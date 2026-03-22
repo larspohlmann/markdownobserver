@@ -174,6 +174,74 @@ struct ReaderStoreSourceEditingTests {
         #expect(!fixture.store.hasUnacknowledgedExternalChange)
         #expect(fixture.store.sourceMarkdown == "# External")
     }
+
+    // MARK: - Guard paths
+
+    @Test @MainActor func startEditingIsNoOpWhenNoDocumentIsOpen() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        // No openFile call — store has no open document.
+        fixture.store.startEditingSource()
+
+        #expect(!fixture.store.isSourceEditing)
+        #expect(!fixture.store.hasUnsavedDraftChanges)
+    }
+
+    @Test @MainActor func startEditingIsNoOpWhenCurrentFileIsMissing() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.delete(fixture.primaryFileURL)
+        fixture.store.handleObservedFileChange()
+
+        #expect(fixture.store.isCurrentFileMissing)
+
+        fixture.store.startEditingSource()
+
+        #expect(!fixture.store.isSourceEditing)
+    }
+
+    @Test @MainActor func startEditingIsNoOpWhenAlreadyEditing() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.startEditingSource()
+        fixture.store.updateSourceDraft("# Draft")
+
+        // Second call while already editing must not reset the draft.
+        fixture.store.startEditingSource()
+
+        #expect(fixture.store.isSourceEditing)
+        #expect(fixture.store.sourceMarkdown == "# Draft")
+    }
+
+    @Test @MainActor func updateDraftIsNoOpWhenNotEditing() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        // updateSourceDraft without startEditingSource — must be a no-op.
+        fixture.store.updateSourceDraft("# Should Not Apply")
+
+        #expect(!fixture.store.isSourceEditing)
+        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(!fixture.store.hasUnsavedDraftChanges)
+    }
+
+    @Test @MainActor func discardDraftIsNoOpWhenNotEditing() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        // discardSourceDraft without an active editing session must be a no-op.
+        fixture.store.discardSourceDraft()
+
+        #expect(!fixture.store.isSourceEditing)
+        #expect(fixture.store.sourceMarkdown == "# Initial")
+    }
 }
 
 private extension ReaderStoreSourceEditingTests {

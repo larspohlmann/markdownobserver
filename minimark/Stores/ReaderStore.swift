@@ -54,6 +54,12 @@ final class ReaderStore: ObservableObject {
     let requestWatchedFolderReauthorization: (URL) -> URL?
 
     private var settingsCancellable: AnyCancellable?
+
+    // MARK: - Internal: accessible to Coordination extensions
+    // Swift requires at least `internal` visibility for stored properties that are
+    // read or mutated from extensions declared in separate files.  These properties
+    // are implementation details of the store's coordination layer and must not be
+    // accessed directly from outside the Stores/ group.
     var securityScopeToken: SecurityScopedAccessToken?
     var folderSecurityScopeToken: SecurityScopedAccessToken?
     var currentAccessibleFileURL: URL?
@@ -61,13 +67,14 @@ final class ReaderStore: ObservableObject {
     var currentOpenOrigin: ReaderOpenOrigin = .manual
     var savedMarkdown: String = ""
     var draftMarkdown: String?
+    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
+    var onFolderWatchStopped: (() -> Void)?
+
     private var pendingSavedDraftDiffBaselineMarkdown: String?
     private var pendingAutoOpenSettlingContext: PendingAutoOpenSettlingContext?
     private var pendingAutoOpenSettlingTask: Task<Void, Never>?
     private var pendingDraftPreviewRenderTask: Task<Void, Never>?
     private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
-    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
-    var onFolderWatchStopped: (() -> Void)?
 
     init(
         renderer: MarkdownRendering,
