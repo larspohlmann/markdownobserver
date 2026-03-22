@@ -178,8 +178,8 @@ extension ReaderStore {
             return true
         }
 
-                if resolvedError.domain == NSPOSIXErrorDomain,
-                     [Int(EACCES), Int(EPERM)].contains(resolvedError.code) {
+          if resolvedError.domain == NSPOSIXErrorDomain,
+              [Int(EACCES), Int(EPERM)].contains(resolvedError.code) {
             return true
         }
 

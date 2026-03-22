@@ -62,11 +62,11 @@ struct ReaderWindowUITestFlowSupport {
             }
             assignTask(task)
         } catch let error {
-    #if DEBUG
+            #if DEBUG
             assertionFailure("Failed to start auto-open watch flow: \(error)")
-    #else
+            #else
             NSLog("Failed to start auto-open watch flow: \(error)")
-    #endif
+            #endif
         }
     }
 
