@@ -136,7 +136,11 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchAutoOpenPlannerUsesAgedBaselineForRapidSuccessiveModifications() async {
-        let planner = ReaderFolderWatchAutoOpenPlanner(minimumDiffBaselineAge: 0.2)
+        var now = Date(timeIntervalSince1970: 1_700_000_000)
+        let planner = ReaderFolderWatchAutoOpenPlanner(
+            minimumDiffBaselineAge: 0.2,
+            nowProvider: { now }
+        )
         let fileURL = URL(fileURLWithPath: "/tmp/rapid.md")
 
         let firstEvents = planner.liveOpenEvents(
@@ -145,13 +149,13 @@ struct FolderWatchCoordinationTests {
         )
         #expect(firstEvents.first?.previousMarkdown == "# v0")
 
-        try? await Task.sleep(for: .milliseconds(50))
+        now.addTimeInterval(0.05)
         _ = planner.liveOpenEvents(
             for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v1")],
             currentDocumentFileURL: nil
         )
 
-        try? await Task.sleep(for: .milliseconds(50))
+        now.addTimeInterval(0.05)
         let thirdEvents = planner.liveOpenEvents(
             for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v2")],
             currentDocumentFileURL: nil
@@ -159,7 +163,7 @@ struct FolderWatchCoordinationTests {
 
         #expect(thirdEvents.first?.previousMarkdown == "# v0")
 
-        try? await Task.sleep(for: .milliseconds(250))
+        now.addTimeInterval(0.25)
         let fourthEvents = planner.liveOpenEvents(
             for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v3")],
             currentDocumentFileURL: nil

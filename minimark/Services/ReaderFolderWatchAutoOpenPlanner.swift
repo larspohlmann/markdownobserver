@@ -28,11 +28,16 @@ private struct AutoOpenDiffBaselineRecord {
 
 final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning {
     private let minimumDiffBaselineAge: TimeInterval
+    private let nowProvider: () -> Date
     private let maximumHistoryDepth = 32
     private var baselineHistoryByFileURL: [URL: [AutoOpenDiffBaselineRecord]] = [:]
 
-    init(minimumDiffBaselineAge: TimeInterval = 10) {
+    init(
+        minimumDiffBaselineAge: TimeInterval = 10,
+        nowProvider: @escaping () -> Date = { .now }
+    ) {
         self.minimumDiffBaselineAge = max(0, minimumDiffBaselineAge)
+        self.nowProvider = nowProvider
     }
 
     func initialPlan(
@@ -87,7 +92,7 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
         currentDocumentFileURL: URL?
     ) -> ReaderFolderWatchAutoOpenPlan {
         let eligible = eligibleEvents(from: events, currentDocumentFileURL: currentDocumentFileURL)
-        let liveEvents = eventsWithAgedDiffBaselines(from: eligible, now: .now)
+        let liveEvents = eventsWithAgedDiffBaselines(from: eligible, now: nowProvider())
         let autoOpenEvents = Array(
             liveEvents.prefix(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
         )
