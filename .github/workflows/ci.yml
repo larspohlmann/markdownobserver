@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-      - main
+      - develop
 
 jobs:
   test-macos:
@@ -17,10 +17,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Show Xcode version
+        run: xcodebuild -version
+
       - name: Run macOS tests
         run: |
           xcodebuild test \
             -project minimark.xcodeproj \
             -scheme minimark \
             -destination 'platform=macOS' \
-            -only-testing:minimarkTests
+            -only-testing:minimarkTests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=''
