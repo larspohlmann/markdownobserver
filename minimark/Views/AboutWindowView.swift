@@ -78,6 +78,7 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
     case markdownItDeflist
     case markdownItFootnote
     case markdownItTaskLists
+    case differ
     case highlightJS
 
     var id: String {
@@ -98,6 +99,8 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return "markdown-it-footnote"
         case .markdownItTaskLists:
             return "markdown-it-task-lists"
+        case .differ:
+            return "Differ (Swift package)"
         case .highlightJS:
             return "highlight.js"
         }
@@ -106,26 +109,28 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
     var licenseName: String {
         switch self {
         case .codeMirror:
-            return "MIT License"
+            return "MIT"
         case .markdownIt:
-            return "MIT License"
+            return "MIT"
         case .markdownItAttrs:
-            return "MIT License"
+            return "MIT"
         case .markdownItDeflist:
-            return "MIT License"
+            return "MIT"
         case .markdownItFootnote:
-            return "MIT License"
+            return "MIT"
         case .markdownItTaskLists:
-            return "ISC License"
+            return "ISC"
+        case .differ:
+            return "MIT"
         case .highlightJS:
-            return "BSD 3-Clause License"
+            return "BSD 3-Clause"
         }
     }
 
     var projectURL: URL {
         switch self {
         case .codeMirror:
-            return URL(string: "https://codemirror.net/")!
+            return URL(string: "https://github.com/codemirror/dev")!
         case .markdownIt:
             return URL(string: "https://github.com/markdown-it/markdown-it")!
         case .markdownItAttrs:
@@ -136,6 +141,8 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return URL(string: "https://github.com/markdown-it/markdown-it-footnote")!
         case .markdownItTaskLists:
             return URL(string: "https://github.com/revin/markdown-it-task-lists")!
+        case .differ:
+            return URL(string: "https://github.com/tonyarnold/Differ")!
         case .highlightJS:
             return URL(string: "https://github.com/highlightjs/highlight.js")!
         }
