@@ -37,6 +37,13 @@ jobs:
             exit 0
           fi
 
+          second_parent=$(git rev-parse "$GITHUB_SHA^2")
+          git fetch origin main --depth=1
+          if git merge-base --is-ancestor "$second_parent" "origin/main"; then
+            echo "Merge commit syncs main into develop; skipping build bump."
+            exit 0
+          fi
+
           pbxproj="minimark.xcodeproj/project.pbxproj"
           current_build=$(perl -ne 'if (/CURRENT_PROJECT_VERSION = ([0-9]+);/) { print $1; exit }' "$pbxproj")
           if [[ -z "$current_build" ]]; then
