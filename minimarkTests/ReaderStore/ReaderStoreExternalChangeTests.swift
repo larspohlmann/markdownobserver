@@ -945,6 +945,37 @@ struct ReaderStoreExternalChangeTests {
     }
 }
 
+// MARK: - handleIncomingOpenURL deduplication
+
+extension ReaderStoreExternalChangeTests {
+    @Test @MainActor func handleIncomingOpenURLIsNoOpWhenSameURLIsAlreadyOpen() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        let initialWatchCallCount = fixture.watcher.startCallCount
+
+        // Opening the same URL via handleIncomingOpenURL must not restart the file watcher
+        // or trigger a new document load cycle.
+        fixture.store.handleIncomingOpenURL(fixture.primaryFileURL, origin: .manual)
+
+        #expect(fixture.watcher.startCallCount == initialWatchCallCount)
+        #expect(fixture.store.sourceMarkdown == "# Initial")
+    }
+
+    @Test @MainActor func handleIncomingOpenURLIgnoresNonMarkdownFiles() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        let txtURL = fixture.temporaryDirectoryURL.appendingPathComponent("file.txt")
+        try "hello".write(to: txtURL, atomically: true, encoding: .utf8)
+
+        fixture.store.handleIncomingOpenURL(txtURL, origin: .manual)
+
+        #expect(!fixture.store.hasOpenDocument)
+    }
+}
+
 private extension ReaderStoreExternalChangeTests {
     static var sampleChangedRegion: ChangedRegion {
         ChangedRegion(blockIndex: 0, lineRange: 1...1, kind: .edited)
