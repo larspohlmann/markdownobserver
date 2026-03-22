@@ -1,0 +1,413 @@
+//
+//  ReaderSettingsAndModelsTests.swift
+//  minimarkTests
+//
+
+import CoreGraphics
+import Foundation
+import Testing
+import UserNotifications
+@testable import minimark
+
+@Suite(.serialized)
+struct ReaderSettingsAndModelsTests {
+    @Test @MainActor func readerWindowSeedCodableRoundTripPreservesIdentityFilePathAndWatchSession() throws {
+        let id = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let fileURL = URL(fileURLWithPath: "/tmp/watch.md")
+        let watchSession = ReaderFolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/tmp/docs"),
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
+            startedAt: Date(timeIntervalSince1970: 12345)
+        )
+        let seed = ReaderWindowSeed(
+            id: id,
+            fileURL: fileURL,
+            folderWatchSession: watchSession,
+            openOrigin: .folderWatchAutoOpen,
+            initialDiffBaselineMarkdown: "# Previous"
+        )
+
+        let data = try JSONEncoder().encode(seed)
+        let decoded = try JSONDecoder().decode(ReaderWindowSeed.self, from: data)
+
+        #expect(decoded.id == id)
+        #expect(decoded.filePath == fileURL.path)
+        #expect(decoded.fileURL?.path == fileURL.path)
+        #expect(decoded.folderWatchSession == watchSession)
+        #expect(decoded.openOrigin == .folderWatchAutoOpen)
+        #expect(decoded.initialDiffBaselineMarkdown == "# Previous")
+    }
+
+    @Test @MainActor func readerWindowSeedCodableRoundTripPreservesRecentWatchedFolderRequest() throws {
+        let entry = ReaderRecentWatchedFolder(
+            folderURL: URL(fileURLWithPath: "/tmp/docs"),
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
+        )
+        let seed = ReaderWindowSeed(recentWatchedFolder: entry)
+
+        let data = try JSONEncoder().encode(seed)
+        let decoded = try JSONDecoder().decode(ReaderWindowSeed.self, from: data)
+
+        #expect(decoded.recentWatchedFolder?.folderPath == entry.folderPath)
+        #expect(decoded.recentWatchedFolder?.options == entry.options)
+    }
+
+    @Test @MainActor func readerWindowSeedCodableRoundTripPreservesRecentOpenedFileRequest() throws {
+        let entry = ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/tmp/recent.md"))
+        let seed = ReaderWindowSeed(recentOpenedFile: entry)
+
+        let data = try JSONEncoder().encode(seed)
+        let decoded = try JSONDecoder().decode(ReaderWindowSeed.self, from: data)
+
+        #expect(decoded.recentOpenedFile?.filePath == entry.filePath)
+    }
+
+    @Test @MainActor func readerWindowSeedDefaultOriginIsManual() {
+        let seed = ReaderWindowSeed(fileURL: URL(fileURLWithPath: "/tmp/default-origin.md"))
+
+        #expect(seed.openOrigin == .manual)
+    }
+
+    @Test func readerWindowDefaultsUseBaseSizeWhenVisibleFrameCanFitIt() {
+        let size = ReaderWindowDefaults.size(forVisibleFrame: CGRect(x: 0, y: 0, width: 1600, height: 2200))
+
+        #expect(size.width == ReaderWindowDefaults.baseWidth)
+        #expect(size.height == ReaderWindowDefaults.baseHeight)
+    }
+
+    @Test func readerWindowDefaultsClampToVisibleHeightWhilePreservingAspectRatio() {
+        let visibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
+        let expectedHeight = visibleFrame.height * ReaderWindowDefaults.fittedHeightUsage
+        let expectedWidth = expectedHeight / ReaderWindowDefaults.goldenRatio
+
+        #expect(size.width == expectedWidth)
+        #expect(size.height == expectedHeight)
+    }
+
+    @Test func readerWindowDefaultsKeepMinimumUsableWidthWhenScreenIsCloseToFittingIt() {
+        let minimumUsableHeight = ReaderWindowDefaults.minimumUsableWidth * ReaderWindowDefaults.goldenRatio
+        let visibleFrame = CGRect(
+            x: 0,
+            y: 0,
+            width: 1440,
+            height: minimumUsableHeight * ReaderWindowDefaults.minimumUsableHeightTolerance
+        )
+
+        let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
+
+        #expect(size.width == ReaderWindowDefaults.minimumUsableWidth)
+        #expect(size.height == minimumUsableHeight)
+    }
+
+    @Test func readerWindowDefaultsPreferFittedSizeWhenMinimumUsableWidthWouldStillBeTooTall() {
+        let visibleFrame = CGRect(x: 0, y: 0, width: 1280, height: 820)
+        let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
+
+        #expect(size.width < ReaderWindowDefaults.minimumUsableWidth)
+        #expect(size.height == visibleFrame.height * ReaderWindowDefaults.fittedHeightUsage)
+    }
+
+    @Test @MainActor func readerSettingsStorePersistsMultiFileDisplayMode() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.updateMultiFileDisplayMode(.sidebarRight)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.currentSettings.multiFileDisplayMode == .sidebarRight)
+    }
+
+    @Test @MainActor func readerSettingsStorePersistsAppAppearance() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.app-appearance.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.updateAppAppearance(.dark)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.currentSettings.appAppearance == .dark)
+    }
+
+    @Test @MainActor func readerSettingsStorePersistsSidebarSortMode() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.sidebar-sort.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.updateSidebarSortMode(.lastChangedNewestFirst)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.currentSettings.sidebarSortMode == .lastChangedNewestFirst)
+    }
+
+    @Test @MainActor func readerSettingsStorePersistsNotificationsEnabled() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.notifications.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.updateNotificationsEnabled(false)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(!reloadedStore.currentSettings.notificationsEnabled)
+    }
+
+    @Test @MainActor func readerSettingsStoreDefaultsToSidebarDisplayMode() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, storageKey: "reader.settings.default-mode.tests")
+
+        #expect(store.currentSettings.appAppearance == .system)
+        #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
+        #expect(store.currentSettings.notificationsEnabled)
+        #expect(store.currentSettings.sidebarSortMode == .openOrder)
+        #expect(store.currentSettings.recentWatchedFolders.isEmpty)
+        #expect(store.currentSettings.recentManuallyOpenedFiles.isEmpty)
+    }
+
+    @Test @MainActor func readerSettingsStorePersistsRecentHistoryAndCapsEntries() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.recent-history.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        for index in 0..<20 {
+            store.addRecentManuallyOpenedFile(URL(fileURLWithPath: "/tmp/file-\(index).md"))
+            store.addRecentWatchedFolder(
+                URL(fileURLWithPath: "/tmp/folder-\(index)"),
+                options: .init(
+                    openMode: index.isMultiple(of: 2) ? .openAllMarkdownFiles : .watchChangesOnly,
+                    scope: .selectedFolderOnly
+                )
+            )
+        }
+
+        store.addRecentManuallyOpenedFile(URL(fileURLWithPath: "/tmp/file-3.md"))
+        store.addRecentWatchedFolder(
+            URL(fileURLWithPath: "/tmp/folder-3"),
+            options: .init(openMode: .watchChangesOnly, scope: .includeSubfolders)
+        )
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        #expect(reloadedStore.currentSettings.recentManuallyOpenedFiles.count == 15)
+        #expect(reloadedStore.currentSettings.recentWatchedFolders.count == 15)
+        #expect(reloadedStore.currentSettings.recentManuallyOpenedFiles.first?.filePath == "/tmp/file-3.md")
+        #expect(reloadedStore.currentSettings.recentWatchedFolders.first?.folderPath == "/tmp/folder-3")
+        #expect(reloadedStore.currentSettings.recentWatchedFolders.first?.options.scope == .includeSubfolders)
+    }
+
+    @Test func readerRecentHistoryMenuTitleAddsParentContextOnlyWhenNeeded() {
+        let fileEntries = [
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/todo.md")),
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/ideas.md"))
+        ]
+        let folderEntries = [
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
+                options: .default
+            ),
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/beta/docs"),
+                options: .default
+            ),
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/gamma/guides"),
+                options: .default
+            )
+        ]
+
+        #expect(ReaderRecentHistory.menuTitle(for: fileEntries[0], among: fileEntries) == "todo.md (alpha/notes)")
+        #expect(ReaderRecentHistory.menuTitle(for: fileEntries[2], among: fileEntries) == "ideas.md")
+        #expect(ReaderRecentHistory.menuTitle(for: folderEntries[0], among: folderEntries) == "docs (alpha)")
+        #expect(ReaderRecentHistory.menuTitle(for: folderEntries[2], among: folderEntries) == "guides")
+    }
+
+    @Test func readerSystemNotifierConfigureDoesNotRequestAuthorization() {
+        let notificationCenter = TestUserNotificationCenter()
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+
+        notifier.configure()
+
+        #expect(notificationCenter.requestAuthorizationCallCount == 0)
+        #expect(notificationCenter.delegate != nil)
+    }
+
+    @Test @MainActor func readerSystemNotifierConfigureRefreshesNotificationStatus() async {
+        let notificationCenter = TestUserNotificationCenter()
+        notificationCenter.currentNotificationSettings = ReaderUserNotificationSettings(
+            authorizationStatus: .denied,
+            alertSetting: .disabled,
+            soundSetting: .disabled,
+            notificationCenterSetting: .enabled
+        )
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+
+        notifier.configure()
+
+        #expect(await waitUntil {
+            notifier.notificationStatus.authorizationState == .denied
+        })
+        #expect(!notifier.notificationStatus.alertsEnabled)
+        #expect(notifier.notificationStatus.notificationCenterEnabled)
+    }
+
+    @Test func readerSystemNotifierRequestsAuthorizationBeforePostingFirstNotification() throws {
+        let notificationCenter = TestUserNotificationCenter()
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let fileURL = watchedFolderURL.appendingPathComponent("roadmap.md")
+
+        notifier.notifyFileAutoLoaded(
+            fileURL,
+            changeKind: .modified,
+            watchedFolderURL: watchedFolderURL
+        )
+
+        #expect(notificationCenter.requestAuthorizationCallCount == 1)
+        let requestAuthorizationIndex = try #require(notificationCenter.recordedEvents.firstIndex(of: "requestAuthorization"))
+        let addIndex = try #require(notificationCenter.recordedEvents.firstIndex(of: "add"))
+        #expect(notificationCenter.recordedEvents.first == "notificationSettings")
+        #expect(notificationCenter.recordedEvents.filter { $0 == "notificationSettings" }.count >= 1)
+        #expect(requestAuthorizationIndex < addIndex)
+
+        let request = try #require(notificationCenter.addedRequests.first)
+        #expect(request.trigger == nil)
+        #expect(request.content.title == "roadmap.md")
+        #expect(request.content.subtitle == "Folder watch: docs")
+        #expect(request.content.body == "Updated and opened in MarkdownObserver")
+        #expect(request.content.userInfo["filePath"] as? String == fileURL.path)
+        #expect(request.content.userInfo["watchedFolderPath"] as? String == watchedFolderURL.path)
+    }
+
+    @Test func readerSystemNotifierRoutesNotificationClicksToTargetFocuser() {
+        let notificationCenter = TestUserNotificationCenter()
+        let focuser = TestNotificationTargetFocuser()
+        let notifier = ReaderSystemNotifier(
+            notificationCenter: notificationCenter,
+            notificationTargetFocuser: focuser
+        )
+
+        notifier.handleNotificationResponseUserInfo([
+            "filePath": "/tmp/notes/todo.md",
+            "watchedFolderPath": "/tmp/notes"
+        ])
+
+        #expect(focuser.focusedTargets.count == 1)
+        #expect(focuser.focusedTargets[0].fileURL == URL(fileURLWithPath: "/tmp/notes/todo.md"))
+        #expect(focuser.focusedTargets[0].watchedFolderURL == URL(fileURLWithPath: "/tmp/notes"))
+    }
+
+    @Test func readerSystemNotifierSchedulesDelayedTestNotification() throws {
+        let notificationCenter = TestUserNotificationCenter()
+        notificationCenter.currentNotificationSettings = ReaderUserNotificationSettings(
+            authorizationStatus: .authorized,
+            alertSetting: .enabled,
+            soundSetting: .disabled,
+            notificationCenterSetting: .enabled
+        )
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+
+        notifier.sendTestNotification()
+
+        let request = try #require(notificationCenter.addedRequests.first)
+        let trigger = try #require(request.trigger as? UNTimeIntervalNotificationTrigger)
+        #expect(trigger.timeInterval == 5)
+        #expect(request.content.title == "Test notification")
+        #expect(request.content.body == "This test was scheduled by MarkdownObserver. Switch away from the app before it fires to verify background delivery.")
+    }
+
+    @Test @MainActor func readerSettingsStoreDecodesLegacySidebarModeAsSidebarLeftAndDefaultsAppAppearance() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.legacy-mode.tests"
+        storage.set("{\"readerTheme\":\"blackOnWhite\",\"syntaxTheme\":\"monokai\",\"baseFontSize\":15,\"autoRefreshOnExternalChange\":true,\"multiFileDisplayMode\":\"sidebar\"}".data(using: .utf8), forKey: storageKey)
+
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        #expect(store.currentSettings.appAppearance == .system)
+        #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
+        #expect(store.currentSettings.notificationsEnabled)
+        #expect(store.currentSettings.sidebarSortMode == .openOrder)
+        #expect(store.currentSettings.recentWatchedFolders.isEmpty)
+        #expect(store.currentSettings.recentManuallyOpenedFiles.isEmpty)
+    }
+
+    @Test @MainActor func readerSettingsStoreMigratesLegacyTabsModeWithoutResettingOtherSettings() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.legacy-tabs-mode.tests"
+        storage.set(
+            "{\"appAppearance\":\"dark\",\"readerTheme\":\"whiteOnBlack\",\"syntaxTheme\":\"xcode\",\"baseFontSize\":19,\"autoRefreshOnExternalChange\":false,\"notificationsEnabled\":false,\"multiFileDisplayMode\":\"tabs\",\"sidebarSortMode\":\"nameDescending\"}".data(using: .utf8),
+            forKey: storageKey
+        )
+
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        #expect(store.currentSettings.appAppearance == .dark)
+        #expect(store.currentSettings.readerTheme == .whiteOnBlack)
+        #expect(store.currentSettings.syntaxTheme == .xcode)
+        #expect(store.currentSettings.baseFontSize == 19)
+        #expect(!store.currentSettings.autoRefreshOnExternalChange)
+        #expect(!store.currentSettings.notificationsEnabled)
+        #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
+        #expect(store.currentSettings.sidebarSortMode == .nameDescending)
+        #expect(store.currentSettings.recentWatchedFolders.isEmpty)
+        #expect(store.currentSettings.recentManuallyOpenedFiles.isEmpty)
+    }
+
+    @Test func sidebarSortModeNameAscendingSortsNamedFilesAndKeepsUntitledLast() {
+        let items = [
+            SidebarSortTestItem(id: "untitled", displayName: nil, lastChangedAt: nil),
+            SidebarSortTestItem(id: "zeta", displayName: "zeta.md", lastChangedAt: nil),
+            SidebarSortTestItem(id: "alpha", displayName: "alpha.md", lastChangedAt: nil)
+        ]
+
+        let ordered = ReaderSidebarSortMode.nameAscending.sorted(items) { item in
+            ReaderSidebarSortDescriptor(displayName: item.displayName, lastChangedAt: item.lastChangedAt)
+        }
+
+        #expect(ordered.map(\.id) == ["alpha", "zeta", "untitled"])
+    }
+
+    @Test func sidebarSortModeNewestFirstUsesStableFallbackForEqualAndMissingDates() {
+        let olderDate = Date(timeIntervalSince1970: 100)
+        let newerDate = Date(timeIntervalSince1970: 200)
+        let items = [
+            SidebarSortTestItem(id: "same-a", displayName: "same-a.md", lastChangedAt: olderDate),
+            SidebarSortTestItem(id: "newest", displayName: "newest.md", lastChangedAt: newerDate),
+            SidebarSortTestItem(id: "same-b", displayName: "same-b.md", lastChangedAt: olderDate),
+            SidebarSortTestItem(id: "untitled", displayName: nil, lastChangedAt: nil)
+        ]
+
+        let ordered = ReaderSidebarSortMode.lastChangedNewestFirst.sorted(items) { item in
+            ReaderSidebarSortDescriptor(displayName: item.displayName, lastChangedAt: item.lastChangedAt)
+        }
+
+        #expect(ordered.map(\.id) == ["newest", "same-a", "same-b", "untitled"])
+    }
+
+    @Test func readerMultiFileDisplayModeChangesNeverRequireRestartInSidebarOnlyMode() {
+        #expect(!ReaderMultiFileDisplayMode.sidebarLeft.requiresRestart(from: .sidebarRight))
+        #expect(!ReaderMultiFileDisplayMode.sidebarRight.requiresRestart(from: .sidebarLeft))
+    }
+
+    @Test func readerSettingsGuidanceExplainsImmediateSidebarLayoutChanges() {
+        #expect(
+            ReaderSettingsGuidance.layoutHelpText(selectedMode: .sidebarRight)
+                == "Sidebar placement changes immediately."
+        )
+    }
+
+    @Test func readerSettingsGuidanceFormatsMarkdownAssociationPermissionErrorWithoutStatusCode() {
+        let error = MarkdownAssociationError.launchServicesFailed([
+            .init(
+                contentType: "net.daringfireball.markdown",
+                role: .all,
+                status: -54
+            )
+        ])
+
+        #expect(
+            ReaderSettingsGuidance.markdownAssociationErrorMessage(for: error)
+                == "macOS didn’t allow this change. In Finder, select a .md file, choose Get Info, set Open with to MarkdownObserver, then choose Change All."
+        )
+    }
+}

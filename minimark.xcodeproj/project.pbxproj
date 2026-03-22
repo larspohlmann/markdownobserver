@@ -1,0 +1,1062 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E10000000000000000000001 /* ReaderCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000001 /* ReaderCommands.swift */; };
+		E10000000000000000000002 /* AppWindowID.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000002 /* AppWindowID.swift */; };
+		E10000000000000000000003 /* ChangedRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000003 /* ChangedRegion.swift */; };
+		E10000000000000000000004 /* ReaderExternalApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000004 /* ReaderExternalApplication.swift */; };
+		E10000000000000000000005 /* ReaderFolderWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000005 /* ReaderFolderWatch.swift */; };
+		E10000000000000000000006 /* ReaderMultiFileDisplayMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000006 /* ReaderMultiFileDisplayMode.swift */; };
+		E10000000000000000000007 /* ReaderTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000007 /* ReaderTheme.swift */; };
+		E10000000000000000000008 /* ReaderWindowSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000008 /* ReaderWindowSeed.swift */; };
+		E10000000000000000000009 /* SyntaxTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000009 /* SyntaxTheme.swift */; };
+		E1000000000000000000000A /* ChangedRegionDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000A /* ChangedRegionDiffer.swift */; };
+		E1000000000000000000000B /* FileChangeWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000B /* FileChangeWatcher.swift */; };
+		E1000000000000000000000C /* FolderChangeWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000C /* FolderChangeWatcher.swift */; };
+		E1000000000000000000000D /* MarkdownRenderingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000D /* MarkdownRenderingService.swift */; };
+		E1000000000000000000000E /* MarkdownRuntimePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000E /* MarkdownRuntimePayload.swift */; };
+		E1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift */; };
+		E10000000000000000000010 /* ReaderFileActionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000010 /* ReaderFileActionService.swift */; };
+		E10000000000000000000011 /* SecurityScopedResourceAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000011 /* SecurityScopedResourceAccess.swift */; };
+		E10000000000000000000012 /* ReaderSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000012 /* ReaderSettingsStore.swift */; };
+		E10000000000000000000013 /* ReaderSidebarDocumentController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000013 /* ReaderSidebarDocumentController.swift */; };
+		E10000000000000000000014 /* ReaderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000014 /* ReaderStore.swift */; };
+		E10000000000000000000015 /* MarkdownOpenPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000015 /* MarkdownOpenPanel.swift */; };
+		E10000000000000000000016 /* ReaderBundledAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000016 /* ReaderBundledAssets.swift */; };
+		E10000000000000000000017 /* ReaderCSSFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000017 /* ReaderCSSFactory.swift */; };
+		E10000000000000000000018 /* ReaderError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000018 /* ReaderError.swift */; };
+		E10000000000000000000019 /* ReaderFileRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000019 /* ReaderFileRouting.swift */; };
+		E1000000000000000000001A /* ReaderFocusedActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000001A /* ReaderFocusedActions.swift */; };
+		E1000000000000000000001B /* ReaderHostedWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000001B /* ReaderHostedWindowController.swift */; };
+		E1000000000000000000001C /* ReaderWindowRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000001C /* ReaderWindowRegistry.swift */; };
+		E1000000000000000000001D /* ReaderWindowDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000001D /* ReaderWindowDefaults.swift */; };
+		E1000000000000000000001E /* AboutWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000001E /* AboutWindowView.swift */; };
+		E1000000000000000000001F /* MarkdownWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000001F /* MarkdownWebView.swift */; };
+		E10000000000000000000020 /* ReaderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000020 /* ReaderSettingsView.swift */; };
+		E10000000000000000000021 /* ReaderSidebarWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000021 /* ReaderSidebarWorkspaceView.swift */; };
+		E10000000000000000000022 /* ReaderWindowRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000022 /* ReaderWindowRootView.swift */; };
+		E10000000000000000000023 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000023 /* ContentView.swift */; };
+		E10000000000000000000024 /* minimarkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000024 /* minimarkApp.swift */; };
+		E10000000000000000000025 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000025 /* Assets.xcassets */; };
+		E10000000000000000000026 /* codemirror-source-view.js in Resources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000028 /* codemirror-source-view.js */; };
+		E10000000000000000000027 /* markdown-it-attrs.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000029 /* markdown-it-attrs.min.js */; };
+		E10000000000000000000028 /* markdown-it-deflist.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000002A /* markdown-it-deflist.min.js */; };
+		E10000000000000000000029 /* markdown-it-footnote.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000002B /* markdown-it-footnote.min.js */; };
+		E1000000000000000000002A /* markdown-it-task-lists.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000002C /* markdown-it-task-lists.min.js */; };
+		E1000000000000000000002B /* markdown-it.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000002D /* markdown-it.min.js */; };
+		E1000000000000000000002C /* highlight.min.js in Resources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000002E /* highlight.min.js */; };
+		E1000000000000000000002E /* minimarkUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000030 /* minimarkUITests.swift */; };
+		E1000000000000000000002F /* minimarkUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000031 /* minimarkUITestsLaunchTests.swift */; };
+		E10000000000000000000030 /* ReaderSidebarSortMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000032 /* ReaderSidebarSortMode.swift */; };
+		E10000000000000000000031 /* AppAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000033 /* AppAppearance.swift */; };
+		E10000000000000000000032 /* ReaderFolderWatchAutoOpenPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000034 /* ReaderFolderWatchAutoOpenPlanner.swift */; };
+		E10000000000000000000033 /* ReaderSystemNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000035 /* ReaderSystemNotificationService.swift */; };
+		E10000000000000000000034 /* ReaderFolderWatchAutoOpenWarningCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000036 /* ReaderFolderWatchAutoOpenWarningCoordinator.swift */; };
+		E10000000000000000000035 /* ReaderFolderWatchOpenCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000037 /* ReaderFolderWatchOpenCoordinator.swift */; };
+				E1000000000000000000004E /* ReaderWindowTitleSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004E /* ReaderWindowTitleSupport.swift */; };
+		E10000000000000000000036 /* ReaderUITestLaunchConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000038 /* ReaderUITestLaunchConfiguration.swift */; };
+		E10000000000000000000037 /* FolderWatchAutoOpenFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000039 /* FolderWatchAutoOpenFlowView.swift */; };
+		E10000000000000000000038 /* ReaderSidebarFolderWatchOwnership.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000003A /* ReaderSidebarFolderWatchOwnership.swift */; };
+		E10000000000000000000039 /* ReaderSidebarSelectedStoreProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */; };
+		E1000000000000000000003A /* ReaderSettingsGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000003C /* ReaderSettingsGuidance.swift */; };
+		E10000000000000000000040 /* ReaderSettingsAndModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000040 /* ReaderSettingsAndModelsTests.swift */; };
+		E10000000000000000000041 /* FolderWatchCoordinationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000041 /* FolderWatchCoordinationTests.swift */; };
+		E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */; };
+		E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */; };
+		E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000044 /* RenderingAndDiffTests.swift */; };
+		E10000000000000000000045 /* FileRoutingAndWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */; };
+		E10000000000000000000046 /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000046 /* TestDoubles.swift */; };
+		E10000000000000000000047 /* MarkdownDocumentIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000047 /* MarkdownDocumentIcon.icns */; };
+		E10000000000000000000048 /* ReaderTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000048 /* ReaderTopBar.swift */; };
+		E10000000000000000000049 /* ReaderStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000049 /* ReaderStatusBar.swift */; };
+		E1000000000000000000004A /* FolderWatchOptionsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004A /* FolderWatchOptionsSheet.swift */; };
+		E1000000000000000000004B /* ContentDocumentSurfaceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */; };
+		E1000000000000000000004C /* ReaderStatusFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004C /* ReaderStatusFormatting.swift */; };
+		E1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */; };
+		F10000000000000000000001 /* Differ in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* Differ */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4619225E2F5ABC8000DD137D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 461922462F5ABC7E00DD137D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4619224D2F5ABC7E00DD137D;
+			remoteInfo = minimark;
+		};
+		461922682F5ABC8000DD137D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 461922462F5ABC7E00DD137D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4619224D2F5ABC7E00DD137D;
+			remoteInfo = minimark;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		4619224E2F5ABC7E00DD137D /* MarkdownObserver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarkdownObserver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4619225D2F5ABC8000DD137D /* minimarkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = minimarkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		461922672F5ABC8000DD137D /* minimarkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = minimarkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D10000000000000000000050 /* OpenSourceDefaults.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/OpenSourceDefaults.xcconfig; sourceTree = SOURCE_ROOT; };
+		D10000000000000000000051 /* Signing.local.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.local.example.xcconfig; sourceTree = SOURCE_ROOT; };
+		D10000000000000000000001 /* ReaderCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderCommands.swift; sourceTree = "<group>"; };
+		D10000000000000000000002 /* AppWindowID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppWindowID.swift; sourceTree = "<group>"; };
+		D10000000000000000000003 /* ChangedRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangedRegion.swift; sourceTree = "<group>"; };
+		D10000000000000000000004 /* ReaderExternalApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderExternalApplication.swift; sourceTree = "<group>"; };
+		D10000000000000000000005 /* ReaderFolderWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFolderWatch.swift; sourceTree = "<group>"; };
+		D10000000000000000000006 /* ReaderMultiFileDisplayMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderMultiFileDisplayMode.swift; sourceTree = "<group>"; };
+		D10000000000000000000007 /* ReaderTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTheme.swift; sourceTree = "<group>"; };
+		D10000000000000000000008 /* ReaderWindowSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowSeed.swift; sourceTree = "<group>"; };
+		D10000000000000000000009 /* SyntaxTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxTheme.swift; sourceTree = "<group>"; };
+		D1000000000000000000000A /* ChangedRegionDiffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangedRegionDiffer.swift; sourceTree = "<group>"; };
+		D1000000000000000000000B /* FileChangeWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileChangeWatcher.swift; sourceTree = "<group>"; };
+		D1000000000000000000000C /* FolderChangeWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderChangeWatcher.swift; sourceTree = "<group>"; };
+		D1000000000000000000000D /* MarkdownRenderingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRenderingService.swift; sourceTree = "<group>"; };
+		D1000000000000000000000E /* MarkdownRuntimePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRuntimePayload.swift; sourceTree = "<group>"; };
+		D1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderDefaultMarkdownAssociationService.swift; sourceTree = "<group>"; };
+		D10000000000000000000010 /* ReaderFileActionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFileActionService.swift; sourceTree = "<group>"; };
+		D10000000000000000000011 /* SecurityScopedResourceAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityScopedResourceAccess.swift; sourceTree = "<group>"; };
+		D10000000000000000000012 /* ReaderSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsStore.swift; sourceTree = "<group>"; };
+		D10000000000000000000013 /* ReaderSidebarDocumentController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarDocumentController.swift; sourceTree = "<group>"; };
+		D10000000000000000000014 /* ReaderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStore.swift; sourceTree = "<group>"; };
+		D10000000000000000000015 /* MarkdownOpenPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownOpenPanel.swift; sourceTree = "<group>"; };
+		D10000000000000000000016 /* ReaderBundledAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderBundledAssets.swift; sourceTree = "<group>"; };
+		D10000000000000000000017 /* ReaderCSSFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderCSSFactory.swift; sourceTree = "<group>"; };
+		D10000000000000000000018 /* ReaderError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderError.swift; sourceTree = "<group>"; };
+		D10000000000000000000019 /* ReaderFileRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFileRouting.swift; sourceTree = "<group>"; };
+		D1000000000000000000001A /* ReaderFocusedActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFocusedActions.swift; sourceTree = "<group>"; };
+		D1000000000000000000001B /* ReaderHostedWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderHostedWindowController.swift; sourceTree = "<group>"; };
+		D1000000000000000000001C /* ReaderWindowRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowRegistry.swift; sourceTree = "<group>"; };
+		D1000000000000000000001D /* ReaderWindowDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowDefaults.swift; sourceTree = "<group>"; };
+		D1000000000000000000001E /* AboutWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutWindowView.swift; sourceTree = "<group>"; };
+		D1000000000000000000001F /* MarkdownWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownWebView.swift; sourceTree = "<group>"; };
+		D10000000000000000000020 /* ReaderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsView.swift; sourceTree = "<group>"; };
+		D10000000000000000000021 /* ReaderSidebarWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarWorkspaceView.swift; sourceTree = "<group>"; };
+		D10000000000000000000022 /* ReaderWindowRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowRootView.swift; sourceTree = "<group>"; };
+		D10000000000000000000023 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D10000000000000000000024 /* minimarkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkApp.swift; sourceTree = "<group>"; };
+		D10000000000000000000025 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D10000000000000000000026 /* minimark.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = minimark.entitlements; sourceTree = "<group>"; };
+		D10000000000000000000028 /* codemirror-source-view.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codemirror-source-view.js"; sourceTree = "<group>"; };
+		D10000000000000000000029 /* markdown-it-attrs.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdown-it-attrs.min.js"; sourceTree = "<group>"; };
+		D1000000000000000000002A /* markdown-it-deflist.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdown-it-deflist.min.js"; sourceTree = "<group>"; };
+		D1000000000000000000002B /* markdown-it-footnote.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdown-it-footnote.min.js"; sourceTree = "<group>"; };
+		D1000000000000000000002C /* markdown-it-task-lists.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdown-it-task-lists.min.js"; sourceTree = "<group>"; };
+		D1000000000000000000002D /* markdown-it.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdown-it.min.js"; sourceTree = "<group>"; };
+		D1000000000000000000002E /* highlight.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = highlight.min.js; sourceTree = "<group>"; };
+		D10000000000000000000030 /* minimarkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkUITests.swift; sourceTree = "<group>"; };
+		D10000000000000000000031 /* minimarkUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000032 /* ReaderSidebarSortMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarSortMode.swift; sourceTree = "<group>"; };
+		D10000000000000000000033 /* AppAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAppearance.swift; sourceTree = "<group>"; };
+		D10000000000000000000034 /* ReaderFolderWatchAutoOpenPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFolderWatchAutoOpenPlanner.swift; sourceTree = "<group>"; };
+		D10000000000000000000035 /* ReaderSystemNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSystemNotificationService.swift; sourceTree = "<group>"; };
+		D10000000000000000000036 /* ReaderFolderWatchAutoOpenWarningCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFolderWatchAutoOpenWarningCoordinator.swift; sourceTree = "<group>"; };
+		D10000000000000000000037 /* ReaderFolderWatchOpenCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFolderWatchOpenCoordinator.swift; sourceTree = "<group>"; };
+				D1000000000000000000004E /* ReaderWindowTitleSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowTitleSupport.swift; sourceTree = "<group>"; };
+		D10000000000000000000038 /* ReaderUITestLaunchConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderUITestLaunchConfiguration.swift; sourceTree = "<group>"; };
+		D10000000000000000000039 /* FolderWatchAutoOpenFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatchAutoOpenFlowView.swift; sourceTree = "<group>"; };
+		D1000000000000000000003A /* ReaderSidebarFolderWatchOwnership.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarFolderWatchOwnership.swift; sourceTree = "<group>"; };
+		D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarSelectedStoreProjection.swift; sourceTree = "<group>"; };
+		D1000000000000000000003C /* ReaderSettingsGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsGuidance.swift; sourceTree = "<group>"; };
+		D10000000000000000000040 /* ReaderSettingsAndModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsAndModelsTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000041 /* FolderWatchCoordinationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatchCoordinationTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarDocumentControllerTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreExternalChangeTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000044 /* RenderingAndDiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingAndDiffTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRoutingAndWatcherTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000046 /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDoubles.swift; sourceTree = "<group>"; };
+		D10000000000000000000047 /* MarkdownDocumentIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = MarkdownDocumentIcon.icns; sourceTree = "<group>"; };
+		D10000000000000000000048 /* ReaderTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTopBar.swift; sourceTree = "<group>"; };
+		D10000000000000000000049 /* ReaderStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStatusBar.swift; sourceTree = "<group>"; };
+		D1000000000000000000004A /* FolderWatchOptionsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatchOptionsSheet.swift; sourceTree = "<group>"; };
+		D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentDocumentSurfaceViews.swift; sourceTree = "<group>"; };
+		D1000000000000000000004C /* ReaderStatusFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStatusFormatting.swift; sourceTree = "<group>"; };
+		D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownSourceHTMLRenderer.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4619224B2F5ABC7E00DD137D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F10000000000000000000001 /* Differ in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4619225A2F5ABC8000DD137D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		461922642F5ABC8000DD137D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		461922452F5ABC7E00DD137D = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000013 /* Config */,
+				461922502F5ABC7E00DD137D /* minimark */,
+				461922602F5ABC8000DD137D /* minimarkTests */,
+				4619226A2F5ABC8000DD137D /* minimarkUITests */,
+				4619224F2F5ABC7E00DD137D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4619224F2F5ABC7E00DD137D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4619224E2F5ABC7E00DD137D /* MarkdownObserver.app */,
+				4619225D2F5ABC8000DD137D /* minimarkTests.xctest */,
+				461922672F5ABC8000DD137D /* minimarkUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		461922502F5ABC7E00DD137D /* minimark */ = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000001 /* App */,
+				D10000000000000000000025 /* Assets.xcassets */,
+				C10000000000000000000002 /* Commands */,
+				D10000000000000000000023 /* ContentView.swift */,
+				C10000000000000000000003 /* Models */,
+				C10000000000000000000004 /* Services */,
+				C10000000000000000000005 /* Stores */,
+				C10000000000000000000006 /* Support */,
+				C10000000000000000000007 /* Views */,
+				D10000000000000000000024 /* minimarkApp.swift */,
+			);
+			path = minimark;
+			sourceTree = "<group>";
+		};
+		461922602F5ABC8000DD137D /* minimarkTests */ = {
+			isa = PBXGroup;
+			children = (
+				C1000000000000000000000B /* Core */,
+				C1000000000000000000000C /* FolderWatch */,
+				C1000000000000000000000D /* Sidebar */,
+				C1000000000000000000000E /* ReaderStore */,
+				C1000000000000000000000F /* Rendering */,
+				C10000000000000000000010 /* Infrastructure */,
+				C10000000000000000000011 /* TestSupport */,
+			);
+			path = minimarkTests;
+			sourceTree = "<group>";
+		};
+		4619226A2F5ABC8000DD137D /* minimarkUITests */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000030 /* minimarkUITests.swift */,
+				D10000000000000000000031 /* minimarkUITestsLaunchTests.swift */,
+			);
+			path = minimarkUITests;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000026 /* minimark.entitlements */,
+				C10000000000000000000008 /* Resources */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000002 /* Commands */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000001 /* ReaderCommands.swift */,
+			);
+			path = Commands;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000033 /* AppAppearance.swift */,
+				D10000000000000000000002 /* AppWindowID.swift */,
+				D10000000000000000000003 /* ChangedRegion.swift */,
+				D10000000000000000000004 /* ReaderExternalApplication.swift */,
+				D10000000000000000000005 /* ReaderFolderWatch.swift */,
+				D10000000000000000000006 /* ReaderMultiFileDisplayMode.swift */,
+				D10000000000000000000032 /* ReaderSidebarSortMode.swift */,
+				D10000000000000000000007 /* ReaderTheme.swift */,
+				D10000000000000000000008 /* ReaderWindowSeed.swift */,
+				D10000000000000000000009 /* SyntaxTheme.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000004 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				D1000000000000000000000A /* ChangedRegionDiffer.swift */,
+				D1000000000000000000000B /* FileChangeWatcher.swift */,
+				D1000000000000000000000C /* FolderChangeWatcher.swift */,
+				D1000000000000000000000D /* MarkdownRenderingService.swift */,
+				D1000000000000000000000E /* MarkdownRuntimePayload.swift */,
+				D10000000000000000000034 /* ReaderFolderWatchAutoOpenPlanner.swift */,
+				D1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift */,
+				D10000000000000000000010 /* ReaderFileActionService.swift */,
+				D10000000000000000000035 /* ReaderSystemNotificationService.swift */,
+				D10000000000000000000011 /* SecurityScopedResourceAccess.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000005 /* Stores */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000012 /* ReaderSettingsStore.swift */,
+				D1000000000000000000003A /* ReaderSidebarFolderWatchOwnership.swift */,
+				D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */,
+				D10000000000000000000013 /* ReaderSidebarDocumentController.swift */,
+				D10000000000000000000014 /* ReaderStore.swift */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000006 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000015 /* MarkdownOpenPanel.swift */,
+				D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */,
+				D10000000000000000000016 /* ReaderBundledAssets.swift */,
+				D10000000000000000000017 /* ReaderCSSFactory.swift */,
+				D10000000000000000000018 /* ReaderError.swift */,
+				D10000000000000000000019 /* ReaderFileRouting.swift */,
+				D1000000000000000000003C /* ReaderSettingsGuidance.swift */,
+				D10000000000000000000036 /* ReaderFolderWatchAutoOpenWarningCoordinator.swift */,
+				D10000000000000000000037 /* ReaderFolderWatchOpenCoordinator.swift */,
+				D1000000000000000000001A /* ReaderFocusedActions.swift */,
+				D1000000000000000000001B /* ReaderHostedWindowController.swift */,
+				D1000000000000000000004E /* ReaderWindowTitleSupport.swift */,
+				D1000000000000000000001C /* ReaderWindowRegistry.swift */,
+				D10000000000000000000038 /* ReaderUITestLaunchConfiguration.swift */,
+				D1000000000000000000001D /* ReaderWindowDefaults.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000007 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D1000000000000000000001E /* AboutWindowView.swift */,
+				C10000000000000000000012 /* Content */,
+				D10000000000000000000039 /* FolderWatchAutoOpenFlowView.swift */,
+				D1000000000000000000001F /* MarkdownWebView.swift */,
+				D10000000000000000000020 /* ReaderSettingsView.swift */,
+				D10000000000000000000021 /* ReaderSidebarWorkspaceView.swift */,
+				D10000000000000000000022 /* ReaderWindowRootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000008 /* Resources */ = {
+				C10000000000000000000013 /* Config */ = {
+					isa = PBXGroup;
+					children = (
+						D10000000000000000000050 /* OpenSourceDefaults.xcconfig */,
+						D10000000000000000000051 /* Signing.local.example.xcconfig */,
+					);
+					path = Config;
+					sourceTree = "<group>";
+				};
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000028 /* codemirror-source-view.js */,
+				D10000000000000000000029 /* markdown-it-attrs.min.js */,
+				D1000000000000000000002A /* markdown-it-deflist.min.js */,
+				D1000000000000000000002B /* markdown-it-footnote.min.js */,
+				D1000000000000000000002C /* markdown-it-task-lists.min.js */,
+				D1000000000000000000002D /* markdown-it.min.js */,
+				D10000000000000000000047 /* MarkdownDocumentIcon.icns */,
+				C10000000000000000000009 /* Vendor */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000009 /* Vendor */ = {
+			isa = PBXGroup;
+			children = (
+				C1000000000000000000000A /* highlightjs */,
+			);
+			path = Vendor;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000A /* highlightjs */ = {
+			isa = PBXGroup;
+			children = (
+				D1000000000000000000002E /* highlight.min.js */,
+			);
+			path = highlightjs;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000B /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000040 /* ReaderSettingsAndModelsTests.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000C /* FolderWatch */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000041 /* FolderWatchCoordinationTests.swift */,
+			);
+			path = FolderWatch;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000D /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000E /* ReaderStore */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */,
+			);
+			path = ReaderStore;
+			sourceTree = "<group>";
+		};
+		C1000000000000000000000F /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000044 /* RenderingAndDiffTests.swift */,
+			);
+			path = Rendering;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000010 /* Infrastructure */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */,
+			);
+			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000011 /* TestSupport */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000046 /* TestDoubles.swift */,
+			);
+			path = TestSupport;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000012 /* Content */ = {
+			isa = PBXGroup;
+			children = (
+				D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */,
+				D1000000000000000000004A /* FolderWatchOptionsSheet.swift */,
+				D10000000000000000000049 /* ReaderStatusBar.swift */,
+				D1000000000000000000004C /* ReaderStatusFormatting.swift */,
+				D10000000000000000000048 /* ReaderTopBar.swift */,
+			);
+			path = Content;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4619224D2F5ABC7E00DD137D /* minimark */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 461922712F5ABC8000DD137D /* Build configuration list for PBXNativeTarget "minimark" */;
+			buildPhases = (
+				4619224A2F5ABC7E00DD137D /* Sources */,
+				4619224B2F5ABC7E00DD137D /* Frameworks */,
+				4619224C2F5ABC7E00DD137D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = minimark;
+			packageProductDependencies = (
+				F10000000000000000000003 /* Differ */,
+			);
+			productName = MarkdownObserver;
+			productReference = 4619224E2F5ABC7E00DD137D /* MarkdownObserver.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4619225C2F5ABC8000DD137D /* minimarkTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 461922742F5ABC8000DD137D /* Build configuration list for PBXNativeTarget "minimarkTests" */;
+			buildPhases = (
+				461922592F5ABC8000DD137D /* Sources */,
+				4619225A2F5ABC8000DD137D /* Frameworks */,
+				4619225B2F5ABC8000DD137D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4619225F2F5ABC8000DD137D /* PBXTargetDependency */,
+			);
+			name = minimarkTests;
+			packageProductDependencies = (
+			);
+			productName = minimarkTests;
+			productReference = 4619225D2F5ABC8000DD137D /* minimarkTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		461922662F5ABC8000DD137D /* minimarkUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 461922772F5ABC8000DD137D /* Build configuration list for PBXNativeTarget "minimarkUITests" */;
+			buildPhases = (
+				461922632F5ABC8000DD137D /* Sources */,
+				461922642F5ABC8000DD137D /* Frameworks */,
+				461922652F5ABC8000DD137D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				461922692F5ABC8000DD137D /* PBXTargetDependency */,
+			);
+			name = minimarkUITests;
+			packageProductDependencies = (
+			);
+			productName = minimarkUITests;
+			productReference = 461922672F5ABC8000DD137D /* minimarkUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		461922462F5ABC7E00DD137D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					4619224D2F5ABC7E00DD137D = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					4619225C2F5ABC8000DD137D = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 4619224D2F5ABC7E00DD137D;
+					};
+					461922662F5ABC8000DD137D = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 4619224D2F5ABC7E00DD137D;
+					};
+				};
+			};
+			buildConfigurationList = 461922492F5ABC7E00DD137D /* Build configuration list for PBXProject "minimark" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 461922452F5ABC7E00DD137D;
+			packageReferences = (
+				F10000000000000000000002 /* XCRemoteSwiftPackageReference "Differ" */,
+			);
+			productRefGroup = 4619224F2F5ABC7E00DD137D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4619224D2F5ABC7E00DD137D /* minimark */,
+				4619225C2F5ABC8000DD137D /* minimarkTests */,
+				461922662F5ABC8000DD137D /* minimarkUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4619224C2F5ABC7E00DD137D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E10000000000000000000025 /* Assets.xcassets in Resources */,
+				E10000000000000000000026 /* codemirror-source-view.js in Resources */,
+				E10000000000000000000027 /* markdown-it-attrs.min.js in Resources */,
+				E10000000000000000000028 /* markdown-it-deflist.min.js in Resources */,
+				E10000000000000000000029 /* markdown-it-footnote.min.js in Resources */,
+				E1000000000000000000002A /* markdown-it-task-lists.min.js in Resources */,
+				E1000000000000000000002B /* markdown-it.min.js in Resources */,
+				E1000000000000000000002C /* highlight.min.js in Resources */,
+				E10000000000000000000047 /* MarkdownDocumentIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4619225B2F5ABC8000DD137D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		461922652F5ABC8000DD137D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4619224A2F5ABC7E00DD137D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E10000000000000000000031 /* AppAppearance.swift in Sources */,
+				E10000000000000000000001 /* ReaderCommands.swift in Sources */,
+				E10000000000000000000002 /* AppWindowID.swift in Sources */,
+				E10000000000000000000003 /* ChangedRegion.swift in Sources */,
+				E10000000000000000000004 /* ReaderExternalApplication.swift in Sources */,
+				E10000000000000000000005 /* ReaderFolderWatch.swift in Sources */,
+				E10000000000000000000006 /* ReaderMultiFileDisplayMode.swift in Sources */,
+				E10000000000000000000030 /* ReaderSidebarSortMode.swift in Sources */,
+				E10000000000000000000007 /* ReaderTheme.swift in Sources */,
+				E10000000000000000000008 /* ReaderWindowSeed.swift in Sources */,
+				E10000000000000000000009 /* SyntaxTheme.swift in Sources */,
+				E1000000000000000000000A /* ChangedRegionDiffer.swift in Sources */,
+				E1000000000000000000000B /* FileChangeWatcher.swift in Sources */,
+				E1000000000000000000000C /* FolderChangeWatcher.swift in Sources */,
+				E10000000000000000000032 /* ReaderFolderWatchAutoOpenPlanner.swift in Sources */,
+				E1000000000000000000000D /* MarkdownRenderingService.swift in Sources */,
+				E1000000000000000000000E /* MarkdownRuntimePayload.swift in Sources */,
+				E1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift in Sources */,
+				E10000000000000000000010 /* ReaderFileActionService.swift in Sources */,
+				E10000000000000000000033 /* ReaderSystemNotificationService.swift in Sources */,
+				E10000000000000000000011 /* SecurityScopedResourceAccess.swift in Sources */,
+				E10000000000000000000012 /* ReaderSettingsStore.swift in Sources */,
+				E10000000000000000000038 /* ReaderSidebarFolderWatchOwnership.swift in Sources */,
+				E10000000000000000000039 /* ReaderSidebarSelectedStoreProjection.swift in Sources */,
+				E10000000000000000000013 /* ReaderSidebarDocumentController.swift in Sources */,
+				E10000000000000000000014 /* ReaderStore.swift in Sources */,
+				E10000000000000000000015 /* MarkdownOpenPanel.swift in Sources */,
+				E10000000000000000000016 /* ReaderBundledAssets.swift in Sources */,
+				E10000000000000000000017 /* ReaderCSSFactory.swift in Sources */,
+				E10000000000000000000018 /* ReaderError.swift in Sources */,
+				E1000000000000000000003A /* ReaderSettingsGuidance.swift in Sources */,
+				E10000000000000000000019 /* ReaderFileRouting.swift in Sources */,
+				E10000000000000000000034 /* ReaderFolderWatchAutoOpenWarningCoordinator.swift in Sources */,
+				E10000000000000000000035 /* ReaderFolderWatchOpenCoordinator.swift in Sources */,
+				E1000000000000000000001A /* ReaderFocusedActions.swift in Sources */,
+				E1000000000000000000001B /* ReaderHostedWindowController.swift in Sources */,
+				E1000000000000000000004E /* ReaderWindowTitleSupport.swift in Sources */,
+				E1000000000000000000001C /* ReaderWindowRegistry.swift in Sources */,
+				E10000000000000000000036 /* ReaderUITestLaunchConfiguration.swift in Sources */,
+				E1000000000000000000001D /* ReaderWindowDefaults.swift in Sources */,
+				E1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift in Sources */,
+				E1000000000000000000001E /* AboutWindowView.swift in Sources */,
+				E1000000000000000000004B /* ContentDocumentSurfaceViews.swift in Sources */,
+				E1000000000000000000004A /* FolderWatchOptionsSheet.swift in Sources */,
+				E10000000000000000000037 /* FolderWatchAutoOpenFlowView.swift in Sources */,
+				E1000000000000000000001F /* MarkdownWebView.swift in Sources */,
+				E10000000000000000000020 /* ReaderSettingsView.swift in Sources */,
+				E10000000000000000000049 /* ReaderStatusBar.swift in Sources */,
+				E1000000000000000000004C /* ReaderStatusFormatting.swift in Sources */,
+				E10000000000000000000048 /* ReaderTopBar.swift in Sources */,
+				E10000000000000000000021 /* ReaderSidebarWorkspaceView.swift in Sources */,
+				E10000000000000000000022 /* ReaderWindowRootView.swift in Sources */,
+				E10000000000000000000023 /* ContentView.swift in Sources */,
+				E10000000000000000000024 /* minimarkApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		461922592F5ABC8000DD137D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E10000000000000000000045 /* FileRoutingAndWatcherTests.swift in Sources */,
+				E10000000000000000000041 /* FolderWatchCoordinationTests.swift in Sources */,
+				E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */,
+				E10000000000000000000040 /* ReaderSettingsAndModelsTests.swift in Sources */,
+				E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */,
+				E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */,
+				E10000000000000000000046 /* TestDoubles.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		461922632F5ABC8000DD137D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1000000000000000000002E /* minimarkUITests.swift in Sources */,
+				E1000000000000000000002F /* minimarkUITestsLaunchTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4619225F2F5ABC8000DD137D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4619224D2F5ABC7E00DD137D /* minimark */;
+			targetProxy = 4619225E2F5ABC8000DD137D /* PBXContainerItemProxy */;
+		};
+		461922692F5ABC8000DD137D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4619224D2F5ABC7E00DD137D /* minimark */;
+			targetProxy = 461922682F5ABC8000DD137D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4619226F2F5ABC8000DD137D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		461922702F5ABC8000DD137D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		461922722F5ABC8000DD137D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = minimark/App/minimark.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = minimark/App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				OTHER_CODE_SIGN_FLAGS = "$(inherited) --deep";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
+				PRODUCT_MODULE_NAME = minimark;
+				PRODUCT_NAME = MarkdownObserver;
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		461922732F5ABC8000DD137D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = minimark/App/minimark.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 5;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = minimark/App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
+				PRODUCT_MODULE_NAME = minimark;
+				PRODUCT_NAME = MarkdownObserver;
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		461922752F5ABC8000DD137D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TESTS_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MarkdownObserver.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MarkdownObserver";
+			};
+			name = Debug;
+		};
+		461922762F5ABC8000DD137D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TESTS_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MarkdownObserver.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MarkdownObserver";
+			};
+			name = Release;
+		};
+		461922782F5ABC8000DD137D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UITESTS_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = minimark;
+			};
+			name = Debug;
+		};
+		461922792F5ABC8000DD137D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UITESTS_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = minimark;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		461922492F5ABC7E00DD137D /* Build configuration list for PBXProject "minimark" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4619226F2F5ABC8000DD137D /* Debug */,
+				461922702F5ABC8000DD137D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		461922712F5ABC8000DD137D /* Build configuration list for PBXNativeTarget "minimark" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				461922722F5ABC8000DD137D /* Debug */,
+				461922732F5ABC8000DD137D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		461922742F5ABC8000DD137D /* Build configuration list for PBXNativeTarget "minimarkTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				461922752F5ABC8000DD137D /* Debug */,
+				461922762F5ABC8000DD137D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		461922772F5ABC8000DD137D /* Build configuration list for PBXNativeTarget "minimarkUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				461922782F5ABC8000DD137D /* Debug */,
+				461922792F5ABC8000DD137D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F10000000000000000000002 /* XCRemoteSwiftPackageReference "Differ" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tonyarnold/Differ.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F10000000000000000000003 /* Differ */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000002 /* XCRemoteSwiftPackageReference "Differ" */;
+			productName = Differ;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 461922462F5ABC7E00DD137D /* Project object */;
+}

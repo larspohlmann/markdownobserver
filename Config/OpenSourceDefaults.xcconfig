@@ -1,0 +1,13 @@
+// Public-safe defaults. Contributors can override locally via Signing.local.xcconfig.
+
+// Neutral bundle IDs for open-source distribution.
+APP_BUNDLE_IDENTIFIER = org.markdownobserver.app
+TESTS_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).tests
+UITESTS_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).uitests
+
+// Avoid requiring personal/team signing for local builds and tests.
+CODE_SIGNING_ALLOWED = NO
+CODE_SIGNING_REQUIRED = NO
+
+// Optional local overrides (gitignored), for distribution signing.
+#include? "Signing.local.xcconfig"

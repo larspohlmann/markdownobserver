@@ -1,0 +1,27 @@
+# Build outputs
+build/
+DerivedData/
+buildServer.json
+
+# macOS / Finder
+.DS_Store
+
+# Editor / local tooling
+.vscode/
+.xcodebuildmcp/
+
+# Python virtualenv used for local tooling
+.venv/
+
+# Xcode user-specific metadata
+minimark.xcodeproj/xcuserdata/
+*.xcresult/
+
+# Local signing and release environment overrides
+Config/Signing.local.xcconfig
+.env
+.env.*
+!.env.example
+
+# Ignore repository workflow/config directory
+.github/

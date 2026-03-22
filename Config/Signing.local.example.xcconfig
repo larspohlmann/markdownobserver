@@ -1,0 +1,15 @@
+// Copy this file to Config/Signing.local.xcconfig and adjust for your account.
+// This file is safe to commit as an example; Signing.local.xcconfig is gitignored.
+
+// Re-enable signing when you want a distributable build.
+CODE_SIGNING_ALLOWED = YES
+CODE_SIGNING_REQUIRED = YES
+CODE_SIGN_STYLE = Automatic
+
+// Your Apple Developer Team ID (example placeholder).
+DEVELOPMENT_TEAM = YOURTEAMID
+
+// Optional: custom bundle IDs.
+// APP_BUNDLE_IDENTIFIER = com.yourdomain.MarkdownObserver
+// TESTS_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).tests
+// UITESTS_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).uitests

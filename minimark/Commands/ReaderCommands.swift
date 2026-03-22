@@ -1,0 +1,303 @@
+import AppKit
+import SwiftUI
+
+struct ReaderCommands: Commands {
+    @ObservedObject var settingsStore: ReaderSettingsStore
+    let multiFileDisplayMode: ReaderMultiFileDisplayMode
+
+    @Environment(\.openWindow) private var openWindow
+    @FocusedValue(\.readerOpenDocument) private var openDocument
+    @FocusedValue(\.readerOpenDocumentInCurrentWindow) private var openInCurrentWindow
+    @FocusedValue(\.readerOpenAdditionalDocument) private var openAdditionalDocument
+    @FocusedValue(\.readerWatchFolder) private var watchFolder
+    @FocusedValue(\.readerStartRecentFolderWatch) private var startRecentFolderWatch
+    @FocusedValue(\.readerStopFolderWatch) private var stopFolderWatch
+    @FocusedValue(\.readerHasActiveFolderWatch) private var hasActiveFolderWatch
+    @FocusedValue(\.readerDocumentViewModeContext) private var documentViewModeContext
+    @FocusedValue(\.readerChangedRegionNavigation) private var changedRegionNavigation
+    @FocusedValue(\.readerSourceEditingContext) private var sourceEditingContext
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Open Markdown...") {
+                openMarkdown()
+            }
+            .keyboardShortcut("o", modifiers: [.command])
+
+            Button("Open Markdown in Current Window...") {
+                openMarkdownInCurrentWindow()
+            }
+
+            Button(multiFileDisplayMode.secondaryActionLabel) {
+                openMarkdownInSidebar()
+            }
+            .keyboardShortcut("t", modifiers: [.command])
+
+            Button("Open Markdown File(s) in New Window(s)...") {
+                openMarkdownInNewWindows()
+            }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+
+            Menu("Recent Opened Files") {
+                recentOpenedFilesMenuContent()
+            }
+            .disabled(settingsStore.currentSettings.recentManuallyOpenedFiles.isEmpty)
+
+            Divider()
+
+            Button("Watch Folder...") {
+                watchFolderFromPicker()
+            }
+            .keyboardShortcut("w", modifiers: [.command, .option])
+            .disabled(watchFolder == nil)
+
+            Button("Stop Watching Folder") {
+                stopFolderWatch?()
+            }
+            .disabled(!(hasActiveFolderWatch ?? false))
+        }
+
+        CommandMenu("Watch") {
+            Button("Watch Folder...") {
+                watchFolderFromPicker()
+            }
+            .keyboardShortcut("w", modifiers: [.command, .option])
+            .disabled(watchFolder == nil)
+
+            Button("Stop Watching Folder") {
+                stopFolderWatch?()
+            }
+            .disabled(!(hasActiveFolderWatch ?? false))
+
+            Menu("Recent Watched Folders") {
+                recentWatchedFoldersMenuContent()
+            }
+            .disabled(settingsStore.currentSettings.recentWatchedFolders.isEmpty)
+        }
+
+        CommandGroup(replacing: .saveItem) {
+            Button("Save Source Changes") {
+                sourceEditingContext?.saveIfAvailable()
+            }
+            .keyboardShortcut("s", modifiers: [.command])
+            .disabled(!(sourceEditingContext?.canSave ?? false))
+        }
+
+        CommandGroup(after: .toolbar) {
+            Button("Edit Source") {
+                sourceEditingContext?.startIfAvailable()
+            }
+            .keyboardShortcut("e", modifiers: [.command])
+            .disabled(!(sourceEditingContext?.canStartEditing ?? false))
+
+            Divider()
+
+            Button("Show Preview") {
+                documentViewModeContext?.setMode(.preview)
+            }
+            .disabled(!(documentViewModeContext?.canSetMode ?? false) || documentViewModeContext?.currentMode == .preview)
+
+            Button("Show Split") {
+                documentViewModeContext?.setMode(.split)
+            }
+            .disabled(!(documentViewModeContext?.canSetMode ?? false) || documentViewModeContext?.currentMode == .split)
+
+            Button("Show Source") {
+                documentViewModeContext?.setMode(.source)
+            }
+            .disabled(!(documentViewModeContext?.canSetMode ?? false) || documentViewModeContext?.currentMode == .source)
+
+            Button("Cycle Document View") {
+                documentViewModeContext?.toggleMode()
+            }
+            .disabled(!(documentViewModeContext?.canSetMode ?? false))
+
+            Divider()
+
+            Button("Previous Change") {
+                changedRegionNavigation?(.previous)
+            }
+            .disabled(!(changedRegionNavigation?.canNavigate ?? false))
+
+            Button("Next Change") {
+                changedRegionNavigation?(.next)
+            }
+            .disabled(!(changedRegionNavigation?.canNavigate ?? false))
+        }
+
+        CommandGroup(replacing: .appInfo) {
+            Button("About MarkdownObserver") {
+                openWindow(id: AppWindowID.about.rawValue)
+            }
+        }
+    }
+
+    private func openMarkdown() {
+        openPickedMarkdown(using: openDocumentAction)
+    }
+
+    private func openMarkdownInCurrentWindow() {
+        openPickedMarkdown(using: openInCurrentWindowAction)
+    }
+
+    private func openMarkdownInSidebar() {
+        openPickedMarkdown(using: openAdditionalDocumentAction)
+    }
+
+    private func openMarkdownInNewWindows() {
+        guard let urls = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: true) else {
+            return
+        }
+
+        for url in urls {
+            openMarkdownInNewWindow(url)
+        }
+    }
+
+    @ViewBuilder
+    private func recentOpenedFilesMenuContent() -> some View {
+        if settingsStore.currentSettings.recentManuallyOpenedFiles.isEmpty {
+            Text("No recent manually opened files")
+        } else {
+            ForEach(settingsStore.currentSettings.recentManuallyOpenedFiles) { entry in
+                Button(ReaderRecentHistory.menuTitle(for: entry, among: settingsStore.currentSettings.recentManuallyOpenedFiles)) {
+                    openRecentOpenedFile(entry)
+                }
+            }
+
+            Divider()
+
+            Button("Clear History") {
+                settingsStore.clearRecentManuallyOpenedFiles()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func recentWatchedFoldersMenuContent() -> some View {
+        if settingsStore.currentSettings.recentWatchedFolders.isEmpty {
+            Text("No recent watched folders")
+        } else {
+            ForEach(settingsStore.currentSettings.recentWatchedFolders) { entry in
+                Button(ReaderRecentHistory.menuTitle(for: entry, among: settingsStore.currentSettings.recentWatchedFolders)) {
+                    startRecentWatchedFolder(entry)
+                }
+            }
+
+            Divider()
+
+            Button("Clear History") {
+                settingsStore.clearRecentWatchedFolders()
+            }
+        }
+    }
+
+    private func openRecentOpenedFile(_ entry: ReaderRecentOpenedFile) {
+        if postRecentRequest(
+            notificationName: ReaderCommandNotification.openRecentFile,
+            payloadKey: ReaderCommandNotification.recentFileEntryKey,
+            payload: entry
+        ) {
+            return
+        }
+
+        openWindow(value: ReaderWindowSeed(recentOpenedFile: entry))
+    }
+
+    private func startRecentWatchedFolder(_ entry: ReaderRecentWatchedFolder) {
+        if postRecentRequest(
+            notificationName: ReaderCommandNotification.prepareRecentWatchedFolder,
+            payloadKey: ReaderCommandNotification.recentWatchedFolderEntryKey,
+            payload: entry
+        ) {
+            return
+        }
+
+        openWindow(value: ReaderWindowSeed(recentWatchedFolder: entry))
+    }
+
+    private func openPickedMarkdown(using action: ((URL) -> Void)?) {
+        guard let url = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: false)?.first else {
+            return
+        }
+
+        routePickedMarkdown(url, using: action)
+    }
+
+    private func routePickedMarkdown(_ url: URL, using action: ((URL) -> Void)?) {
+        if let action {
+            action(url)
+            return
+        }
+
+        openMarkdownInNewWindow(url)
+    }
+
+    private func openMarkdownInNewWindow(_ url: URL) {
+        settingsStore.addRecentManuallyOpenedFile(url)
+        openWindow(value: ReaderWindowSeed(fileURL: url))
+    }
+
+    private func postRecentRequest(
+        notificationName: Notification.Name,
+        payloadKey: String,
+        payload: Any
+    ) -> Bool {
+        guard let targetWindowNumber = targetWindowNumber else {
+            return false
+        }
+
+        NotificationCenter.default.post(
+            name: notificationName,
+            object: nil,
+            userInfo: [
+                ReaderCommandNotification.targetWindowNumberKey: targetWindowNumber,
+                payloadKey: payload
+            ]
+        )
+        return true
+    }
+
+    private var targetWindowNumber: Int? {
+        NSApp.mainWindow?.windowNumber
+    }
+
+    private var openDocumentAction: ((URL) -> Void)? {
+        openDocument.map { action in
+            action.callAsFunction
+        }
+    }
+
+    private var openInCurrentWindowAction: ((URL) -> Void)? {
+        openInCurrentWindow.map { action in
+            action.callAsFunction
+        }
+    }
+
+    private var openAdditionalDocumentAction: ((URL) -> Void)? {
+        openAdditionalDocument.map { action in
+            action.callAsFunction
+        }
+    }
+
+    private func watchFolderFromPicker() {
+        guard let folderURL = pickFolder() else {
+            return
+        }
+
+        watchFolder?(folderURL)
+    }
+
+    private func pickFolder() -> URL? {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Folder to Watch"
+        panel.message = "Select a folder, then choose watch options."
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.prompt = "Choose Folder"
+
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+}

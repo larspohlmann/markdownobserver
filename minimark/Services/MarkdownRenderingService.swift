@@ -1,0 +1,62 @@
+import Foundation
+
+struct RenderedMarkdown: Equatable, Sendable {
+    let htmlDocument: String
+    let changedRegions: [ChangedRegion]
+    let renderedAt: Date
+}
+
+protocol MarkdownRendering {
+    func render(
+        markdown: String,
+        changedRegions: [ChangedRegion],
+        unsavedChangedRegions: [ChangedRegion],
+        readerTheme: ReaderTheme,
+        syntaxTheme: SyntaxThemeKind,
+        baseFontSize: Double
+    ) throws -> RenderedMarkdown
+}
+
+struct MarkdownRenderingService: MarkdownRendering {
+    private let cssFactory: ReaderCSSFactory
+    private let payloadEncoder: MarkdownRuntimePayloadEncoding
+    private let runtimeAssetResolver: ReaderRuntimeAssetResolving
+
+    init(
+        cssFactory: ReaderCSSFactory = ReaderCSSFactory(),
+        payloadEncoder: MarkdownRuntimePayloadEncoding = JSONBase64MarkdownRuntimePayloadEncoder(),
+        runtimeAssetResolver: ReaderRuntimeAssetResolving = BundledReaderRuntimeAssetResolver()
+    ) {
+        self.cssFactory = cssFactory
+        self.payloadEncoder = payloadEncoder
+        self.runtimeAssetResolver = runtimeAssetResolver
+    }
+
+    func render(
+        markdown: String,
+        changedRegions: [ChangedRegion],
+        unsavedChangedRegions: [ChangedRegion],
+        readerTheme: ReaderTheme,
+        syntaxTheme: SyntaxThemeKind,
+        baseFontSize: Double
+    ) throws -> RenderedMarkdown {
+        let runtimeAssets = try runtimeAssetResolver.requiredRuntimeAssets()
+        let payloadBase64 = try payloadEncoder.makePayloadBase64(
+            markdown: markdown,
+            changedRegions: changedRegions,
+            unsavedChangedRegions: unsavedChangedRegions
+        )
+        let css = cssFactory.makeCSS(theme: readerTheme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
+        let htmlDocument = cssFactory.makeHTMLDocument(
+            css: css,
+            payloadBase64: payloadBase64,
+            runtimeAssets: runtimeAssets
+        )
+
+        return RenderedMarkdown(
+            htmlDocument: htmlDocument,
+            changedRegions: changedRegions,
+            renderedAt: Date()
+        )
+    }
+}
