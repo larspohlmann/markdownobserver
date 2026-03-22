@@ -20,23 +20,45 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Show runner info
+        run: |
+          uname -a
+          uname -m
+          sw_vers
+
       - name: Show Xcode version
         run: xcodebuild -version
 
       - name: Show available schemes
         run: xcodebuild -list -project minimark.xcodeproj
 
+      - name: Resolve package dependencies
+        run: |
+          set -o pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project minimark.xcodeproj \
+            -scheme minimark \
+            | tee resolve-packages.log
+
       - name: Build for testing
         run: |
           set -o pipefail
-          xcodebuild build-for-testing \
-            -project minimark.xcodeproj \
-            -scheme minimark \
-            -destination 'platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY='' \
-            | tee build-for-testing.log
+          build_for_testing() {
+            xcodebuild build-for-testing \
+              -project minimark.xcodeproj \
+              -scheme minimark \
+              -destination 'platform=macOS' \
+              -resultBundlePath BuildForTestingResults.xcresult \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY=''
+          }
+
+          build_for_testing | tee build-for-testing.log || {
+            echo "First build-for-testing attempt failed; retrying once after 5s..."
+            sleep 5
+            build_for_testing | tee -a build-for-testing.log
+          }
 
       - name: Run macOS tests
         run: |
@@ -58,7 +80,9 @@ jobs:
         with:
           name: macos-test-debug-artifacts
           path: |
+            resolve-packages.log
             build-for-testing.log
             test.log
+            BuildForTestingResults.xcresult
             TestResults.xcresult
           if-no-files-found: warn
