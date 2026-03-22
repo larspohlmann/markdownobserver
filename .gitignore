@@ -15,6 +15,7 @@ buildServer.json
 
 # Xcode user-specific metadata
 minimark.xcodeproj/xcuserdata/
+minimark.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcresult/
 
 # Local signing and release environment overrides
