@@ -135,6 +135,82 @@ struct FolderWatchCoordinationTests {
         #expect(!coordinator.hasPendingEvents)
     }
 
+    @Test func folderWatchEventDispatchCoordinatorFallsBackToPrimaryOpenWhenAdditionalHandlerIsMissing() {
+        let session = ReaderFolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/tmp/watched"),
+            options: .default,
+            startedAt: Date(timeIntervalSince1970: 99)
+        )
+        let events = [
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added)
+        ]
+        var openedPrimaryEvents: [ReaderFolderWatchChangeEvent] = []
+
+        let coordinator = ReaderFolderWatchEventDispatchCoordinator()
+        coordinator.dispatchLiveEvents(events, session: session, origin: .folderWatchAutoOpen) { event, _, _ in
+            openedPrimaryEvents.append(event)
+        }
+
+        #expect(openedPrimaryEvents == [events[0]])
+    }
+
+    @Test func folderWatchEventDispatchCoordinatorUsesAdditionalHandlerForLiveEventsWhenConfigured() {
+        let session = ReaderFolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/tmp/watched"),
+            options: .default,
+            startedAt: Date(timeIntervalSince1970: 99)
+        )
+        let events = [
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .modified, previousMarkdown: "# before")
+        ]
+        var additionalOpenEvents: [ReaderFolderWatchChangeEvent] = []
+        var openedPrimaryEvents: [ReaderFolderWatchChangeEvent] = []
+
+        var coordinator = ReaderFolderWatchEventDispatchCoordinator()
+        coordinator.setAdditionalOpenHandler { event, _, _ in
+            additionalOpenEvents.append(event)
+        }
+
+        coordinator.dispatchLiveEvents(events, session: session, origin: .folderWatchAutoOpen) { event, _, _ in
+            openedPrimaryEvents.append(event)
+        }
+
+        #expect(additionalOpenEvents == events)
+        #expect(openedPrimaryEvents.isEmpty)
+    }
+
+    @Test func folderWatchEventDispatchCoordinatorDispatchesInitialBatchAsPrimaryThenAdditional() {
+        let session = ReaderFolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/tmp/watched"),
+            options: .default,
+            startedAt: Date(timeIntervalSince1970: 99)
+        )
+        let events = [
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added),
+            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/third.md"), kind: .added)
+        ]
+        var primaryOpenCalls: [(ReaderFolderWatchChangeEvent, ReaderOpenOrigin)] = []
+        var additionalOpenCalls: [(ReaderFolderWatchChangeEvent, ReaderOpenOrigin)] = []
+
+        var coordinator = ReaderFolderWatchEventDispatchCoordinator()
+        coordinator.setAdditionalOpenHandler { event, _, origin in
+            additionalOpenCalls.append((event, origin))
+        }
+
+        coordinator.dispatchInitialEvents(events, session: session) { event, _, origin in
+            primaryOpenCalls.append((event, origin))
+        }
+
+        #expect(primaryOpenCalls.count == 1)
+        #expect(primaryOpenCalls.first?.0 == events[0])
+        #expect(primaryOpenCalls.first?.1 == .folderWatchInitialBatchAutoOpen)
+        #expect(additionalOpenCalls.map(\.0) == Array(events.dropFirst()))
+        #expect(additionalOpenCalls.map(\.1) == [.folderWatchInitialBatchAutoOpen, .folderWatchInitialBatchAutoOpen])
+    }
+
     @Test @MainActor func folderWatchAutoOpenPlannerUsesAgedBaselineForRapidSuccessiveModifications() async {
         var now = Date(timeIntervalSince1970: 1_700_000_000)
         let planner = ReaderFolderWatchAutoOpenPlanner(
@@ -336,6 +412,59 @@ struct FolderWatchCoordinationTests {
 
         #expect(didFocus)
         #expect(focusedURLs == [ReaderFileRouting.normalizedFileURL(requestedURL)])
+    }
+
+    @Test @MainActor func readerWindowCoordinatorResolvesTitleFromSelectedDocumentState() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+
+        let title = coordinator.resolveWindowTitle(activeFolderWatch: nil)
+
+        #expect(title == harness.controller.selectedWindowTitle)
+    }
+
+    @Test @MainActor func readerWindowCoordinatorQueuesFolderWatchOpenEventsUntilFlushIsPossible() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+        let queuedURL = URL(fileURLWithPath: "/tmp/queued-from-window-coordinator.md")
+        let queuedEvent = ReaderFolderWatchChangeEvent(
+            fileURL: queuedURL,
+            kind: .modified,
+            previousMarkdown: "# Before"
+        )
+
+        coordinator.enqueueFolderWatchOpen(
+            queuedEvent,
+            folderWatchSession: nil,
+            origin: .folderWatchAutoOpen,
+            onFlushRequested: {}
+        )
+
+        let blockedBatch = coordinator.consumeQueuedFolderWatchOpenBatchIfPossible(
+            canFlushImmediately: false,
+            onFlushRequested: {}
+        )
+        #expect(blockedBatch == nil)
+
+        let flushBatch = coordinator.consumeQueuedFolderWatchOpenBatchIfPossible(
+            canFlushImmediately: true,
+            onFlushRequested: {}
+        )
+        #expect(flushBatch?.fileURLs == [ReaderFileRouting.normalizedFileURL(queuedURL)])
+        #expect(
+            flushBatch?.initialDiffBaselineMarkdownByURL[ReaderFileRouting.normalizedFileURL(queuedURL)] == "# Before"
+        )
+        #expect(flushBatch?.openOrigin == .folderWatchAutoOpen)
     }
 
     @Test @MainActor func focusNotificationTargetFallsBackToWatchedFolderWindow() {

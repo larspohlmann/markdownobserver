@@ -102,7 +102,10 @@ final class minimarkUITests: XCTestCase {
         let sheet = app.descendants(matching: .any).matching(identifier: watchFolderSheetIdentifier).firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
 
-        let includeSubfoldersToggle = sheet.switches["Include subfolders"]
+        let includeSubfoldersToggle = toggleElement(
+            in: sheet,
+            label: "Include subfolders"
+        )
         XCTAssertTrue(includeSubfoldersToggle.waitForExistence(timeout: 2))
         if includeSubfoldersToggle.value as? String != "1" {
             includeSubfoldersToggle.tap()
@@ -155,5 +158,14 @@ final class minimarkUITests: XCTestCase {
         }
 
         XCTFail("Condition not met within \(timeout) seconds")
+    }
+
+    private func toggleElement(in sheet: XCUIElement, label: String) -> XCUIElement {
+        let checkbox = sheet.checkBoxes[label]
+        if checkbox.exists {
+            return checkbox
+        }
+
+        return sheet.switches[label]
     }
 }

@@ -1,0 +1,107 @@
+import AppKit
+import Combine
+import Foundation
+
+private struct ReaderWindowStoreCallbackConfigurator {
+    let onOpenAdditionalDocument: (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
+
+    func configure(_ store: ReaderStore) {
+        store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, folderWatchSession, origin in
+            onOpenAdditionalDocument(
+                event.fileURL,
+                folderWatchSession,
+                origin,
+                event.kind == .modified ? event.previousMarkdown : nil
+            )
+        }
+    }
+}
+
+@MainActor
+final class ReaderWindowCoordinator: ObservableObject {
+    let objectWillChange = ObservableObjectPublisher()
+
+    private let settingsStore: ReaderSettingsStore
+    private let sidebarDocumentController: ReaderSidebarDocumentController
+    private let folderWatchOpenCoordinator = ReaderFolderWatchOpenCoordinator()
+
+    init(
+        settingsStore: ReaderSettingsStore,
+        sidebarDocumentController: ReaderSidebarDocumentController
+    ) {
+        self.settingsStore = settingsStore
+        self.sidebarDocumentController = sidebarDocumentController
+    }
+
+    var hasPendingFolderWatchOpenEvents: Bool {
+        folderWatchOpenCoordinator.hasPendingEvents
+    }
+
+    func configureStoreCallbacks(
+        onOpenAdditionalDocument: @escaping (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
+    ) {
+        sidebarDocumentController.setStoreConfigurator { store in
+            ReaderWindowStoreCallbackConfigurator(
+                onOpenAdditionalDocument: onOpenAdditionalDocument
+            ).configure(store)
+        }
+
+        ReaderWindowStoreCallbackConfigurator(
+            onOpenAdditionalDocument: onOpenAdditionalDocument
+        ).configure(sidebarDocumentController.selectedReaderStore)
+    }
+
+    func sharedFolderWatchState() -> (session: ReaderFolderWatchSession?, canStop: Bool) {
+        (
+            sidebarDocumentController.activeFolderWatchSession,
+            sidebarDocumentController.canStopFolderWatch
+        )
+    }
+
+    func resolveWindowTitle(activeFolderWatch: ReaderFolderWatchSession?) -> String {
+        ReaderWindowTitleFormatter.resolveWindowTitle(
+            documentTitle: sidebarDocumentController.selectedWindowTitle,
+            activeFolderWatch: activeFolderWatch,
+            hasUnacknowledgedExternalChange: sidebarDocumentController.selectedHasUnacknowledgedExternalChange
+        )
+    }
+
+    func enqueueFolderWatchOpen(
+        _ event: ReaderFolderWatchChangeEvent,
+        folderWatchSession: ReaderFolderWatchSession?,
+        origin: ReaderOpenOrigin,
+        onFlushRequested: @escaping @MainActor () -> Void
+    ) {
+        folderWatchOpenCoordinator.enqueue(
+            event,
+            folderWatchSession: folderWatchSession,
+            origin: origin,
+            onFlushRequested: onFlushRequested
+        )
+    }
+
+    func consumeQueuedFolderWatchOpenBatchIfPossible(
+        canFlushImmediately: Bool,
+        onFlushRequested: @escaping @MainActor () -> Void
+    ) -> ReaderFolderWatchOpenBatch? {
+        folderWatchOpenCoordinator.consumeBatchIfPossible(
+            canFlushImmediately: canFlushImmediately,
+            onFlushRequested: onFlushRequested
+        )
+    }
+
+    func registerWindow(
+        _ hostWindow: NSWindow?,
+        activeFolderWatch: ReaderFolderWatchSession?
+    ) {
+        ReaderWindowRegistry.shared.registerWindow(
+            hostWindow,
+            focusDocument: { [sidebarDocumentController] fileURL in
+                sidebarDocumentController.focusDocument(at: fileURL)
+            },
+            watchedFolderURLProvider: {
+                activeFolderWatch?.folderURL
+            }
+        )
+    }
+}

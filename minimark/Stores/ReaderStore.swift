@@ -2,44 +2,6 @@ import Foundation
 import Combine
 import OSLog
 
-enum ReaderDocumentViewMode: String, CaseIterable, Sendable {
-    case preview
-    case split
-    case source
-
-    var displayName: String {
-        switch self {
-        case .preview:
-            return "Preview"
-        case .split:
-            return "Split"
-        case .source:
-            return "Source"
-        }
-    }
-
-    var next: ReaderDocumentViewMode {
-        switch self {
-        case .preview:
-            return .split
-        case .split:
-            return .source
-        case .source:
-            return .preview
-        }
-    }
-}
-
-enum ReaderDocumentLoadState: Equatable, Sendable {
-    case ready
-    case settlingAutoOpen
-}
-
-enum ReaderStatusBarTimestamp: Equatable, Sendable {
-    case updated(Date)
-    case lastModified(Date)
-}
-
 @MainActor
 final class ReaderStore: ObservableObject {
     private static let draftPreviewRenderDebounceInterval: Duration = .milliseconds(5)
@@ -80,31 +42,32 @@ final class ReaderStore: ObservableObject {
 
     private let renderer: MarkdownRendering
     private let differ: ChangedRegionDiffering
-    private let fileWatcher: FileChangeWatching
-    private let folderWatcher: FolderChangeWatching
-    private let settingsStore: ReaderSettingsStoring
-    private let securityScope: SecurityScopedResourceAccessing
+    let fileWatcher: FileChangeWatching
+    let folderWatcher: FolderChangeWatching
+    let settingsStore: ReaderSettingsStoring
+    let securityScope: SecurityScopedResourceAccessing
     private let fileActions: ReaderFileActionHandling
-    private let systemNotifier: ReaderSystemNotifying
-    private let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
+    let systemNotifier: ReaderSystemNotifying
+    let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
+    let sourceEditingCoordinator = ReaderSourceEditingCoordinator()
     private let autoOpenSettlingInterval: TimeInterval
-    private let requestWatchedFolderReauthorization: (URL) -> URL?
+    let requestWatchedFolderReauthorization: (URL) -> URL?
 
     private var settingsCancellable: AnyCancellable?
-    private var securityScopeToken: SecurityScopedAccessToken?
-    private var folderSecurityScopeToken: SecurityScopedAccessToken?
-    private var currentAccessibleFileURL: URL?
-    private var currentAccessibleFileURLSource: String?
-    private var currentOpenOrigin: ReaderOpenOrigin = .manual
-    private var savedMarkdown: String = ""
-    private var draftMarkdown: String?
+    var securityScopeToken: SecurityScopedAccessToken?
+    var folderSecurityScopeToken: SecurityScopedAccessToken?
+    var currentAccessibleFileURL: URL?
+    var currentAccessibleFileURLSource: String?
+    var currentOpenOrigin: ReaderOpenOrigin = .manual
+    var savedMarkdown: String = ""
+    var draftMarkdown: String?
     private var pendingSavedDraftDiffBaselineMarkdown: String?
     private var pendingAutoOpenSettlingContext: PendingAutoOpenSettlingContext?
     private var pendingAutoOpenSettlingTask: Task<Void, Never>?
     private var pendingDraftPreviewRenderTask: Task<Void, Never>?
-    private var openAdditionalDocumentForFolderWatchEvent: ((ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void)?
-    private var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
-    private var onFolderWatchStopped: (() -> Void)?
+    private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
+    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
+    var onFolderWatchStopped: (() -> Void)?
 
     init(
         renderer: MarkdownRendering,
@@ -267,7 +230,7 @@ final class ReaderStore: ObservableObject {
     func setOpenAdditionalDocumentForFolderWatchEventHandler(
         _ handler: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
     ) {
-        openAdditionalDocumentForFolderWatchEvent = handler
+        folderWatchEventDispatchCoordinator.setAdditionalOpenHandler(handler)
     }
 
     func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
@@ -295,131 +258,21 @@ final class ReaderStore: ObservableObject {
         onFolderWatchStopped = onStopped
     }
 
-    func startWatchingFolder(folderURL: URL, options: ReaderFolderWatchOptions) {
-        do {
-            prepareForFolderWatchStart()
-
-            let accessibleFolderURL = folderURL
-            let session = try activateFolderWatch(
-                folderURL: accessibleFolderURL,
-                options: options
-            )
-
-            finishStartingFolderWatch(session, accessibleFolderURL: accessibleFolderURL)
-            try performInitialFolderWatchAutoOpenIfNeeded(
-                folderURL: accessibleFolderURL,
-                session: session
-            )
-        } catch {
-            resetFolderWatchState(notifyIfNeeded: false)
-            handle(error)
-        }
-    }
-
-    func stopWatchingFolder() {
-        let hadActiveFolderWatch = activeFolderWatchSession != nil
-        resetFolderWatchState(notifyIfNeeded: hadActiveFolderWatch)
-
-        if fileURL != nil {
-            startWatchingCurrentFile()
-        }
-    }
-
-    private func prepareForFolderWatchStart() {
-        stopWatchingFolder()
-        folderWatchAutoOpenWarning = nil
-        folderWatchAutoOpenPlanner.resetTransientState()
-    }
-
-    private func activateFolderWatch(
-        folderURL: URL,
-        options: ReaderFolderWatchOptions
-    ) throws -> ReaderFolderWatchSession {
-        folderSecurityScopeToken = securityScope.beginAccess(to: folderURL)
-
-        try folderWatcher.startWatching(
-            folderURL: folderURL,
-            includeSubfolders: options.scope == .includeSubfolders
-        ) { [weak self] changedMarkdownEvents in
-            guard let self else {
-                return
-            }
-
-            Task { @MainActor [self] in
-                self.handleObservedWatchedFolderChanges(changedMarkdownEvents)
-            }
-        }
-
-        let session = ReaderFolderWatchSession(
-            folderURL: Self.normalizedFileURL(folderURL),
-            options: options,
-            startedAt: .now
-        )
+    func setActiveFolderWatchSession(_ session: ReaderFolderWatchSession?) {
         activeFolderWatchSession = session
-        return session
     }
 
-    private func finishStartingFolderWatch(
-        _ session: ReaderFolderWatchSession,
-        accessibleFolderURL: URL
-    ) {
-        settingsStore.addRecentWatchedFolder(accessibleFolderURL, options: session.options)
-        onFolderWatchStarted?(session)
-        lastWatchedFolderEventAt = nil
-
-        if fileURL != nil {
-            startWatchingCurrentFile()
-        }
+    func setLastWatchedFolderEventAt(_ date: Date?) {
+        lastWatchedFolderEventAt = date
     }
 
-    private func performInitialFolderWatchAutoOpenIfNeeded(
-        folderURL: URL,
-        session: ReaderFolderWatchSession
-    ) throws {
-        guard session.options.openMode == .openAllMarkdownFiles else {
-            return
-        }
-
-        let initialPlan = try initialFolderWatchAutoOpenPlan(
-            folderURL: folderURL,
-            session: session
-        )
-
-        folderWatchAutoOpenWarning = initialPlan.warning
-        openInitialMarkdownFilesFromWatchedFolder(initialPlan.autoOpenEvents, session: session)
+    func setFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
+        folderWatchAutoOpenWarning = warning
     }
 
-    private func initialFolderWatchAutoOpenPlan(
-        folderURL: URL,
-        session: ReaderFolderWatchSession
-    ) throws -> ReaderFolderWatchAutoOpenPlan {
-        let markdownURLs = try folderWatcher.markdownFiles(
-            in: folderURL,
-            includeSubfolders: session.options.scope == .includeSubfolders
-        )
-        let initialMarkdownEvents = markdownURLs.map {
-            ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
-        }
-
-        return folderWatchAutoOpenPlanner.initialPlan(
-            for: initialMarkdownEvents,
-            activeSession: session,
-            currentDocumentFileURL: fileURLForCurrentDocument
-        )
-    }
-
-    private func resetFolderWatchState(notifyIfNeeded: Bool) {
-        folderWatcher.stopWatching()
-        folderWatchAutoOpenPlanner.resetTransientState()
-        folderSecurityScopeToken?.endAccess()
-        folderSecurityScopeToken = nil
-        activeFolderWatchSession = nil
-        lastWatchedFolderEventAt = nil
-        folderWatchAutoOpenWarning = nil
-
-        if notifyIfNeeded {
-            onFolderWatchStopped?()
-        }
+    func noteObservedExternalChange() {
+        lastExternalChangeAt = Date()
+        hasUnacknowledgedExternalChange = true
     }
 
     func clearOpenDocument() {
@@ -460,237 +313,7 @@ final class ReaderStore: ObservableObject {
         folderWatchAutoOpenWarning = nil
     }
 
-    func openFile(at url: URL) {
-        openFile(at: url, origin: .manual)
-    }
-
-    func openFile(
-        at url: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        do {
-            let accessibleURL = url
-            let normalizedURL = Self.normalizedFileURL(accessibleURL)
-            fileWatcher.stopWatching()
-            activateFileSecurityScope(for: accessibleURL, reason: "open")
-            bindFolderWatchSessionIfNeeded(folderWatchSession)
-            let readURL = effectiveAccessibleFileURL(for: normalizedURL, reason: "open")
-            currentOpenOrigin = origin
-            logSaveInfo("opened document for reading: \(saveLogContext(for: normalizedURL))")
-
-            let loaded = try loadAndPresentDocument(
-                readURL: readURL,
-                presentedAs: normalizedURL,
-                diffBaselineMarkdown: initialDiffBaselineMarkdown,
-                resetDocumentViewMode: true,
-                acknowledgeExternalChange: true
-            )
-            applyPostOpenSideEffects(
-                accessibleURL: accessibleURL,
-                normalizedURL: normalizedURL,
-                origin: origin,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
-                loadedMarkdown: loaded.markdown
-            )
-        } catch {
-            handle(error)
-        }
-    }
-
-    private func applyPostOpenSideEffects(
-        accessibleURL: URL,
-        normalizedURL: URL,
-        origin: ReaderOpenOrigin,
-        initialDiffBaselineMarkdown: String?,
-        loadedMarkdown: String
-    ) {
-        setPendingAutoOpenSettlingContext(
-            makePendingAutoOpenSettlingContext(
-                origin: origin,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
-                loadedMarkdown: loadedMarkdown,
-                now: Date()
-            )
-        )
-        refreshOpenInApplications()
-        recordRecentManualOpenIfNeeded(accessibleURL, origin: origin)
-        notifyAutoLoadedFileIfNeeded(
-            normalizedURL,
-            origin: origin,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-        startWatchingCurrentFile()
-    }
-
-    private func recordRecentManualOpenIfNeeded(_ accessibleURL: URL, origin: ReaderOpenOrigin) {
-        guard origin == .manual else {
-            return
-        }
-
-        settingsStore.addRecentManuallyOpenedFile(accessibleURL)
-    }
-
-    private func notifyAutoLoadedFileIfNeeded(
-        _ normalizedURL: URL,
-        origin: ReaderOpenOrigin,
-        initialDiffBaselineMarkdown: String?
-    ) {
-        guard origin.shouldNotifyFileAutoLoaded,
-              activeFolderWatchSession != nil,
-              settingsStore.currentSettings.notificationsEnabled else {
-            return
-        }
-
-        systemNotifier.notifyFileAutoLoaded(
-            normalizedURL,
-            changeKind: initialDiffBaselineMarkdown == nil ? .added : .modified,
-            watchedFolderURL: activeFolderWatchSession?.folderURL
-        )
-    }
-
-    func handleIncomingOpenURL(_ url: URL) {
-        handleIncomingOpenURL(url, origin: .manual)
-    }
-
-    func handleIncomingOpenURL(
-        _ url: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        guard url.isFileURL else {
-            return
-        }
-
-        guard Self.isSupportedMarkdownFileURL(url) else {
-            return
-        }
-
-        let normalizedIncomingURL = Self.normalizedFileURL(url)
-        if let fileURL, Self.normalizedFileURL(fileURL) == normalizedIncomingURL {
-            return
-        }
-
-        openFile(
-            at: normalizedIncomingURL,
-            origin: origin,
-            folderWatchSession: folderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-    }
-
-    func reloadCurrentFile(
-        forceHighlight: Bool = true,
-        acknowledgeExternalChange: Bool = true
-    ) {
-        guard let fileURL else {
-            return
-        }
-
-        reloadCurrentFile(
-            at: fileURL,
-            diffBaselineMarkdown: forceHighlight ? sourceMarkdown : nil,
-            acknowledgeExternalChange: acknowledgeExternalChange
-        )
-    }
-
-    func refreshFromExternalChange() {
-        guard settingsStore.currentSettings.autoRefreshOnExternalChange,
-              !isSourceEditing else {
-            return
-        }
-        reloadCurrentFile(
-            at: fileURL,
-            diffBaselineMarkdown: sourceMarkdown,
-            acknowledgeExternalChange: false
-        )
-    }
-
-    func handleObservedFileChange() {
-        if handlePendingAutoOpenSettlingChangeIfNeeded() {
-            return
-        }
-
-        if handlePendingSavedDraftChangeIfNeeded() {
-            return
-        }
-
-        lastExternalChangeAt = Date()
-        hasUnacknowledgedExternalChange = true
-        if let fileURL,
-           settingsStore.currentSettings.notificationsEnabled {
-            systemNotifier.notifyExternalChange(
-                for: fileURL,
-                autoRefreshed: settingsStore.currentSettings.autoRefreshOnExternalChange,
-                watchedFolderURL: watchedFolderURLForCurrentFile
-            )
-        }
-
-        if isSourceEditing {
-            return
-        }
-
-        if isCurrentFileMissing || currentDocumentHasBeenDeleted {
-            reloadCurrentFile(
-                at: fileURL,
-                diffBaselineMarkdown: nil,
-                acknowledgeExternalChange: false
-            )
-            return
-        }
-
-        refreshFromExternalChange()
-    }
-
-    func startEditingSource() {
-        guard canStartSourceEditing else {
-            return
-        }
-
-        beginSourceEditingSession(with: savedMarkdown)
-        isSourceEditing = true
-        lastError = nil
-    }
-
-    func updateSourceDraft(_ markdown: String) {
-        guard isSourceEditing else {
-            return
-        }
-
-        applyDraftMarkdown(markdown, diffBaselineMarkdown: savedMarkdown)
-
-        scheduleDraftPreviewRender()
-    }
-
-    func saveSourceDraft() {
-        guard isSourceEditing,
-              let draftMarkdown,
-              let fileURL else {
-            logSaveError("save requested without active editable document: \(saveLogContext(for: fileURL))")
-            handle(ReaderError.noOpenFileInReader)
-            return
-        }
-
-        do {
-            logSaveInfo(
-                "save requested: \(saveLogContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
-            )
-            cancelPendingDraftPreviewRender()
-            let diffBaselineMarkdown = savedMarkdown
-            try persistSourceDraft(
-                draftMarkdown,
-                to: fileURL,
-                diffBaselineMarkdown: diffBaselineMarkdown,
-                recoveryAttempted: false
-            )
-        } catch {
-            handle(error)
-        }
-    }
-
-    private func persistSourceDraft(
+    func persistSourceDraft(
         _ draftMarkdown: String,
         to fileURL: URL,
         diffBaselineMarkdown: String,
@@ -699,7 +322,8 @@ final class ReaderStore: ObservableObject {
         do {
             try writeMarkdownFile(draftMarkdown, to: fileURL)
             savedMarkdown = draftMarkdown
-            finishSourceEditingSession(with: draftMarkdown)
+            let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
+            applySourceEditingTransition(transition)
             changedRegions = changedRegions(
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
@@ -736,55 +360,16 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    func discardSourceDraft() {
-        guard isSourceEditing else {
-            return
-        }
-
-        if hasUnacknowledgedExternalChange {
-            reloadCurrentFile(
-                at: fileURL,
-                diffBaselineMarkdown: nil,
-                acknowledgeExternalChange: true
-            )
-            return
-        }
-
-        finishSourceEditingSession(with: savedMarkdown)
-
-        do {
-            try renderCurrentMarkdownImmediately()
-            lastError = nil
-        } catch {
-            handle(error)
-        }
+    func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
+        draftMarkdown = transition.draftMarkdown
+        sourceMarkdown = transition.sourceMarkdown
+        sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
+        unsavedChangedRegions = transition.unsavedChangedRegions
+        isSourceEditing = transition.isSourceEditing
+        hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
     }
 
-    private func beginSourceEditingSession(with markdown: String) {
-        sourceEditorSeedMarkdown = markdown
-        applyDraftMarkdown(markdown, diffBaselineMarkdown: savedMarkdown)
-    }
-
-    private func applyDraftMarkdown(_ markdown: String, diffBaselineMarkdown: String) {
-        draftMarkdown = markdown
-        sourceMarkdown = markdown
-        unsavedChangedRegions = changedRegions(
-            diffBaselineMarkdown: diffBaselineMarkdown,
-            newMarkdown: markdown
-        )
-        hasUnsavedDraftChanges = markdown != diffBaselineMarkdown
-    }
-
-    private func finishSourceEditingSession(with markdown: String) {
-        draftMarkdown = nil
-        sourceMarkdown = markdown
-        sourceEditorSeedMarkdown = markdown
-        unsavedChangedRegions = []
-        isSourceEditing = false
-        hasUnsavedDraftChanges = false
-    }
-
-    private func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
+    func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
         guard let session = activeFolderWatchSession else {
             return
         }
@@ -821,18 +406,17 @@ final class ReaderStore: ObservableObject {
         session: ReaderFolderWatchSession,
         origin: ReaderOpenOrigin
     ) {
-        guard !plannedEvents.isEmpty else {
-            return
+        folderWatchEventDispatchCoordinator.dispatchLiveEvents(
+            plannedEvents,
+            session: session,
+            origin: origin
+        ) { [self] event, eventSession, eventOrigin in
+            openPrimaryFolderWatchAutoOpenEvent(
+                event,
+                session: eventSession,
+                origin: eventOrigin
+            )
         }
-
-        if let openAdditionalDocumentForFolderWatchEvent {
-            for event in plannedEvents {
-                openAdditionalDocumentForFolderWatchEvent(event, session, origin)
-            }
-            return
-        }
-
-        openPrimaryFolderWatchAutoOpenEvent(plannedEvents[0], session: session, origin: origin)
     }
 
     private func openPrimaryFolderWatchAutoOpenEvent(
@@ -848,90 +432,22 @@ final class ReaderStore: ObservableObject {
         )
     }
 
-    private func dispatchAdditionalFolderWatchAutoOpenEvents(
-        _ events: ArraySlice<ReaderFolderWatchChangeEvent>,
-        session: ReaderFolderWatchSession,
-        origin: ReaderOpenOrigin
-    ) {
-        for event in events {
-            openAdditionalDocumentForFolderWatchEvent?(event, session, origin)
-        }
-    }
-
-    private func openInitialMarkdownFilesFromWatchedFolder(
+    func openInitialMarkdownFilesFromWatchedFolder(
         _ markdownFileEvents: [ReaderFolderWatchChangeEvent],
         session: ReaderFolderWatchSession
     ) {
-        guard let firstEvent = markdownFileEvents.first else {
-            return
-        }
-
-        let initialOrigin: ReaderOpenOrigin = markdownFileEvents.count > 1
-            ? .folderWatchInitialBatchAutoOpen
-            : .folderWatchAutoOpen
-
-        openPrimaryFolderWatchAutoOpenEvent(
-            firstEvent,
-            session: session,
-            origin: initialOrigin
-        )
-
-        dispatchAdditionalFolderWatchAutoOpenEvents(
-            markdownFileEvents.dropFirst(),
-            session: session,
-            origin: .folderWatchInitialBatchAutoOpen
-        )
-    }
-
-    private func reloadCurrentFile(
-        at fileURL: URL?,
-        diffBaselineMarkdown: String?,
-        acknowledgeExternalChange: Bool
-    ) {
-        guard let fileURL else {
-            return
-        }
-
-        do {
-            _ = try loadAndPresentDocument(
-                readURL: fileURL,
-                presentedAs: fileURL,
-                diffBaselineMarkdown: diffBaselineMarkdown,
-                resetDocumentViewMode: false,
-                acknowledgeExternalChange: acknowledgeExternalChange
+        folderWatchEventDispatchCoordinator.dispatchInitialEvents(
+            markdownFileEvents,
+            session: session
+        ) { [self] event, eventSession, eventOrigin in
+            openPrimaryFolderWatchAutoOpenEvent(
+                event,
+                session: eventSession,
+                origin: eventOrigin
             )
-            clearPendingAutoOpenSettling()
-        } catch {
-            handleDocumentReloadFailure(error, for: fileURL)
         }
     }
 
-    private var fileURLForCurrentDocument: URL? {
-        guard let fileURL else {
-            return nil
-        }
-        return Self.normalizedFileURL(fileURL)
-    }
-
-    private var watchedFolderURLForCurrentFile: URL? {
-        guard let activeFolderWatchSession,
-              let fileURL = fileURLForCurrentDocument else {
-            return nil
-        }
-
-        let normalizedWatchedFolderURL = Self.normalizedFileURL(activeFolderWatchSession.folderURL)
-        switch activeFolderWatchSession.options.scope {
-        case .selectedFolderOnly:
-            return fileURL.deletingLastPathComponent().path == normalizedWatchedFolderURL.path
-                ? normalizedWatchedFolderURL
-                : nil
-        case .includeSubfolders:
-            let folderPath = normalizedWatchedFolderURL.path.hasSuffix("/")
-                ? normalizedWatchedFolderURL.path
-                : normalizedWatchedFolderURL.path + "/"
-            return fileURL.path.hasPrefix(folderPath) ? normalizedWatchedFolderURL : nil
-        }
-    }
 
     func increaseFontSize(step: Double = 1.0) {
         let next = settingsStore.currentSettings.baseFontSize + step
@@ -993,7 +509,7 @@ final class ReaderStore: ObservableObject {
         handle(error)
     }
 
-    private func startWatchingCurrentFile() {
+    func startWatchingCurrentFile() {
         guard let fileURL else {
             return
         }
@@ -1022,7 +538,7 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func scheduleDraftPreviewRender() {
+    func scheduleDraftPreviewRender() {
         pendingDraftPreviewRenderTask?.cancel()
         pendingDraftPreviewRenderTask = Task { @MainActor [weak self] in
             guard let self else {
@@ -1046,12 +562,12 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func cancelPendingDraftPreviewRender() {
+    func cancelPendingDraftPreviewRender() {
         pendingDraftPreviewRenderTask?.cancel()
         pendingDraftPreviewRenderTask = nil
     }
 
-    private func renderCurrentMarkdownImmediately() throws {
+    func renderCurrentMarkdownImmediately() throws {
         cancelPendingDraftPreviewRender()
         try renderCurrentMarkdown()
         lastRefreshAt = Date()
@@ -1073,25 +589,7 @@ final class ReaderStore: ObservableObject {
         renderedHTMLDocument = rendered.htmlDocument
     }
 
-    private func loadAndPresentDocument(
-        readURL: URL,
-        presentedAs fileURL: URL,
-        diffBaselineMarkdown: String?,
-        resetDocumentViewMode: Bool,
-        acknowledgeExternalChange: Bool
-    ) throws -> (markdown: String, modificationDate: Date) {
-        let loaded = try loadMarkdownFile(at: readURL)
-        try presentLoadedDocument(
-            loaded,
-            at: fileURL,
-            diffBaselineMarkdown: diffBaselineMarkdown,
-            resetDocumentViewMode: resetDocumentViewMode,
-            acknowledgeExternalChange: acknowledgeExternalChange
-        )
-        return loaded
-    }
-
-    private func presentLoadedDocument(
+    func presentLoadedDocument(
         _ loaded: (markdown: String, modificationDate: Date),
         at fileURL: URL,
         diffBaselineMarkdown: String?,
@@ -1141,24 +639,7 @@ final class ReaderStore: ObservableObject {
         hasUnsavedDraftChanges = false
     }
 
-    private var currentDocumentHasBeenDeleted: Bool {
-        guard let fileURL else {
-            return false
-        }
-
-        return !FileManager.default.fileExists(atPath: fileURL.path)
-    }
-
-    private func handleDocumentReloadFailure(_ error: Error, for fileURL: URL) {
-        guard !FileManager.default.fileExists(atPath: fileURL.path) else {
-            handle(error)
-            return
-        }
-
-        presentMissingDocument(at: fileURL, error: error)
-    }
-
-    private func presentMissingDocument(at fileURL: URL, error: Error) {
+    func presentMissingDocument(at fileURL: URL, error: Error) {
         self.fileURL = fileURL
         fileDisplayName = fileURL.lastPathComponent
         fileLastModifiedAt = nil
@@ -1168,7 +649,7 @@ final class ReaderStore: ObservableObject {
         clearPendingAutoOpenSettling()
     }
 
-    private func changedRegions(
+    func changedRegions(
         diffBaselineMarkdown: String?,
         newMarkdown: String
     ) -> [ChangedRegion] {
@@ -1182,7 +663,7 @@ final class ReaderStore: ObservableObject {
         )
     }
 
-    private func handlePendingSavedDraftChangeIfNeeded() -> Bool {
+    func handlePendingSavedDraftChangeIfNeeded() -> Bool {
         guard let diffBaselineMarkdown = pendingSavedDraftDiffBaselineMarkdown,
               let fileURL,
               !isSourceEditing else {
@@ -1209,7 +690,7 @@ final class ReaderStore: ObservableObject {
         return true
     }
 
-    private func handlePendingAutoOpenSettlingChangeIfNeeded() -> Bool {
+    func handlePendingAutoOpenSettlingChangeIfNeeded() -> Bool {
         guard let fileURL else {
             return false
         }
@@ -1235,7 +716,7 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func setPendingAutoOpenSettlingContext(_ context: PendingAutoOpenSettlingContext?) {
+    func setPendingAutoOpenSettlingContext(_ context: PendingAutoOpenSettlingContext?) {
         pendingAutoOpenSettlingTask?.cancel()
         pendingAutoOpenSettlingTask = nil
         pendingAutoOpenSettlingContext = context
@@ -1248,7 +729,7 @@ final class ReaderStore: ObservableObject {
         schedulePendingAutoOpenSettlingCheck()
     }
 
-    private func clearPendingAutoOpenSettling() {
+    func clearPendingAutoOpenSettling() {
         pendingAutoOpenSettlingTask?.cancel()
         pendingAutoOpenSettlingTask = nil
         pendingAutoOpenSettlingContext = nil
@@ -1271,7 +752,7 @@ final class ReaderStore: ObservableObject {
             loadedMarkdown.isEmpty
     }
 
-    private func makePendingAutoOpenSettlingContext(
+    func makePendingAutoOpenSettlingContext(
         origin: ReaderOpenOrigin,
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String,
@@ -1380,7 +861,7 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
+    func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
         guard url.isFileURL else {
             throw ReaderError.invalidFileURL
         }
@@ -1394,7 +875,7 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func writeMarkdownFile(_ markdown: String, to url: URL) throws {
+    func writeMarkdownFile(_ markdown: String, to url: URL) throws {
         guard url.isFileURL else {
             throw ReaderError.invalidFileURL
         }
@@ -1407,7 +888,7 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func modificationDate(for url: URL) -> Date {
+    func modificationDate(for url: URL) -> Date {
         let normalizedURL = Self.normalizedFileURL(url)
 
         if let attributes = try? FileManager.default.attributesOfItem(atPath: normalizedURL.path),
@@ -1423,249 +904,7 @@ final class ReaderStore: ObservableObject {
         return .distantPast
     }
 
-    private func activateFileSecurityScope(for url: URL, reason: String) {
-        securityScopeToken?.endAccess()
-        securityScopeToken = securityScope.beginAccess(to: url)
-        if securityScopeToken?.didStartAccess == true {
-            currentAccessibleFileURL = url
-            currentAccessibleFileURLSource = "fileScope"
-        }
-        logSaveInfo(
-            "file scope updated: reason=\(reason) url=\(url.path) started=\(securityScopeToken?.didStartAccess == true)"
-        )
-    }
-
-    private func bindFolderWatchSessionIfNeeded(_ session: ReaderFolderWatchSession?) {
-        guard let session else {
-            return
-        }
-
-        activeFolderWatchSession = normalizedFolderWatchSession(session)
-    }
-
-    private func ensureFolderWatchAccessIfNeeded(for fileURL: URL, reason: String) {
-        guard let activeFolderWatchSession,
-              watchedFolderSession(activeFolderWatchSession, appliesTo: fileURL) else {
-            return
-        }
-
-        if folderSecurityScopeToken?.didStartAccess == true {
-            return
-        }
-
-        let accessURL = resolvedWatchedFolderAccessURL(for: activeFolderWatchSession)
-        folderSecurityScopeToken?.endAccess()
-        folderSecurityScopeToken = securityScope.beginAccess(to: accessURL)
-        logSaveInfo(
-            "folder scope updated: reason=\(reason) watchedFolder=\(activeFolderWatchSession.folderURL.path) accessURL=\(accessURL.path) started=\(folderSecurityScopeToken?.didStartAccess == true) appliesToFile=\(fileURL.path)"
-        )
-    }
-
-    private func effectiveAccessibleFileURL(for url: URL, reason: String) -> URL {
-        let normalizedURL = Self.normalizedFileURL(url)
-        ensureFolderWatchAccessIfNeeded(for: normalizedURL, reason: reason)
-
-        if let securityScopeToken,
-           securityScopeToken.didStartAccess,
-           Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
-            currentAccessibleFileURL = securityScopeToken.url
-            currentAccessibleFileURLSource = "fileScope"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(securityScopeToken.url.path) source=fileScope"
-            )
-            return securityScopeToken.url
-        }
-
-        if let currentAccessibleFileURL,
-           currentAccessibleFileURLSource == "fileScope",
-           Self.normalizedFileURL(currentAccessibleFileURL) == normalizedURL {
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(currentAccessibleFileURL.path) source=cachedFileScope"
-            )
-            return currentAccessibleFileURL
-        }
-
-        if let folderScopedFileURL = folderScopedAccessibleFileURL(for: normalizedURL) {
-            currentAccessibleFileURL = folderScopedFileURL
-            currentAccessibleFileURLSource = "folderScopeChildURL"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(folderScopedFileURL.path) source=folderScopeChildURL"
-            )
-            return folderScopedFileURL
-        }
-
-        deriveFileSecurityScopeFromFolderIfNeeded(for: normalizedURL, reason: reason)
-
-        if let securityScopeToken,
-           securityScopeToken.didStartAccess,
-           Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
-            currentAccessibleFileURL = securityScopeToken.url
-            currentAccessibleFileURLSource = "derivedFileScope"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(securityScopeToken.url.path) source=derivedFileScope"
-            )
-            return securityScopeToken.url
-        }
-
-        logSaveInfo(
-            "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(normalizedURL.path) source=plainURL"
-        )
-        return normalizedURL
-    }
-
-    private func folderScopedAccessibleFileURL(for fileURL: URL) -> URL? {
-        guard let activeFolderWatchSession,
-              watchedFolderSession(activeFolderWatchSession, appliesTo: fileURL),
-              let folderSecurityScopeToken,
-              folderSecurityScopeToken.didStartAccess else {
-            return nil
-        }
-
-        let normalizedFileURL = Self.normalizedFileURL(fileURL)
-        let normalizedWatchedFolderURL = Self.normalizedFileURL(activeFolderWatchSession.folderURL)
-        let watchedFolderPath = normalizedWatchedFolderURL.path
-        let filePath = normalizedFileURL.path
-
-        guard filePath.hasPrefix(watchedFolderPath) else {
-            return nil
-        }
-
-        let relativePath = filePath.dropFirst(watchedFolderPath.count).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard !relativePath.isEmpty else {
-            return folderSecurityScopeToken.url
-        }
-
-        return URL(fileURLWithPath: relativePath, relativeTo: folderSecurityScopeToken.url).standardizedFileURL
-    }
-
-    private func tryReauthorizeWatchedFolderIfNeeded(after error: Error, for fileURL: URL) -> Bool {
-        guard isPermissionDeniedWriteError(error),
-              let activeFolderWatchSession,
-              watchedFolderSession(activeFolderWatchSession, appliesTo: fileURL) else {
-            return false
-        }
-
-        let watchedFolderURL = Self.normalizedFileURL(activeFolderWatchSession.folderURL)
-        logSaveInfo(
-            "watched-folder reauthorization requested: file=\(fileURL.path) watchedFolder=\(watchedFolderURL.path)"
-        )
-
-        guard let selectedFolderURL = requestWatchedFolderReauthorization(watchedFolderURL) else {
-            logSaveInfo(
-                "watched-folder reauthorization cancelled: file=\(fileURL.path) watchedFolder=\(watchedFolderURL.path)"
-            )
-            return false
-        }
-
-        let normalizedSelectedFolderURL = Self.normalizedFileURL(selectedFolderURL)
-        guard normalizedSelectedFolderURL == watchedFolderURL else {
-            logSaveError(
-                "watched-folder reauthorization rejected different folder: file=\(fileURL.path) expected=\(watchedFolderURL.path) selected=\(normalizedSelectedFolderURL.path)"
-            )
-            return false
-        }
-
-        settingsStore.addRecentWatchedFolder(selectedFolderURL, options: activeFolderWatchSession.options)
-        folderSecurityScopeToken?.endAccess()
-        folderSecurityScopeToken = securityScope.beginAccess(to: selectedFolderURL)
-        self.activeFolderWatchSession = ReaderFolderWatchSession(
-            folderURL: watchedFolderURL,
-            options: activeFolderWatchSession.options,
-            startedAt: activeFolderWatchSession.startedAt
-        )
-        securityScopeToken?.endAccess()
-        securityScopeToken = nil
-        currentAccessibleFileURL = nil
-        currentAccessibleFileURLSource = nil
-
-        logSaveInfo(
-            "watched-folder reauthorization updated: file=\(fileURL.path) watchedFolder=\(watchedFolderURL.path) started=\(folderSecurityScopeToken?.didStartAccess == true)"
-        )
-
-        return folderSecurityScopeToken?.didStartAccess == true
-    }
-
-    private func isPermissionDeniedWriteError(_ error: Error) -> Bool {
-        let resolvedError: NSError
-        if case let ReaderError.fileWriteFailed(_, underlying) = error {
-            resolvedError = underlying as NSError
-        } else {
-            resolvedError = error as NSError
-        }
-
-        if resolvedError.domain == NSCocoaErrorDomain,
-           resolvedError.code == NSFileWriteNoPermissionError {
-            return true
-        }
-
-        if resolvedError.domain == NSPOSIXErrorDomain,
-              [Int(EACCES), Int(EPERM)].contains(resolvedError.code) {
-            return true
-        }
-
-        return false
-    }
-
-    private func deriveFileSecurityScopeFromFolderIfNeeded(for fileURL: URL, reason: String) {
-        guard let activeFolderWatchSession,
-              watchedFolderSession(activeFolderWatchSession, appliesTo: fileURL),
-              folderSecurityScopeToken?.didStartAccess == true,
-              securityScopeToken?.didStartAccess != true else {
-            return
-        }
-
-        do {
-            let bookmarkData = try fileURL.bookmarkData(
-                options: [.withSecurityScope],
-                includingResourceValuesForKeys: nil,
-                relativeTo: nil
-            )
-            var bookmarkIsStale = false
-            let scopedFileURL = try URL(
-                resolvingBookmarkData: bookmarkData,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &bookmarkIsStale
-            )
-            logSaveInfo(
-                "file scope derivation attempting: reason=\(reason) file=\(fileURL.path) watchedFolder=\(activeFolderWatchSession.folderURL.path) staleBookmark=\(bookmarkIsStale)"
-            )
-            activateFileSecurityScope(for: scopedFileURL, reason: "\(reason)-derivedFromFolder")
-        } catch {
-            logSaveError(
-                "file scope derivation failed: reason=\(reason) file=\(fileURL.path) watchedFolder=\(activeFolderWatchSession.folderURL.path) error=\(error.localizedDescription)"
-            )
-        }
-    }
-
-    private func resolvedWatchedFolderAccessURL(for session: ReaderFolderWatchSession) -> URL {
-        settingsStore.resolvedRecentWatchedFolderURL(matching: session.folderURL) ?? session.folderURL
-    }
-
-    private func watchedFolderSession(_ session: ReaderFolderWatchSession, appliesTo fileURL: URL) -> Bool {
-        let normalizedFileURL = Self.normalizedFileURL(fileURL)
-        let normalizedWatchedFolderURL = Self.normalizedFileURL(session.folderURL)
-
-        switch session.options.scope {
-        case .selectedFolderOnly:
-            return normalizedFileURL.deletingLastPathComponent().path == normalizedWatchedFolderURL.path
-        case .includeSubfolders:
-            let folderPath = normalizedWatchedFolderURL.path.hasSuffix("/")
-                ? normalizedWatchedFolderURL.path
-                : normalizedWatchedFolderURL.path + "/"
-            return normalizedFileURL.path.hasPrefix(folderPath)
-        }
-    }
-
-    private func normalizedFolderWatchSession(_ session: ReaderFolderWatchSession) -> ReaderFolderWatchSession {
-        ReaderFolderWatchSession(
-            folderURL: Self.normalizedFileURL(session.folderURL),
-            options: session.options,
-            startedAt: session.startedAt
-        )
-    }
-
-    private func saveLogContext(for url: URL?) -> String {
+    func saveLogContext(for url: URL?) -> String {
         let filePath = url?.path ?? "none"
         let watchedFolderPath = activeFolderWatchSession?.folderURL.path ?? "none"
         let fileScopeURL = securityScopeToken?.url.path ?? "none"
@@ -1674,35 +913,27 @@ final class ReaderStore: ObservableObject {
         return "file=\(filePath) origin=\(currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(securityScopeToken != nil) fileScopeStarted=\(securityScopeToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(folderSecurityScopeToken != nil) folderScopeStarted=\(folderSecurityScopeToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
-    private func logSaveInfo(_ message: String) {
+    func logSaveInfo(_ message: String) {
         Self.logger.info("\(message, privacy: .public)")
     }
 
-    private func logSaveError(_ message: String) {
+    func logSaveError(_ message: String) {
         Self.logger.error("\(message, privacy: .public)")
     }
 
-    private func handle(_ error: Error) {
+    func handle(_ error: Error) {
         lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
-    private static func normalizedFileURL(_ url: URL) -> URL {
+    func clearLastError() {
+        lastError = nil
+    }
+
+    static func normalizedFileURL(_ url: URL) -> URL {
         ReaderFileRouting.normalizedFileURL(url)
     }
 
-    private static func isSupportedMarkdownFileURL(_ url: URL) -> Bool {
+    static func isSupportedMarkdownFileURL(_ url: URL) -> Bool {
         ReaderFileRouting.isSupportedMarkdownFileURL(url)
     }
-}
-
-private struct PendingAutoOpenSettlingContext {
-    let loadedMarkdown: String
-    let diffBaselineMarkdown: String?
-    let expiresAt: Date?
-    let showsLoadingOverlay: Bool
-}
-
-private enum PendingAutoOpenSettlingEvaluation {
-    case unhandled
-    case handled
 }

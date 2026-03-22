@@ -181,3 +181,50 @@ private extension ReaderStoreSourceEditingTests {
         ChangedRegion(blockIndex: 0, lineRange: 1...1, kind: .edited)
     }
 }
+
+struct ReaderSourceEditingCoordinatorTests {
+    @Test func beginSessionStartsCleanEditingState() {
+        let coordinator = ReaderSourceEditingCoordinator()
+
+        let transition = coordinator.beginSession(markdown: "# Initial")
+
+        #expect(transition.draftMarkdown == "# Initial")
+        #expect(transition.sourceMarkdown == "# Initial")
+        #expect(transition.sourceEditorSeedMarkdown == "# Initial")
+        #expect(transition.unsavedChangedRegions.isEmpty)
+        #expect(transition.isSourceEditing)
+        #expect(!transition.hasUnsavedDraftChanges)
+    }
+
+    @Test func updateDraftTracksUnsavedStateAgainstBaseline() {
+        let coordinator = ReaderSourceEditingCoordinator()
+        let changedRegions = [ChangedRegion(blockIndex: 0, lineRange: 1...1, kind: .edited)]
+
+        let transition = coordinator.updateDraft(
+            markdown: "# Draft",
+            sourceEditorSeedMarkdown: "# Initial",
+            diffBaselineMarkdown: "# Initial",
+            unsavedChangedRegions: changedRegions
+        )
+
+        #expect(transition.draftMarkdown == "# Draft")
+        #expect(transition.sourceMarkdown == "# Draft")
+        #expect(transition.sourceEditorSeedMarkdown == "# Initial")
+        #expect(transition.unsavedChangedRegions == changedRegions)
+        #expect(transition.isSourceEditing)
+        #expect(transition.hasUnsavedDraftChanges)
+    }
+
+    @Test func finishSessionResetsEditingFlags() {
+        let coordinator = ReaderSourceEditingCoordinator()
+
+        let transition = coordinator.finishSession(markdown: "# Saved")
+
+        #expect(transition.draftMarkdown == nil)
+        #expect(transition.sourceMarkdown == "# Saved")
+        #expect(transition.sourceEditorSeedMarkdown == "# Saved")
+        #expect(transition.unsavedChangedRegions.isEmpty)
+        #expect(!transition.isSourceEditing)
+        #expect(!transition.hasUnsavedDraftChanges)
+    }
+}
