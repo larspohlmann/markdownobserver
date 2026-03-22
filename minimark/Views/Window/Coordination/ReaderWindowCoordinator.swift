@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import Foundation
 
+@MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
     let onOpenAdditionalDocument: (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
 
