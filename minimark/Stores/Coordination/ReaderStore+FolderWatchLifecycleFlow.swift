@@ -1,0 +1,130 @@
+import Foundation
+
+extension ReaderStore {
+    func startWatchingFolder(folderURL: URL, options: ReaderFolderWatchOptions) {
+        do {
+            prepareForFolderWatchStart()
+
+            let accessibleFolderURL = folderURL
+            let session = try activateFolderWatch(
+                folderURL: accessibleFolderURL,
+                options: options
+            )
+
+            finishStartingFolderWatch(session, accessibleFolderURL: accessibleFolderURL)
+            try performInitialFolderWatchAutoOpenIfNeeded(
+                folderURL: accessibleFolderURL,
+                session: session
+            )
+        } catch {
+            resetFolderWatchState(notifyIfNeeded: false)
+            handle(error)
+        }
+    }
+
+    func stopWatchingFolder() {
+        let hadActiveFolderWatch = activeFolderWatchSession != nil
+        resetFolderWatchState(notifyIfNeeded: hadActiveFolderWatch)
+
+        if fileURL != nil {
+            startWatchingCurrentFile()
+        }
+    }
+
+    private func prepareForFolderWatchStart() {
+        stopWatchingFolder()
+        setFolderWatchAutoOpenWarning(nil)
+        folderWatchAutoOpenPlanner.resetTransientState()
+    }
+
+    private func activateFolderWatch(
+        folderURL: URL,
+        options: ReaderFolderWatchOptions
+    ) throws -> ReaderFolderWatchSession {
+        folderSecurityScopeToken = securityScope.beginAccess(to: folderURL)
+
+        try folderWatcher.startWatching(
+            folderURL: folderURL,
+            includeSubfolders: options.scope == .includeSubfolders
+        ) { [weak self] changedMarkdownEvents in
+            guard let self else {
+                return
+            }
+
+            Task { @MainActor [self] in
+                self.handleObservedWatchedFolderChanges(changedMarkdownEvents)
+            }
+        }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: Self.normalizedFileURL(folderURL),
+            options: options,
+            startedAt: .now
+        )
+        setActiveFolderWatchSession(session)
+        return session
+    }
+
+    private func finishStartingFolderWatch(
+        _ session: ReaderFolderWatchSession,
+        accessibleFolderURL: URL
+    ) {
+        settingsStore.addRecentWatchedFolder(accessibleFolderURL, options: session.options)
+        onFolderWatchStarted?(session)
+        setLastWatchedFolderEventAt(nil)
+
+        if fileURL != nil {
+            startWatchingCurrentFile()
+        }
+    }
+
+    private func performInitialFolderWatchAutoOpenIfNeeded(
+        folderURL: URL,
+        session: ReaderFolderWatchSession
+    ) throws {
+        guard session.options.openMode == .openAllMarkdownFiles else {
+            return
+        }
+
+        let initialPlan = try initialFolderWatchAutoOpenPlan(
+            folderURL: folderURL,
+            session: session
+        )
+
+        setFolderWatchAutoOpenWarning(initialPlan.warning)
+        openInitialMarkdownFilesFromWatchedFolder(initialPlan.autoOpenEvents, session: session)
+    }
+
+    private func initialFolderWatchAutoOpenPlan(
+        folderURL: URL,
+        session: ReaderFolderWatchSession
+    ) throws -> ReaderFolderWatchAutoOpenPlan {
+        let markdownURLs = try folderWatcher.markdownFiles(
+            in: folderURL,
+            includeSubfolders: session.options.scope == .includeSubfolders
+        )
+        let initialMarkdownEvents = markdownURLs.map {
+            ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+        }
+
+        return folderWatchAutoOpenPlanner.initialPlan(
+            for: initialMarkdownEvents,
+            activeSession: session,
+            currentDocumentFileURL: fileURLForCurrentDocument
+        )
+    }
+
+    private func resetFolderWatchState(notifyIfNeeded: Bool) {
+        folderWatcher.stopWatching()
+        folderWatchAutoOpenPlanner.resetTransientState()
+        folderSecurityScopeToken?.endAccess()
+        folderSecurityScopeToken = nil
+        setActiveFolderWatchSession(nil)
+        setLastWatchedFolderEventAt(nil)
+        setFolderWatchAutoOpenWarning(nil)
+
+        if notifyIfNeeded {
+            onFolderWatchStopped?()
+        }
+    }
+}

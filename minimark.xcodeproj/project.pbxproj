@@ -79,6 +79,20 @@
 		E1000000000000000000004B /* ContentDocumentSurfaceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */; };
 		E1000000000000000000004C /* ReaderStatusFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004C /* ReaderStatusFormatting.swift */; };
 		E1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */; };
+		E10000000000000000000052 /* ReaderStoreCoordinators.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000052 /* ReaderStoreCoordinators.swift */; };
+		E10000000000000000000053 /* ReaderWindowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000053 /* ReaderWindowCoordinator.swift */; };
+		E10000000000000000000054 /* ReaderStoreTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000054 /* ReaderStoreTypes.swift */; };
+		E10000000000000000000055 /* ReaderWindowUITestFlowSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000055 /* ReaderWindowUITestFlowSupport.swift */; };
+		E10000000000000000000057 /* ReaderWindowOpenAndWatchFlowSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000057 /* ReaderWindowOpenAndWatchFlowSupport.swift */; };
+		E10000000000000000000058 /* ReaderStore+SourceEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000058 /* ReaderStore+SourceEditing.swift */; };
+		E10000000000000000000059 /* ReaderWindowRootView+OpenAndWatchFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000059 /* ReaderWindowRootView+OpenAndWatchFlow.swift */; };
+		E1000000000000000000005A /* ReaderStore+SecurityScopeFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000005A /* ReaderStore+SecurityScopeFlow.swift */; };
+		E1000000000000000000005B /* ReaderWindowRootView+WarningFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000005B /* ReaderWindowRootView+WarningFlow.swift */; };
+		E1000000000000000000005C /* ReaderWindowRootView+WindowShellFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000005C /* ReaderWindowRootView+WindowShellFlow.swift */; };
+		E1000000000000000000005D /* ReaderWindowRootView+SidebarCommandFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000005D /* ReaderWindowRootView+SidebarCommandFlow.swift */; };
+		E1000000000000000000005E /* ReaderStore+DocumentOpenFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000005E /* ReaderStore+DocumentOpenFlow.swift */; };
+		E1000000000000000000005F /* ReaderStore+ExternalChangeFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000005F /* ReaderStore+ExternalChangeFlow.swift */; };
+		E10000000000000000000060 /* ReaderStore+FolderWatchLifecycleFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000060 /* ReaderStore+FolderWatchLifecycleFlow.swift */; };
 		F10000000000000000000001 /* Differ in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* Differ */; };
 /* End PBXBuildFile section */
 
@@ -178,6 +192,20 @@
 		D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentDocumentSurfaceViews.swift; sourceTree = "<group>"; };
 		D1000000000000000000004C /* ReaderStatusFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStatusFormatting.swift; sourceTree = "<group>"; };
 		D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownSourceHTMLRenderer.swift; sourceTree = "<group>"; };
+		D10000000000000000000052 /* ReaderStoreCoordinators.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreCoordinators.swift; sourceTree = "<group>"; };
+		D10000000000000000000053 /* ReaderWindowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowCoordinator.swift; sourceTree = "<group>"; };
+		D10000000000000000000054 /* ReaderStoreTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreTypes.swift; sourceTree = "<group>"; };
+		D10000000000000000000055 /* ReaderWindowUITestFlowSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowUITestFlowSupport.swift; sourceTree = "<group>"; };
+		D10000000000000000000057 /* ReaderWindowOpenAndWatchFlowSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowOpenAndWatchFlowSupport.swift; sourceTree = "<group>"; };
+		D10000000000000000000058 /* ReaderStore+SourceEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderStore+SourceEditing.swift"; sourceTree = "<group>"; };
+		D10000000000000000000059 /* ReaderWindowRootView+OpenAndWatchFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderWindowRootView+OpenAndWatchFlow.swift"; sourceTree = "<group>"; };
+		D1000000000000000000005A /* ReaderStore+SecurityScopeFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderStore+SecurityScopeFlow.swift"; sourceTree = "<group>"; };
+		D1000000000000000000005B /* ReaderWindowRootView+WarningFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderWindowRootView+WarningFlow.swift"; sourceTree = "<group>"; };
+		D1000000000000000000005C /* ReaderWindowRootView+WindowShellFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderWindowRootView+WindowShellFlow.swift"; sourceTree = "<group>"; };
+		D1000000000000000000005D /* ReaderWindowRootView+SidebarCommandFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderWindowRootView+SidebarCommandFlow.swift"; sourceTree = "<group>"; };
+		D1000000000000000000005E /* ReaderStore+DocumentOpenFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderStore+DocumentOpenFlow.swift"; sourceTree = "<group>"; };
+		D1000000000000000000005F /* ReaderStore+ExternalChangeFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderStore+ExternalChangeFlow.swift"; sourceTree = "<group>"; };
+		D10000000000000000000060 /* ReaderStore+FolderWatchLifecycleFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderStore+FolderWatchLifecycleFlow.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -326,6 +354,8 @@
 				D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */,
 				D10000000000000000000013 /* ReaderSidebarDocumentController.swift */,
 				D10000000000000000000014 /* ReaderStore.swift */,
+				C10000000000000000000014 /* Coordination */,
+				C10000000000000000000015 /* Types */,
 			);
 			path = Stores;
 			sourceTree = "<group>";
@@ -359,6 +389,7 @@
 				C10000000000000000000012 /* Content */,
 				D10000000000000000000039 /* FolderWatchAutoOpenFlowView.swift */,
 				D1000000000000000000001F /* MarkdownWebView.swift */,
+				C10000000000000000000016 /* Window */,
 				D10000000000000000000020 /* ReaderSettingsView.swift */,
 				D10000000000000000000021 /* ReaderSidebarWorkspaceView.swift */,
 				D10000000000000000000022 /* ReaderWindowRootView.swift */,
@@ -472,6 +503,57 @@
 				D10000000000000000000048 /* ReaderTopBar.swift */,
 			);
 			path = Content;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000014 /* Coordination */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000052 /* ReaderStoreCoordinators.swift */,
+				D10000000000000000000058 /* ReaderStore+SourceEditing.swift */,
+				D10000000000000000000060 /* ReaderStore+FolderWatchLifecycleFlow.swift */,
+				D1000000000000000000005A /* ReaderStore+SecurityScopeFlow.swift */,
+				D1000000000000000000005E /* ReaderStore+DocumentOpenFlow.swift */,
+				D1000000000000000000005F /* ReaderStore+ExternalChangeFlow.swift */,
+			);
+			path = Coordination;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000015 /* Types */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000054 /* ReaderStoreTypes.swift */,
+			);
+			path = Types;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000016 /* Window */ = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000017 /* Coordination */,
+				C10000000000000000000018 /* Flow */,
+			);
+			path = Window;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000017 /* Coordination */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000053 /* ReaderWindowCoordinator.swift */,
+			);
+			path = Coordination;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000018 /* Flow */ = {
+			isa = PBXGroup;
+			children = (
+				D10000000000000000000055 /* ReaderWindowUITestFlowSupport.swift */,
+				D10000000000000000000057 /* ReaderWindowOpenAndWatchFlowSupport.swift */,
+				D10000000000000000000059 /* ReaderWindowRootView+OpenAndWatchFlow.swift */,
+				D1000000000000000000005B /* ReaderWindowRootView+WarningFlow.swift */,
+				D1000000000000000000005C /* ReaderWindowRootView+WindowShellFlow.swift */,
+				D1000000000000000000005D /* ReaderWindowRootView+SidebarCommandFlow.swift */,
+			);
+			path = Flow;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -647,6 +729,13 @@
 				E10000000000000000000039 /* ReaderSidebarSelectedStoreProjection.swift in Sources */,
 				E10000000000000000000013 /* ReaderSidebarDocumentController.swift in Sources */,
 				E10000000000000000000014 /* ReaderStore.swift in Sources */,
+				E10000000000000000000052 /* ReaderStoreCoordinators.swift in Sources */,
+				E10000000000000000000054 /* ReaderStoreTypes.swift in Sources */,
+				E10000000000000000000058 /* ReaderStore+SourceEditing.swift in Sources */,
+				E10000000000000000000060 /* ReaderStore+FolderWatchLifecycleFlow.swift in Sources */,
+				E1000000000000000000005A /* ReaderStore+SecurityScopeFlow.swift in Sources */,
+				E1000000000000000000005E /* ReaderStore+DocumentOpenFlow.swift in Sources */,
+				E1000000000000000000005F /* ReaderStore+ExternalChangeFlow.swift in Sources */,
 				E10000000000000000000015 /* MarkdownOpenPanel.swift in Sources */,
 				E10000000000000000000016 /* ReaderBundledAssets.swift in Sources */,
 				E10000000000000000000017 /* ReaderCSSFactory.swift in Sources */,
@@ -672,6 +761,13 @@
 				E1000000000000000000004C /* ReaderStatusFormatting.swift in Sources */,
 				E10000000000000000000048 /* ReaderTopBar.swift in Sources */,
 				E10000000000000000000021 /* ReaderSidebarWorkspaceView.swift in Sources */,
+				E10000000000000000000053 /* ReaderWindowCoordinator.swift in Sources */,
+				E10000000000000000000055 /* ReaderWindowUITestFlowSupport.swift in Sources */,
+				E10000000000000000000057 /* ReaderWindowOpenAndWatchFlowSupport.swift in Sources */,
+				E10000000000000000000059 /* ReaderWindowRootView+OpenAndWatchFlow.swift in Sources */,
+				E1000000000000000000005B /* ReaderWindowRootView+WarningFlow.swift in Sources */,
+				E1000000000000000000005C /* ReaderWindowRootView+WindowShellFlow.swift in Sources */,
+				E1000000000000000000005D /* ReaderWindowRootView+SidebarCommandFlow.swift in Sources */,
 				E10000000000000000000022 /* ReaderWindowRootView.swift in Sources */,
 				E10000000000000000000023 /* ContentView.swift in Sources */,
 				E10000000000000000000024 /* minimarkApp.swift in Sources */,
@@ -850,7 +946,7 @@
 				CODE_SIGN_ENTITLEMENTS = minimark/App/minimark.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -863,7 +959,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --deep";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = minimark;
@@ -887,7 +983,7 @@
 				CODE_SIGN_ENTITLEMENTS = minimark/App/minimark.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -900,7 +996,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = minimark;
 				PRODUCT_NAME = MarkdownObserver;

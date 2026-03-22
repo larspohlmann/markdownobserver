@@ -58,6 +58,10 @@ See [SECURITY.md](SECURITY.md) for how to report vulnerabilities.
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+## Author
+
+Lars Pohlmann
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).

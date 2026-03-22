@@ -25,7 +25,10 @@ struct AboutWindowView: View {
                     Text("Open-source project")
                         .foregroundStyle(.secondary)
 
-                    Link("Project repository", destination: URL(string: "https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPO")!)
+                    Text("Author: Lars Pohlmann")
+                        .foregroundStyle(.secondary)
+
+                    Link("Project repository", destination: URL(string: "https://github.com/larspohlmann/markdownobserver")!)
                         .accessibilityLabel("MarkdownObserver project repository")
                 }
                 .accessibilityElement(children: .combine)
