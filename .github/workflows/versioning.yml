@@ -1,0 +1,103 @@
+name: Versioning
+
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: versioning-develop
+  cancel-in-progress: false
+
+jobs:
+  bump-build-on-merge:
+    if: github.ref == 'refs/heads/develop' && github.actor != 'github-actions[bot]'
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out develop
+        uses: actions/checkout@v5
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Bump app build number on merge commits
+        run: |
+          set -euo pipefail
+
+          parents_count=$(git rev-list --parents -n 1 "$GITHUB_SHA" | awk '{print NF-1}')
+          if [[ "$parents_count" -lt 2 ]]; then
+            echo "Head commit is not a merge commit; skipping build bump."
+            exit 0
+          fi
+
+          pbxproj="minimark.xcodeproj/project.pbxproj"
+          current_build=$(perl -ne 'if (/CURRENT_PROJECT_VERSION = ([0-9]+);/) { print $1; exit }' "$pbxproj")
+          if [[ -z "$current_build" ]]; then
+            echo "Could not read CURRENT_PROJECT_VERSION"
+            exit 1
+          fi
+
+          next_build=$((current_build + 1))
+          NEXT_BUILD="$next_build" perl -0pi -e '
+            my $n = $ENV{"NEXT_BUILD"};
+            my $count = 0;
+            s/CURRENT_PROJECT_VERSION = \d+;/$count++ < 2 ? "CURRENT_PROJECT_VERSION = $n;" : $&/ge;
+          ' "$pbxproj"
+
+          git diff --quiet -- "$pbxproj" && {
+            echo "No build-number change detected."
+            exit 0
+          }
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$pbxproj"
+          git commit -m "chore(version): bump build number to $next_build [skip version-bump]"
+          git push origin HEAD:develop
+
+  bump-version-on-release-tag:
+    if: startsWith(github.ref, 'refs/tags/') && github.actor != 'github-actions[bot]'
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out develop
+        uses: actions/checkout@v5
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Set app marketing version from release tag
+        run: |
+          set -euo pipefail
+
+          tag="$GITHUB_REF_NAME"
+          version="${tag#v}"
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '$tag' does not match v<major>.<minor>.<patch>; skipping."
+            exit 0
+          fi
+
+          pbxproj="minimark.xcodeproj/project.pbxproj"
+          NEXT_VERSION="$version" perl -0pi -e '
+            my $v = $ENV{"NEXT_VERSION"};
+            my $count = 0;
+            s/MARKETING_VERSION = [^;]+;/$count++ < 2 ? "MARKETING_VERSION = $v;" : $&/ge;
+          ' "$pbxproj"
+
+          git diff --quiet -- "$pbxproj" && {
+            echo "No marketing-version change detected."
+            exit 0
+          }
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$pbxproj"
+          git commit -m "chore(version): set marketing version to $version [skip version-bump]"
+          git push origin HEAD:develop
