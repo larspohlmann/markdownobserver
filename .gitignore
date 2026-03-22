@@ -23,5 +23,7 @@ Config/Signing.local.xcconfig
 .env.*
 !.env.example
 
-# Ignore repository workflow/config directory
-.github/
+# Ignore repository workflow/config directory, except Actions workflows.
+.github/*
+!.github/workflows/
+!.github/workflows/**
