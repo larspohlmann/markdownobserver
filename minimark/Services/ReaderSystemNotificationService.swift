@@ -263,10 +263,23 @@ protocol ReaderNotificationTargetFocusing {
 struct ReaderNotificationTargetFocusCoordinator: ReaderNotificationTargetFocusing {
     @discardableResult
     func focusNotificationTarget(fileURL: URL?, watchedFolderURL: URL?) -> Bool {
-        ReaderWindowRegistry.shared.focusNotificationTarget(
-            fileURL: fileURL,
-            watchedFolderURL: watchedFolderURL
-        )
+        if Thread.isMainThread {
+            return MainActor.assumeIsolated {
+                ReaderWindowRegistry.shared.focusNotificationTarget(
+                    fileURL: fileURL,
+                    watchedFolderURL: watchedFolderURL
+                )
+            }
+        }
+
+        return DispatchQueue.main.sync {
+            MainActor.assumeIsolated {
+                ReaderWindowRegistry.shared.focusNotificationTarget(
+                    fileURL: fileURL,
+                    watchedFolderURL: watchedFolderURL
+                )
+            }
+        }
     }
 }
 

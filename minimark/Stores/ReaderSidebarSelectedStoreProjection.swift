@@ -3,6 +3,7 @@ import Combine
 
 @MainActor
 final class ReaderSidebarSelectedStoreProjection {
+    @MainActor
     struct State {
         let windowTitle: String
         let fileURL: URL?
