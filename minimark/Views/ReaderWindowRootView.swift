@@ -278,7 +278,19 @@ struct ReaderWindowRootView: View {
         )
     }
 
-    func applyUITestLaunchConfigurationIfNeeded() {
+    private func handleHostWindowStateChange() {
+        refreshWindowShellState()
+        applyUITestLaunchConfigurationIfNeeded()
+
+        guard hostWindow != nil,
+              windowCoordinator.hasPendingFolderWatchOpenEvents else {
+            return
+        }
+
+        flushQueuedFolderWatchOpens()
+    }
+
+    private func applyUITestLaunchConfigurationIfNeeded() {
         guard !hasAppliedUITestLaunchConfiguration else {
             return
         }

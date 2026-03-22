@@ -61,7 +61,13 @@ struct ReaderWindowUITestFlowSupport {
                 try? "# Auto Open\n\nLater version\n".write(to: fileURL, atomically: true, encoding: .utf8)
             }
             assignTask(task)
-        } catch {}
+        } catch let error {
+    #if DEBUG
+            assertionFailure("Failed to start auto-open watch flow: \(error)")
+    #else
+            NSLog("Failed to start auto-open watch flow: \(error)")
+    #endif
+        }
     }
 
     static func waitForFolderWatchStartup(

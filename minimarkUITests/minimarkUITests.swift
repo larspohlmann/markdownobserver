@@ -162,10 +162,16 @@ final class minimarkUITests: XCTestCase {
 
     private func toggleElement(in sheet: XCUIElement, label: String) -> XCUIElement {
         let checkbox = sheet.checkBoxes[label]
+        let toggleSwitch = sheet.switches[label]
+
+        waitForCondition(timeout: 2.0) {
+            checkbox.exists || toggleSwitch.exists
+        }
+
         if checkbox.exists {
             return checkbox
         }
 
-        return sheet.switches[label]
+        return toggleSwitch
     }
 }

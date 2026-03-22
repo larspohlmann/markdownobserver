@@ -95,18 +95,6 @@ extension ReaderWindowRootView {
         refreshWindowPresentation()
     }
 
-    func handleHostWindowStateChange() {
-        refreshWindowShellState()
-        applyUITestLaunchConfigurationIfNeeded()
-
-        guard hostWindow != nil,
-              windowCoordinator.hasPendingFolderWatchOpenEvents else {
-            return
-        }
-
-        flushQueuedFolderWatchOpens()
-    }
-
     func registerWindowIfNeeded() {
         windowCoordinator.registerWindow(
             hostWindow,
