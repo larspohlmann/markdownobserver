@@ -6,6 +6,7 @@ on:
       - develop
     tags:
       - "v*"
+      - "*.*.*"
 
 permissions:
   contents: write
