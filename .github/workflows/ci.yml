@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches:
@@ -15,18 +18,47 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Show available schemes
+        run: xcodebuild -list -project minimark.xcodeproj
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project minimark.xcodeproj \
+            -scheme minimark \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            | tee build-for-testing.log
+
       - name: Run macOS tests
         run: |
-          xcodebuild test \
+          set -o pipefail
+          xcodebuild test-without-building \
             -project minimark.xcodeproj \
             -scheme minimark \
             -destination 'platform=macOS' \
             -only-testing:minimarkTests \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=''
+            CODE_SIGN_IDENTITY='' \
+            -resultBundlePath TestResults.xcresult \
+            | tee test.log
+
+      - name: Upload test logs and result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-test-debug-artifacts
+          path: |
+            build-for-testing.log
+            test.log
+            TestResults.xcresult
+          if-no-files-found: warn
