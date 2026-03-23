@@ -140,7 +140,8 @@ final class minimarkUITests: XCTestCase {
         selectIncludeSubfoldersSegment(in: sheet)
 
         XCTAssertTrue(sheet.staticTexts["Action required before watch can start"].waitForExistence(timeout: 8))
-        XCTAssertTrue(sheet.buttons["Review Exclusions"].exists)
+        XCTAssertTrue(sheet.buttons[startButtonIdentifier].exists)
+        XCTAssertFalse(sheet.buttons[startButtonIdentifier].isEnabled)
 
         let warningButton = sheet.buttons[reviewExclusionsButtonTitle]
         XCTAssertTrue(warningButton.waitForExistence(timeout: 8))
@@ -164,6 +165,28 @@ final class minimarkUITests: XCTestCase {
         }
 
         XCTAssertTrue(app.staticTexts["Threshold met"].exists)
+    }
+
+    @MainActor
+    func testIncludeSubfoldersToggleKeepsSheetResponsiveAroundOptimizationCardStateChanges() throws {
+        let folderURL = try makeTemporaryFolder(subdirectoryCount: 100)
+        let app = XCUIApplication()
+        app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
+        app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path
+        app.launch()
+
+        let sheet = app.descendants(matching: .any).matching(identifier: watchFolderSheetIdentifier).firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+
+        for _ in 0..<3 {
+            selectIncludeSubfoldersSegment(in: sheet)
+            XCTAssertTrue(sheet.staticTexts["Action required before watch can start"].waitForExistence(timeout: 8))
+            XCTAssertTrue(sheet.buttons[reviewExclusionsButtonTitle].exists)
+
+            selectSelectedFolderOnlySegment(in: sheet)
+            XCTAssertTrue(sheet.buttons[startButtonIdentifier].waitForExistence(timeout: 3))
+            XCTAssertTrue(sheet.buttons[startButtonIdentifier].isEnabled)
+        }
     }
 
     private func makeTemporaryFolder() throws -> URL {
@@ -230,6 +253,25 @@ final class minimarkUITests: XCTestCase {
         }
 
         let predicate = NSPredicate(format: "label CONTAINS[c] 'include subfolders'")
+        let fallback = sheet.descendants(matching: .any).matching(predicate).firstMatch
+        XCTAssertTrue(fallback.waitForExistence(timeout: 2.0))
+        fallback.tap()
+    }
+
+    private func selectSelectedFolderOnlySegment(in sheet: XCUIElement) {
+        let directButton = sheet.buttons["Selected Folder"]
+        if directButton.exists || directButton.waitForExistence(timeout: 1.5) {
+            directButton.tap()
+            return
+        }
+
+        let directRadio = sheet.radioButtons["Selected Folder"]
+        if directRadio.exists || directRadio.waitForExistence(timeout: 1.0) {
+            directRadio.tap()
+            return
+        }
+
+        let predicate = NSPredicate(format: "label CONTAINS[c] 'selected folder'")
         let fallback = sheet.descendants(matching: .any).matching(predicate).firstMatch
         XCTAssertTrue(fallback.waitForExistence(timeout: 2.0))
         fallback.tap()
