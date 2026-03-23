@@ -78,6 +78,7 @@ struct ContentView: View {
     let pendingFolderWatchURL: URL?
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
+    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let onRequestFolderWatch: (URL) -> Void
@@ -299,6 +300,7 @@ struct ContentView: View {
                 folderURL: pendingFolderWatchURL,
                 openMode: $pendingFolderWatchOpenMode,
                 scope: $pendingFolderWatchScope,
+                excludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths,
                 onCancel: onCancelFolderWatch,
                 onConfirm: onConfirmFolderWatch
             )
@@ -812,6 +814,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         pendingFolderWatchURL: nil,
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
+        pendingFolderWatchExcludedSubdirectoryPaths: .constant([]),
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
         onRequestFolderWatch: { _ in },

@@ -180,6 +180,69 @@ struct FileRoutingAndWatcherTests {
         ].sorted(by: { $0.path < $1.path }))
     }
 
+    @Test func folderChangeWatcherExcludesConfiguredSubdirectoriesFromRecursiveEnumeration() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let includedSubdirectoryURL = directoryURL.appendingPathComponent("included", isDirectory: true)
+        let excludedSubdirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
+        try FileManager.default.createDirectory(at: includedSubdirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: excludedSubdirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let includedFileURL = includedSubdirectoryURL.appendingPathComponent("included.md")
+        let excludedFileURL = excludedSubdirectoryURL.appendingPathComponent("excluded.md")
+        try "# Included".write(to: includedFileURL, atomically: false, encoding: .utf8)
+        try "# Excluded".write(to: excludedFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher()
+        let recursiveFiles = try watcher.markdownFiles(
+            in: directoryURL,
+            includeSubfolders: true,
+            excludedSubdirectoryURLs: [excludedSubdirectoryURL]
+        )
+
+        #expect(recursiveFiles == [ReaderFileRouting.normalizedFileURL(includedFileURL)])
+    }
+
+    @Test @MainActor func folderChangeWatcherDoesNotEmitEventsFromExcludedSubdirectories() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let excludedSubdirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
+        let includedSubdirectoryURL = directoryURL.appendingPathComponent("included", isDirectory: true)
+        try FileManager.default.createDirectory(at: excludedSubdirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: includedSubdirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let excludedFileURL = excludedSubdirectoryURL.appendingPathComponent("ignored.md")
+        let includedFileURL = includedSubdirectoryURL.appendingPathComponent("tracked.md")
+        try "# Before".write(to: excludedFileURL, atomically: false, encoding: .utf8)
+        try "# Before".write(to: includedFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = makeFolderChangeWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            excludedSubdirectoryURLs: [excludedSubdirectoryURL]
+        ) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        try "# After excluded".write(to: excludedFileURL, atomically: false, encoding: .utf8)
+        try "# After included".write(to: includedFileURL, atomically: false, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(includedFileURL) &&
+                $0.kind == .modified
+            })
+        })
+
+        #expect(!receivedEvents.contains(where: {
+            $0.fileURL == ReaderFileRouting.normalizedFileURL(excludedFileURL)
+        }))
+    }
+
     @Test @MainActor func folderChangeWatcherDoesNotEmitInitialEventsForExistingNestedMarkdownFiles() async throws {
         let directoryURL = try makeTemporaryDirectory()
         let nestedDirectoryURL = directoryURL

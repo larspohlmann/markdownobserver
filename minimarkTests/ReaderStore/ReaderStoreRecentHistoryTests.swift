@@ -20,7 +20,10 @@ struct ReaderStoreRecentHistoryTests {
 
         let options = ReaderFolderWatchOptions(
             openMode: .openAllMarkdownFiles,
-            scope: .includeSubfolders
+            scope: .includeSubfolders,
+            excludedSubdirectoryPaths: [
+                fixture.temporaryDirectoryURL.appendingPathComponent("node_modules", isDirectory: true).path
+            ]
         )
 
         fixture.store.startWatchingFolder(folderURL: fixture.temporaryDirectoryURL, options: options)
