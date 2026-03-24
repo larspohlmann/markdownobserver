@@ -8,7 +8,7 @@ final class FolderWatchAutoOpenSelectionModel: ObservableObject {
 
     init(omittedFileURLs: [URL]) {
         self.omittedFileURLs = omittedFileURLs
-        self.selectedFileURLs = Set(omittedFileURLs)
+        self.selectedFileURLs = []
     }
 
     func isSelected(_ fileURL: URL) -> Bool {

@@ -1072,12 +1072,9 @@ private struct LargeFolderExclusionDialog: View {
         }
 
         let currentExcludedSet = Set(excludedSubdirectoryPaths)
-        guard !currentExcludedSet.isEmpty,
-              allPreparedPaths.isSubset(of: currentExcludedSet) else {
-            return
+        if currentExcludedSet.isEmpty {
+            excludedSubdirectoryPaths = preparedSubdirectoryPaths
         }
-
-        excludedSubdirectoryPaths = []
     }
 
     private static func collectPaths(from node: FolderWatchDirectoryNode) -> [String] {
