@@ -912,12 +912,23 @@ final class ReaderStore: ObservableObject {
     }
 
     func saveLogContext(for url: URL?) -> String {
-        let filePath = url?.path ?? "none"
-        let watchedFolderPath = activeFolderWatchSession?.folderURL.path ?? "none"
-        let fileScopeURL = securityScopeToken?.url.path ?? "none"
-        let folderScopeURL = folderSecurityScopeToken?.url.path ?? "none"
-        let accessibleFilePath = currentAccessibleFileURL?.path ?? "none"
+        let filePath = redactedPathText(for: url)
+        let watchedFolderPath = redactedPathText(for: activeFolderWatchSession?.folderURL)
+        let fileScopeURL = redactedPathText(for: securityScopeToken?.url)
+        let folderScopeURL = redactedPathText(for: folderSecurityScopeToken?.url)
+        let accessibleFilePath = redactedPathText(for: currentAccessibleFileURL)
         return "file=\(filePath) origin=\(currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(securityScopeToken != nil) fileScopeStarted=\(securityScopeToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(folderSecurityScopeToken != nil) folderScopeStarted=\(folderSecurityScopeToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+    }
+
+    func redactedPathText(for url: URL?) -> String {
+        guard let url else {
+            return "none"
+        }
+
+        let normalizedURL = Self.normalizedFileURL(url)
+        let name = normalizedURL.lastPathComponent.isEmpty ? "root" : normalizedURL.lastPathComponent
+        let pathHash = String(abs(normalizedURL.path.hashValue), radix: 16)
+        return "\(name)#\(pathHash)"
     }
 
     func logSaveInfo(_ message: String) {

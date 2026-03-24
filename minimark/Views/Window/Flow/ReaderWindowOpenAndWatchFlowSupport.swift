@@ -9,10 +9,12 @@ enum ReaderWindowOpenAndWatchFlowSupport {
         seed: ReaderWindowSeed?,
         openDocumentInCurrentWindow: (URL) -> Void,
         openDocumentInSelectedSlot: (URL, ReaderOpenOrigin, ReaderFolderWatchSession?, String?) -> Void,
-        prepareRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
+        resolveRecentOpenedFileURL: (ReaderRecentOpenedFile) -> URL,
+        resolveRecentWatchedFolderURL: (ReaderRecentWatchedFolder) -> URL,
+        prepareRecentFolderWatch: (URL, ReaderFolderWatchOptions) -> Void
     ) {
         if let recentOpenedFile = seed?.recentOpenedFile {
-            openDocumentInCurrentWindow(recentOpenedFile.resolvedFileURL)
+            openDocumentInCurrentWindow(resolveRecentOpenedFileURL(recentOpenedFile))
         } else if let fileURL = seed?.fileURL {
             openDocumentInSelectedSlot(
                 fileURL,
@@ -23,7 +25,8 @@ enum ReaderWindowOpenAndWatchFlowSupport {
         }
 
         if let recentWatchedFolder = seed?.recentWatchedFolder {
-            prepareRecentFolderWatch(recentWatchedFolder)
+            let resolvedFolderURL = resolveRecentWatchedFolderURL(recentWatchedFolder)
+            prepareRecentFolderWatch(resolvedFolderURL, recentWatchedFolder.options)
         }
     }
 

@@ -213,7 +213,8 @@ struct ReaderWindowRootView: View {
                     return
                 }
 
-                openDocumentInCurrentWindow(entry.resolvedFileURL)
+                let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
+                openDocumentInCurrentWindow(resolvedURL)
             }
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
                 guard notificationTargetsCurrentWindow(notification) else {
@@ -275,6 +276,7 @@ struct ReaderWindowRootView: View {
             },
             activeFolderWatch: sharedFolderWatchSession,
             isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
+            isFolderWatchInitialScanFailed: sidebarDocumentController.didFolderWatchInitialScanFail,
             canStopFolderWatch: canStopSharedFolderWatch,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchURL: pendingFolderWatchURL,
@@ -287,6 +289,10 @@ struct ReaderWindowRootView: View {
             onConfirmFolderWatch: confirmFolderWatch,
             onCancelFolderWatch: cancelFolderWatch,
             onStopFolderWatch: stopFolderWatch,
+            onStartRecentManuallyOpenedFile: { entry in
+                let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
+                openDocumentInCurrentWindow(resolvedURL)
+            },
             onStartRecentFolderWatch: startRecentFolderWatch,
             onClearRecentWatchedFolders: clearRecentWatchedFolders,
             onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles

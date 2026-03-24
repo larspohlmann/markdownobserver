@@ -31,8 +31,14 @@ extension ReaderWindowRootView {
                     initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
                 )
             },
-            prepareRecentFolderWatch: { entry in
-                prepareRecentFolderWatch(entry)
+            resolveRecentOpenedFileURL: { entry in
+                settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
+            },
+            resolveRecentWatchedFolderURL: { entry in
+                settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
+            },
+            prepareRecentFolderWatch: { folderURL, options in
+                presentFolderWatchOptions(for: folderURL, options: options)
             }
         )
     }
@@ -65,7 +71,8 @@ extension ReaderWindowRootView {
     }
 
     func prepareRecentFolderWatch(_ entry: ReaderRecentWatchedFolder) {
-        presentFolderWatchOptions(for: entry.resolvedFolderURL, options: entry.options)
+        let resolvedFolderURL = settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
+        presentFolderWatchOptions(for: resolvedFolderURL, options: entry.options)
     }
 
     func updatePendingFolderWatchRequest(

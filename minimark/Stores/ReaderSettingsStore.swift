@@ -51,6 +51,11 @@ nonisolated struct ReaderRecentOpenedFile: Equatable, Hashable, Codable, Sendabl
             relativeTo: nil
         )
     }
+
+    init(filePath: String, bookmarkData: Data?) {
+        self.filePath = filePath
+        self.bookmarkData = bookmarkData
+    }
 }
 
 nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
@@ -104,6 +109,12 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
+    }
+
+    init(folderPath: String, options: ReaderFolderWatchOptions, bookmarkData: Data?) {
+        self.folderPath = folderPath
+        self.options = options
+        self.bookmarkData = bookmarkData
     }
 }
 
@@ -309,6 +320,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
     func addRecentManuallyOpenedFile(_ fileURL: URL)
+    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
 }
 
@@ -401,9 +413,13 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        return currentSettings.recentWatchedFolders.first(where: { entry in
+        guard let entry = currentSettings.recentWatchedFolders.first(where: { entry in
             ReaderFileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
-        })?.resolvedFolderURL
+        }) else {
+            return nil
+        }
+
+        return resolveRecentWatchedFolderURL(for: entry)
     }
 
     func clearRecentWatchedFolders() {
@@ -419,6 +435,17 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
                 into: settings.recentManuallyOpenedFiles
             )
         }
+    }
+
+    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL? {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        guard let entry = currentSettings.recentManuallyOpenedFiles.first(where: { entry in
+            ReaderFileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
+        }) else {
+            return nil
+        }
+
+        return resolveRecentOpenedFileURL(for: entry)
     }
 
     func clearRecentManuallyOpenedFiles() {
@@ -444,5 +471,110 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
             return
         }
         storage.set(data, forKey: storageKey)
+    }
+
+    private func resolveRecentOpenedFileURL(for entry: ReaderRecentOpenedFile) -> URL {
+        guard let bookmarkData = entry.bookmarkData else {
+            return entry.fileURL
+        }
+
+        var bookmarkIsStale = false
+        do {
+            let resolvedURL = try URL(
+                resolvingBookmarkData: bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &bookmarkIsStale
+            )
+
+            if bookmarkIsStale {
+                refreshRecentOpenedFileBookmark(for: entry, resolvedURL: resolvedURL)
+            }
+
+            return resolvedURL
+        } catch {
+            updateRecentOpenedFileBookmarkData(forPath: entry.filePath, bookmarkData: nil)
+            return entry.fileURL
+        }
+    }
+
+    private func resolveRecentWatchedFolderURL(for entry: ReaderRecentWatchedFolder) -> URL {
+        guard let bookmarkData = entry.bookmarkData else {
+            return entry.folderURL
+        }
+
+        var bookmarkIsStale = false
+        do {
+            let resolvedURL = try URL(
+                resolvingBookmarkData: bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &bookmarkIsStale
+            )
+
+            if bookmarkIsStale {
+                refreshRecentWatchedFolderBookmark(for: entry, resolvedURL: resolvedURL)
+            }
+
+            return resolvedURL
+        } catch {
+            updateRecentWatchedFolderBookmarkData(forPath: entry.folderPath, bookmarkData: nil)
+            return entry.folderURL
+        }
+    }
+
+    private func refreshRecentOpenedFileBookmark(for entry: ReaderRecentOpenedFile, resolvedURL: URL) {
+        let refreshedBookmarkData = try? resolvedURL.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+        updateRecentOpenedFileBookmarkData(forPath: entry.filePath, bookmarkData: refreshedBookmarkData)
+    }
+
+    private func refreshRecentWatchedFolderBookmark(for entry: ReaderRecentWatchedFolder, resolvedURL: URL) {
+        let refreshedBookmarkData = try? resolvedURL.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+        updateRecentWatchedFolderBookmarkData(forPath: entry.folderPath, bookmarkData: refreshedBookmarkData)
+    }
+
+    private func updateRecentOpenedFileBookmarkData(forPath filePath: String, bookmarkData: Data?) {
+        updateSettings { settings in
+            guard let index = settings.recentManuallyOpenedFiles.firstIndex(where: { $0.filePath == filePath }) else {
+                return
+            }
+
+            let existingEntry = settings.recentManuallyOpenedFiles[index]
+            guard existingEntry.bookmarkData != bookmarkData else {
+                return
+            }
+
+            settings.recentManuallyOpenedFiles[index] = ReaderRecentOpenedFile(
+                filePath: existingEntry.filePath,
+                bookmarkData: bookmarkData
+            )
+        }
+    }
+
+    private func updateRecentWatchedFolderBookmarkData(forPath folderPath: String, bookmarkData: Data?) {
+        updateSettings { settings in
+            guard let index = settings.recentWatchedFolders.firstIndex(where: { $0.folderPath == folderPath }) else {
+                return
+            }
+
+            let existingEntry = settings.recentWatchedFolders[index]
+            guard existingEntry.bookmarkData != bookmarkData else {
+                return
+            }
+
+            settings.recentWatchedFolders[index] = ReaderRecentWatchedFolder(
+                folderPath: existingEntry.folderPath,
+                options: existingEntry.options,
+                bookmarkData: bookmarkData
+            )
+        }
     }
 }

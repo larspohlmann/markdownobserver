@@ -195,6 +195,96 @@ struct ReaderSettingsAndModelsTests {
         #expect(reloadedStore.currentSettings.recentWatchedFolders.first?.options.scope == .includeSubfolders)
     }
 
+    @Test @MainActor func readerSettingsStoreRecentFileResolverClearsInvalidBookmarkData() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.recent-file.invalid-bookmark.tests"
+        let fileURL = URL(fileURLWithPath: "/tmp/invalid-bookmark.md")
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [
+                ReaderRecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x00, 0x01, 0x02]))
+            ]
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let resolvedURL = store.resolvedRecentManuallyOpenedFileURL(matching: fileURL)
+
+        #expect(resolvedURL?.path == fileURL.path)
+        #expect(store.currentSettings.recentManuallyOpenedFiles.first?.bookmarkData == nil)
+    }
+
+    @Test @MainActor func readerSettingsStoreRecentWatchedFolderResolverClearsInvalidBookmarkData() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.recent-folder.invalid-bookmark.tests"
+        let folderURL = URL(fileURLWithPath: "/tmp/invalid-watch-folder", isDirectory: true)
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [
+                ReaderRecentWatchedFolder(
+                    folderPath: folderURL.path,
+                    options: .default,
+                    bookmarkData: Data([0xAA, 0xBB, 0xCC])
+                )
+            ],
+            recentManuallyOpenedFiles: []
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let resolvedURL = store.resolvedRecentWatchedFolderURL(matching: folderURL)
+
+        #expect(resolvedURL?.path == folderURL.path)
+        #expect(store.currentSettings.recentWatchedFolders.first?.bookmarkData == nil)
+    }
+
+    @Test @MainActor func readerSettingsStoreRecentFileResolverPreservesValidBookmarkData() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.recent-file.valid-bookmark.tests"
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("reader-settings-valid-bookmark-\(UUID().uuidString).md")
+        try "# hello".write(to: fileURL, atomically: true, encoding: .utf8)
+        defer {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+
+        let entry = ReaderRecentOpenedFile(fileURL: fileURL)
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [entry]
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let resolvedURL = store.resolvedRecentManuallyOpenedFileURL(matching: fileURL)
+
+        #expect(resolvedURL != nil)
+        #expect(store.currentSettings.recentManuallyOpenedFiles.first?.bookmarkData != nil)
+    }
+
     @Test func readerRecentHistoryMenuTitleAddsParentContextOnlyWhenNeeded() {
         let fileEntries = [
             ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),

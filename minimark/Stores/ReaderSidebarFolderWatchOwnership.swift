@@ -32,6 +32,10 @@ final class ReaderFolderWatchController {
         didSet { onStateChange?() }
     }
 
+    private(set) var didInitialMarkdownScanFail = false {
+        didSet { onStateChange?() }
+    }
+
     init(
         folderWatcher: FolderChangeWatching,
         settingsStore: ReaderSettingsStoring,
@@ -64,6 +68,7 @@ final class ReaderFolderWatchController {
         stopWatching()
         folderWatchAutoOpenWarning = nil
         folderWatchAutoOpenPlanner.resetTransientState()
+        didInitialMarkdownScanFail = false
 
         let accessibleFolderURL = folderURL
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(accessibleFolderURL)
@@ -96,6 +101,7 @@ final class ReaderFolderWatchController {
 
             guard options.openMode == .openAllMarkdownFiles else {
                 isInitialMarkdownScanInProgress = false
+                didInitialMarkdownScanFail = false
                 return
             }
 
@@ -114,6 +120,7 @@ final class ReaderFolderWatchController {
                     includeSubfolders: false,
                     excludedSubdirectoryURLs: excludedSubdirectoryURLs
                 )
+                didInitialMarkdownScanFail = false
                 applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
             }
         } catch {
@@ -124,6 +131,7 @@ final class ReaderFolderWatchController {
             lastWatchedFolderEventAt = nil
             folderWatchAutoOpenWarning = nil
             isInitialMarkdownScanInProgress = false
+            didInitialMarkdownScanFail = false
             throw error
         }
     }
@@ -139,6 +147,7 @@ final class ReaderFolderWatchController {
         lastWatchedFolderEventAt = nil
         folderWatchAutoOpenWarning = nil
         isInitialMarkdownScanInProgress = false
+        didInitialMarkdownScanFail = false
     }
 
     func dismissFolderWatchAutoOpenWarning() {
@@ -232,21 +241,42 @@ final class ReaderFolderWatchController {
         let folderWatcher = self.folderWatcher
 
         initialMarkdownScanTask = Task.detached(priority: .utility) { [weak self] in
-            let markdownURLs = (try? folderWatcher.markdownFiles(
-                in: folderURL,
-                includeSubfolders: includeSubfolders,
-                excludedSubdirectoryURLs: excludedSubdirectoryURLs
-            )) ?? []
+            let markdownScanResult: Result<[URL], Error>
+            do {
+                let markdownURLs = try folderWatcher.markdownFiles(
+                    in: folderURL,
+                    includeSubfolders: includeSubfolders,
+                    excludedSubdirectoryURLs: excludedSubdirectoryURLs
+                )
+                markdownScanResult = .success(markdownURLs)
+            } catch {
+                markdownScanResult = .failure(error)
+            }
 
             guard !Task.isCancelled else {
                 return
             }
 
             Task { @MainActor [weak self] in
-                self?.applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
+                switch markdownScanResult {
+                case let .success(markdownURLs):
+                    self?.didInitialMarkdownScanFail = false
+                    self?.applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
+                case .failure:
+                    self?.applyInitialAutoOpenMarkdownScanFailure(for: session)
+                }
                 self?.initialMarkdownScanTask = nil
             }
         }
+    }
+
+    private func applyInitialAutoOpenMarkdownScanFailure(for session: ReaderFolderWatchSession) {
+        guard activeFolderWatchSession == session else {
+            return
+        }
+
+        didInitialMarkdownScanFail = true
+        isInitialMarkdownScanInProgress = false
     }
 
     private func applyInitialAutoOpenMarkdownURLs(
@@ -266,6 +296,7 @@ final class ReaderFolderWatchController {
             currentDocumentFileURL: currentDocumentFileURLProvider?()
         )
 
+        didInitialMarkdownScanFail = false
         folderWatchAutoOpenWarning = initialPlan.warning
         let initialOpenOrigin: ReaderOpenOrigin = initialPlan.autoOpenEvents.count > 1
             ? .folderWatchInitialBatchAutoOpen

@@ -206,6 +206,42 @@ struct FolderWatchCoordinationTests {
         #expect(!controller.isInitialMarkdownScanInProgress)
     }
 
+    @Test @MainActor func folderWatchControllerFlagsInitialScanFailureForIncludeSubfolders() async throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/watched-failure-\(UUID().uuidString)", isDirectory: true)
+        let watcher = TestFolderWatcher()
+        watcher.markdownFilesError = NSError(domain: "FolderWatchCoordinationTests", code: 77)
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.scan-failure.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        controller.openEventsHandler = { events, _, _ in
+            openedEvents.append(contentsOf: events)
+        }
+
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders
+            )
+        )
+
+        #expect(controller.isInitialMarkdownScanInProgress)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            controller.didInitialMarkdownScanFail && !controller.isInitialMarkdownScanInProgress
+        })
+        #expect(openedEvents.isEmpty)
+    }
+
     @Test @MainActor func folderWatchControllerIgnoresStaleInitialScanCompletionAfterRestart() async throws {
         let firstFolderURL = URL(fileURLWithPath: "/tmp/watched-first-\(UUID().uuidString)", isDirectory: true)
         let secondFolderURL = URL(fileURLWithPath: "/tmp/watched-second-\(UUID().uuidString)", isDirectory: true)
