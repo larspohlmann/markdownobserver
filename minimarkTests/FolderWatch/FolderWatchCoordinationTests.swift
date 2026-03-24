@@ -59,6 +59,89 @@ struct FolderWatchCoordinationTests {
         ])
     }
 
+    @Test @MainActor func folderWatchControllerLoadsIncludeSubfoldersInitialBatchWithoutBlockingStart() async throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/watched-\(UUID().uuidString)", isDirectory: true)
+        let initialFileURL = folderURL.appendingPathComponent("initial.md")
+        let watcher = TestFolderWatcher()
+        watcher.markdownFilesDelay = 0.35
+        watcher.markdownFilesToReturn = [initialFileURL]
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.async-start.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        controller.openEventsHandler = { events, _, _ in
+            openedEvents.append(contentsOf: events)
+        }
+
+        let startedAt = Date()
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders
+            )
+        )
+        let elapsed = Date().timeIntervalSince(startedAt)
+
+        #expect(elapsed < 0.2)
+        #expect(openedEvents.isEmpty)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            openedEvents.map(\.fileURL) == [ReaderFileRouting.normalizedFileURL(initialFileURL)]
+        })
+    }
+
+    @Test @MainActor func folderWatchControllerDiscardsStaleIncludeSubfoldersInitialBatchAfterRestart() async throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/watched-\(UUID().uuidString)", isDirectory: true)
+        let staleFileURL = folderURL.appendingPathComponent("stale.md")
+        let watcher = TestFolderWatcher()
+        watcher.markdownFilesDelay = 0.25
+        watcher.markdownFilesToReturn = [staleFileURL]
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.stale-initial.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        controller.openEventsHandler = { events, _, _ in
+            openedEvents.append(contentsOf: events)
+        }
+
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders
+            )
+        )
+
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .includeSubfolders
+            )
+        )
+
+        try? await Task.sleep(for: .milliseconds(500))
+
+        #expect(openedEvents.isEmpty)
+    }
+
     @Test @MainActor func folderWatchOpenCoordinatorDeduplicatesAndBuildsLatestBatch() {
         let coordinator = ReaderFolderWatchOpenCoordinator()
         let watchSession = ReaderFolderWatchSession(

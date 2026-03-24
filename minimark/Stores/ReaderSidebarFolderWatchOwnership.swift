@@ -62,12 +62,14 @@ final class ReaderFolderWatchController {
 
         let accessibleFolderURL = folderURL
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(accessibleFolderURL)
+        let excludedSubdirectoryURLs = options.resolvedExcludedSubdirectoryURLs(relativeTo: normalizedFolderURL)
         folderSecurityScopeToken = securityScope.beginAccess(to: accessibleFolderURL)
 
         do {
             try folderWatcher.startWatching(
                 folderURL: accessibleFolderURL,
-                includeSubfolders: options.scope == .includeSubfolders
+                includeSubfolders: options.scope == .includeSubfolders,
+                excludedSubdirectoryURLs: excludedSubdirectoryURLs
             ) { [weak self] changedMarkdownEvents in
                 guard let self else {
                     return
@@ -91,24 +93,21 @@ final class ReaderFolderWatchController {
                 return
             }
 
-            let markdownURLs = try folderWatcher.markdownFiles(
-                in: accessibleFolderURL,
-                includeSubfolders: options.scope == .includeSubfolders
-            )
-            let initialMarkdownEvents = markdownURLs.map {
-                ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+            if options.scope == .includeSubfolders {
+                loadInitialMarkdownFilesOffMainActor(
+                    for: session,
+                    folderURL: accessibleFolderURL,
+                    includeSubfolders: true,
+                    excludedSubdirectoryURLs: excludedSubdirectoryURLs
+                )
+            } else {
+                let markdownURLs = try folderWatcher.markdownFiles(
+                    in: accessibleFolderURL,
+                    includeSubfolders: false,
+                    excludedSubdirectoryURLs: excludedSubdirectoryURLs
+                )
+                applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
             }
-            let initialPlan = folderWatchAutoOpenPlanner.initialPlan(
-                for: initialMarkdownEvents,
-                activeSession: session,
-                currentDocumentFileURL: currentDocumentFileURLProvider?()
-            )
-
-            folderWatchAutoOpenWarning = initialPlan.warning
-            let initialOpenOrigin: ReaderOpenOrigin = initialPlan.autoOpenEvents.count > 1
-                ? .folderWatchInitialBatchAutoOpen
-                : .folderWatchAutoOpen
-            dispatchOpenEvents(initialPlan.autoOpenEvents, session: session, origin: initialOpenOrigin)
         } catch {
             folderWatcher.stopWatching()
             folderSecurityScopeToken?.endAccess()
@@ -208,5 +207,50 @@ final class ReaderFolderWatchController {
         }
 
         openEventsHandler?(events, session, origin)
+    }
+
+    private func loadInitialMarkdownFilesOffMainActor(
+        for session: ReaderFolderWatchSession,
+        folderURL: URL,
+        includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL]
+    ) {
+        let folderWatcher = self.folderWatcher
+
+        Thread.detachNewThread { [weak self] in
+            let markdownURLs = (try? folderWatcher.markdownFiles(
+                in: folderURL,
+                includeSubfolders: includeSubfolders,
+                excludedSubdirectoryURLs: excludedSubdirectoryURLs
+            )) ?? []
+
+            Task { @MainActor [weak self] in
+                self?.applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
+            }
+        }
+    }
+
+    private func applyInitialAutoOpenMarkdownURLs(
+        _ markdownURLs: [URL],
+        for session: ReaderFolderWatchSession
+    ) {
+        guard activeFolderWatchSession == session else {
+            return
+        }
+
+        let initialMarkdownEvents = markdownURLs.map {
+            ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+        }
+        let initialPlan = folderWatchAutoOpenPlanner.initialPlan(
+            for: initialMarkdownEvents,
+            activeSession: session,
+            currentDocumentFileURL: currentDocumentFileURLProvider?()
+        )
+
+        folderWatchAutoOpenWarning = initialPlan.warning
+        let initialOpenOrigin: ReaderOpenOrigin = initialPlan.autoOpenEvents.count > 1
+            ? .folderWatchInitialBatchAutoOpen
+            : .folderWatchAutoOpen
+        dispatchOpenEvents(initialPlan.autoOpenEvents, session: session, origin: initialOpenOrigin)
     }
 }
