@@ -228,6 +228,35 @@ struct FileRoutingAndWatcherTests {
         #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
     }
 
+    @Test func folderChangeWatcherIncludesDeeperFilesWhenSubdirectoriesAreExplicitlyExcluded() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let includedBranchDepthFiveDirectoryURL = directoryURL
+            .appendingPathComponent("included", isDirectory: true)
+            .appendingPathComponent("l1", isDirectory: true)
+            .appendingPathComponent("l2", isDirectory: true)
+            .appendingPathComponent("l3", isDirectory: true)
+            .appendingPathComponent("l4", isDirectory: true)
+            .appendingPathComponent("l5", isDirectory: true)
+        let excludedBranchDirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: includedBranchDepthFiveDirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: excludedBranchDirectoryURL, withIntermediateDirectories: true)
+
+        let deepIncludedFileURL = includedBranchDepthFiveDirectoryURL.appendingPathComponent("deep-include.md")
+        try "# Deep include".write(to: deepIncludedFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher()
+        let recursiveFiles = try watcher.markdownFiles(
+            in: directoryURL,
+            includeSubfolders: true,
+            excludedSubdirectoryURLs: [excludedBranchDirectoryURL]
+        )
+
+        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(deepIncludedFileURL)))
+    }
+
     @Test @MainActor func folderChangeWatcherDoesNotEmitEventsFromExcludedSubdirectories() async throws {
         let directoryURL = try makeTemporaryDirectory()
         let excludedSubdirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)

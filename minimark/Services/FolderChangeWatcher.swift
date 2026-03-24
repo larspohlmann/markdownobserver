@@ -504,11 +504,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
             var result: [URL] = []
             for case let fileURL as URL in enumerator {
-                if shouldSkipEntryBeyondIncludeSubfolderDepth(
+                if exclusionMatcher.hasNoExcludedDirectories,
+                   shouldSkipEntryBeyondIncludeSubfolderDepth(
                     fileURL,
                     rootFolderURL: folderURL,
                     enumerator: enumerator
-                ) {
+                   ) {
                     continue
                 }
 
@@ -563,11 +564,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         for case let directoryURL as URL in enumerator {
-            if shouldSkipEntryBeyondIncludeSubfolderDepth(
+            if exclusionMatcher.hasNoExcludedDirectories,
+               shouldSkipEntryBeyondIncludeSubfolderDepth(
                 directoryURL,
                 rootFolderURL: normalizedFolderURL,
                 enumerator: enumerator
-            ) {
+               ) {
                 continue
             }
 
@@ -674,6 +676,10 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 private struct FolderWatchExclusionMatcher {
     private let rootFolderPathWithSlash: String
     private let excludedDirectoryPaths: [String]
+
+    var hasNoExcludedDirectories: Bool {
+        excludedDirectoryPaths.isEmpty
+    }
 
     init(rootFolderURL: URL, excludedSubdirectoryURLs: [URL]) {
         let normalizedRootURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)

@@ -713,6 +713,7 @@ private struct LargeFolderExclusionDialog: View {
     @State private var subdirectoryPreparationTask: Task<Void, Never>?
     @State private var effectiveExcludedSubdirectoryCount = 0
     @State private var effectiveExcludedCountTask: Task<Void, Never>?
+    @State private var didNormalizeInitialExclusionSelection = false
 
     private var excludedSet: Set<String> {
         Set(excludedSubdirectoryPaths)
@@ -981,6 +982,7 @@ private struct LargeFolderExclusionDialog: View {
         .padding(22)
         .frame(width: 700)
         .onAppear {
+            didNormalizeInitialExclusionSelection = false
             scheduleSubdirectoryPreparation()
         }
         .onDisappear {
@@ -993,6 +995,7 @@ private struct LargeFolderExclusionDialog: View {
             scheduleSubdirectoryPreparation()
         }
         .onChange(of: preparedSubdirectoryPaths) { _, _ in
+            normalizeInitialExclusionSelectionIfNeeded()
             scheduleEffectiveExcludedCountRefresh()
         }
         .onChange(of: excludedSubdirectoryPaths) { _, _ in
@@ -1054,6 +1057,27 @@ private struct LargeFolderExclusionDialog: View {
                 effectiveExcludedSubdirectoryCount = count
             }
         }
+    }
+
+    private func normalizeInitialExclusionSelectionIfNeeded() {
+        guard !didNormalizeInitialExclusionSelection else {
+            return
+        }
+
+        didNormalizeInitialExclusionSelection = true
+
+        let allPreparedPaths = Set(preparedSubdirectoryPaths)
+        guard !allPreparedPaths.isEmpty else {
+            return
+        }
+
+        let currentExcludedSet = Set(excludedSubdirectoryPaths)
+        guard !currentExcludedSet.isEmpty,
+              allPreparedPaths.isSubset(of: currentExcludedSet) else {
+            return
+        }
+
+        excludedSubdirectoryPaths = []
     }
 
     private static func collectPaths(from node: FolderWatchDirectoryNode) -> [String] {
