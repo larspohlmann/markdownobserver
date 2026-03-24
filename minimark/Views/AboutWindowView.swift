@@ -1,8 +1,16 @@
+import AppKit
 import SwiftUI
 
 struct AboutWindowView: View {
     private let appName: String
     private let appVersionText: String
+    private let authorName = "Lars Pohlmann"
+    private let authorURL = URL(string: "https://lars-pohlmann.de")!
+    private let repositoryURL = URL(string: "https://github.com/larspohlmann/markdownobserver")!
+
+    private var appIcon: NSImage? {
+        NSApp.applicationIconImage
+    }
 
     init(
         appName: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "MarkdownObserver",
@@ -15,23 +23,67 @@ struct AboutWindowView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appName)
-                        .font(.title2.weight(.semibold))
-                    Text(appVersionText)
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center, spacing: 14) {
+                        if let appIcon {
+                            Image(nsImage: appIcon)
+                                .resizable()
+                                .interpolation(.high)
+                                .frame(width: 76, height: 76)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .strokeBorder(.quaternary, lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+                                .accessibilityHidden(true)
+                        }
 
-                    Text("Open-source project")
-                        .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(appName)
+                                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            Text(appVersionText)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text("A focused macOS markdown reader")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
 
-                    Text("Author: Lars Pohlmann")
-                        .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                    }
 
-                    Link("Project repository", destination: URL(string: "https://github.com/larspohlmann/markdownobserver")!)
-                        .accessibilityLabel("MarkdownObserver project repository")
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        AboutDetailLinkItem(label: "Author", title: authorName, destination: authorURL)
+
+                        Link(destination: repositoryURL) {
+                            HStack(spacing: 7) {
+                                Image(systemName: "link")
+                                Text(repositoryURL.absoluteString)
+                                    .font(.callout.monospaced())
+                                    .underline()
+                                    .textSelection(.enabled)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption.weight(.semibold))
+                            }
+                        }
+                        .buttonStyle(.link)
+                        .accessibilityLabel("MarkdownObserver project repository: \(repositoryURL.absoluteString)")
+                    }
                 }
-                .accessibilityElement(children: .combine)
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.regularMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(.separator.opacity(0.35), lineWidth: 1)
+                )
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel("\(appName), \(appVersionText)")
 
                 Divider()
@@ -44,33 +96,122 @@ struct AboutWindowView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    ForEach(ThirdPartyLicenseNote.allCases) { note in
-                        ThirdPartyLicenseRow(note: note)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 12) {
+                            Text("Component")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("License")
+                                .frame(width: 110, alignment: .leading)
+                            Text("Link")
+                                .frame(width: 86, alignment: .trailing)
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+
+                        Divider()
+
+                        ForEach(Array(ThirdPartyLicenseNote.allCases.enumerated()), id: \.element.id) { index, note in
+                            ThirdPartyLicenseRow(note: note, index: index)
+
+                            if index < ThirdPartyLicenseNote.allCases.count - 1 {
+                                Divider()
+                            }
+                        }
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(.regularMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(.separator.opacity(0.35), lineWidth: 1)
+                    )
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
         }
-        .frame(minWidth: 560, minHeight: 460)
+        .frame(minWidth: 620, minHeight: 500)
+    }
+}
+
+private struct AboutDetailLinkItem: View {
+    let label: String
+    let title: String
+    let destination: URL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+
+            Link(title, destination: destination)
+                .font(.subheadline.weight(.semibold))
+                .underline()
+                .buttonStyle(.link)
+                .overlay(alignment: .trailing) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.semibold))
+                        .padding(.leading, 4)
+                        .offset(x: 14)
+                }
+        }
+    }
+}
+
+private struct AboutDetailItem: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
 private struct ThirdPartyLicenseRow: View {
     let note: ThirdPartyLicenseNote
+    let index: Int
+
+    private var hostText: String {
+        note.projectURL.host?.replacingOccurrences(of: "www.", with: "") ?? ""
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(note.displayName)
-                .font(.body.weight(.medium))
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(note.displayName)
+                    .font(.body.weight(.medium))
+                Text(hostText)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(note.licenseName)
+                .font(.callout.weight(.medium))
                 .foregroundStyle(.secondary)
+                .frame(width: 110, alignment: .leading)
 
-            Link("Project website", destination: note.projectURL)
+            Link("Website", destination: note.projectURL)
+                .font(.callout.weight(.semibold))
+                .frame(width: 86, alignment: .trailing)
                 .accessibilityLabel("\(note.displayName) project website")
         }
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(index.isMultiple(of: 2) ? Color.primary.opacity(0.025) : .clear)
     }
 }
 
