@@ -232,7 +232,7 @@ struct FileRoutingAndWatcherTests {
         #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
     }
 
-    @Test func folderChangeWatcherIncludesDeeperFilesWhenSubdirectoriesAreExplicitlyExcluded() throws {
+    @Test func folderChangeWatcherStillAppliesDepthLimitWhenSubdirectoriesAreExplicitlyExcluded() throws {
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
@@ -258,7 +258,7 @@ struct FileRoutingAndWatcherTests {
             excludedSubdirectoryURLs: [excludedBranchDirectoryURL]
         )
 
-        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(deepIncludedFileURL)))
+        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(deepIncludedFileURL)))
     }
 
     @Test @MainActor func folderChangeWatcherDoesNotEmitEventsFromExcludedSubdirectories() async throws {

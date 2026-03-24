@@ -765,7 +765,7 @@ private struct LargeFolderExclusionDialog: View {
     }
 
     private var confirmButtonTitle: String {
-        remainingToDeactivateCount > 0 ? "Start Watching Anyway" : "Start Watching"
+        "Start Watching"
     }
 
     private var footerNeedText: String {
@@ -1064,17 +1064,9 @@ private struct LargeFolderExclusionDialog: View {
             return
         }
 
+        // Keep normalization side-effect free so opening/canceling the dialog
+        // never mutates pending exclusions in the parent sheet.
         didNormalizeInitialExclusionSelection = true
-
-        let allPreparedPaths = Set(preparedSubdirectoryPaths)
-        guard !allPreparedPaths.isEmpty else {
-            return
-        }
-
-        let currentExcludedSet = Set(excludedSubdirectoryPaths)
-        if currentExcludedSet.isEmpty {
-            excludedSubdirectoryPaths = preparedSubdirectoryPaths
-        }
     }
 
     private static func collectPaths(from node: FolderWatchDirectoryNode) -> [String] {

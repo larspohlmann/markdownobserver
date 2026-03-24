@@ -151,7 +151,7 @@ nonisolated enum ReaderRecentHistory {
         )
 
         let excludedCount = entry.options.excludedSubdirectoryPaths.count
-        guard excludedCount > 0 else {
+        guard entry.options.scope == .includeSubfolders, excludedCount > 0 else {
             return baseTitle
         }
 

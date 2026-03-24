@@ -246,6 +246,27 @@ struct ReaderSettingsAndModelsTests {
         )
     }
 
+    @Test func readerRecentHistoryMenuTitleOmitsFilteredIndicatorForSelectedFolderScope() {
+        let entries = [
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
+                options: ReaderFolderWatchOptions(
+                    openMode: .watchChangesOnly,
+                    scope: .selectedFolderOnly,
+                    excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
+                )
+            ),
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/beta/docs"),
+                options: .default
+            )
+        ]
+
+        #expect(
+            ReaderRecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha)"
+        )
+    }
+
     @Test func readerFolderWatchOptionsDecodesLegacyPayloadWithoutExclusions() throws {
         let legacyJSON = "{\"openMode\":\"watchChangesOnly\",\"scope\":\"includeSubfolders\"}".data(using: .utf8)!
         let decoded = try JSONDecoder().decode(ReaderFolderWatchOptions.self, from: legacyJSON)

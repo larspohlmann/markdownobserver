@@ -9,6 +9,7 @@ final class ReaderFolderWatchController {
     private let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
 
     private var folderSecurityScopeToken: SecurityScopedAccessToken?
+    private var initialMarkdownScanTask: Task<Void, Never>?
 
     var currentDocumentFileURLProvider: (() -> URL?)?
     var openDocumentFileURLsProvider: (() -> [URL])?
@@ -128,6 +129,8 @@ final class ReaderFolderWatchController {
     }
 
     func stopWatching() {
+        initialMarkdownScanTask?.cancel()
+        initialMarkdownScanTask = nil
         folderWatcher.stopWatching()
         folderWatchAutoOpenPlanner.resetTransientState()
         folderSecurityScopeToken?.endAccess()
@@ -224,17 +227,24 @@ final class ReaderFolderWatchController {
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
     ) {
+        initialMarkdownScanTask?.cancel()
+
         let folderWatcher = self.folderWatcher
 
-        Thread.detachNewThread { [weak self] in
+        initialMarkdownScanTask = Task.detached(priority: .utility) { [weak self] in
             let markdownURLs = (try? folderWatcher.markdownFiles(
                 in: folderURL,
                 includeSubfolders: includeSubfolders,
                 excludedSubdirectoryURLs: excludedSubdirectoryURLs
             )) ?? []
 
+            guard !Task.isCancelled else {
+                return
+            }
+
             Task { @MainActor [weak self] in
                 self?.applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
+                self?.initialMarkdownScanTask = nil
             }
         }
     }
@@ -243,10 +253,6 @@ final class ReaderFolderWatchController {
         _ markdownURLs: [URL],
         for session: ReaderFolderWatchSession
     ) {
-        defer {
-            isInitialMarkdownScanInProgress = false
-        }
-
         guard activeFolderWatchSession == session else {
             return
         }
@@ -265,5 +271,6 @@ final class ReaderFolderWatchController {
             ? .folderWatchInitialBatchAutoOpen
             : .folderWatchAutoOpen
         dispatchOpenEvents(initialPlan.autoOpenEvents, session: session, origin: initialOpenOrigin)
+        isInitialMarkdownScanInProgress = false
     }
 }

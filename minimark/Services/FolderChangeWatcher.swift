@@ -70,7 +70,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var pendingWorkItem: DispatchWorkItem?
     private var usesEventSource = false
     private var needsDirectorySourceResync = false
-    private var hasPendingFilesystemSignal = false
 
     private var watchedFolderURL: URL?
     private var includesSubfolders = false
@@ -132,7 +131,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
             lastSnapshot = [:]
             needsDirectorySourceResync = false
-            hasPendingFilesystemSignal = false
 
             return nextSequence
         }
@@ -165,7 +163,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.lastSnapshot = [:]
             self.usesEventSource = false
             self.needsDirectorySourceResync = false
-            self.hasPendingFilesystemSignal = false
             self.startupSequence &+= 1
         }
 
@@ -248,8 +245,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func scheduleVerification() {
-        hasPendingFilesystemSignal = true
-
         guard pendingWorkItem == nil else {
             return
         }
@@ -266,8 +261,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         guard let watchedFolderURL, let onMarkdownFilesAddedOrChanged else {
             return
         }
-
-        hasPendingFilesystemSignal = false
 
         let exclusionMatcher = FolderWatchExclusionMatcher(
             rootFolderURL: watchedFolderURL,
@@ -504,8 +497,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
             var result: [URL] = []
             for case let fileURL as URL in enumerator {
-                if exclusionMatcher.hasNoExcludedDirectories,
-                   shouldSkipEntryBeyondIncludeSubfolderDepth(
+                if shouldSkipEntryBeyondIncludeSubfolderDepth(
                     fileURL,
                     rootFolderURL: folderURL,
                     enumerator: enumerator
@@ -564,8 +556,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         for case let directoryURL as URL in enumerator {
-            if exclusionMatcher.hasNoExcludedDirectories,
-               shouldSkipEntryBeyondIncludeSubfolderDepth(
+            if shouldSkipEntryBeyondIncludeSubfolderDepth(
                 directoryURL,
                 rootFolderURL: normalizedFolderURL,
                 enumerator: enumerator
@@ -676,10 +667,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 private struct FolderWatchExclusionMatcher {
     private let rootFolderPathWithSlash: String
     private let excludedDirectoryPaths: [String]
-
-    var hasNoExcludedDirectories: Bool {
-        excludedDirectoryPaths.isEmpty
-    }
 
     init(rootFolderURL: URL, excludedSubdirectoryURLs: [URL]) {
         let normalizedRootURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)

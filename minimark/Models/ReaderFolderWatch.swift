@@ -176,13 +176,18 @@ nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Senda
     }
 
     nonisolated var tooltipText: String {
-        [
+        var lines = [
             "Watching folder",
             detailPathText,
             "When watch starts: \(options.openMode.label)",
-            "Scope: \(options.scope.label)",
-            "Filtered subdirectories: \(options.excludedSubdirectoryPaths.count)"
-        ].joined(separator: "\n")
+            "Scope: \(options.scope.label)"
+        ]
+
+        if options.scope == .includeSubfolders {
+            lines.append("Filtered subdirectories: \(options.excludedSubdirectoryPaths.count)")
+        }
+
+        return lines.joined(separator: "\n")
     }
 
     nonisolated var accessibilityValue: String {

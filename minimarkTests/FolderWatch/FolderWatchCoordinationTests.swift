@@ -206,6 +206,51 @@ struct FolderWatchCoordinationTests {
         #expect(!controller.isInitialMarkdownScanInProgress)
     }
 
+    @Test @MainActor func folderWatchControllerIgnoresStaleInitialScanCompletionAfterRestart() async throws {
+        let firstFolderURL = URL(fileURLWithPath: "/tmp/watched-first-\(UUID().uuidString)", isDirectory: true)
+        let secondFolderURL = URL(fileURLWithPath: "/tmp/watched-second-\(UUID().uuidString)", isDirectory: true)
+        let watcher = TestFolderWatcher()
+        watcher.markdownFilesDelay = 0.4
+        watcher.markdownFilesToReturn = [firstFolderURL.appendingPathComponent("initial.md")]
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.progress-restart.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+
+        try controller.startWatching(
+            folderURL: firstFolderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders
+            )
+        )
+        #expect(controller.isInitialMarkdownScanInProgress)
+
+        try? await Task.sleep(for: .milliseconds(100))
+
+        try controller.startWatching(
+            folderURL: secondFolderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders
+            )
+        )
+
+        try? await Task.sleep(for: .milliseconds(350))
+        #expect(controller.isInitialMarkdownScanInProgress)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            !controller.isInitialMarkdownScanInProgress
+        })
+    }
+
     @Test @MainActor func folderWatchOpenCoordinatorDeduplicatesAndBuildsLatestBatch() {
         let coordinator = ReaderFolderWatchOpenCoordinator()
         let watchSession = ReaderFolderWatchSession(
@@ -486,6 +531,22 @@ struct FolderWatchCoordinationTests {
         #expect(session.tooltipText.contains(session.detailPathText))
         #expect(session.tooltipText.contains("When watch starts: Open all Markdown files"))
         #expect(session.tooltipText.contains("Scope: Include subfolders"))
+        #expect(session.tooltipText.contains("Filtered subdirectories: 0"))
+    }
+
+    @Test func folderWatchTooltipOmitsFilteredSubdirectoryLineForSelectedFolderScope() {
+        let session = ReaderFolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/Users/example/Documents/Projects/MarkdownObserver/docs/reference", isDirectory: true),
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .selectedFolderOnly,
+                excludedSubdirectoryPaths: ["/Users/example/Documents/Projects/MarkdownObserver/docs/reference/build"]
+            ),
+            startedAt: Date(timeIntervalSince1970: 4242)
+        )
+
+        #expect(session.detailRows.count == 2)
+        #expect(!session.tooltipText.contains("Filtered subdirectories:"))
     }
 
     @Test func windowTitleFormatterUsesDocumentTitleWithoutWatch() {
