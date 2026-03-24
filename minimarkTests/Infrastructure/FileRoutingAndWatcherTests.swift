@@ -352,6 +352,159 @@ struct FileRoutingAndWatcherTests {
         #expect(receivedEvents.isEmpty)
     }
 
+    @Test @MainActor func folderChangeWatcherSignalsStartupSnapshotFailureAndRecoversAfterFolderAppears() async throws {
+        let baseDirectoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: baseDirectoryURL) }
+
+        let missingFolderURL = baseDirectoryURL.appendingPathComponent("missing", isDirectory: true)
+        let recoveredFileURL = missingFolderURL.appendingPathComponent("recovered.md")
+
+        let lock = NSLock()
+        var failures: [FolderChangeWatcherFailure] = []
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        let watcher = makeFolderChangeWatcher(onFailure: { failure in
+            lock.lock()
+            failures.append(failure)
+            lock.unlock()
+        })
+
+        try watcher.startWatching(folderURL: missingFolderURL, includeSubfolders: false) { events in
+            lock.lock()
+            receivedEvents.append(contentsOf: events)
+            lock.unlock()
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            lock.lock()
+            defer { lock.unlock() }
+            return failures.contains(where: { $0.stage == .startupSnapshot })
+        })
+
+        lock.lock()
+        let startupFailure = failures.first(where: { $0.stage == .startupSnapshot })
+        lock.unlock()
+        let startupFailureValue = try #require(startupFailure)
+        #expect(!startupFailureValue.folderIdentifier.contains("/"))
+        #expect(startupFailureValue.errorDescription.contains("(domain:"))
+        #expect(!startupFailureValue.errorDescription.contains(missingFolderURL.path))
+
+        try FileManager.default.createDirectory(at: missingFolderURL, withIntermediateDirectories: true)
+        try "# Recovered".write(to: recoveredFileURL, atomically: false, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            lock.lock()
+            defer { lock.unlock() }
+            return receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(recoveredFileURL) &&
+                $0.kind == .added
+            })
+        })
+    }
+
+    @Test @MainActor func folderChangeWatcherFailureCallbacksArriveOnMainThreadAndDeduplicateRepeatedVerificationErrors() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let trackedFileURL = directoryURL.appendingPathComponent("tracked.md")
+        try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
+
+        let lock = NSLock()
+        var verificationFailures: [FolderChangeWatcherFailure] = []
+        var callbackMainThreadFlags: [Bool] = []
+
+        let watcher = makeFolderChangeWatcher(onFailure: { failure in
+            lock.lock()
+            callbackMainThreadFlags.append(Thread.isMainThread)
+            if failure.stage == .verificationSnapshot {
+                verificationFailures.append(failure)
+            }
+            lock.unlock()
+        })
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { _ in }
+        defer { watcher.stopWatching() }
+
+        try? await Task.sleep(for: .milliseconds(200))
+        try FileManager.default.removeItem(at: directoryURL)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            lock.lock()
+            defer { lock.unlock() }
+            return !verificationFailures.isEmpty
+        })
+
+        try? await Task.sleep(for: .milliseconds(200))
+
+        lock.lock()
+        let firstFailureCount = verificationFailures.count
+        let allCallbacksOnMainThread = callbackMainThreadFlags.allSatisfy { $0 }
+        lock.unlock()
+
+        #expect(firstFailureCount == 1)
+        #expect(allCallbacksOnMainThread)
+
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try "# Restored".write(to: trackedFileURL, atomically: false, encoding: .utf8)
+        try? await Task.sleep(for: .milliseconds(200))
+
+        try FileManager.default.removeItem(at: directoryURL)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            lock.lock()
+            defer { lock.unlock() }
+            return verificationFailures.count == 2
+        })
+    }
+
+    @Test @MainActor func folderChangeWatcherSignalsVerificationFailureAndRecoversAfterFolderRestored() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let trackedFileURL = directoryURL.appendingPathComponent("tracked.md")
+        try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
+
+        let lock = NSLock()
+        var failures: [FolderChangeWatcherFailure] = []
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        let watcher = makeFolderChangeWatcher(onFailure: { failure in
+            lock.lock()
+            failures.append(failure)
+            lock.unlock()
+        })
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { events in
+            lock.lock()
+            receivedEvents.append(contentsOf: events)
+            lock.unlock()
+        }
+        defer { watcher.stopWatching() }
+
+        try? await Task.sleep(for: .milliseconds(200))
+        try FileManager.default.removeItem(at: directoryURL)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            lock.lock()
+            defer { lock.unlock() }
+            return failures.contains(where: { $0.stage == .verificationSnapshot })
+        })
+
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        let recoveredFileURL = directoryURL.appendingPathComponent("after-restore.md")
+        try "# After restore".write(to: recoveredFileURL, atomically: false, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            lock.lock()
+            defer { lock.unlock() }
+            return receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(recoveredFileURL) &&
+                $0.kind == .added
+            })
+        })
+    }
+
     @Test @MainActor func recursiveFolderWatchDoesNotTriggerNestedFileWatcherWithoutRealFileChanges() async throws {
         let directoryURL = try makeTemporaryDirectory()
         let nestedDirectoryURL = directoryURL
@@ -582,13 +735,15 @@ private extension FileRoutingAndWatcherTests {
 
     func makeFolderChangeWatcher(
         fallbackPollingInterval: DispatchTimeInterval = defaultFallbackPollingInterval,
-        maximumDirectoryEventSourceCount: Int? = nil
+        maximumDirectoryEventSourceCount: Int? = nil,
+        onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) -> FolderChangeWatcher {
         guard let maximumDirectoryEventSourceCount else {
             return FolderChangeWatcher(
                 pollingInterval: Self.defaultPollingInterval,
                 fallbackPollingInterval: fallbackPollingInterval,
-                verificationDelay: Self.defaultVerificationDelay
+                verificationDelay: Self.defaultVerificationDelay,
+                onFailure: onFailure
             )
         }
 
@@ -596,7 +751,8 @@ private extension FileRoutingAndWatcherTests {
             pollingInterval: Self.defaultPollingInterval,
             fallbackPollingInterval: fallbackPollingInterval,
             verificationDelay: Self.defaultVerificationDelay,
-            maximumDirectoryEventSourceCount: maximumDirectoryEventSourceCount
+            maximumDirectoryEventSourceCount: maximumDirectoryEventSourceCount,
+            onFailure: onFailure
         )
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 enum ReaderFolderWatchChangeKind: String, Equatable, Hashable, Codable, Sendable {
     case added
@@ -57,13 +58,30 @@ extension FolderChangeWatching {
     }
 }
 
+struct FolderChangeWatcherFailure: Equatable, Sendable {
+    enum Stage: String, Equatable, Sendable {
+        case startupSnapshot
+        case verificationSnapshot
+        case watchedDirectoryEnumeration
+    }
+
+    let stage: Stage
+    let folderIdentifier: String
+    let errorDescription: String
+}
+
 final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private static let queueKey = DispatchSpecificKey<UInt8>()
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "FolderChangeWatcher"
+    )
     private let queue = DispatchQueue(label: "minimark.folderwatcher")
     private let pollingInterval: DispatchTimeInterval
     private let fallbackPollingInterval: DispatchTimeInterval
     private let verificationDelay: DispatchTimeInterval
     private let maximumDirectoryEventSourceCount: Int
+    private let onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)?
     private var directorySources: [URL: DispatchSourceFileSystemObject] = [:]
     private var timer: DispatchSourceTimer?
     private var timerInterval: DispatchTimeInterval?
@@ -76,30 +94,36 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var excludedSubdirectoryURLs: [URL] = []
     private var onMarkdownFilesAddedOrChanged: (([ReaderFolderWatchChangeEvent]) -> Void)?
     private var lastSnapshot: [URL: FolderFileSnapshot] = [:]
+    private var lastReportedFailureByStage: [FolderChangeWatcherFailure.Stage: String] = [:]
     private var startupSequence: UInt64 = 0
 
-    init(
+    convenience init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
         fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
-        verificationDelay: DispatchTimeInterval = .milliseconds(75)
+        verificationDelay: DispatchTimeInterval = .milliseconds(75),
+        onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) {
-        self.pollingInterval = pollingInterval
-        self.fallbackPollingInterval = fallbackPollingInterval
-        self.verificationDelay = verificationDelay
-        self.maximumDirectoryEventSourceCount = 128
-        queue.setSpecific(key: Self.queueKey, value: 1)
+        self.init(
+            pollingInterval: pollingInterval,
+            fallbackPollingInterval: fallbackPollingInterval,
+            verificationDelay: verificationDelay,
+            maximumDirectoryEventSourceCount: 128,
+            onFailure: onFailure
+        )
     }
 
     init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
         fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
         verificationDelay: DispatchTimeInterval = .milliseconds(75),
-        maximumDirectoryEventSourceCount: Int = 128
+        maximumDirectoryEventSourceCount: Int = 128,
+        onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) {
         self.pollingInterval = pollingInterval
         self.fallbackPollingInterval = fallbackPollingInterval
         self.verificationDelay = verificationDelay
         self.maximumDirectoryEventSourceCount = max(1, maximumDirectoryEventSourceCount)
+        self.onFailure = onFailure
         queue.setSpecific(key: Self.queueKey, value: 1)
     }
 
@@ -130,6 +154,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.excludedSubdirectoryURLs = normalizedExcludedSubdirectoryURLs
             self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
             lastSnapshot = [:]
+            lastReportedFailureByStage = [:]
             needsDirectorySourceResync = false
 
             return nextSequence
@@ -161,6 +186,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.excludedSubdirectoryURLs = []
             self.onMarkdownFilesAddedOrChanged = nil
             self.lastSnapshot = [:]
+            self.lastReportedFailureByStage = [:]
             self.usesEventSource = false
             self.needsDirectorySourceResync = false
             self.startupSequence &+= 1
@@ -183,11 +209,19 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             return
         }
 
-        let snapshot = (try? buildSnapshot(
-            folderURL: folderURL,
-            includeSubfolders: includeSubfolders,
-            excludedSubdirectoryURLs: excludedSubdirectoryURLs
-        )) ?? [:]
+        let snapshot: [URL: FolderFileSnapshot]
+        do {
+            snapshot = try buildSnapshot(
+                folderURL: folderURL,
+                includeSubfolders: includeSubfolders,
+                excludedSubdirectoryURLs: excludedSubdirectoryURLs
+            )
+            clearReportedFailure(for: .startupSnapshot)
+        } catch {
+            // Keep startup resilient by preserving empty-baseline behavior while surfacing the failure.
+            snapshot = [:]
+            reportFailure(stage: .startupSnapshot, folderURL: folderURL, error: error)
+        }
 
         guard startupSequence == self.startupSequence else {
             return
@@ -267,12 +301,17 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             excludedSubdirectoryURLs: excludedSubdirectoryURLs
         )
 
-        guard let currentSnapshot = try? buildIncrementalSnapshot(
-            folderURL: watchedFolderURL,
-            includeSubfolders: includesSubfolders,
-            exclusionMatcher: exclusionMatcher,
-            previousSnapshot: lastSnapshot
-        ) else {
+        let currentSnapshot: [URL: FolderFileSnapshot]
+        do {
+            currentSnapshot = try buildIncrementalSnapshot(
+                folderURL: watchedFolderURL,
+                includeSubfolders: includesSubfolders,
+                exclusionMatcher: exclusionMatcher,
+                previousSnapshot: lastSnapshot
+            )
+            clearReportedFailure(for: .verificationSnapshot)
+        } catch {
+            reportFailure(stage: .verificationSnapshot, folderURL: watchedFolderURL, error: error)
             return
         }
 
@@ -348,11 +387,18 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             rootFolderURL: folderURL,
             excludedSubdirectoryURLs: excludedSubdirectoryURLs
         )
-        let watchedDirectoryURLs = (try? enumerateWatchedDirectories(
-            folderURL: folderURL,
-            includeSubfolders: includeSubfolders,
-            exclusionMatcher: exclusionMatcher
-        )) ?? [folderURL]
+        let watchedDirectoryURLs: [URL]
+        do {
+            watchedDirectoryURLs = try enumerateWatchedDirectories(
+                folderURL: folderURL,
+                includeSubfolders: includeSubfolders,
+                exclusionMatcher: exclusionMatcher
+            )
+            clearReportedFailure(for: .watchedDirectoryEnumeration)
+        } catch {
+            watchedDirectoryURLs = [folderURL]
+            reportFailure(stage: .watchedDirectoryEnumeration, folderURL: folderURL, error: error)
+        }
 
         if includeSubfolders && watchedDirectoryURLs.count > maximumDirectoryEventSourceCount {
             cancelAllDirectorySources()
@@ -661,6 +707,43 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         // Files should be allowed up to the maximum directory depth, so we do not
         // count the file name itself as an additional level.
         return max(0, componentCount - 1)
+    }
+
+    private func reportFailure(stage: FolderChangeWatcherFailure.Stage, folderURL: URL, error: any Error) {
+        let errorDescription = sanitizedErrorDescription(for: error)
+        let failure = FolderChangeWatcherFailure(
+            stage: stage,
+            folderIdentifier: sanitizedFolderIdentifier(for: folderURL),
+            errorDescription: errorDescription
+        )
+
+        let signature = "\(String(reflecting: type(of: error))):\(errorDescription)"
+        if lastReportedFailureByStage[stage] != signature {
+            lastReportedFailureByStage[stage] = signature
+            Self.logger.error(
+                "folder watch failure stage=\(stage.rawValue, privacy: .public) folder=\(folderURL.path, privacy: .private(mask: .hash)) error=\(errorDescription, privacy: .private(mask: .hash))"
+            )
+
+            let onFailure = self.onFailure
+            DispatchQueue.main.async {
+                onFailure?(failure)
+            }
+        }
+    }
+
+    private func clearReportedFailure(for stage: FolderChangeWatcherFailure.Stage) {
+        lastReportedFailureByStage.removeValue(forKey: stage)
+    }
+
+    private func sanitizedFolderIdentifier(for folderURL: URL) -> String {
+        let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        return String(normalizedPath.hashValue, radix: 16)
+    }
+
+    private func sanitizedErrorDescription(for error: any Error) -> String {
+        let typeDescription = String(reflecting: type(of: error))
+        let nsError = error as NSError
+        return "\(typeDescription)(domain: \(nsError.domain), code: \(nsError.code))"
     }
 }
 

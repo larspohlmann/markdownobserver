@@ -63,19 +63,27 @@ final class TestChangedRegionDiffer: ChangedRegionDiffering {
 }
 
 final class TestFileWatcher: FileChangeWatching {
+    enum Operation: Equatable {
+        case start(URL)
+        case stop
+    }
+
     private(set) var startCallCount = 0
     private(set) var stopCallCount = 0
     private(set) var lastStartedFileURL: URL?
+    private(set) var operations: [Operation] = []
     private var onChange: (@Sendable () -> Void)?
 
     func startWatching(fileURL: URL, onChange: @escaping @Sendable () -> Void) throws {
         startCallCount += 1
         lastStartedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        operations.append(.start(ReaderFileRouting.normalizedFileURL(fileURL)))
         self.onChange = onChange
     }
 
     func stopWatching() {
         stopCallCount += 1
+        operations.append(.stop)
         onChange = nil
     }
 
