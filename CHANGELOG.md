@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.3] - 2026-03-24
+
+### Added
+- Added scalable include-subfolders flow support with selective exclusions for large folder trees.
+- Added startup profiling hooks and expanded regression coverage for folder watch and sidebar flows.
+- Added improved watcher-failure surfacing and recovery-path test coverage.
+
+### Changed
+- Improved folder watch startup responsiveness by caching scan results and reducing large-tree UI lag.
+- Refined About window layout and repository link clarity.
+- Set the subfolder depth limit to 5 to keep recursive watch behavior predictable.
+
+### Fixed
+- Prevented main-thread freezes during recursive folder watch startup.
+- Fixed include-subfolders startup opening and folder selection default regressions.
+- Preserved active file watching when document open flow fails.
+- Improved handling for stale security bookmarks, initial scan failures, and path-log privacy.
+
+### Chore
+- Tuned Release Swift archive build settings.
+- Advanced internal build number progression for release automation.
+
 ## [1.0.2] - 2026-03-22
 
 ### Added
