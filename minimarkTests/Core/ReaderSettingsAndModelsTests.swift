@@ -253,6 +253,55 @@ struct ReaderSettingsAndModelsTests {
         #expect(store.currentSettings.recentWatchedFolders.first?.bookmarkData == nil)
     }
 
+    @Test @MainActor func readerSettingsStoreRecentWatchedFolderResolverRefreshesStaleBookmarkData() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.recent-folder.stale-bookmark.tests"
+        let folderURL = URL(fileURLWithPath: "/tmp/stale-watch-folder", isDirectory: true)
+        let originalBookmarkData = Data([0x01, 0x02, 0x03])
+        let refreshedBookmarkData = Data([0x10, 0x20, 0x30])
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [
+                ReaderRecentWatchedFolder(
+                    folderPath: folderURL.path,
+                    options: .default,
+                    bookmarkData: originalBookmarkData
+                )
+            ],
+            recentManuallyOpenedFiles: []
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        var resolvedBookmarkDataValues: [Data] = []
+        var createdBookmarkURLs: [URL] = []
+        let store = ReaderSettingsStore(
+            storage: storage,
+            storageKey: storageKey,
+            bookmarkResolver: { bookmarkData in
+                resolvedBookmarkDataValues.append(bookmarkData)
+                return (folderURL, true)
+            },
+            bookmarkCreator: { resolvedURL in
+                createdBookmarkURLs.append(resolvedURL)
+                return refreshedBookmarkData
+            }
+        )
+
+        let resolvedURL = store.resolvedRecentWatchedFolderURL(matching: folderURL)
+
+        #expect(resolvedURL?.path == folderURL.path)
+        #expect(resolvedBookmarkDataValues == [originalBookmarkData])
+        #expect(createdBookmarkURLs == [folderURL])
+        #expect(store.currentSettings.recentWatchedFolders.first?.bookmarkData == refreshedBookmarkData)
+    }
+
     @Test @MainActor func readerSettingsStoreRecentFileResolverPreservesValidBookmarkData() throws {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.recent-file.valid-bookmark.tests"

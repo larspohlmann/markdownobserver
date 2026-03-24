@@ -96,6 +96,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var lastSnapshot: [URL: FolderFileSnapshot] = [:]
     private var lastReportedFailureByStage: [FolderChangeWatcherFailure.Stage: String] = [:]
     private var startupSequence: UInt64 = 0
+    private var didCompleteStartup = false
 
     convenience init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
@@ -156,6 +157,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             lastSnapshot = [:]
             lastReportedFailureByStage = [:]
             needsDirectorySourceResync = false
+            didCompleteStartup = false
 
             return nextSequence
         }
@@ -189,6 +191,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.lastReportedFailureByStage = [:]
             self.usesEventSource = false
             self.needsDirectorySourceResync = false
+            self.didCompleteStartup = false
             self.startupSequence &+= 1
         }
 
@@ -235,6 +238,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             excludedSubdirectoryURLs: excludedSubdirectoryURLs
         )
         needsDirectorySourceResync = false
+        didCompleteStartup = true
         reconfigureTimerIfNeeded()
         scheduleVerification()
     }
@@ -276,6 +280,14 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         return queue.sync { timerInterval == fallbackPollingInterval }
+    }
+
+    var didCompleteStartupForTesting: Bool {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            return didCompleteStartup
+        }
+
+        return queue.sync { didCompleteStartup }
     }
 
     private func scheduleVerification() {

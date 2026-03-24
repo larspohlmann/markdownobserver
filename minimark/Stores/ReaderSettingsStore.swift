@@ -325,6 +325,10 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 }
 
 @MainActor final class ReaderSettingsStore: ObservableObject, ReaderSettingsStoring {
+    typealias BookmarkResolution = (url: URL, isStale: Bool)
+    typealias BookmarkResolver = (Data) throws -> BookmarkResolution
+    typealias BookmarkCreator = (URL) throws -> Data
+
     let objectWillChange = ObservableObjectPublisher()
 
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> {
@@ -340,13 +344,34 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     private let subject: CurrentValueSubject<ReaderSettings, Never>
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let bookmarkResolver: BookmarkResolver
+    private let bookmarkCreator: BookmarkCreator
 
     init(
         storage: ReaderSettingsKeyValueStoring = UserDefaults.standard,
-        storageKey: String = "reader.settings.v1"
+        storageKey: String = "reader.settings.v1",
+        bookmarkResolver: @escaping BookmarkResolver = { bookmarkData in
+            var bookmarkIsStale = false
+            let resolvedURL = try URL(
+                resolvingBookmarkData: bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &bookmarkIsStale
+            )
+            return (resolvedURL, bookmarkIsStale)
+        },
+        bookmarkCreator: @escaping BookmarkCreator = { resolvedURL in
+            try resolvedURL.bookmarkData(
+                options: [.withSecurityScope],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+        }
     ) {
         self.storage = storage
         self.storageKey = storageKey
+        self.bookmarkResolver = bookmarkResolver
+        self.bookmarkCreator = bookmarkCreator
         let initialSettings: ReaderSettings
 
         if let data = storage.data(forKey: storageKey),
@@ -478,20 +503,14 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
             return entry.fileURL
         }
 
-        var bookmarkIsStale = false
         do {
-            let resolvedURL = try URL(
-                resolvingBookmarkData: bookmarkData,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &bookmarkIsStale
-            )
+            let resolution = try bookmarkResolver(bookmarkData)
 
-            if bookmarkIsStale {
-                refreshRecentOpenedFileBookmark(for: entry, resolvedURL: resolvedURL)
+            if resolution.isStale {
+                refreshRecentOpenedFileBookmark(for: entry, resolvedURL: resolution.url)
             }
 
-            return resolvedURL
+            return resolution.url
         } catch {
             updateRecentOpenedFileBookmarkData(forPath: entry.filePath, bookmarkData: nil)
             return entry.fileURL
@@ -503,20 +522,14 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
             return entry.folderURL
         }
 
-        var bookmarkIsStale = false
         do {
-            let resolvedURL = try URL(
-                resolvingBookmarkData: bookmarkData,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &bookmarkIsStale
-            )
+            let resolution = try bookmarkResolver(bookmarkData)
 
-            if bookmarkIsStale {
-                refreshRecentWatchedFolderBookmark(for: entry, resolvedURL: resolvedURL)
+            if resolution.isStale {
+                refreshRecentWatchedFolderBookmark(for: entry, resolvedURL: resolution.url)
             }
 
-            return resolvedURL
+            return resolution.url
         } catch {
             updateRecentWatchedFolderBookmarkData(forPath: entry.folderPath, bookmarkData: nil)
             return entry.folderURL
@@ -524,20 +537,12 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     }
 
     private func refreshRecentOpenedFileBookmark(for entry: ReaderRecentOpenedFile, resolvedURL: URL) {
-        let refreshedBookmarkData = try? resolvedURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
+        let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
         updateRecentOpenedFileBookmarkData(forPath: entry.filePath, bookmarkData: refreshedBookmarkData)
     }
 
     private func refreshRecentWatchedFolderBookmark(for entry: ReaderRecentWatchedFolder, resolvedURL: URL) {
-        let refreshedBookmarkData = try? resolvedURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
+        let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
         updateRecentWatchedFolderBookmarkData(forPath: entry.folderPath, bookmarkData: refreshedBookmarkData)
     }
 
