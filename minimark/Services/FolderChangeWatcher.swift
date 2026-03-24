@@ -504,6 +504,14 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
             var result: [URL] = []
             for case let fileURL as URL in enumerator {
+                if shouldSkipEntryBeyondIncludeSubfolderDepth(
+                    fileURL,
+                    rootFolderURL: folderURL,
+                    enumerator: enumerator
+                ) {
+                    continue
+                }
+
                 if shouldSkipDescendants(for: fileURL, exclusionMatcher: exclusionMatcher, enumerator: enumerator) {
                     continue
                 }
@@ -555,6 +563,14 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         for case let directoryURL as URL in enumerator {
+            if shouldSkipEntryBeyondIncludeSubfolderDepth(
+                directoryURL,
+                rootFolderURL: normalizedFolderURL,
+                enumerator: enumerator
+            ) {
+                continue
+            }
+
             if shouldSkipDescendants(for: directoryURL, exclusionMatcher: exclusionMatcher, enumerator: enumerator) {
                 continue
             }
@@ -597,6 +613,61 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
         enumerator.skipDescendants()
         return true
+    }
+
+    private func shouldSkipEntryBeyondIncludeSubfolderDepth(
+        _ url: URL,
+        rootFolderURL: URL,
+        enumerator: FileManager.DirectoryEnumerator
+    ) -> Bool {
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedRootFolderURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
+        let isDirectory = (try? normalizedURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+        let depth = relativePathDepth(
+            for: normalizedURL,
+            relativeTo: normalizedRootFolderURL,
+            isDirectory: isDirectory
+        )
+
+        guard depth > ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
+            return false
+        }
+
+        if isDirectory {
+            enumerator.skipDescendants()
+        }
+
+        return true
+    }
+
+    private func relativePathDepth(for url: URL, relativeTo rootFolderURL: URL, isDirectory: Bool) -> Int {
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedRootFolderURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
+        let rootPath = normalizedRootFolderURL.path
+        let path = normalizedURL.path
+
+        if path == rootPath {
+            return 0
+        }
+
+        let rootPrefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        guard path.hasPrefix(rootPrefix) else {
+            return .max
+        }
+
+        let relativePath = String(path.dropFirst(rootPrefix.count))
+        guard !relativePath.isEmpty else {
+            return 0
+        }
+
+        let componentCount = relativePath.split(separator: "/", omittingEmptySubsequences: true).count
+        guard !isDirectory else {
+            return componentCount
+        }
+
+        // Files should be allowed up to the maximum directory depth, so we do not
+        // count the file name itself as an additional level.
+        return max(0, componentCount - 1)
     }
 }
 

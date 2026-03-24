@@ -203,6 +203,31 @@ struct FileRoutingAndWatcherTests {
         #expect(recursiveFiles == [ReaderFileRouting.normalizedFileURL(includedFileURL)])
     }
 
+    @Test func folderChangeWatcherLimitsRecursiveEnumerationToFourLevels() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let depthFourDirectoryURL = directoryURL
+            .appendingPathComponent("l1", isDirectory: true)
+            .appendingPathComponent("l2", isDirectory: true)
+            .appendingPathComponent("l3", isDirectory: true)
+            .appendingPathComponent("l4", isDirectory: true)
+        let depthFiveDirectoryURL = depthFourDirectoryURL.appendingPathComponent("l5", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: depthFiveDirectoryURL, withIntermediateDirectories: true)
+
+        let depthFourFileURL = depthFourDirectoryURL.appendingPathComponent("depth-four.md")
+        let depthFiveFileURL = depthFiveDirectoryURL.appendingPathComponent("depth-five.md")
+        try "# Depth four".write(to: depthFourFileURL, atomically: false, encoding: .utf8)
+        try "# Depth five".write(to: depthFiveFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher()
+        let recursiveFiles = try watcher.markdownFiles(in: directoryURL, includeSubfolders: true)
+
+        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFourFileURL)))
+        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
+    }
+
     @Test @MainActor func folderChangeWatcherDoesNotEmitEventsFromExcludedSubdirectories() async throws {
         let directoryURL = try makeTemporaryDirectory()
         let excludedSubdirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
