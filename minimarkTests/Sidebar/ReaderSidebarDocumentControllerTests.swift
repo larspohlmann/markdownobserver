@@ -92,6 +92,57 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.selectedReaderStore.fileURL == nil)
     }
 
+    @Test @MainActor func sidebarControllerFailedWatchedOpenKeepsActiveFolderWatchSession() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default
+        )
+        let stopCallCountBeforeFailedOpen = harness.folderWatchControllerWatcher.stopCallCount
+
+        let missingFileURL = harness.temporaryDirectoryURL
+            .appendingPathComponent("nested", isDirectory: true)
+            .appendingPathComponent("missing.md")
+
+        harness.controller.openAdditionalDocument(
+            at: missingFileURL,
+            origin: .folderWatchAutoOpen,
+            folderWatchSession: harness.controller.activeFolderWatchSession,
+            preferEmptySelection: false
+        )
+
+        #expect(harness.controller.documents.count == 1)
+        #expect(harness.controller.selectedReaderStore.fileURL == nil)
+        #expect(harness.controller.canStopFolderWatch)
+        #expect(harness.controller.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
+        #expect(harness.folderWatchControllerWatcher.stopCallCount == stopCallCountBeforeFailedOpen)
+    }
+
+    @Test @MainActor func sidebarControllerSurfacesInitialScanFailureState() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        harness.folderWatchControllerWatcher.markdownFilesError = NSError(
+            domain: "ReaderSidebarDocumentControllerTests",
+            code: 91
+        )
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders
+            )
+        )
+
+        #expect(harness.controller.isFolderWatchInitialScanInProgress)
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            harness.controller.didFolderWatchInitialScanFail && !harness.controller.isFolderWatchInitialScanInProgress
+        })
+    }
+
     @Test @MainActor func sidebarControllerStopsActiveFolderWatch() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }

@@ -97,6 +97,38 @@ struct ReaderStoreSourceEditingTests {
         #expect(fixture.securityScope.accessedURLs.contains(where: { $0.path == fixture.temporaryDirectoryURL.path }))
     }
 
+    @Test @MainActor func watchedFolderReauthorizationRequestsMatchingFolderAndRefreshesScopeToken() throws {
+        var requestedFolderURL: URL?
+        let fixture = try ReaderStoreTestFixture(
+            autoRefreshOnExternalChange: false,
+            requestWatchedFolderReauthorization: { folderURL in
+                requestedFolderURL = folderURL
+                return folderURL
+            }
+        )
+        defer { fixture.cleanup() }
+
+        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(
+            folderURL: fixture.temporaryDirectoryURL,
+            options: options,
+            startedAt: .now
+        )
+        fixture.store.setActiveFolderWatchSession(session)
+
+        let permissionDeniedError = NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError)
+        let didReauthorize = fixture.store.tryReauthorizeWatchedFolderIfNeeded(
+            after: permissionDeniedError,
+            for: fixture.primaryFileURL
+        )
+
+        #expect(didReauthorize)
+        #expect(requestedFolderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        #expect(fixture.store.activeFolderWatchSession?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        #expect(fixture.settings.recordedRecentWatchedFolders.first?.folderPath == fixture.temporaryDirectoryURL.path)
+        #expect(fixture.securityScope.accessedURLs.contains(where: { $0.path == fixture.temporaryDirectoryURL.path }))
+    }
+
     @Test @MainActor func observedFileChangeAfterSavingDraftPreservesSavedDiffAndSkipsExternalState() throws {
         let fixture = try ReaderStoreTestFixture(
             autoRefreshOnExternalChange: true,

@@ -500,7 +500,8 @@ struct ReaderStoreTestFixture {
         autoRefreshOnExternalChange: Bool,
         notificationsEnabled: Bool = true,
         changedRegionsForModifiedContent: [ChangedRegion] = [],
-        autoOpenSettlingInterval: TimeInterval = 1.0
+        autoOpenSettlingInterval: TimeInterval = 1.0,
+        requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
     ) throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("minimark-tests-\(UUID().uuidString)", isDirectory: true)
@@ -518,17 +519,32 @@ struct ReaderStoreTestFixture {
             autoRefreshOnExternalChange: autoRefreshOnExternalChange,
             notificationsEnabled: notificationsEnabled
         )
-        store = ReaderStore(
-            renderer: renderer,
-            differ: differ,
-            fileWatcher: watcher,
-            folderWatcher: folderWatcher,
-            settingsStore: settings,
-            securityScope: securityScope,
-            fileActions: fileActions,
-            systemNotifier: notifier,
-            autoOpenSettlingInterval: autoOpenSettlingInterval
-        )
+        if let requestWatchedFolderReauthorization {
+            store = ReaderStore(
+                renderer: renderer,
+                differ: differ,
+                fileWatcher: watcher,
+                folderWatcher: folderWatcher,
+                settingsStore: settings,
+                securityScope: securityScope,
+                fileActions: fileActions,
+                systemNotifier: notifier,
+                autoOpenSettlingInterval: autoOpenSettlingInterval,
+                requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+            )
+        } else {
+            store = ReaderStore(
+                renderer: renderer,
+                differ: differ,
+                fileWatcher: watcher,
+                folderWatcher: folderWatcher,
+                settingsStore: settings,
+                securityScope: securityScope,
+                fileActions: fileActions,
+                systemNotifier: notifier,
+                autoOpenSettlingInterval: autoOpenSettlingInterval
+            )
+        }
     }
 
     func write(content: String, to url: URL) {

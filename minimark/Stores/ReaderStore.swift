@@ -86,7 +86,8 @@ final class ReaderStore: ObservableObject {
         fileActions: ReaderFileActionHandling,
         systemNotifier: ReaderSystemNotifying,
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning,
-        autoOpenSettlingInterval: TimeInterval
+        autoOpenSettlingInterval: TimeInterval,
+        requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
     ) {
         self.renderer = renderer
         self.differ = differ
@@ -98,13 +99,17 @@ final class ReaderStore: ObservableObject {
         self.systemNotifier = systemNotifier
         self.folderWatchAutoOpenPlanner = folderWatchAutoOpenPlanner
         self.autoOpenSettlingInterval = autoOpenSettlingInterval
-        self.requestWatchedFolderReauthorization = { folderURL in
-            MarkdownOpenPanel.pickFolder(
-                directoryURL: folderURL,
-                title: "Reauthorize Watched Folder",
-                message: "MarkdownObserver needs write access to this watched folder to save auto-opened documents.",
-                prompt: "Grant Access"
-            )
+        if let requestWatchedFolderReauthorization {
+            self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
+        } else {
+            self.requestWatchedFolderReauthorization = { folderURL in
+                MarkdownOpenPanel.pickFolder(
+                    directoryURL: folderURL,
+                    title: "Reauthorize Watched Folder",
+                    message: "MarkdownObserver needs write access to this watched folder to save auto-opened documents.",
+                    prompt: "Grant Access"
+                )
+            }
         }
 
         settingsCancellable = settingsStore.settingsPublisher
@@ -191,6 +196,33 @@ final class ReaderStore: ObservableObject {
             systemNotifier: systemNotifier,
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
             autoOpenSettlingInterval: autoOpenSettlingInterval
+        )
+    }
+
+    convenience init(
+        renderer: MarkdownRendering,
+        differ: ChangedRegionDiffering,
+        fileWatcher: FileChangeWatching,
+        folderWatcher: FolderChangeWatching,
+        settingsStore: ReaderSettingsStoring,
+        securityScope: SecurityScopedResourceAccessing,
+        fileActions: ReaderFileActionHandling,
+        systemNotifier: ReaderSystemNotifying,
+        autoOpenSettlingInterval: TimeInterval = 1.0,
+        requestWatchedFolderReauthorization: @escaping (URL) -> URL?
+    ) {
+        self.init(
+            renderer: renderer,
+            differ: differ,
+            fileWatcher: fileWatcher,
+            folderWatcher: folderWatcher,
+            settingsStore: settingsStore,
+            securityScope: securityScope,
+            fileActions: fileActions,
+            systemNotifier: systemNotifier,
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+            autoOpenSettlingInterval: autoOpenSettlingInterval,
+            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
         )
     }
 

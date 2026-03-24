@@ -122,9 +122,9 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
-        // Give the watcher a brief warm-up window so initial baselines are captured
-        // before exercising modified/added event assertions.
-        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting
+        })
 
         try "# After".write(to: existingFileURL, atomically: false, encoding: .utf8)
         try "# Added".write(to: addedFileURL, atomically: false, encoding: .utf8)
@@ -286,8 +286,9 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
-        // Ensure recursive directory sources and baselines are primed before writes.
-        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting
+        })
 
         try "# After excluded".write(to: excludedFileURL, atomically: false, encoding: .utf8)
         try "# After included".write(to: includedFileURL, atomically: false, encoding: .utf8)
@@ -619,6 +620,78 @@ struct FileRoutingAndWatcherTests {
         })
     }
 
+    @Test @MainActor func profileFolderChangeWatcherStartupSnapshotForLargeCorpus() async throws {
+        let triggerFileURL = URL(fileURLWithPath: "/tmp/minimark-startup-profile-trigger.txt")
+        var triggerConfig: [String: String] = [:]
+        if let triggerText = try? String(contentsOf: triggerFileURL, encoding: .utf8) {
+            for line in triggerText.split(separator: "\n") {
+                let parts = line.split(separator: "=", maxSplits: 1).map(String.init)
+                guard parts.count == 2 else {
+                    continue
+                }
+                triggerConfig[parts[0].trimmingCharacters(in: .whitespaces)] = parts[1].trimmingCharacters(in: .whitespaces)
+            }
+        }
+
+        let environment = ProcessInfo.processInfo.environment
+        let isEnabledViaEnvironment = environment["PROFILE_STARTUP_SNAPSHOT"] == "1"
+        let isEnabledViaTriggerFile = triggerConfig["enabled"] == "1"
+        guard isEnabledViaEnvironment || isEnabledViaTriggerFile else {
+            return
+        }
+
+        let maximumProfileFileCount = 20_000
+        let maximumProfileDepth = 8
+        let resolvedFileCount = Int(environment["PROFILE_STARTUP_FILE_COUNT"] ?? triggerConfig["file_count"] ?? "4000") ?? 4000
+        let resolvedDepth = Int(environment["PROFILE_STARTUP_DEPTH"] ?? triggerConfig["depth"] ?? "3") ?? 3
+        let fileCount = min(max(resolvedFileCount, 1), maximumProfileFileCount)
+        let depth = min(max(resolvedDepth, 1), maximumProfileDepth)
+        let includeSubfolders = (environment["PROFILE_STARTUP_INCLUDE_SUBFOLDERS"] ?? triggerConfig["include_subfolders"]) != "0"
+        print(
+            "PROFILE_STARTUP_CONFIG file_count=\(fileCount) depth=\(depth) include_subfolders=\(includeSubfolders)"
+        )
+
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        for index in 0..<fileCount {
+            var parentURL = directoryURL
+            for level in 0..<depth {
+                let branch = (index + level) % 10
+                parentURL = parentURL.appendingPathComponent("d\(level)-\(branch)", isDirectory: true)
+            }
+            try FileManager.default.createDirectory(at: parentURL, withIntermediateDirectories: true)
+            let fileURL = parentURL.appendingPathComponent(String(format: "note-%05d.md", index))
+            try "# Startup Profile \(index)".write(to: fileURL, atomically: false, encoding: .utf8)
+        }
+
+        let watcher = makeFolderChangeWatcher(fallbackPollingInterval: .seconds(5))
+        let clock = ContinuousClock()
+        let start = clock.now
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: includeSubfolders) { _ in }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(30)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        let elapsed = start.duration(to: clock.now)
+        let elapsedMilliseconds = Double(elapsed.components.seconds) * 1000.0 +
+            Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+        let elapsedText = String(format: "%.2f", elapsedMilliseconds)
+        print(
+            "PROFILE_STARTUP_SNAPSHOT elapsed_ms=\(elapsedText) file_count=\(fileCount) depth=\(depth) include_subfolders=\(includeSubfolders)"
+        )
+
+        if let outputPath = environment["PROFILE_STARTUP_OUTPUT_PATH"] ?? triggerConfig["output_path"],
+           !outputPath.isEmpty {
+            let outputURL = URL(fileURLWithPath: outputPath)
+            let outputText = "elapsed_ms=\(elapsedText)\nfile_count=\(fileCount)\ndepth=\(depth)\ninclude_subfolders=\(includeSubfolders)\n"
+            try outputText.write(to: outputURL, atomically: true, encoding: .utf8)
+        }
+    }
+
     @Test func readerFileActionServiceDeduplicatesApplicationsWithSameBundleIdentifier() throws {
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("reader-file-action-service-tests-\(UUID().uuidString)", isDirectory: true)
@@ -785,8 +858,9 @@ private extension FileRoutingAndWatcherTests {
         }
         #expect(watcherReady)
 
-        // Allow watcher setup to complete before mutating nested files.
-        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting
+        })
 
         try "# After".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
