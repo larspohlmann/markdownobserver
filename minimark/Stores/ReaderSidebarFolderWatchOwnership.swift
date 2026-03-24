@@ -27,6 +27,10 @@ final class ReaderFolderWatchController {
         didSet { onStateChange?() }
     }
 
+    private(set) var isInitialMarkdownScanInProgress = false {
+        didSet { onStateChange?() }
+    }
+
     init(
         folderWatcher: FolderChangeWatching,
         settingsStore: ReaderSettingsStoring,
@@ -90,10 +94,12 @@ final class ReaderFolderWatchController {
             lastWatchedFolderEventAt = nil
 
             guard options.openMode == .openAllMarkdownFiles else {
+                isInitialMarkdownScanInProgress = false
                 return
             }
 
             if options.scope == .includeSubfolders {
+                isInitialMarkdownScanInProgress = true
                 loadInitialMarkdownFilesOffMainActor(
                     for: session,
                     folderURL: accessibleFolderURL,
@@ -101,6 +107,7 @@ final class ReaderFolderWatchController {
                     excludedSubdirectoryURLs: excludedSubdirectoryURLs
                 )
             } else {
+                isInitialMarkdownScanInProgress = true
                 let markdownURLs = try folderWatcher.markdownFiles(
                     in: accessibleFolderURL,
                     includeSubfolders: false,
@@ -115,6 +122,7 @@ final class ReaderFolderWatchController {
             activeFolderWatchSession = nil
             lastWatchedFolderEventAt = nil
             folderWatchAutoOpenWarning = nil
+            isInitialMarkdownScanInProgress = false
             throw error
         }
     }
@@ -127,6 +135,7 @@ final class ReaderFolderWatchController {
         activeFolderWatchSession = nil
         lastWatchedFolderEventAt = nil
         folderWatchAutoOpenWarning = nil
+        isInitialMarkdownScanInProgress = false
     }
 
     func dismissFolderWatchAutoOpenWarning() {
@@ -234,6 +243,10 @@ final class ReaderFolderWatchController {
         _ markdownURLs: [URL],
         for session: ReaderFolderWatchSession
     ) {
+        defer {
+            isInitialMarkdownScanInProgress = false
+        }
+
         guard activeFolderWatchSession == session else {
             return
         }

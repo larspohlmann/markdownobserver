@@ -100,7 +100,19 @@ struct FolderWatchOptionsSheet: View {
         return max(0, activeSubdirectoryCount - ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold)
     }
 
+    private var exceedsSupportedSubdirectoryLimit: Bool {
+        scope == .includeSubfolders && directoryScanModel.didExceedSupportedSubdirectoryLimit
+    }
+
+    private var requiresHardLimitRefusal: Bool {
+        exceedsSupportedSubdirectoryLimit
+    }
+
     private var requiresExclusionSelectionBeforeStart: Bool {
+        guard !requiresHardLimitRefusal else {
+            return false
+        }
+
         guard scope == .includeSubfolders,
               let summary = directoryScanModel.summary,
               summary.subdirectoryCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold else {
@@ -111,6 +123,10 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private var thresholdWarningVisible: Bool {
+        guard !requiresHardLimitRefusal else {
+            return false
+        }
+
         guard let summary = directoryScanModel.summary else {
             return false
         }
@@ -124,7 +140,14 @@ struct FolderWatchOptionsSheet: View {
         }
 
         if directoryScanModel.isLoading {
+            if let progress = directoryScanModel.scanProgress {
+                return "Scanning subdirectories... \(progress.scannedDirectoryCount) folders processed"
+            }
             return "Scanning subdirectories..."
+        }
+
+        if requiresHardLimitRefusal {
+            return "This folder has more than \(ReaderFolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount) subdirectories. Include Subfolders is unavailable for this folder."
         }
 
         if let summary = directoryScanModel.summary {
@@ -173,6 +196,10 @@ struct FolderWatchOptionsSheet: View {
             return "Scanning subfolders"
         }
 
+        if requiresHardLimitRefusal {
+            return "Folder too large for Include Subfolders"
+        }
+
         return thresholdWarningVisible
             ? thresholdWarningTitle
             : "Tree size is within optimization threshold"
@@ -185,6 +212,10 @@ struct FolderWatchOptionsSheet: View {
 
         guard !directoryScanModel.isLoading else {
             return "Collecting subfolder metrics to evaluate large-tree performance."
+        }
+
+        if requiresHardLimitRefusal {
+            return "Detected more than \(ReaderFolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount) subdirectories. To avoid long freezes, this configuration cannot be started. Choose Selected Folder instead."
         }
 
         return thresholdWarningVisible
@@ -201,10 +232,18 @@ struct FolderWatchOptionsSheet: View {
             return .neutral
         }
 
+        if requiresHardLimitRefusal {
+            return .warning
+        }
+
         return thresholdWarningVisible ? .warning : .success
     }
 
     private var startActionStatusText: String {
+        if requiresHardLimitRefusal {
+            return "Include Subfolders unavailable"
+        }
+
         if requiresExclusionSelectionBeforeStart {
             return "Action required before watch can start"
         }
@@ -215,6 +254,10 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private var startActionStatusSymbol: String {
+        if requiresHardLimitRefusal {
+            return "xmark.octagon.fill"
+        }
+
         if requiresExclusionSelectionBeforeStart {
             return "exclamationmark.triangle.fill"
         }
@@ -223,6 +266,10 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private var startActionStatusColor: AnyShapeStyle {
+        if requiresHardLimitRefusal {
+            return AnyShapeStyle(.red)
+        }
+
         if requiresExclusionSelectionBeforeStart {
             return AnyShapeStyle(.orange)
         }
@@ -304,6 +351,7 @@ struct FolderWatchOptionsSheet: View {
                     FolderWatchScopeSummaryView(
                         footerText: scopeFooterText,
                         isLoading: directoryScanModel.isLoading,
+                        scanProgress: directoryScanModel.scanProgress,
                         summary: directoryScanModel.summary
                     )
                 }
@@ -312,7 +360,7 @@ struct FolderWatchOptionsSheet: View {
                     title: optimizationCardTitle,
                     detail: optimizationCardDetail,
                     tone: optimizationCardTone,
-                    showsAction: thresholdWarningVisible,
+                    showsAction: thresholdWarningVisible && !requiresHardLimitRefusal,
                     onInspect: {
                         isLargeTreeDialogPresented = true
                     }
@@ -350,7 +398,7 @@ struct FolderWatchOptionsSheet: View {
                 .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
                 .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
-                .disabled(folderURL == nil || directoryScanModel.isLoading || requiresExclusionSelectionBeforeStart)
+                .disabled(folderURL == nil || directoryScanModel.isLoading || requiresExclusionSelectionBeforeStart || requiresHardLimitRefusal)
                 .accessibilityHint("Starts folder watch with selected options")
             }
         }
@@ -399,6 +447,10 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private func confirmWithThresholdGuard() {
+        guard !requiresHardLimitRefusal else {
+            return
+        }
+
         guard !requiresExclusionSelectionBeforeStart else {
             isLargeTreeDialogPresented = true
             return
@@ -431,6 +483,10 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private func applyThresholdDefaultDeselectionIfNeeded() {
+        guard !requiresHardLimitRefusal else {
+            return
+        }
+
         guard scope == .includeSubfolders,
               let folderURL,
               let summary = directoryScanModel.summary,
@@ -476,6 +532,7 @@ struct FolderWatchOptionsSheet: View {
 private struct FolderWatchScopeSummaryView: View {
     let footerText: String
     let isLoading: Bool
+    let scanProgress: FolderWatchDirectoryScanProgress?
     let summary: FolderWatchDirectoryScanSummary?
 
     var body: some View {
@@ -494,8 +551,20 @@ private struct FolderWatchScopeSummaryView: View {
                 Spacer()
 
                 if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if let scanProgress {
+                            Text("\(scanProgress.scannedDirectoryCount) scanned")
+                                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            ProgressView(value: scanProgress.fractionCompleted)
+                                .progressViewStyle(.linear)
+                                .frame(width: 120)
+                                .controlSize(.small)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
                 }
             }
 
@@ -794,12 +863,23 @@ private struct LargeFolderExclusionDialog: View {
 
             Group {
                 if scanModel.isLoading {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Scanning subdirectories...")
-                            .font(.system(size: 12.5, weight: .medium))
-                            .foregroundStyle(.secondary)
+                    VStack(spacing: 10) {
+                        if let progress = scanModel.scanProgress {
+                            ProgressView(value: progress.fractionCompleted)
+                                .progressViewStyle(.linear)
+                                .frame(width: 320)
+                                .controlSize(.small)
+
+                            Text("Scanning subdirectories... \(progress.scannedDirectoryCount) folders processed")
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Scanning subdirectories...")
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
                 } else if let summary = scanModel.summary {
@@ -1129,6 +1209,20 @@ private struct FolderWatchDirectoryScanSummary: Equatable {
     let markdownFileCount: Int
 }
 
+private struct FolderWatchDirectoryScanProgress: Equatable {
+    let scannedDirectoryCount: Int
+    let estimatedTotalDirectoryCount: Int
+
+    var fractionCompleted: Double {
+        guard estimatedTotalDirectoryCount > 0 else {
+            return 0
+        }
+
+        let progress = Double(scannedDirectoryCount) / Double(estimatedTotalDirectoryCount)
+        return max(0, min(progress, 1))
+    }
+}
+
 private struct FolderWatchDirectoryNode: Identifiable, Equatable {
     let path: String
     let name: String
@@ -1143,9 +1237,12 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
     nonisolated private enum ScanLimit {
         static let maximumTraversalDepth = 48
         static let maximumVisitedDirectories = 20_000
+        static let maximumSupportedSubdirectoryCount = ReaderFolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount
     }
 
     @Published private(set) var isLoading = false
+    @Published private(set) var scanProgress: FolderWatchDirectoryScanProgress?
+    @Published private(set) var didExceedSupportedSubdirectoryLimit = false
     @Published private(set) var rootNode: FolderWatchDirectoryNode?
     @Published private(set) var summary: FolderWatchDirectoryScanSummary?
 
@@ -1155,6 +1252,8 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         activeTask?.cancel()
         activeTask = nil
         isLoading = false
+        scanProgress = nil
+        didExceedSupportedSubdirectoryLimit = false
         rootNode = nil
         summary = nil
     }
@@ -1162,25 +1261,59 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
     func scan(folderURL: URL) {
         activeTask?.cancel()
         isLoading = true
+        scanProgress = FolderWatchDirectoryScanProgress(
+            scannedDirectoryCount: 0,
+            estimatedTotalDirectoryCount: ScanLimit.maximumVisitedDirectories
+        )
+        didExceedSupportedSubdirectoryLimit = false
         rootNode = nil
         summary = nil
 
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         activeTask = Task {
-            let result = await Task.detached(priority: .userInitiated) {
-                Self.buildTree(at: normalizedFolderURL)
+            let result = await Task.detached(priority: .utility) {
+                Self.buildTree(at: normalizedFolderURL) { scannedDirectoryCount in
+                    guard scannedDirectoryCount == 1 || scannedDirectoryCount.isMultiple(of: 32) else {
+                        return
+                    }
+
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self,
+                              self.isLoading else {
+                            return
+                        }
+
+                        self.scanProgress = FolderWatchDirectoryScanProgress(
+                            scannedDirectoryCount: scannedDirectoryCount,
+                            estimatedTotalDirectoryCount: ScanLimit.maximumVisitedDirectories
+                        )
+                    }
+                }
             }.value
 
             guard !Task.isCancelled else {
                 return
             }
 
-            await MainActor.run {
-                isLoading = false
-                rootNode = result
+            await MainActor.run { [weak self] in
+                guard let self else {
+                    return
+                }
 
-                if let result {
-                    summary = FolderWatchDirectoryScanSummary(
+                self.isLoading = false
+                self.scanProgress = nil
+                self.didExceedSupportedSubdirectoryLimit = result.didExceedSupportedSubdirectoryLimit
+
+                if result.didExceedSupportedSubdirectoryLimit {
+                    self.rootNode = nil
+                    self.summary = nil
+                    return
+                }
+
+                self.rootNode = result.rootNode
+
+                if let result = result.rootNode {
+                    self.summary = FolderWatchDirectoryScanSummary(
                         subdirectoryCount: result.subdirectoryCount,
                         markdownFileCount: result.markdownFileCount
                     )
@@ -1189,25 +1322,42 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         }
     }
 
-    nonisolated private static func buildTree(at folderURL: URL) -> FolderWatchDirectoryNode? {
+    nonisolated private static func buildTree(
+        at folderURL: URL,
+        onDirectoryScanned: @escaping @Sendable (Int) -> Void
+    ) -> FolderWatchDirectoryScanResult {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         guard (try? normalizedFolderURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
-            return nil
+            return FolderWatchDirectoryScanResult(rootNode: nil, didExceedSupportedSubdirectoryLimit: false)
         }
 
+        var scanState = DirectoryScanTraversalState()
         var visitedDirectoryPaths = Set<String>()
-        return buildNode(
+        let rootNode = buildNode(
             at: normalizedFolderURL,
             depth: 0,
-            visitedDirectoryPaths: &visitedDirectoryPaths
+            visitedDirectoryPaths: &visitedDirectoryPaths,
+            scanState: &scanState,
+            onDirectoryScanned: onDirectoryScanned
+        )
+
+        return FolderWatchDirectoryScanResult(
+            rootNode: rootNode,
+            didExceedSupportedSubdirectoryLimit: scanState.didExceedSupportedSubdirectoryLimit
         )
     }
 
     nonisolated private static func buildNode(
         at directoryURL: URL,
         depth: Int,
-        visitedDirectoryPaths: inout Set<String>
+        visitedDirectoryPaths: inout Set<String>,
+        scanState: inout DirectoryScanTraversalState,
+        onDirectoryScanned: @escaping @Sendable (Int) -> Void
     ) -> FolderWatchDirectoryNode? {
+        guard !scanState.didExceedSupportedSubdirectoryLimit else {
+            return nil
+        }
+
         guard depth <= ScanLimit.maximumTraversalDepth else {
             return nil
         }
@@ -1220,6 +1370,14 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         }
 
         guard visitedDirectoryPaths.insert(normalizedDirectoryPath).inserted else {
+            return nil
+        }
+
+        let scannedSubdirectoryCount = max(0, visitedDirectoryPaths.count - 1)
+        onDirectoryScanned(scannedSubdirectoryCount)
+
+        if scannedSubdirectoryCount > ScanLimit.maximumSupportedSubdirectoryCount {
+            scanState.didExceedSupportedSubdirectoryLimit = true
             return nil
         }
 
@@ -1237,6 +1395,10 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         var markdownCount = 0
 
         for entry in entries {
+            guard !scanState.didExceedSupportedSubdirectoryLimit else {
+                return nil
+            }
+
             let normalizedEntry = ReaderFileRouting.normalizedFileURL(entry)
             let values = try? normalizedEntry.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
 
@@ -1248,7 +1410,9 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
                 if let childNode = buildNode(
                     at: normalizedEntry,
                     depth: depth + 1,
-                    visitedDirectoryPaths: &visitedDirectoryPaths
+                    visitedDirectoryPaths: &visitedDirectoryPaths,
+                    scanState: &scanState,
+                    onDirectoryScanned: onDirectoryScanned
                 ) {
                     childDirectories.append(childNode)
                     markdownCount += childNode.markdownFileCount
@@ -1274,6 +1438,15 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
             markdownFileCount: markdownCount
         )
     }
+}
+
+private struct FolderWatchDirectoryScanResult {
+    let rootNode: FolderWatchDirectoryNode?
+    let didExceedSupportedSubdirectoryLimit: Bool
+}
+
+private struct DirectoryScanTraversalState {
+    var didExceedSupportedSubdirectoryLimit = false
 }
 
 private struct FolderWatchHeaderView: View {

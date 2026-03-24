@@ -6,6 +6,7 @@ struct ReaderTopBar: View {
     let documentViewMode: ReaderDocumentViewMode
     let showSourceEditingControls: Bool
     let activeFolderWatch: ReaderFolderWatchSession?
+    let isFolderWatchInitialScanInProgress: Bool
     let folderWatchHighlightColor: Color
     let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
@@ -53,6 +54,7 @@ struct ReaderTopBar: View {
                 HStack(spacing: Metrics.controlGroupSpacing) {
                     FolderWatchToolbarButton(
                         activeFolderWatch: activeFolderWatch,
+                        isInitialScanInProgress: isFolderWatchInitialScanInProgress,
                         highlightColor: folderWatchHighlightColor,
                         onActivate: handleFolderWatchToolbarButton
                     )
@@ -163,6 +165,7 @@ struct ReaderTopBar: View {
 
     private struct FolderWatchToolbarButton: View {
         let activeFolderWatch: ReaderFolderWatchSession?
+        let isInitialScanInProgress: Bool
         let highlightColor: Color
         let onActivate: () -> Void
 
@@ -171,7 +174,10 @@ struct ReaderTopBar: View {
         }
 
         private var statusText: String {
-            activeFolderWatch?.statusLabel ?? "Not watching"
+            if isInitialScanInProgress {
+                return "Scanning folder tree..."
+            }
+            return activeFolderWatch?.statusLabel ?? "Not watching"
         }
 
         private var helpText: String {
@@ -210,15 +216,25 @@ struct ReaderTopBar: View {
                 .accessibilityValue(isActive ? "Active" : "Inactive")
                 .accessibilityHint(isActive ? "Stops monitoring the current folder" : "Opens the folder picker for starting folder watch")
 
-                Text(statusText)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(isActive ? highlightColor.opacity(0.9) : .secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 180, alignment: .leading)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .help(helpText)
-                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(statusText)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(isActive ? highlightColor.opacity(0.9) : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 180, alignment: .leading)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .help(helpText)
+                        .accessibilityHidden(true)
+
+                    if isInitialScanInProgress {
+                        ProgressView()
+                            .progressViewStyle(.linear)
+                            .frame(width: 140)
+                            .controlSize(.small)
+                            .tint(highlightColor)
+                    }
+                }
             }
             .fixedSize(horizontal: true, vertical: false)
         }

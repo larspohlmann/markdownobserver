@@ -73,6 +73,7 @@ struct ContentView: View {
     let openAdditionalDocument: (URL) -> Void
     let openDocumentInCurrentWindow: (URL) -> Void
     let activeFolderWatch: ReaderFolderWatchSession?
+    let isFolderWatchInitialScanInProgress: Bool
     let canStopFolderWatch: Bool
     @Binding var isFolderWatchOptionsPresented: Bool
     let pendingFolderWatchURL: URL?
@@ -111,6 +112,7 @@ struct ContentView: View {
                 documentViewMode: readerStore.documentViewMode,
                 showSourceEditingControls: showSourceEditingControls,
                 activeFolderWatch: activeFolderWatch,
+                isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
                 folderWatchHighlightColor: folderWatchHighlightColor,
                 canNavigateChangedRegions: canNavigateChangedRegions,
                 canStopFolderWatch: canStopFolderWatch,
@@ -809,6 +811,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         openAdditionalDocument: { _ in },
         openDocumentInCurrentWindow: { _ in },
         activeFolderWatch: nil,
+        isFolderWatchInitialScanInProgress: false,
         canStopFolderWatch: false,
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchURL: nil,

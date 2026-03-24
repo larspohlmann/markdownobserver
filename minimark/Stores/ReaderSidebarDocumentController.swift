@@ -15,6 +15,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var selectedHasUnacknowledgedExternalChange: Bool
     @Published private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
     @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+    @Published private(set) var isFolderWatchInitialScanInProgress: Bool
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
@@ -42,6 +43,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         selectedHasUnacknowledgedExternalChange = initialDocument.readerStore.hasUnacknowledgedExternalChange
         selectedFolderWatchAutoOpenWarning = nil
         activeFolderWatchSession = nil
+        isFolderWatchInitialScanInProgress = false
         synchronizeDocumentChangeObservers()
         configureFolderWatchController()
         bindSelectedStore()
@@ -436,5 +438,6 @@ final class ReaderSidebarDocumentController: ObservableObject {
     private func synchronizeFolderWatchState() {
         activeFolderWatchSession = folderWatchController.activeFolderWatchSession
         selectedFolderWatchAutoOpenWarning = folderWatchController.folderWatchAutoOpenWarning
+        isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
     }
 }
