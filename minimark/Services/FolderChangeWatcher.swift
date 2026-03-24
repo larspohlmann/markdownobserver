@@ -66,7 +66,7 @@ struct FolderChangeWatcherFailure: Equatable, Sendable {
     }
 
     let stage: Stage
-    let folderURL: URL
+    let folderIdentifier: String
     let errorDescription: String
 }
 
@@ -710,25 +710,40 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func reportFailure(stage: FolderChangeWatcherFailure.Stage, folderURL: URL, error: any Error) {
+        let errorDescription = sanitizedErrorDescription(for: error)
         let failure = FolderChangeWatcherFailure(
             stage: stage,
-            folderURL: folderURL,
-            errorDescription: String(describing: error)
+            folderIdentifier: sanitizedFolderIdentifier(for: folderURL),
+            errorDescription: errorDescription
         )
 
-        let signature = "\(String(reflecting: type(of: error))):\(failure.errorDescription)"
+        let signature = "\(String(reflecting: type(of: error))):\(errorDescription)"
         if lastReportedFailureByStage[stage] != signature {
             lastReportedFailureByStage[stage] = signature
             Self.logger.error(
-                "folder watch failure stage=\(stage.rawValue, privacy: .public) folder=\(folderURL.path, privacy: .private(mask: .hash)) error=\(failure.errorDescription, privacy: .private(mask: .hash))"
+                "folder watch failure stage=\(stage.rawValue, privacy: .public) folder=\(folderURL.path, privacy: .private(mask: .hash)) error=\(errorDescription, privacy: .private(mask: .hash))"
             )
-        }
 
-        onFailure?(failure)
+            let onFailure = self.onFailure
+            DispatchQueue.main.async {
+                onFailure?(failure)
+            }
+        }
     }
 
     private func clearReportedFailure(for stage: FolderChangeWatcherFailure.Stage) {
         lastReportedFailureByStage.removeValue(forKey: stage)
+    }
+
+    private func sanitizedFolderIdentifier(for folderURL: URL) -> String {
+        let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        return String(normalizedPath.hashValue, radix: 16)
+    }
+
+    private func sanitizedErrorDescription(for error: any Error) -> String {
+        let typeDescription = String(reflecting: type(of: error))
+        let nsError = error as NSError
+        return "\(typeDescription)(domain: \(nsError.domain), code: \(nsError.code))"
     }
 }
 

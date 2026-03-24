@@ -486,6 +486,21 @@ struct ReaderStoreExternalChangeTests {
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
     }
 
+    @Test @MainActor func openingSecondFileStopsPreviousWatcherBeforeRebinding() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.openFile(at: fixture.secondaryFileURL)
+
+        #expect(fixture.watcher.operations == [
+            .stop,
+            .start(ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL)),
+            .stop,
+            .start(ReaderFileRouting.normalizedFileURL(fixture.secondaryFileURL))
+        ])
+    }
+
     @Test @MainActor func failedOpenPreservesCurrentFileWatcherAndAvoidsDuplicateRebinds() async throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }

@@ -704,7 +704,6 @@ private struct LargeFolderExclusionDialog: View {
     let onConfirm: () -> Void
 
     @State private var preparedSubdirectoryPaths: [String] = []
-    @State private var isPreparingSubdirectoryPaths = false
     @State private var effectiveExcludedSubdirectoryCount = 0
     @State private var effectiveExcludedCountTask: Task<Void, Never>?
     @State private var didNormalizeInitialExclusionSelection = false
@@ -846,15 +845,6 @@ private struct LargeFolderExclusionDialog: View {
                                 .font(.system(size: 12.5, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
-                } else if isPreparingSubdirectoryPaths {
-                    VStack(spacing: 10) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Preparing subdirectory list...")
-                            .font(.system(size: 12.5, weight: .medium))
-                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
                 } else if let summary = scanModel.summary {
@@ -999,12 +989,10 @@ private struct LargeFolderExclusionDialog: View {
         guard !scanModel.isLoading else {
             preparedSubdirectoryPaths = []
             effectiveExcludedSubdirectoryCount = 0
-            isPreparingSubdirectoryPaths = false
             return
         }
 
         preparedSubdirectoryPaths = scanModel.allSubdirectoryPaths
-        isPreparingSubdirectoryPaths = false
     }
 
     private func scheduleEffectiveExcludedCountRefresh() {
@@ -1313,6 +1301,7 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
 
     private var activeTask: Task<Void, Never>?
     private static let cache = FolderWatchDirectoryScanCache()
+    private static let cacheableSubdirectoryThreshold = 2_000
 
     func reset() {
         activeTask?.cancel()
@@ -1338,9 +1327,10 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         summary = nil
 
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        let cacheKey = normalizedFolderURL.path
+        let cacheKey = Self.cacheKey(for: normalizedFolderURL)
         activeTask = Task {
-            if let cachedResult = await Self.cache.cachedResult(for: cacheKey) {
+            if let cacheKey,
+               let cachedResult = await Self.cache.cachedResult(for: cacheKey) {
                 guard !Task.isCancelled else {
                     return
                 }
@@ -1375,7 +1365,10 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
                 return
             }
 
-            await Self.cache.store(result, for: cacheKey)
+            if let cacheKey,
+               Self.shouldCache(result: result) {
+                await Self.cache.store(result, for: cacheKey)
+            }
 
             await MainActor.run { [weak self] in
                 self?.applyScanResult(result)
@@ -1441,6 +1434,31 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
 
     nonisolated private static func collectPaths(from node: FolderWatchDirectoryNode) -> [String] {
         [node.path] + node.children.flatMap { collectPaths(from: $0) }
+    }
+
+    nonisolated private static func shouldCache(result: FolderWatchDirectoryScanResult) -> Bool {
+        guard !result.didExceedSupportedSubdirectoryLimit,
+              let rootNode = result.rootNode else {
+            return false
+        }
+
+        return rootNode.subdirectoryCount <= cacheableSubdirectoryThreshold
+    }
+
+    nonisolated private static func cacheKey(for normalizedFolderURL: URL) -> FolderWatchDirectoryScanCacheKey? {
+        let values = try? normalizedFolderURL.resourceValues(
+            forKeys: [.isDirectoryKey, .contentModificationDateKey, .fileResourceIdentifierKey]
+        )
+
+        guard values?.isDirectory == true else {
+            return nil
+        }
+
+        let resourceIdentifier = values?.fileResourceIdentifier.map(String.init(describing:)) ?? "none"
+        let contentModificationStamp = values?.contentModificationDate?.timeIntervalSince1970 ?? 0
+        let fingerprint = "\(resourceIdentifier)|\(Int64(contentModificationStamp * 1_000))"
+
+        return FolderWatchDirectoryScanCacheKey(folderPath: normalizedFolderURL.path, folderFingerprint: fingerprint)
     }
 
     nonisolated private static func buildNode(
@@ -1546,34 +1564,55 @@ private struct DirectoryScanTraversalState: Sendable {
     var didExceedSupportedSubdirectoryLimit = false
 }
 
-private actor FolderWatchDirectoryScanCache {
-    private let maximumEntries = 8
-    private var entriesByPath: [String: FolderWatchDirectoryScanResult] = [:]
-    private var pathOrder: [String] = []
+private struct FolderWatchDirectoryScanCacheKey: Hashable, Sendable {
+    let folderPath: String
+    let folderFingerprint: String
+}
 
-    func cachedResult(for folderPath: String) -> FolderWatchDirectoryScanResult? {
-        guard let entry = entriesByPath[folderPath] else {
+private struct FolderWatchDirectoryScanCacheEntry: Sendable {
+    let result: FolderWatchDirectoryScanResult
+    let insertedAt: Date
+}
+
+private actor FolderWatchDirectoryScanCache {
+    private let maximumEntries = 4
+    private let maximumEntryAge: TimeInterval = 30
+    private var entriesByKey: [FolderWatchDirectoryScanCacheKey: FolderWatchDirectoryScanCacheEntry] = [:]
+    private var keyOrder: [FolderWatchDirectoryScanCacheKey] = []
+
+    func cachedResult(for key: FolderWatchDirectoryScanCacheKey) -> FolderWatchDirectoryScanResult? {
+        guard let entry = entriesByKey[key] else {
             return nil
         }
 
-        touch(folderPath)
-        return entry
+        if Date().timeIntervalSince(entry.insertedAt) > maximumEntryAge {
+            remove(key)
+            return nil
+        }
+
+        touch(key)
+        return entry.result
     }
 
-    func store(_ result: FolderWatchDirectoryScanResult, for folderPath: String) {
-        entriesByPath[folderPath] = result
-        touch(folderPath)
+    func store(_ result: FolderWatchDirectoryScanResult, for key: FolderWatchDirectoryScanCacheKey) {
+        entriesByKey[key] = FolderWatchDirectoryScanCacheEntry(result: result, insertedAt: Date())
+        touch(key)
 
-        while pathOrder.count > maximumEntries,
-              let oldestPath = pathOrder.first {
-            pathOrder.removeFirst()
-            entriesByPath.removeValue(forKey: oldestPath)
+        while keyOrder.count > maximumEntries,
+              let oldestKey = keyOrder.first {
+            keyOrder.removeFirst()
+            entriesByKey.removeValue(forKey: oldestKey)
         }
     }
 
-    private func touch(_ folderPath: String) {
-        pathOrder.removeAll(where: { $0 == folderPath })
-        pathOrder.append(folderPath)
+    private func remove(_ key: FolderWatchDirectoryScanCacheKey) {
+        entriesByKey.removeValue(forKey: key)
+        keyOrder.removeAll(where: { $0 == key })
+    }
+
+    private func touch(_ key: FolderWatchDirectoryScanCacheKey) {
+        keyOrder.removeAll(where: { $0 == key })
+        keyOrder.append(key)
     }
 }
 

@@ -20,13 +20,20 @@ extension ReaderStore {
             currentOpenOrigin = origin
             logSaveInfo("opened document for reading: \(saveLogContext(for: normalizedURL))")
 
-            let loaded = try loadAndPresentDocument(
-                readURL: readURL,
-                presentedAs: normalizedURL,
+            let loaded = try loadMarkdownFile(at: readURL)
+
+            // Stop previous file-watch callbacks before mutating the active
+            // document identity so stale events cannot cross into the new file state.
+            fileWatcher.stopWatching()
+
+            try presentLoadedDocument(
+                loaded,
+                at: normalizedURL,
                 diffBaselineMarkdown: initialDiffBaselineMarkdown,
                 resetDocumentViewMode: true,
                 acknowledgeExternalChange: true
             )
+
             applyPostOpenSideEffects(
                 accessibleURL: accessibleURL,
                 normalizedURL: normalizedURL,
@@ -61,9 +68,6 @@ extension ReaderStore {
             origin: origin,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
-        // Stop the previous watch only after load succeeds so failed opens keep
-        // the current document's external-change observer active.
-        fileWatcher.stopWatching()
         startWatchingCurrentFile()
     }
 
