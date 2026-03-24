@@ -12,6 +12,7 @@ struct FolderWatchOptionsSheet: View {
     @StateObject private var directoryScanModel = FolderWatchDirectoryScanModel()
     @State private var isLargeTreeDialogPresented = false
     @State private var expandedDirectoryPaths: Set<String> = []
+    @State private var autoDeselectionAppliedFolderPath: String?
 
     private enum Metrics {
         static let sectionSpacing: CGFloat = 14
@@ -361,10 +362,17 @@ struct FolderWatchOptionsSheet: View {
             scheduleDirectoryScanRefresh()
         }
         .onChange(of: folderURL) { _, _ in
+            autoDeselectionAppliedFolderPath = nil
             scheduleDirectoryScanRefresh()
         }
         .onChange(of: scope) { _, _ in
+            if scope != .includeSubfolders {
+                autoDeselectionAppliedFolderPath = nil
+            }
             scheduleDirectoryScanRefresh()
+        }
+        .onChange(of: directoryScanModel.summary) { _, _ in
+            applyThresholdDefaultDeselectionIfNeeded()
         }
         .sheet(isPresented: $isLargeTreeDialogPresented) {
             LargeFolderExclusionDialog(
@@ -420,6 +428,33 @@ struct FolderWatchOptionsSheet: View {
         DispatchQueue.main.async {
             refreshDirectoryScan()
         }
+    }
+
+    private func applyThresholdDefaultDeselectionIfNeeded() {
+        guard scope == .includeSubfolders,
+              let folderURL,
+              let summary = directoryScanModel.summary,
+              summary.subdirectoryCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold else {
+            return
+        }
+
+        let normalizedFolderPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        guard autoDeselectionAppliedFolderPath != normalizedFolderPath else {
+            return
+        }
+
+        guard normalizedExcludedSubdirectoryPaths.isEmpty else {
+            autoDeselectionAppliedFolderPath = normalizedFolderPath
+            return
+        }
+
+        let subdirectoryPaths = allScannedSubdirectoryPaths
+        guard !subdirectoryPaths.isEmpty else {
+            return
+        }
+
+        excludedSubdirectoryPaths = subdirectoryPaths
+        autoDeselectionAppliedFolderPath = normalizedFolderPath
     }
 
     private func collectSubdirectoryPaths(from node: FolderWatchDirectoryNode) -> [String] {
