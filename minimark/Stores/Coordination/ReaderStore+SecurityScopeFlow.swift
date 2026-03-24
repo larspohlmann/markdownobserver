@@ -9,7 +9,7 @@ extension ReaderStore {
             currentAccessibleFileURLSource = "fileScope"
         }
         logSaveInfo(
-            "file scope updated: reason=\(reason) url=\(url.path) started=\(securityScopeToken?.didStartAccess == true)"
+            "file scope updated: reason=\(reason) url=\(redactedPathText(for: url)) started=\(securityScopeToken?.didStartAccess == true)"
         )
     }
 
@@ -35,7 +35,7 @@ extension ReaderStore {
         folderSecurityScopeToken?.endAccess()
         folderSecurityScopeToken = securityScope.beginAccess(to: accessURL)
         logSaveInfo(
-            "folder scope updated: reason=\(reason) watchedFolder=\(activeFolderWatchSession.folderURL.path) accessURL=\(accessURL.path) started=\(folderSecurityScopeToken?.didStartAccess == true) appliesToFile=\(fileURL.path)"
+            "folder scope updated: reason=\(reason) watchedFolder=\(redactedPathText(for: activeFolderWatchSession.folderURL)) accessURL=\(redactedPathText(for: accessURL)) started=\(folderSecurityScopeToken?.didStartAccess == true) appliesToFile=\(redactedPathText(for: fileURL))"
         )
     }
 
@@ -49,7 +49,7 @@ extension ReaderStore {
             currentAccessibleFileURL = securityScopeToken.url
             currentAccessibleFileURLSource = "fileScope"
             logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(securityScopeToken.url.path) source=fileScope"
+                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: securityScopeToken.url)) source=fileScope"
             )
             return securityScopeToken.url
         }
@@ -58,7 +58,7 @@ extension ReaderStore {
            currentAccessibleFileURLSource == "fileScope",
            Self.normalizedFileURL(currentAccessibleFileURL) == normalizedURL {
             logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(currentAccessibleFileURL.path) source=cachedFileScope"
+                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: currentAccessibleFileURL)) source=cachedFileScope"
             )
             return currentAccessibleFileURL
         }
@@ -67,7 +67,7 @@ extension ReaderStore {
             currentAccessibleFileURL = folderScopedFileURL
             currentAccessibleFileURLSource = "folderScopeChildURL"
             logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(folderScopedFileURL.path) source=folderScopeChildURL"
+                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: folderScopedFileURL)) source=folderScopeChildURL"
             )
             return folderScopedFileURL
         }
@@ -80,13 +80,13 @@ extension ReaderStore {
             currentAccessibleFileURL = securityScopeToken.url
             currentAccessibleFileURLSource = "fileScope"
             logSaveInfo(
-                "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(securityScopeToken.url.path) source=fileScopeDerived"
+                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: securityScopeToken.url)) source=fileScopeDerived"
             )
             return securityScopeToken.url
         }
 
         logSaveInfo(
-            "effective file access: reason=\(reason) file=\(normalizedURL.path) accessURL=\(normalizedURL.path) source=plainURL"
+            "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: normalizedURL)) source=plainURL"
         )
         return normalizedURL
     }
@@ -125,7 +125,7 @@ extension ReaderStore {
 
         let watchedFolderURL = Self.normalizedFileURL(activeFolderWatchSession.folderURL)
         logSaveInfo(
-            "watched-folder reauthorization requested: file=\(fileURL.path) watchedFolder=\(watchedFolderURL.path)"
+            "watched-folder reauthorization requested: file=\(redactedPathText(for: fileURL)) watchedFolder=\(redactedPathText(for: watchedFolderURL))"
         )
 
         guard let selectedFolderURL = requestWatchedFolderReauthorization(watchedFolderURL) else {
@@ -138,7 +138,7 @@ extension ReaderStore {
         let normalizedSelectedFolderURL = Self.normalizedFileURL(selectedFolderURL)
         guard normalizedSelectedFolderURL == watchedFolderURL else {
             logSaveError(
-                "watched-folder reauthorization mismatched selection: requested=\(watchedFolderURL.path) selected=\(normalizedSelectedFolderURL.path)"
+                "watched-folder reauthorization mismatched selection: requested=\(redactedPathText(for: watchedFolderURL)) selected=\(redactedPathText(for: normalizedSelectedFolderURL))"
             )
             return false
         }
@@ -159,7 +159,7 @@ extension ReaderStore {
         currentAccessibleFileURLSource = nil
 
         logSaveInfo(
-            "watched-folder reauthorization completed: watchedFolder=\(watchedFolderURL.path) selected=\(normalizedSelectedFolderURL.path) started=\(folderSecurityScopeToken?.didStartAccess == true)"
+            "watched-folder reauthorization completed: watchedFolder=\(redactedPathText(for: watchedFolderURL)) selected=\(redactedPathText(for: normalizedSelectedFolderURL)) started=\(folderSecurityScopeToken?.didStartAccess == true)"
         )
 
         return folderSecurityScopeToken?.didStartAccess == true
@@ -210,13 +210,13 @@ extension ReaderStore {
             )
             if isStale {
                 logSaveInfo(
-                    "bookmark stale while deriving file scope: reason=\(reason) file=\(fileURL.path)"
+                    "bookmark stale while deriving file scope: reason=\(reason) file=\(redactedPathText(for: fileURL))"
                 )
             }
             activateFileSecurityScope(for: scopedFileURL, reason: "\(reason)-derivedFromFolder")
         } catch {
             logSaveInfo(
-                "failed deriving file scope from folder: reason=\(reason) file=\(fileURL.path) error=\(error.localizedDescription)"
+                "failed deriving file scope from folder: reason=\(reason) file=\(redactedPathText(for: fileURL)) error=\(error.localizedDescription)"
             )
         }
     }

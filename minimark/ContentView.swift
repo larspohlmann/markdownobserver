@@ -74,6 +74,7 @@ struct ContentView: View {
     let openDocumentInCurrentWindow: (URL) -> Void
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
+    let isFolderWatchInitialScanFailed: Bool
     let canStopFolderWatch: Bool
     @Binding var isFolderWatchOptionsPresented: Bool
     let pendingFolderWatchURL: URL?
@@ -86,6 +87,7 @@ struct ContentView: View {
     let onConfirmFolderWatch: (ReaderFolderWatchOptions) -> Void
     let onCancelFolderWatch: () -> Void
     let onStopFolderWatch: () -> Void
+    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
     let onClearRecentManuallyOpenedFiles: () -> Void
@@ -113,6 +115,7 @@ struct ContentView: View {
                 showSourceEditingControls: showSourceEditingControls,
                 activeFolderWatch: activeFolderWatch,
                 isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
+                didFolderWatchInitialScanFail: isFolderWatchInitialScanFailed,
                 folderWatchHighlightColor: folderWatchHighlightColor,
                 canNavigateChangedRegions: canNavigateChangedRegions,
                 canStopFolderWatch: canStopFolderWatch,
@@ -127,6 +130,7 @@ struct ContentView: View {
                 },
                 onRequestFolderWatch: onRequestFolderWatch,
                 onStopFolderWatch: onStopFolderWatch,
+                onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: onClearRecentWatchedFolders,
                 onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
@@ -812,6 +816,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         openDocumentInCurrentWindow: { _ in },
         activeFolderWatch: nil,
         isFolderWatchInitialScanInProgress: false,
+        isFolderWatchInitialScanFailed: false,
         canStopFolderWatch: false,
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchURL: nil,
@@ -824,6 +829,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         onConfirmFolderWatch: { _ in },
         onCancelFolderWatch: {},
         onStopFolderWatch: {},
+        onStartRecentManuallyOpenedFile: { _ in },
         onStartRecentFolderWatch: { _ in },
         onClearRecentWatchedFolders: {},
         onClearRecentManuallyOpenedFiles: {}

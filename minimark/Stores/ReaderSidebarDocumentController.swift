@@ -16,6 +16,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
     @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     @Published private(set) var isFolderWatchInitialScanInProgress: Bool
+    @Published private(set) var didFolderWatchInitialScanFail: Bool
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
@@ -44,6 +45,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         selectedFolderWatchAutoOpenWarning = nil
         activeFolderWatchSession = nil
         isFolderWatchInitialScanInProgress = false
+        didFolderWatchInitialScanFail = false
         synchronizeDocumentChangeObservers()
         configureFolderWatchController()
         bindSelectedStore()
@@ -439,5 +441,6 @@ final class ReaderSidebarDocumentController: ObservableObject {
         activeFolderWatchSession = folderWatchController.activeFolderWatchSession
         selectedFolderWatchAutoOpenWarning = folderWatchController.folderWatchAutoOpenWarning
         isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
+        didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
     }
 }

@@ -7,6 +7,7 @@ struct ReaderTopBar: View {
     let showSourceEditingControls: Bool
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
+    let didFolderWatchInitialScanFail: Bool
     let folderWatchHighlightColor: Color
     let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
@@ -17,6 +18,7 @@ struct ReaderTopBar: View {
     let onOpenFile: (URL) -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
+    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
     let onClearRecentManuallyOpenedFiles: () -> Void
@@ -55,6 +57,7 @@ struct ReaderTopBar: View {
                     FolderWatchToolbarButton(
                         activeFolderWatch: activeFolderWatch,
                         isInitialScanInProgress: isFolderWatchInitialScanInProgress,
+                        didInitialScanFail: didFolderWatchInitialScanFail,
                         highlightColor: folderWatchHighlightColor,
                         onActivate: handleFolderWatchToolbarButton
                     )
@@ -95,6 +98,7 @@ struct ReaderTopBar: View {
                     },
                     onRequestFolderWatch: onRequestFolderWatch,
                     onStopFolderWatch: onStopFolderWatch,
+                    onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                     onStartRecentFolderWatch: onStartRecentFolderWatch,
                     onClearRecentWatchedFolders: onClearRecentWatchedFolders,
                     onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
@@ -166,6 +170,7 @@ struct ReaderTopBar: View {
     private struct FolderWatchToolbarButton: View {
         let activeFolderWatch: ReaderFolderWatchSession?
         let isInitialScanInProgress: Bool
+        let didInitialScanFail: Bool
         let highlightColor: Color
         let onActivate: () -> Void
 
@@ -176,6 +181,9 @@ struct ReaderTopBar: View {
         private var statusText: String {
             if isInitialScanInProgress {
                 return "Scanning folder tree..."
+            }
+            if didInitialScanFail {
+                return "Initial scan failed"
             }
             return activeFolderWatch?.statusLabel ?? "Not watching"
         }
@@ -508,6 +516,7 @@ struct ReaderTopBar: View {
         let onRevealInFinder: () -> Void
         let onRequestFolderWatch: (URL) -> Void
         let onStopFolderWatch: () -> Void
+        let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
         let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
         let onClearRecentWatchedFolders: () -> Void
         let onClearRecentManuallyOpenedFiles: () -> Void
@@ -539,6 +548,7 @@ struct ReaderTopBar: View {
                     onRevealInFinder: onRevealInFinder,
                     onRequestFolderWatch: onRequestFolderWatch,
                     onStopFolderWatch: onStopFolderWatch,
+                    onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                     onStartRecentFolderWatch: onStartRecentFolderWatch,
                     onClearRecentWatchedFolders: onClearRecentWatchedFolders,
                     onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
@@ -884,6 +894,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
     let onRevealInFinder: () -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
+    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
     let onClearRecentManuallyOpenedFiles: () -> Void
@@ -1100,7 +1111,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onOpenFile(entry.resolvedFileURL)
+            parent.onStartRecentManuallyOpenedFile(entry)
         }
 
         @objc private func revealInFinder() {

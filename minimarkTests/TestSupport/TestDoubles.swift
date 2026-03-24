@@ -201,6 +201,13 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
+    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL? {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        return subject.value.recentManuallyOpenedFiles.first(where: { entry in
+            ReaderFileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
+        })?.resolvedFileURL
+    }
+
     func clearRecentManuallyOpenedFiles() {
         var next = subject.value
         next.recentManuallyOpenedFiles = []
@@ -229,6 +236,7 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
     var lastIncludeSubfolders = false
     var lastExcludedSubdirectoryURLs: [URL] = []
     var markdownFilesToReturn: [URL] = []
+    var markdownFilesError: Error?
     var markdownFilesDelay: TimeInterval = 0
 
     func startWatching(
@@ -253,6 +261,9 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
     ) throws -> [URL] {
+        if let markdownFilesError {
+            throw markdownFilesError
+        }
         if markdownFilesDelay > 0 {
             Thread.sleep(forTimeInterval: markdownFilesDelay)
         }
