@@ -60,15 +60,22 @@ struct FolderWatchOptionsSheet: View {
         }
 
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        let folderPathPrefix = normalizedFolderURL.path.hasSuffix("/") ? normalizedFolderURL.path : normalizedFolderURL.path + "/"
+        let normalizedFolderPath = normalizedFolderURL.path
+        let folderPathPrefix = normalizedFolderPath.hasSuffix("/") ? normalizedFolderPath : normalizedFolderPath + "/"
 
         let normalized = excludedSubdirectoryPaths.compactMap { path -> String? in
             guard !path.isEmpty else {
                 return nil
             }
 
+            // Fast-path common case: values emitted by the scan model are already normalized absolute paths.
+            let trimmedPath = Self.trimTrailingSlash(from: path)
+            if trimmedPath.hasPrefix(folderPathPrefix), trimmedPath != normalizedFolderPath {
+                return trimmedPath
+            }
+
             let normalizedPath = ReaderFileRouting.normalizedFileURL(URL(fileURLWithPath: path, isDirectory: true)).path
-            guard normalizedPath.hasPrefix(folderPathPrefix), normalizedPath != normalizedFolderURL.path else {
+            guard normalizedPath.hasPrefix(folderPathPrefix), normalizedPath != normalizedFolderPath else {
                 return nil
             }
 
@@ -83,10 +90,10 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private var effectiveExcludedSubdirectoryCount: Int {
-        let excludedSet = Set(normalizedExcludedSubdirectoryPaths)
-        return allScannedSubdirectoryPaths.filter { path in
-            isPathEffectivelyExcluded(path, excludedSet: excludedSet)
-        }.count
+        Self.countEffectivelyExcludedSubdirectoryPaths(
+            in: allScannedSubdirectoryPaths,
+            excludedPaths: normalizedExcludedSubdirectoryPaths
+        )
     }
 
     private var remainingSubdirectoriesToDeactivateCount: Int {
@@ -475,15 +482,63 @@ struct FolderWatchOptionsSheet: View {
         }
     }
 
-    private func isPathEffectivelyExcluded(_ path: String, excludedSet: Set<String>) -> Bool {
-        excludedSet.contains { excludedPath in
-            if excludedPath == path {
-                return true
+    nonisolated private static func trimTrailingSlash(from path: String) -> String {
+        guard path.count > 1 else {
+            return path
+        }
+
+        var trimmedPath = path
+        while trimmedPath.count > 1, trimmedPath.hasSuffix("/") {
+            trimmedPath.removeLast()
+        }
+
+        return trimmedPath
+    }
+
+    nonisolated private static func countEffectivelyExcludedSubdirectoryPaths(
+        in paths: [String],
+        excludedPaths: [String]
+    ) -> Int {
+        guard !paths.isEmpty, !excludedPaths.isEmpty else {
+            return 0
+        }
+
+        let normalizedExcludedSet = Set(excludedPaths.map(trimTrailingSlash(from:)))
+        let normalizedPaths = paths.map(trimTrailingSlash(from:))
+
+        if normalizedExcludedSet.count >= normalizedPaths.count,
+           Set(normalizedPaths).isSubset(of: normalizedExcludedSet) {
+            return normalizedPaths.count
+        }
+
+        return normalizedPaths.reduce(into: 0) { count, path in
+            if isPathExcludedBySelfOrAncestor(path, excludedSet: normalizedExcludedSet) {
+                count += 1
+            }
+        }
+    }
+
+    nonisolated private static func isPathExcludedBySelfOrAncestor(
+        _ path: String,
+        excludedSet: Set<String>
+    ) -> Bool {
+        if excludedSet.contains(path) {
+            return true
+        }
+
+        var ancestorCandidate = path
+        while let separatorIndex = ancestorCandidate.lastIndex(of: "/") {
+            if separatorIndex == ancestorCandidate.startIndex {
+                break
             }
 
-            let prefix = excludedPath.hasSuffix("/") ? excludedPath : excludedPath + "/"
-            return path.hasPrefix(prefix)
+            ancestorCandidate = String(ancestorCandidate[..<separatorIndex])
+            if excludedSet.contains(ancestorCandidate) {
+                return true
+            }
         }
+
+        return false
     }
 }
 
@@ -908,6 +963,7 @@ private struct LargeFolderExclusionDialog: View {
                                 FolderWatchTreeNodeRow(
                                     node: node,
                                     level: 0,
+                                    excludedSubdirectoryPathSet: excludedSet,
                                     expandedDirectoryPaths: $expandedDirectoryPaths,
                                     excludedSubdirectoryPaths: $excludedSubdirectoryPaths
                                 )
@@ -1031,24 +1087,63 @@ private struct LargeFolderExclusionDialog: View {
         didNormalizeInitialExclusionSelection = true
     }
 
-    private static func countEffectivelyExcludedSubdirectoryPaths(
+    nonisolated private static func countEffectivelyExcludedSubdirectoryPaths(
         in paths: [String],
         excludedSet: Set<String>
     ) -> Int {
-        paths.reduce(into: 0) { count, path in
-            let isExcluded = excludedSet.contains { excludedPath in
-                if excludedPath == path {
-                    return true
-                }
+        guard !paths.isEmpty, !excludedSet.isEmpty else {
+            return 0
+        }
 
-                let prefix = excludedPath.hasSuffix("/") ? excludedPath : excludedPath + "/"
-                return path.hasPrefix(prefix)
-            }
+        let normalizedExcludedSet = Set(excludedSet.map(Self.normalizedDirectoryPath))
+        let normalizedPaths = paths.map(Self.normalizedDirectoryPath)
 
-            if isExcluded {
+        if normalizedExcludedSet.count >= normalizedPaths.count,
+           Set(normalizedPaths).isSubset(of: normalizedExcludedSet) {
+            return normalizedPaths.count
+        }
+
+        return normalizedPaths.reduce(into: 0) { count, path in
+            if Self.isPathExcludedBySelfOrAncestor(path, excludedSet: normalizedExcludedSet) {
                 count += 1
             }
         }
+    }
+
+    nonisolated private static func normalizedDirectoryPath(_ path: String) -> String {
+        guard path.count > 1 else {
+            return path
+        }
+
+        var normalizedPath = path
+        while normalizedPath.count > 1, normalizedPath.hasSuffix("/") {
+            normalizedPath.removeLast()
+        }
+
+        return normalizedPath
+    }
+
+    nonisolated private static func isPathExcludedBySelfOrAncestor(
+        _ path: String,
+        excludedSet: Set<String>
+    ) -> Bool {
+        if excludedSet.contains(path) {
+            return true
+        }
+
+        var ancestorCandidate = path
+        while let separatorIndex = ancestorCandidate.lastIndex(of: "/") {
+            if separatorIndex == ancestorCandidate.startIndex {
+                break
+            }
+
+            ancestorCandidate = String(ancestorCandidate[..<separatorIndex])
+            if excludedSet.contains(ancestorCandidate) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private func isPathEffectivelyExcluded(_ path: String) -> Bool {
@@ -1066,26 +1161,32 @@ private struct LargeFolderExclusionDialog: View {
 private struct FolderWatchTreeNodeRow: View {
     let node: FolderWatchDirectoryNode
     let level: Int
+    let excludedSubdirectoryPathSet: Set<String>
     @Binding var expandedDirectoryPaths: Set<String>
     @Binding var excludedSubdirectoryPaths: [String]
 
-    private var excludedSet: Set<String> {
-        Set(excludedSubdirectoryPaths)
-    }
-
     private var isExplicitlyExcluded: Bool {
-        excludedSet.contains(node.path)
+        excludedSubdirectoryPathSet.contains(node.path)
     }
 
     private var isExcludedByAncestor: Bool {
-        excludedSet.contains { excludedPath in
-            guard excludedPath != node.path else {
-                return false
+        guard !isExplicitlyExcluded else {
+            return false
+        }
+
+        var ancestorCandidate = node.path
+        while let separatorIndex = ancestorCandidate.lastIndex(of: "/") {
+            if separatorIndex == ancestorCandidate.startIndex {
+                break
             }
 
-            let prefix = excludedPath.hasSuffix("/") ? excludedPath : excludedPath + "/"
-            return node.path.hasPrefix(prefix)
+            ancestorCandidate = String(ancestorCandidate[..<separatorIndex])
+            if excludedSubdirectoryPathSet.contains(ancestorCandidate) {
+                return true
+            }
         }
+
+        return false
     }
 
     private var isEffectivelyExcluded: Bool {
@@ -1211,6 +1312,7 @@ private struct FolderWatchTreeNodeRow: View {
                     FolderWatchTreeNodeRow(
                         node: child,
                         level: level + 1,
+                        excludedSubdirectoryPathSet: excludedSubdirectoryPathSet,
                         expandedDirectoryPaths: $expandedDirectoryPaths,
                         excludedSubdirectoryPaths: $excludedSubdirectoryPaths
                     )
