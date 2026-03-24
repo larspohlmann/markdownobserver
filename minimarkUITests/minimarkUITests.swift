@@ -139,9 +139,9 @@ final class minimarkUITests: XCTestCase {
 
         selectIncludeSubfoldersSegment(in: sheet)
 
-        XCTAssertTrue(sheet.staticTexts["Large tree reviewed"].waitForExistence(timeout: 8))
+        XCTAssertTrue(sheet.staticTexts["Action required before watch can start"].waitForExistence(timeout: 8))
         XCTAssertTrue(sheet.buttons[startButtonIdentifier].exists)
-        XCTAssertTrue(sheet.buttons[startButtonIdentifier].isEnabled)
+        XCTAssertFalse(sheet.buttons[startButtonIdentifier].isEnabled)
 
         let warningButton = sheet.buttons[reviewExclusionsButtonTitle]
         XCTAssertTrue(warningButton.waitForExistence(timeout: 8))
@@ -151,6 +151,10 @@ final class minimarkUITests: XCTestCase {
         XCTAssertTrue(dialogTitle.waitForExistence(timeout: 6))
         let dialogSheet = app.sheets.containing(.staticText, identifier: exclusionDialogTitle).firstMatch
         XCTAssertTrue(dialogSheet.exists)
+
+        let deactivateAllButton = dialogSheet.buttons[deactivateAllButtonTitle]
+        XCTAssertTrue(deactivateAllButton.waitForExistence(timeout: 2))
+        deactivateAllButton.tap()
 
         let startAnywayButton = dialogPrimaryStartButton(in: dialogSheet)
         XCTAssertTrue(startAnywayButton.waitForExistence(timeout: 2))
