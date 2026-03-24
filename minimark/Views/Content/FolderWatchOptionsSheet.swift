@@ -79,8 +79,7 @@ struct FolderWatchOptionsSheet: View {
     }
 
     private var allScannedSubdirectoryPaths: [String] {
-        let rootNodes = directoryScanModel.rootNode?.children ?? []
-        return rootNodes.flatMap { collectSubdirectoryPaths(from: $0) }.sorted()
+        directoryScanModel.allSubdirectoryPaths
     }
 
     private var effectiveExcludedSubdirectoryCount: Int {
@@ -476,10 +475,6 @@ struct FolderWatchOptionsSheet: View {
         }
     }
 
-    private func collectSubdirectoryPaths(from node: FolderWatchDirectoryNode) -> [String] {
-        [node.path] + node.children.flatMap { collectSubdirectoryPaths(from: $0) }
-    }
-
     private func isPathEffectivelyExcluded(_ path: String, excludedSet: Set<String>) -> Bool {
         excludedSet.contains { excludedPath in
             if excludedPath == path {
@@ -710,7 +705,6 @@ private struct LargeFolderExclusionDialog: View {
 
     @State private var preparedSubdirectoryPaths: [String] = []
     @State private var isPreparingSubdirectoryPaths = false
-    @State private var subdirectoryPreparationTask: Task<Void, Never>?
     @State private var effectiveExcludedSubdirectoryCount = 0
     @State private var effectiveExcludedCountTask: Task<Void, Never>?
     @State private var didNormalizeInitialExclusionSelection = false
@@ -986,12 +980,10 @@ private struct LargeFolderExclusionDialog: View {
             scheduleSubdirectoryPreparation()
         }
         .onDisappear {
-            subdirectoryPreparationTask?.cancel()
-            subdirectoryPreparationTask = nil
             effectiveExcludedCountTask?.cancel()
             effectiveExcludedCountTask = nil
         }
-        .onChange(of: scanModel.rootNode) { _, _ in
+        .onChange(of: scanModel.allSubdirectoryPaths) { _, _ in
             scheduleSubdirectoryPreparation()
         }
         .onChange(of: preparedSubdirectoryPaths) { _, _ in
@@ -1004,33 +996,15 @@ private struct LargeFolderExclusionDialog: View {
     }
 
     private func scheduleSubdirectoryPreparation() {
-        subdirectoryPreparationTask?.cancel()
-
-        guard !scanModel.isLoading,
-              let rootNode = scanModel.rootNode else {
+        guard !scanModel.isLoading else {
             preparedSubdirectoryPaths = []
-                        effectiveExcludedSubdirectoryCount = 0
+            effectiveExcludedSubdirectoryCount = 0
             isPreparingSubdirectoryPaths = false
             return
         }
 
-        let rootChildren = rootNode.children
-        isPreparingSubdirectoryPaths = true
-
-        subdirectoryPreparationTask = Task {
-            let paths = await Task.detached(priority: .utility) {
-                rootChildren.flatMap { Self.collectPaths(from: $0) }.sorted()
-            }.value
-
-            guard !Task.isCancelled else {
-                return
-            }
-
-            await MainActor.run {
-                preparedSubdirectoryPaths = paths
-                isPreparingSubdirectoryPaths = false
-            }
-        }
+        preparedSubdirectoryPaths = scanModel.allSubdirectoryPaths
+        isPreparingSubdirectoryPaths = false
     }
 
     private func scheduleEffectiveExcludedCountRefresh() {
@@ -1067,10 +1041,6 @@ private struct LargeFolderExclusionDialog: View {
         // Keep normalization side-effect free so opening/canceling the dialog
         // never mutates pending exclusions in the parent sheet.
         didNormalizeInitialExclusionSelection = true
-    }
-
-    private static func collectPaths(from node: FolderWatchDirectoryNode) -> [String] {
-        [node.path] + node.children.flatMap { collectPaths(from: $0) }
     }
 
     private static func countEffectivelyExcludedSubdirectoryPaths(
@@ -1338,9 +1308,11 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
     @Published private(set) var scanProgress: FolderWatchDirectoryScanProgress?
     @Published private(set) var didExceedSupportedSubdirectoryLimit = false
     @Published private(set) var rootNode: FolderWatchDirectoryNode?
+    @Published private(set) var allSubdirectoryPaths: [String] = []
     @Published private(set) var summary: FolderWatchDirectoryScanSummary?
 
     private var activeTask: Task<Void, Never>?
+    private static let cache = FolderWatchDirectoryScanCache()
 
     func reset() {
         activeTask?.cancel()
@@ -1349,6 +1321,7 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         scanProgress = nil
         didExceedSupportedSubdirectoryLimit = false
         rootNode = nil
+        allSubdirectoryPaths = []
         summary = nil
     }
 
@@ -1361,10 +1334,23 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
         )
         didExceedSupportedSubdirectoryLimit = false
         rootNode = nil
+        allSubdirectoryPaths = []
         summary = nil
 
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let cacheKey = normalizedFolderURL.path
         activeTask = Task {
+            if let cachedResult = await Self.cache.cachedResult(for: cacheKey) {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                await MainActor.run { [weak self] in
+                    self?.applyScanResult(cachedResult)
+                }
+                return
+            }
+
             let result = await Task.detached(priority: .utility) {
                 Self.buildTree(at: normalizedFolderURL) { scannedDirectoryCount in
                     guard scannedDirectoryCount == 1 || scannedDirectoryCount.isMultiple(of: 32) else {
@@ -1389,30 +1375,37 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
                 return
             }
 
+            await Self.cache.store(result, for: cacheKey)
+
             await MainActor.run { [weak self] in
-                guard let self else {
-                    return
-                }
-
-                self.isLoading = false
-                self.scanProgress = nil
-                self.didExceedSupportedSubdirectoryLimit = result.didExceedSupportedSubdirectoryLimit
-
-                if result.didExceedSupportedSubdirectoryLimit {
-                    self.rootNode = nil
-                    self.summary = nil
-                    return
-                }
-
-                self.rootNode = result.rootNode
-
-                if let result = result.rootNode {
-                    self.summary = FolderWatchDirectoryScanSummary(
-                        subdirectoryCount: result.subdirectoryCount,
-                        markdownFileCount: result.markdownFileCount
-                    )
-                }
+                self?.applyScanResult(result)
             }
+        }
+    }
+
+    @MainActor
+    private func applyScanResult(_ result: FolderWatchDirectoryScanResult) {
+        isLoading = false
+        scanProgress = nil
+        didExceedSupportedSubdirectoryLimit = result.didExceedSupportedSubdirectoryLimit
+
+        if result.didExceedSupportedSubdirectoryLimit {
+            rootNode = nil
+            allSubdirectoryPaths = []
+            summary = nil
+            return
+        }
+
+        rootNode = result.rootNode
+        allSubdirectoryPaths = result.allSubdirectoryPaths
+
+        if let rootNode {
+            summary = FolderWatchDirectoryScanSummary(
+                subdirectoryCount: rootNode.subdirectoryCount,
+                markdownFileCount: rootNode.markdownFileCount
+            )
+        } else {
+            summary = nil
         }
     }
 
@@ -1422,7 +1415,11 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
     ) -> FolderWatchDirectoryScanResult {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         guard (try? normalizedFolderURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
-            return FolderWatchDirectoryScanResult(rootNode: nil, didExceedSupportedSubdirectoryLimit: false)
+            return FolderWatchDirectoryScanResult(
+                rootNode: nil,
+                allSubdirectoryPaths: [],
+                didExceedSupportedSubdirectoryLimit: false
+            )
         }
 
         var scanState = DirectoryScanTraversalState()
@@ -1437,8 +1434,13 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
 
         return FolderWatchDirectoryScanResult(
             rootNode: rootNode,
+            allSubdirectoryPaths: rootNode?.children.flatMap { collectPaths(from: $0) }.sorted() ?? [],
             didExceedSupportedSubdirectoryLimit: scanState.didExceedSupportedSubdirectoryLimit
         )
+    }
+
+    nonisolated private static func collectPaths(from node: FolderWatchDirectoryNode) -> [String] {
+        [node.path] + node.children.flatMap { collectPaths(from: $0) }
     }
 
     nonisolated private static func buildNode(
@@ -1534,13 +1536,45 @@ private final class FolderWatchDirectoryScanModel: ObservableObject {
     }
 }
 
-private struct FolderWatchDirectoryScanResult {
+private struct FolderWatchDirectoryScanResult: Sendable {
     let rootNode: FolderWatchDirectoryNode?
+    let allSubdirectoryPaths: [String]
     let didExceedSupportedSubdirectoryLimit: Bool
 }
 
-private struct DirectoryScanTraversalState {
+private struct DirectoryScanTraversalState: Sendable {
     var didExceedSupportedSubdirectoryLimit = false
+}
+
+private actor FolderWatchDirectoryScanCache {
+    private let maximumEntries = 8
+    private var entriesByPath: [String: FolderWatchDirectoryScanResult] = [:]
+    private var pathOrder: [String] = []
+
+    func cachedResult(for folderPath: String) -> FolderWatchDirectoryScanResult? {
+        guard let entry = entriesByPath[folderPath] else {
+            return nil
+        }
+
+        touch(folderPath)
+        return entry
+    }
+
+    func store(_ result: FolderWatchDirectoryScanResult, for folderPath: String) {
+        entriesByPath[folderPath] = result
+        touch(folderPath)
+
+        while pathOrder.count > maximumEntries,
+              let oldestPath = pathOrder.first {
+            pathOrder.removeFirst()
+            entriesByPath.removeValue(forKey: oldestPath)
+        }
+    }
+
+    private func touch(_ folderPath: String) {
+        pathOrder.removeAll(where: { $0 == folderPath })
+        pathOrder.append(folderPath)
+    }
 }
 
 private struct FolderWatchHeaderView: View {
