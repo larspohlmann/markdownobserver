@@ -143,12 +143,20 @@ nonisolated enum ReaderRecentHistory {
         for entry: ReaderRecentWatchedFolder,
         among entries: [ReaderRecentWatchedFolder]
     ) -> String {
-        menuTitle(
+        let baseTitle = menuTitle(
             for: entry,
             among: entries,
             displayName: \ .displayName,
             pathText: \ .pathText
         )
+
+        let excludedCount = entry.options.excludedSubdirectoryPaths.count
+        guard entry.options.scope == .includeSubfolders, excludedCount > 0 else {
+            return baseTitle
+        }
+
+        let noun = excludedCount == 1 ? "folder" : "folders"
+        return "\(baseTitle) [\(excludedCount) filtered \(noun)]"
     }
 
     private static func menuTitle<Entry>(

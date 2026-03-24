@@ -5,6 +5,12 @@ nonisolated enum ReaderFolderWatchAutoOpenPolicy {
     static let maximumLiveAutoOpenFileCount = 12
 }
 
+nonisolated enum ReaderFolderWatchPerformancePolicy {
+    static let exclusionPromptSubdirectoryThreshold = 96
+    static let maximumSupportedSubdirectoryCount = 9_000
+    static let maximumIncludedSubfolderDepth = 4
+}
+
 nonisolated enum ReaderFolderWatchOpenMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case openAllMarkdownFiles
     case watchChangesOnly
@@ -40,11 +46,87 @@ nonisolated enum ReaderFolderWatchScope: String, CaseIterable, Identifiable, Has
 nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Sendable {
     var openMode: ReaderFolderWatchOpenMode
     var scope: ReaderFolderWatchScope
+    var excludedSubdirectoryPaths: [String]
 
     static let `default` = ReaderFolderWatchOptions(
         openMode: .watchChangesOnly,
-        scope: .selectedFolderOnly
+        scope: .selectedFolderOnly,
+        excludedSubdirectoryPaths: []
     )
+
+    init(
+        openMode: ReaderFolderWatchOpenMode,
+        scope: ReaderFolderWatchScope,
+        excludedSubdirectoryPaths: [String] = []
+    ) {
+        self.openMode = openMode
+        self.scope = scope
+        self.excludedSubdirectoryPaths = excludedSubdirectoryPaths
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case openMode
+        case scope
+        case excludedSubdirectoryPaths
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        openMode = try container.decode(ReaderFolderWatchOpenMode.self, forKey: .openMode)
+        scope = try container.decode(ReaderFolderWatchScope.self, forKey: .scope)
+        excludedSubdirectoryPaths = try container.decodeIfPresent([String].self, forKey: .excludedSubdirectoryPaths) ?? []
+    }
+
+    func encodedForFolder(_ folderURL: URL) -> ReaderFolderWatchOptions {
+        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedExclusions = Self.normalizedExcludedSubdirectoryPaths(
+            excludedSubdirectoryPaths,
+            relativeTo: normalizedFolderURL
+        )
+
+        return ReaderFolderWatchOptions(
+            openMode: openMode,
+            scope: scope,
+            excludedSubdirectoryPaths: normalizedExclusions
+        )
+    }
+
+    func resolvedExcludedSubdirectoryURLs(relativeTo folderURL: URL) -> [URL] {
+        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        return Self.normalizedExcludedSubdirectoryPaths(
+            excludedSubdirectoryPaths,
+            relativeTo: normalizedFolderURL
+        ).map {
+            URL(fileURLWithPath: $0, isDirectory: true)
+        }
+    }
+
+    private static func normalizedExcludedSubdirectoryPaths(
+        _ paths: [String],
+        relativeTo folderURL: URL
+    ) -> [String] {
+        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+
+        let normalized = paths.compactMap { path -> String? in
+            guard !path.isEmpty else {
+                return nil
+            }
+
+            let candidateURL = ReaderFileRouting.normalizedFileURL(URL(fileURLWithPath: path, isDirectory: true))
+            guard candidateURL.path != normalizedFolderURL.path else {
+                return nil
+            }
+
+            let folderPath = normalizedFolderURL.path.hasSuffix("/") ? normalizedFolderURL.path : normalizedFolderURL.path + "/"
+            guard candidateURL.path.hasPrefix(folderPath) else {
+                return nil
+            }
+
+            return candidateURL.path
+        }
+
+        return Array(Set(normalized)).sorted()
+    }
 }
 
 nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Sendable {
@@ -78,19 +160,34 @@ nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Senda
     }
 
     nonisolated var detailRows: [(title: String, value: String)] {
-        [
+        var rows: [(title: String, value: String)] = [
             (title: "When watch starts", value: options.openMode.label),
             (title: "Scope", value: options.scope.label)
         ]
+
+        if options.scope == .includeSubfolders {
+            rows.append((
+                title: "Filtered subdirectories",
+                value: String(options.excludedSubdirectoryPaths.count)
+            ))
+        }
+
+        return rows
     }
 
     nonisolated var tooltipText: String {
-        [
+        var lines = [
             "Watching folder",
             detailPathText,
             "When watch starts: \(options.openMode.label)",
             "Scope: \(options.scope.label)"
-        ].joined(separator: "\n")
+        ]
+
+        if options.scope == .includeSubfolders {
+            lines.append("Filtered subdirectories: \(options.excludedSubdirectoryPaths.count)")
+        }
+
+        return lines.joined(separator: "\n")
     }
 
     nonisolated var accessibilityValue: String {

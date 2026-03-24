@@ -77,6 +77,19 @@ struct ReaderWindowRootView: View {
         )
     }
 
+    private var pendingFolderWatchExcludedSubdirectoryPathsBinding: Binding<[String]> {
+        Binding(
+            get: {
+                pendingFolderWatchRequest?.options.excludedSubdirectoryPaths ?? []
+            },
+            set: { newValue in
+                updatePendingFolderWatchRequest { request in
+                    request.options.excludedSubdirectoryPaths = newValue
+                }
+            }
+        )
+    }
+
     var body: some View {
         commandNotificationAwareView(windowLifecycleAwareView(rootContent))
     }
@@ -261,11 +274,13 @@ struct ReaderWindowRootView: View {
                 openDocumentInCurrentWindow(fileURL)
             },
             activeFolderWatch: sharedFolderWatchSession,
+            isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
             canStopFolderWatch: canStopSharedFolderWatch,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchURL: pendingFolderWatchURL,
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
             pendingFolderWatchScope: pendingFolderWatchScopeBinding,
+            pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPathsBinding,
             recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
             recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
             onRequestFolderWatch: prepareFolderWatchOptions,

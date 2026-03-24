@@ -222,6 +222,60 @@ struct ReaderSettingsAndModelsTests {
         #expect(ReaderRecentHistory.menuTitle(for: folderEntries[2], among: folderEntries) == "guides")
     }
 
+    @Test func readerRecentHistoryMenuTitleAddsFilteredIndicatorForWatchedFolders() {
+        let entries = [
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
+                options: ReaderFolderWatchOptions(
+                    openMode: .watchChangesOnly,
+                    scope: .includeSubfolders,
+                    excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
+                )
+            ),
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/beta/docs"),
+                options: .default
+            )
+        ]
+
+        #expect(
+            ReaderRecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha) [1 filtered folder]"
+        )
+        #expect(
+            ReaderRecentHistory.menuTitle(for: entries[1], among: entries) == "docs (beta)"
+        )
+    }
+
+    @Test func readerRecentHistoryMenuTitleOmitsFilteredIndicatorForSelectedFolderScope() {
+        let entries = [
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
+                options: ReaderFolderWatchOptions(
+                    openMode: .watchChangesOnly,
+                    scope: .selectedFolderOnly,
+                    excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
+                )
+            ),
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/beta/docs"),
+                options: .default
+            )
+        ]
+
+        #expect(
+            ReaderRecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha)"
+        )
+    }
+
+    @Test func readerFolderWatchOptionsDecodesLegacyPayloadWithoutExclusions() throws {
+        let legacyJSON = "{\"openMode\":\"watchChangesOnly\",\"scope\":\"includeSubfolders\"}".data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(ReaderFolderWatchOptions.self, from: legacyJSON)
+
+        #expect(decoded.openMode == .watchChangesOnly)
+        #expect(decoded.scope == .includeSubfolders)
+        #expect(decoded.excludedSubdirectoryPaths.isEmpty)
+    }
+
     @Test func readerSystemNotifierConfigureDoesNotRequestAuthorization() {
         let notificationCenter = TestUserNotificationCenter()
         let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)

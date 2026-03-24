@@ -122,6 +122,10 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
+        // Give the watcher a brief warm-up window so initial baselines are captured
+        // before exercising modified/added event assertions.
+        try? await Task.sleep(for: .milliseconds(200))
+
         try "# After".write(to: existingFileURL, atomically: false, encoding: .utf8)
         try "# Added".write(to: addedFileURL, atomically: false, encoding: .utf8)
 
@@ -178,6 +182,126 @@ struct FileRoutingAndWatcherTests {
             ReaderFileRouting.normalizedFileURL(hiddenNestedFileURL),
             ReaderFileRouting.normalizedFileURL(visibleFileURL)
         ].sorted(by: { $0.path < $1.path }))
+    }
+
+    @Test func folderChangeWatcherExcludesConfiguredSubdirectoriesFromRecursiveEnumeration() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let includedSubdirectoryURL = directoryURL.appendingPathComponent("included", isDirectory: true)
+        let excludedSubdirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
+        try FileManager.default.createDirectory(at: includedSubdirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: excludedSubdirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let includedFileURL = includedSubdirectoryURL.appendingPathComponent("included.md")
+        let excludedFileURL = excludedSubdirectoryURL.appendingPathComponent("excluded.md")
+        try "# Included".write(to: includedFileURL, atomically: false, encoding: .utf8)
+        try "# Excluded".write(to: excludedFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher()
+        let recursiveFiles = try watcher.markdownFiles(
+            in: directoryURL,
+            includeSubfolders: true,
+            excludedSubdirectoryURLs: [excludedSubdirectoryURL]
+        )
+
+        #expect(recursiveFiles == [ReaderFileRouting.normalizedFileURL(includedFileURL)])
+    }
+
+    @Test func folderChangeWatcherLimitsRecursiveEnumerationToFourLevels() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let depthFourDirectoryURL = directoryURL
+            .appendingPathComponent("l1", isDirectory: true)
+            .appendingPathComponent("l2", isDirectory: true)
+            .appendingPathComponent("l3", isDirectory: true)
+            .appendingPathComponent("l4", isDirectory: true)
+        let depthFiveDirectoryURL = depthFourDirectoryURL.appendingPathComponent("l5", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: depthFiveDirectoryURL, withIntermediateDirectories: true)
+
+        let depthFourFileURL = depthFourDirectoryURL.appendingPathComponent("depth-four.md")
+        let depthFiveFileURL = depthFiveDirectoryURL.appendingPathComponent("depth-five.md")
+        try "# Depth four".write(to: depthFourFileURL, atomically: false, encoding: .utf8)
+        try "# Depth five".write(to: depthFiveFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher()
+        let recursiveFiles = try watcher.markdownFiles(in: directoryURL, includeSubfolders: true)
+
+        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFourFileURL)))
+        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
+    }
+
+    @Test func folderChangeWatcherStillAppliesDepthLimitWhenSubdirectoriesAreExplicitlyExcluded() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let includedBranchDepthFiveDirectoryURL = directoryURL
+            .appendingPathComponent("included", isDirectory: true)
+            .appendingPathComponent("l1", isDirectory: true)
+            .appendingPathComponent("l2", isDirectory: true)
+            .appendingPathComponent("l3", isDirectory: true)
+            .appendingPathComponent("l4", isDirectory: true)
+            .appendingPathComponent("l5", isDirectory: true)
+        let excludedBranchDirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: includedBranchDepthFiveDirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: excludedBranchDirectoryURL, withIntermediateDirectories: true)
+
+        let deepIncludedFileURL = includedBranchDepthFiveDirectoryURL.appendingPathComponent("deep-include.md")
+        try "# Deep include".write(to: deepIncludedFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher()
+        let recursiveFiles = try watcher.markdownFiles(
+            in: directoryURL,
+            includeSubfolders: true,
+            excludedSubdirectoryURLs: [excludedBranchDirectoryURL]
+        )
+
+        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(deepIncludedFileURL)))
+    }
+
+    @Test @MainActor func folderChangeWatcherDoesNotEmitEventsFromExcludedSubdirectories() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let excludedSubdirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
+        let includedSubdirectoryURL = directoryURL.appendingPathComponent("included", isDirectory: true)
+        try FileManager.default.createDirectory(at: excludedSubdirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: includedSubdirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let excludedFileURL = excludedSubdirectoryURL.appendingPathComponent("ignored.md")
+        let includedFileURL = includedSubdirectoryURL.appendingPathComponent("tracked.md")
+        try "# Before".write(to: excludedFileURL, atomically: false, encoding: .utf8)
+        try "# Before".write(to: includedFileURL, atomically: false, encoding: .utf8)
+
+        let watcher = makeFolderChangeWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            excludedSubdirectoryURLs: [excludedSubdirectoryURL]
+        ) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        // Ensure recursive directory sources and baselines are primed before writes.
+        try? await Task.sleep(for: .milliseconds(200))
+
+        try "# After excluded".write(to: excludedFileURL, atomically: false, encoding: .utf8)
+        try "# After included".write(to: includedFileURL, atomically: false, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(includedFileURL) &&
+                $0.kind == .modified
+            })
+        })
+
+        #expect(!receivedEvents.contains(where: {
+            $0.fileURL == ReaderFileRouting.normalizedFileURL(excludedFileURL)
+        }))
     }
 
     @Test @MainActor func folderChangeWatcherDoesNotEmitInitialEventsForExistingNestedMarkdownFiles() async throws {
@@ -499,9 +623,18 @@ private extension FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
+        let expectedDirectorySourceCount = subdirectoryComponents.count + 1
+        let watcherReady = await waitUntil(timeout: .seconds(3)) {
+            watcher.activeDirectorySourceCountForTesting >= expectedDirectorySourceCount
+        }
+        #expect(watcherReady)
+
+        // Allow watcher setup to complete before mutating nested files.
+        try? await Task.sleep(for: .milliseconds(200))
+
         try "# After".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
-        #expect(await waitUntil(timeout: .seconds(4)) {
+        #expect(await waitUntil(timeout: .seconds(6)) {
             receivedEvents.contains(where: {
                 $0.fileURL == ReaderFileRouting.normalizedFileURL(nestedFileURL) &&
                 $0.kind == .modified &&

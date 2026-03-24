@@ -6,9 +6,10 @@ extension ReaderStore {
             prepareForFolderWatchStart()
 
             let accessibleFolderURL = folderURL
+            let normalizedOptions = options.encodedForFolder(accessibleFolderURL)
             let session = try activateFolderWatch(
                 folderURL: accessibleFolderURL,
-                options: options
+                options: normalizedOptions
             )
 
             finishStartingFolderWatch(session, accessibleFolderURL: accessibleFolderURL)
@@ -45,7 +46,8 @@ extension ReaderStore {
 
         try folderWatcher.startWatching(
             folderURL: folderURL,
-            includeSubfolders: options.scope == .includeSubfolders
+            includeSubfolders: options.scope == .includeSubfolders,
+            excludedSubdirectoryURLs: options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
         ) { [weak self] changedMarkdownEvents in
             guard let self else {
                 return
@@ -101,7 +103,8 @@ extension ReaderStore {
     ) throws -> ReaderFolderWatchAutoOpenPlan {
         let markdownURLs = try folderWatcher.markdownFiles(
             in: folderURL,
-            includeSubfolders: session.options.scope == .includeSubfolders
+            includeSubfolders: session.options.scope == .includeSubfolders,
+            excludedSubdirectoryURLs: session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
         )
         let initialMarkdownEvents = markdownURLs.map {
             ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)

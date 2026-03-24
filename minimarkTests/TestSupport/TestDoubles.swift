@@ -213,21 +213,25 @@ final class TestSettingsKeyValueStorage: ReaderSettingsKeyValueStoring {
     }
 }
 
-final class TestFolderWatcher: FolderChangeWatching {
+final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
     private var onMarkdownFilesAddedOrChanged: (([ReaderFolderWatchChangeEvent]) -> Void)?
 
     var startCallCount = 0
     var stopCallCount = 0
     var lastIncludeSubfolders = false
+    var lastExcludedSubdirectoryURLs: [URL] = []
     var markdownFilesToReturn: [URL] = []
+    var markdownFilesDelay: TimeInterval = 0
 
     func startWatching(
         folderURL: URL,
         includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL],
         onMarkdownFilesAddedOrChanged: @escaping @Sendable ([ReaderFolderWatchChangeEvent]) -> Void
     ) throws {
         startCallCount += 1
         lastIncludeSubfolders = includeSubfolders
+        lastExcludedSubdirectoryURLs = excludedSubdirectoryURLs
         self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
     }
 
@@ -236,8 +240,16 @@ final class TestFolderWatcher: FolderChangeWatching {
         onMarkdownFilesAddedOrChanged = nil
     }
 
-    func markdownFiles(in folderURL: URL, includeSubfolders: Bool) throws -> [URL] {
-        markdownFilesToReturn
+    func markdownFiles(
+        in folderURL: URL,
+        includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL]
+    ) throws -> [URL] {
+        if markdownFilesDelay > 0 {
+            Thread.sleep(forTimeInterval: markdownFilesDelay)
+        }
+        lastExcludedSubdirectoryURLs = excludedSubdirectoryURLs
+        return markdownFilesToReturn
     }
 
     func emitChangedMarkdownEvents(_ events: [ReaderFolderWatchChangeEvent]) {
