@@ -15,8 +15,8 @@ struct FolderWatchOptionsSheet: View {
 
     private enum Metrics {
         static let sectionSpacing: CGFloat = 14
-        static let contentSpacing: CGFloat = 18
-        static let width: CGFloat = 520
+        static let contentSpacing: CGFloat = 16
+        static let width: CGFloat = 560
     }
 
     private var selectedFolderName: String {
@@ -78,6 +78,27 @@ struct FolderWatchOptionsSheet: View {
         return Array(Set(normalized)).sorted()
     }
 
+    private var allScannedSubdirectoryPaths: [String] {
+        let rootNodes = directoryScanModel.rootNode?.children ?? []
+        return rootNodes.flatMap { collectSubdirectoryPaths(from: $0) }.sorted()
+    }
+
+    private var effectiveExcludedSubdirectoryCount: Int {
+        let excludedSet = Set(normalizedExcludedSubdirectoryPaths)
+        return allScannedSubdirectoryPaths.filter { path in
+            isPathEffectivelyExcluded(path, excludedSet: excludedSet)
+        }.count
+    }
+
+    private var remainingSubdirectoriesToDeactivateCount: Int {
+        guard let summary = directoryScanModel.summary else {
+            return 0
+        }
+
+        let activeSubdirectoryCount = max(0, summary.subdirectoryCount - effectiveExcludedSubdirectoryCount)
+        return max(0, activeSubdirectoryCount - ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold)
+    }
+
     private var requiresExclusionSelectionBeforeStart: Bool {
         guard scope == .includeSubfolders,
               let summary = directoryScanModel.summary,
@@ -85,7 +106,7 @@ struct FolderWatchOptionsSheet: View {
             return false
         }
 
-        return normalizedExcludedSubdirectoryPaths.isEmpty
+        return remainingSubdirectoriesToDeactivateCount > 0
     }
 
     private var thresholdWarningVisible: Bool {
@@ -129,32 +150,110 @@ struct FolderWatchOptionsSheet: View {
 
     private var thresholdWarningDetail: String {
         let selectedCount = normalizedExcludedSubdirectoryPaths.count
-        if selectedCount > 0 {
+        if selectedCount > 0 && remainingSubdirectoriesToDeactivateCount == 0 {
             let noun = selectedCount == 1 ? "subdirectory" : "subdirectories"
-            return "\(selectedCount) \(noun) currently deactivated. You can review and adjust selections before starting watch."
+            return "Threshold satisfied with \(selectedCount) \(noun) deactivated. You can start watching now."
+        }
+
+        if selectedCount > 0 {
+            let noun = remainingSubdirectoriesToDeactivateCount == 1 ? "subdirectory" : "subdirectories"
+            return "Deactivate \(remainingSubdirectoriesToDeactivateCount) more \(noun) to reach the optimization threshold."
         }
 
         return "This exceeds the optimization threshold of \(ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold). Deactivate one or more subdirectories before starting to reduce freeze risk."
     }
 
-    private var openAllMarkdownFilesBinding: Binding<Bool> {
+    private var optimizationCardTitle: String {
+        guard scope == .includeSubfolders else {
+            return "Subfolder optimization"
+        }
+
+        guard !directoryScanModel.isLoading else {
+            return "Scanning subfolders"
+        }
+
+        return thresholdWarningVisible
+            ? thresholdWarningTitle
+            : "Tree size is within optimization threshold"
+    }
+
+    private var optimizationCardDetail: String {
+        guard scope == .includeSubfolders else {
+            return "Enable Include Subfolders to evaluate tree size and optimization guidance."
+        }
+
+        guard !directoryScanModel.isLoading else {
+            return "Collecting subfolder metrics to evaluate large-tree performance."
+        }
+
+        return thresholdWarningVisible
+            ? thresholdWarningDetail
+            : "No exclusions required. You can start watching with subfolders enabled."
+    }
+
+    private var optimizationCardTone: FolderWatchLargeTreeWarningCard.Tone {
+        guard scope == .includeSubfolders else {
+            return .neutral
+        }
+
+        guard !directoryScanModel.isLoading else {
+            return .neutral
+        }
+
+        return thresholdWarningVisible ? .warning : .success
+    }
+
+    private var startActionStatusText: String {
+        if requiresExclusionSelectionBeforeStart {
+            return "Action required before watch can start"
+        }
+
+        return thresholdWarningVisible
+            ? "Large tree reviewed"
+            : "Ready to start"
+    }
+
+    private var startActionStatusSymbol: String {
+        if requiresExclusionSelectionBeforeStart {
+            return "exclamationmark.triangle.fill"
+        }
+
+        return thresholdWarningVisible ? "checkmark.shield.fill" : "checkmark.circle.fill"
+    }
+
+    private var startActionStatusColor: AnyShapeStyle {
+        if requiresExclusionSelectionBeforeStart {
+            return AnyShapeStyle(.orange)
+        }
+
+        return AnyShapeStyle(.green)
+    }
+
+    private var openModeSelectionBinding: Binding<ReaderFolderWatchOpenMode> {
         Binding(
             get: {
-                openMode == .openAllMarkdownFiles
+                openMode
             },
-            set: { isEnabled in
-                openMode = isEnabled ? .openAllMarkdownFiles : .watchChangesOnly
+            set: { mode in
+                openMode = mode
             }
         )
     }
 
-    private var includeSubfoldersBinding: Binding<Bool> {
+    private var scopeSelectionBinding: Binding<ReaderFolderWatchScope> {
         Binding(
             get: {
-                scope == .includeSubfolders
+                scope
             },
-            set: { isEnabled in
-                scope = isEnabled ? .includeSubfolders : .selectedFolderOnly
+            set: { updatedScope in
+                guard scope != updatedScope else {
+                    return
+                }
+
+                // Avoid mutating view state during the segmented control's active AppKit layout pass.
+                DispatchQueue.main.async {
+                    scope = updatedScope
+                }
             }
         )
     }
@@ -167,6 +266,8 @@ struct FolderWatchOptionsSheet: View {
                 folderName: selectedFolderName,
                 folderPath: selectedFolderPath,
                 summary: selectionSummary,
+                openModeLabel: openMode == .openAllMarkdownFiles ? "Open Existing Files" : "Watch Changes Only",
+                scopeLabel: scope == .includeSubfolders ? "Include Subfolders" : "Selected Folder Only",
                 hasFolderSelection: folderURL != nil,
                 selectionStateKey: selectionStateKey
             )
@@ -174,57 +275,81 @@ struct FolderWatchOptionsSheet: View {
             VStack(spacing: Metrics.sectionSpacing) {
                 FolderWatchOptionSection(
                     title: "When watch starts",
-                    description: "Choose whether MarkdownObserver should immediately open existing Markdown files or wait for incoming changes."
+                    description: "Choose whether MarkdownObserver opens existing Markdown files immediately or waits for incoming changes."
                 ) {
-                    Toggle("Open all Markdown files", isOn: openAllMarkdownFilesBinding)
-                        .accessibilityLabel("Open all Markdown files")
+                    Picker("Watch start mode", selection: openModeSelectionBinding) {
+                        Text("Open Existing Files")
+                            .tag(ReaderFolderWatchOpenMode.openAllMarkdownFiles)
+                        Text("Watch Changes Only")
+                            .tag(ReaderFolderWatchOpenMode.watchChangesOnly)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Watch start mode")
                 }
 
                 FolderWatchOptionSection(
                     title: "Folder scope",
-                    description: "Control whether watch activity stays in the selected folder or also follows subfolders."
+                    description: "Control whether watch activity stays in the selected folder or follows subfolders."
                 ) {
-                    Toggle("Include subfolders", isOn: includeSubfoldersBinding)
-                        .accessibilityLabel("Include subfolders")
+                    Picker("Folder scope", selection: scopeSelectionBinding) {
+                        Text("Selected Folder")
+                            .tag(ReaderFolderWatchScope.selectedFolderOnly)
+                        Text("Include Subfolders")
+                            .tag(ReaderFolderWatchScope.includeSubfolders)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Folder scope")
 
                     FolderWatchScopeSummaryView(
                         footerText: scopeFooterText,
                         isLoading: directoryScanModel.isLoading,
-                        summary: directoryScanModel.summary,
-                        canInspectLargeTree: thresholdWarningVisible,
-                        onInspectLargeTree: {
-                            isLargeTreeDialogPresented = true
-                        }
+                        summary: directoryScanModel.summary
                     )
                 }
 
-                if thresholdWarningVisible {
-                    FolderWatchLargeTreeWarningCard(
-                        title: thresholdWarningTitle,
-                        detail: thresholdWarningDetail,
-                        onInspect: {
-                            isLargeTreeDialogPresented = true
-                        }
-                    )
-                }
+                FolderWatchLargeTreeWarningCard(
+                    title: optimizationCardTitle,
+                    detail: optimizationCardDetail,
+                    tone: optimizationCardTone,
+                    showsAction: thresholdWarningVisible,
+                    onInspect: {
+                        isLargeTreeDialogPresented = true
+                    }
+                )
+            }
+            .transaction { transaction in
+                transaction.animation = nil
             }
 
             Divider()
 
             HStack {
+                Label(startActionStatusText, systemImage: startActionStatusSymbol)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(startActionStatusColor)
+
                 Spacer()
                 Button("Cancel") {
                     onCancel()
                 }
                 .accessibilityIdentifier("folder-watch-cancel-button")
+                .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
-                Button("Start Watching") {
+                Button {
                     confirmWithThresholdGuard()
+                } label: {
+                    if requiresExclusionSelectionBeforeStart {
+                        Label("Start Watching", systemImage: "lock.fill")
+                    } else {
+                        Text("Start Watching")
+                    }
                 }
                 .accessibilityIdentifier("folder-watch-start-button")
+                .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
+                .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
-                .disabled(folderURL == nil || directoryScanModel.isLoading)
+                .disabled(folderURL == nil || directoryScanModel.isLoading || requiresExclusionSelectionBeforeStart)
                 .accessibilityHint("Starts folder watch with selected options")
             }
         }
@@ -233,13 +358,13 @@ struct FolderWatchOptionsSheet: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("folder-watch-sheet")
         .onAppear {
-            refreshDirectoryScan()
+            scheduleDirectoryScanRefresh()
         }
         .onChange(of: folderURL) { _, _ in
-            refreshDirectoryScan()
+            scheduleDirectoryScanRefresh()
         }
         .onChange(of: scope) { _, _ in
-            refreshDirectoryScan()
+            scheduleDirectoryScanRefresh()
         }
         .sheet(isPresented: $isLargeTreeDialogPresented) {
             LargeFolderExclusionDialog(
@@ -258,10 +383,6 @@ struct FolderWatchOptionsSheet: View {
                     isLargeTreeDialogPresented = false
                 },
                 onConfirm: {
-                    guard !normalizedExcludedSubdirectoryPaths.isEmpty else {
-                        return
-                    }
-
                     isLargeTreeDialogPresented = false
                     confirmWithThresholdGuard()
                 }
@@ -293,31 +414,49 @@ struct FolderWatchOptionsSheet: View {
 
         directoryScanModel.scan(folderURL: folderURL)
     }
+
+    private func scheduleDirectoryScanRefresh() {
+        // Defer state mutation to avoid re-entrant AppKit layout while segmented control changes.
+        DispatchQueue.main.async {
+            refreshDirectoryScan()
+        }
+    }
+
+    private func collectSubdirectoryPaths(from node: FolderWatchDirectoryNode) -> [String] {
+        [node.path] + node.children.flatMap { collectSubdirectoryPaths(from: $0) }
+    }
+
+    private func isPathEffectivelyExcluded(_ path: String, excludedSet: Set<String>) -> Bool {
+        excludedSet.contains { excludedPath in
+            if excludedPath == path {
+                return true
+            }
+
+            let prefix = excludedPath.hasSuffix("/") ? excludedPath : excludedPath + "/"
+            return path.hasPrefix(prefix)
+        }
+    }
 }
 
 private struct FolderWatchScopeSummaryView: View {
     let footerText: String
     let isLoading: Bool
     let summary: FolderWatchDirectoryScanSummary?
-    let canInspectLargeTree: Bool
-    let onInspectLargeTree: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                Label(
-                    summary == nil ? "Subdirectories" : "\(summary?.subdirectoryCount ?? 0)",
-                    systemImage: "folder.badge.gearshape"
+                FolderWatchMetricPill(
+                    title: summary == nil ? "Subdirectories" : "\(summary?.subdirectoryCount ?? 0)",
+                    symbol: "folder.badge.gearshape"
                 )
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(.secondary)
 
-                Label(
-                    summary == nil ? "Markdown files" : "\(summary?.markdownFileCount ?? 0)",
-                    systemImage: "doc.text.magnifyingglass"
+                FolderWatchMetricPill(
+                    title: summary == nil ? "Markdown files" : "\(summary?.markdownFileCount ?? 0)",
+                    symbol: "doc.text.magnifyingglass"
                 )
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(.secondary)
+
+                Spacer()
 
                 if isLoading {
                     ProgressView()
@@ -329,57 +468,167 @@ private struct FolderWatchScopeSummaryView: View {
                 .font(.system(size: 11.5, weight: .regular))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-
-            if canInspectLargeTree {
-                Button {
-                    onInspectLargeTree()
-                } label: {
-                    Label("Review subdirectory exclusions", systemImage: "slider.horizontal.3")
-                }
-                .buttonStyle(.link)
-            }
         }
-        .padding(.top, 8)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.primary.opacity(0.04))
+        )
+    }
+}
+
+private struct FolderWatchMetricPill: View {
+    let title: String
+    let symbol: String
+
+    var body: some View {
+        Label(title, systemImage: symbol)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+            )
+    }
+}
+
+private struct FolderWatchPrimaryActionButtonStyle: ButtonStyle {
+    let tint: Color
+    @Environment(\.isEnabled) private var isEnabled
+
+    private var textStyle: AnyShapeStyle {
+        isEnabled ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.46))
+    }
+
+    private var fillColor: Color {
+        isEnabled ? tint : Color.secondary.opacity(0.16)
+    }
+
+    private var borderColor: Color {
+        isEnabled ? Color.white.opacity(0.15) : Color.white.opacity(0.05)
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12.5, weight: .semibold))
+            .foregroundStyle(textStyle)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(fillColor.opacity(isEnabled ? (configuration.isPressed ? 0.86 : 1.0) : 1.0))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(borderColor, lineWidth: 0.5)
+            )
+            .opacity(isEnabled ? 1.0 : 0.62)
+    }
+}
+
+private struct FolderWatchSecondaryActionButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12.5, weight: .semibold))
+            .foregroundStyle(
+                isEnabled
+                    ? AnyShapeStyle(.primary)
+                    : AnyShapeStyle(.secondary.opacity(0.85))
+            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(
+                        isEnabled
+                            ? Color.primary.opacity(configuration.isPressed ? 0.14 : 0.10)
+                            : Color.primary.opacity(0.05)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.primary.opacity(0.14), lineWidth: 0.5)
+            )
     }
 }
 
 private struct FolderWatchLargeTreeWarningCard: View {
+    enum Tone {
+        case neutral
+        case success
+        case warning
+    }
+
     let title: String
     let detail: String
+    let tone: Tone
+    let showsAction: Bool
     let onInspect: () -> Void
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.yellow)
-                .font(.system(size: 17, weight: .semibold))
+    private var symbolName: String {
+        switch tone {
+        case .neutral:
+            return "info.circle.fill"
+        case .success:
+            return "checkmark.seal.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 6) {
+    private var tintColor: Color {
+        switch tone {
+        case .neutral:
+            return .secondary
+        case .success:
+            return .green
+        case .warning:
+            return .orange
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: symbolName)
+                    .foregroundStyle(tintColor)
+                    .font(.system(size: 16, weight: .semibold))
+
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
+            }
 
+            VStack(alignment: .leading, spacing: 8) {
                 Text(detail)
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Button {
-                    onInspect()
-                } label: {
-                    Label("Choose subdirectories to deactivate", systemImage: "line.3.horizontal.decrease.circle")
+                if showsAction {
+                    Button {
+                        onInspect()
+                    } label: {
+                        Label("Choose subdirectories to deactivate", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.link)
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.yellow.opacity(0.10))
+                .fill(tintColor.opacity(0.10))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.yellow.opacity(0.35), lineWidth: 1)
+                .stroke(tintColor.opacity(0.35), lineWidth: 1)
         )
     }
 }
@@ -397,7 +646,7 @@ private struct LargeFolderExclusionDialog: View {
     }
 
     private var canConfirm: Bool {
-        !excludedSet.isEmpty
+        remainingToDeactivateCount == 0
     }
 
     private var rootNodes: [FolderWatchDirectoryNode] {
@@ -441,27 +690,72 @@ private struct LargeFolderExclusionDialog: View {
         return "Deactivate \(remainingToDeactivateCount) more \(noun) to reach the threshold."
     }
 
+    private var thresholdProgressSymbol: String {
+        remainingToDeactivateCount == 0 ? "checkmark.seal.fill" : "exclamationmark.circle.fill"
+    }
+
+    private var thresholdProgressStyle: AnyShapeStyle {
+        remainingToDeactivateCount == 0 ? AnyShapeStyle(.green) : AnyShapeStyle(.orange)
+    }
+
+    private var confirmButtonTitle: String {
+        remainingToDeactivateCount > 0 ? "Start Watching Anyway" : "Start Watching"
+    }
+
+    private var footerNeedText: String {
+        if remainingToDeactivateCount == 0 {
+            return "Threshold met"
+        }
+
+        return "Need \(remainingToDeactivateCount) more"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "speedometer")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: 34, height: 34)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.accentColor.opacity(0.15))
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "speedometer")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 34, height: 34)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.accentColor.opacity(0.15))
+                        )
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Optimize Large Folder Watch")
+                            .font(.system(size: 19, weight: .semibold, design: .rounded))
+
+                        Text("This folder tree exceeds \(threshold) subdirectories. Deactivate one or more subdirectories to reduce scan pressure and avoid freezes.")
+                            .font(.system(size: 12.5, weight: .regular))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    FolderWatchMetricPill(
+                        title: "Threshold \(threshold)",
+                        symbol: "gauge.with.dots.needle.50percent"
                     )
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Optimize Large Folder Watch")
-                        .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    FolderWatchMetricPill(
+                        title: "\(excludedSet.count) manually deactivated",
+                        symbol: "line.3.horizontal.decrease.circle"
+                    )
 
-                    Text("This folder tree exceeds \(threshold) subdirectories. Deactivate one or more subdirectories to reduce scan pressure and avoid freezes.")
-                        .font(.system(size: 12.5, weight: .regular))
-                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
             }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.primary.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.07), lineWidth: 0.5)
+            )
 
             Group {
                 if scanModel.isLoading {
@@ -492,10 +786,22 @@ private struct LargeFolderExclusionDialog: View {
                         Spacer()
                     }
 
-                    Text(thresholdProgressText)
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundStyle(remainingToDeactivateCount == 0 ? .green : .orange)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Image(systemName: thresholdProgressSymbol)
+                            .foregroundStyle(thresholdProgressStyle)
+
+                        Text(thresholdProgressText)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(thresholdProgressStyle)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.primary.opacity(0.05))
+                    )
 
                     HStack(spacing: 10) {
                         Button {
@@ -542,14 +848,16 @@ private struct LargeFolderExclusionDialog: View {
                 }
             }
 
-            HStack {
+            Divider()
+
+            HStack(spacing: 12) {
                 let count = excludedSet.count
                 let noun = count == 1 ? "subdirectory" : "subdirectories"
                 Label("\(count) \(noun) deactivated", systemImage: count > 0 ? "checkmark.circle.fill" : "xmark.circle")
                     .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(count > 0 ? .green : .secondary)
 
-                Text("Need \(remainingToDeactivateCount) more")
+                Text(footerNeedText)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(remainingToDeactivateCount == 0 ? .green : .orange)
 
@@ -558,16 +866,24 @@ private struct LargeFolderExclusionDialog: View {
                 Button("Cancel") {
                     onCancel()
                 }
+                .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
-                Button("Start Watching") {
+                Button(confirmButtonTitle) {
                     onConfirm()
                 }
+                .accessibilityIdentifier("folder-watch-dialog-start-button")
+                .buttonStyle(
+                    FolderWatchPrimaryActionButtonStyle(
+                        tint: remainingToDeactivateCount == 0 ? .accentColor : .orange
+                    )
+                )
+                .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canConfirm || scanModel.isLoading)
             }
         }
-        .padding(20)
+        .padding(22)
         .frame(width: 700)
     }
 
@@ -629,11 +945,19 @@ private struct FolderWatchTreeNodeRow: View {
     }
 
     private var statusTitle: String {
-        isEffectivelyExcluded ? "Deactivated" : "Active"
+        if isExcludedByAncestor {
+            return "Inherited"
+        }
+
+        return isEffectivelyExcluded ? "Deactivated" : "Active"
     }
 
     private var statusSymbol: String {
-        isEffectivelyExcluded ? "slash.circle.fill" : "checkmark.circle.fill"
+        if isExcludedByAncestor {
+            return "arrow.turn.down.right"
+        }
+
+        return isEffectivelyExcluded ? "slash.circle.fill" : "checkmark.circle.fill"
     }
 
     private var statusHint: String {
@@ -644,72 +968,82 @@ private struct FolderWatchTreeNodeRow: View {
         return isEffectivelyExcluded ? "Click to activate" : "Click to deactivate"
     }
 
+    private var toggleTitle: String {
+        isExplicitlyExcluded ? "Activate" : "Deactivate"
+    }
+
+    private var statusTint: AnyShapeStyle {
+        isEffectivelyExcluded ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 10) {
                 Button {
                     toggleExpanded()
                 } label: {
                     Image(systemName: hasChildren ? (isExpanded ? "chevron.down" : "chevron.right") : "circle.fill")
-                        .font(.system(size: hasChildren ? 11 : 4, weight: .bold))
+                        .font(.system(size: hasChildren ? 10 : 4, weight: .bold))
                         .foregroundStyle(hasChildren ? .secondary : .tertiary)
-                        .frame(width: 12, height: 12)
+                        .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
                 .disabled(!hasChildren)
 
-                Image(systemName: isEffectivelyExcluded ? "folder.slash.fill" : "folder.fill")
-                    .font(.system(size: 12, weight: .medium))
+                Image(systemName: isEffectivelyExcluded ? "folder.badge.minus" : "folder.fill")
+                    .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(isEffectivelyExcluded ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(node.name)
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(.system(size: 12.5, weight: .medium))
                         .lineLimit(1)
 
                     HStack(spacing: 10) {
                         Label("\(node.subdirectoryCount)", systemImage: "folder")
                         Label("\(node.markdownFileCount)", systemImage: "doc.text")
                     }
-                    .font(.system(size: 11, weight: .regular))
+                    .font(.system(size: 10.5, weight: .regular, design: .monospaced))
                     .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Button {
-                    toggleExclusion()
-                } label: {
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Label(statusTitle, systemImage: statusSymbol)
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .foregroundStyle(
-                                isEffectivelyExcluded
-                                    ? AnyShapeStyle(.secondary)
-                                    : AnyShapeStyle(Color.green)
-                            )
+                HStack(spacing: 6) {
+                    Label(statusTitle, systemImage: statusSymbol)
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(statusTint)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    isEffectivelyExcluded
+                                        ? Color.secondary.opacity(0.10)
+                                        : Color.green.opacity(0.13)
+                                )
+                        )
 
-                        Text(statusHint)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.secondary)
+                    Button(toggleTitle) {
+                        toggleExclusion()
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(canToggle ? Color.primary.opacity(0.06) : Color.secondary.opacity(0.08))
-                    )
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .disabled(!canToggle)
+                    .accessibilityHint(statusHint)
                 }
-                .buttonStyle(.borderless)
-                .disabled(!canToggle)
-                .accessibilityHint(statusHint)
             }
             .padding(.leading, CGFloat(level) * 16)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isEffectivelyExcluded ? Color.secondary.opacity(0.08) : Color.clear)
+                    .fill(isEffectivelyExcluded ? Color.secondary.opacity(0.08) : Color.primary.opacity(0.02))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
             )
 
             if hasChildren && isExpanded {
@@ -937,6 +1271,8 @@ private struct FolderWatchSummaryCard: View {
     let folderName: String
     let folderPath: String
     let summary: String
+    let openModeLabel: String
+    let scopeLabel: String
     let hasFolderSelection: Bool
     let selectionStateKey: String
 
@@ -971,6 +1307,20 @@ private struct FolderWatchSummaryCard: View {
                         .accessibilityLabel("Folder path")
                         .accessibilityValue(folderPath)
                 }
+            }
+
+            HStack(spacing: 8) {
+                FolderWatchMetricPill(
+                    title: openModeLabel,
+                    symbol: "bolt.horizontal.circle"
+                )
+
+                FolderWatchMetricPill(
+                    title: scopeLabel,
+                    symbol: "arrow.triangle.branch"
+                )
+
+                Spacer()
             }
 
             Text(summary)
