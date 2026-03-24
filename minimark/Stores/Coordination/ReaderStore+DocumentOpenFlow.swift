@@ -14,7 +14,6 @@ extension ReaderStore {
         do {
             let accessibleURL = url
             let normalizedURL = Self.normalizedFileURL(accessibleURL)
-            fileWatcher.stopWatching()
             activateFileSecurityScope(for: accessibleURL, reason: "open")
             bindFolderWatchSessionIfNeeded(folderWatchSession)
             let readURL = effectiveAccessibleFileURL(for: normalizedURL, reason: "open")
@@ -62,6 +61,9 @@ extension ReaderStore {
             origin: origin,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
+        // Stop the previous watch only after load succeeds so failed opens keep
+        // the current document's external-change observer active.
+        fileWatcher.stopWatching()
         startWatchingCurrentFile()
     }
 

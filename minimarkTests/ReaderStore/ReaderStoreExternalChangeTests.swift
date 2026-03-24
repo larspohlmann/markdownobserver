@@ -486,6 +486,30 @@ struct ReaderStoreExternalChangeTests {
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
     }
 
+    @Test @MainActor func failedOpenPreservesCurrentFileWatcherAndAvoidsDuplicateRebinds() async throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        let initialStartCallCount = fixture.watcher.startCallCount
+        let initialStopCallCount = fixture.watcher.stopCallCount
+
+        let missingFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("missing.md")
+        fixture.store.openFile(at: missingFileURL)
+        fixture.store.openFile(at: missingFileURL)
+
+        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
+        #expect(fixture.watcher.startCallCount == initialStartCallCount)
+        #expect(fixture.watcher.stopCallCount == initialStopCallCount)
+        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+
+        fixture.watcher.emitChange()
+        await Task.yield()
+
+        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.notifier.externalChangeNotifications.count == 1)
+    }
+
     @Test @MainActor func autoRefreshDisabledStillMarksExternalChangeAsPending() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
