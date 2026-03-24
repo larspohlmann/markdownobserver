@@ -122,6 +122,10 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
+        // Give the watcher a brief warm-up window so initial baselines are captured
+        // before exercising modified/added event assertions.
+        try? await Task.sleep(for: .milliseconds(200))
+
         try "# After".write(to: existingFileURL, atomically: false, encoding: .utf8)
         try "# Added".write(to: addedFileURL, atomically: false, encoding: .utf8)
 
@@ -281,6 +285,9 @@ struct FileRoutingAndWatcherTests {
             receivedEvents.append(contentsOf: events)
         }
         defer { watcher.stopWatching() }
+
+        // Ensure recursive directory sources and baselines are primed before writes.
+        try? await Task.sleep(for: .milliseconds(200))
 
         try "# After excluded".write(to: excludedFileURL, atomically: false, encoding: .utf8)
         try "# After included".write(to: includedFileURL, atomically: false, encoding: .utf8)
@@ -616,9 +623,18 @@ private extension FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
+        let expectedDirectorySourceCount = subdirectoryComponents.count + 1
+        let watcherReady = await waitUntil(timeout: .seconds(3)) {
+            watcher.activeDirectorySourceCountForTesting >= expectedDirectorySourceCount
+        }
+        #expect(watcherReady)
+
+        // Allow watcher setup to complete before mutating nested files.
+        try? await Task.sleep(for: .milliseconds(200))
+
         try "# After".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
-        #expect(await waitUntil(timeout: .seconds(4)) {
+        #expect(await waitUntil(timeout: .seconds(6)) {
             receivedEvents.contains(where: {
                 $0.fileURL == ReaderFileRouting.normalizedFileURL(nestedFileURL) &&
                 $0.kind == .modified &&

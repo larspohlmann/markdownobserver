@@ -445,7 +445,7 @@ struct FolderWatchCoordinationTests {
 
         try? await Task.sleep(for: .milliseconds(120))
         #expect(coordinator.activeFlow?.warning == warning)
-        #expect(coordinator.selectedFileURLs() == [omittedFileURL])
+        #expect(coordinator.selectedFileURLs().isEmpty)
 
         coordinator.activeFlow?.selectionModel.clearSelection()
         #expect(coordinator.selectedFileURLs().isEmpty)
@@ -472,11 +472,13 @@ struct FolderWatchCoordinationTests {
         #expect(session.statusLabel == "Watching reference")
         #expect(session.detailSummaryTitle == "reference")
         #expect(session.detailPathText == "/Users/example/Documents/Projects/MarkdownObserver/docs/reference")
-        #expect(session.detailRows.count == 2)
+        #expect(session.detailRows.count == 3)
         #expect(session.detailRows[0].title == "When watch starts")
         #expect(session.detailRows[0].value == "Open all Markdown files")
         #expect(session.detailRows[1].title == "Scope")
         #expect(session.detailRows[1].value == "Include subfolders")
+        #expect(session.detailRows[2].title == "Filtered subdirectories")
+        #expect(session.detailRows[2].value == "0")
         #expect(!session.statusLabel.contains(session.options.openMode.label))
         #expect(!session.statusLabel.contains(session.options.scope.label))
         #expect(session.titleLabel == session.chipLabel)
