@@ -1111,7 +1111,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-                        parent.onStartRecentManuallyOpenedFile(entry)
+            parent.onStartRecentManuallyOpenedFile(entry)
         }
 
         @objc private func revealInFinder() {

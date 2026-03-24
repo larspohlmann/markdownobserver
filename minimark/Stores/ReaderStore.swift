@@ -927,7 +927,7 @@ final class ReaderStore: ObservableObject {
 
         let normalizedURL = Self.normalizedFileURL(url)
         let name = normalizedURL.lastPathComponent.isEmpty ? "root" : normalizedURL.lastPathComponent
-        let pathHash = String(abs(normalizedURL.path.hashValue), radix: 16)
+        let pathHash = String(normalizedURL.path.hashValue.magnitude, radix: 16)
         return "\(name)#\(pathHash)"
     }
 
