@@ -640,9 +640,16 @@ struct FileRoutingAndWatcherTests {
             return
         }
 
-        let fileCount = max(Int(environment["PROFILE_STARTUP_FILE_COUNT"] ?? triggerConfig["file_count"] ?? "4000") ?? 4000, 1)
-        let depth = max(Int(environment["PROFILE_STARTUP_DEPTH"] ?? triggerConfig["depth"] ?? "3") ?? 3, 1)
+        let maximumProfileFileCount = 20_000
+        let maximumProfileDepth = 8
+        let resolvedFileCount = Int(environment["PROFILE_STARTUP_FILE_COUNT"] ?? triggerConfig["file_count"] ?? "4000") ?? 4000
+        let resolvedDepth = Int(environment["PROFILE_STARTUP_DEPTH"] ?? triggerConfig["depth"] ?? "3") ?? 3
+        let fileCount = min(max(resolvedFileCount, 1), maximumProfileFileCount)
+        let depth = min(max(resolvedDepth, 1), maximumProfileDepth)
         let includeSubfolders = (environment["PROFILE_STARTUP_INCLUDE_SUBFOLDERS"] ?? triggerConfig["include_subfolders"]) != "0"
+        print(
+            "PROFILE_STARTUP_CONFIG file_count=\(fileCount) depth=\(depth) include_subfolders=\(includeSubfolders)"
+        )
 
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }
