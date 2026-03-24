@@ -207,48 +207,51 @@ struct FileRoutingAndWatcherTests {
         #expect(recursiveFiles == [ReaderFileRouting.normalizedFileURL(includedFileURL)])
     }
 
-    @Test func folderChangeWatcherLimitsRecursiveEnumerationToFourLevels() throws {
+    @Test func folderChangeWatcherLimitsRecursiveEnumerationToFiveLevels() throws {
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
-        let depthFourDirectoryURL = directoryURL
+        let depthFiveDirectoryURL = directoryURL
             .appendingPathComponent("l1", isDirectory: true)
             .appendingPathComponent("l2", isDirectory: true)
             .appendingPathComponent("l3", isDirectory: true)
             .appendingPathComponent("l4", isDirectory: true)
-        let depthFiveDirectoryURL = depthFourDirectoryURL.appendingPathComponent("l5", isDirectory: true)
+            .appendingPathComponent("l5", isDirectory: true)
+        let depthSixDirectoryURL = depthFiveDirectoryURL.appendingPathComponent("l6", isDirectory: true)
 
-        try FileManager.default.createDirectory(at: depthFiveDirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: depthSixDirectoryURL, withIntermediateDirectories: true)
 
-        let depthFourFileURL = depthFourDirectoryURL.appendingPathComponent("depth-four.md")
         let depthFiveFileURL = depthFiveDirectoryURL.appendingPathComponent("depth-five.md")
-        try "# Depth four".write(to: depthFourFileURL, atomically: false, encoding: .utf8)
+        let depthSixFileURL = depthSixDirectoryURL.appendingPathComponent("depth-six.md")
         try "# Depth five".write(to: depthFiveFileURL, atomically: false, encoding: .utf8)
+        try "# Depth six".write(to: depthSixFileURL, atomically: false, encoding: .utf8)
 
         let watcher = FolderChangeWatcher()
         let recursiveFiles = try watcher.markdownFiles(in: directoryURL, includeSubfolders: true)
 
-        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFourFileURL)))
-        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
+        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
+        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthSixFileURL)))
     }
 
     @Test func folderChangeWatcherStillAppliesDepthLimitWhenSubdirectoriesAreExplicitlyExcluded() throws {
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
-        let includedBranchDepthFiveDirectoryURL = directoryURL
+        let includedBranchDepthSevenDirectoryURL = directoryURL
             .appendingPathComponent("included", isDirectory: true)
             .appendingPathComponent("l1", isDirectory: true)
             .appendingPathComponent("l2", isDirectory: true)
             .appendingPathComponent("l3", isDirectory: true)
             .appendingPathComponent("l4", isDirectory: true)
             .appendingPathComponent("l5", isDirectory: true)
+            .appendingPathComponent("l6", isDirectory: true)
+            .appendingPathComponent("l7", isDirectory: true)
         let excludedBranchDirectoryURL = directoryURL.appendingPathComponent("excluded", isDirectory: true)
 
-        try FileManager.default.createDirectory(at: includedBranchDepthFiveDirectoryURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: includedBranchDepthSevenDirectoryURL, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: excludedBranchDirectoryURL, withIntermediateDirectories: true)
 
-        let deepIncludedFileURL = includedBranchDepthFiveDirectoryURL.appendingPathComponent("deep-include.md")
+        let deepIncludedFileURL = includedBranchDepthSevenDirectoryURL.appendingPathComponent("deep-include.md")
         try "# Deep include".write(to: deepIncludedFileURL, atomically: false, encoding: .utf8)
 
         let watcher = FolderChangeWatcher()
