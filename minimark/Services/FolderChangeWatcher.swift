@@ -17,7 +17,7 @@ struct ReaderFolderWatchChangeEvent: Equatable, Hashable, Codable, Sendable {
     }
 }
 
-protocol FolderChangeWatching: AnyObject {
+protocol FolderChangeWatching: AnyObject, Sendable {
     func startWatching(
         folderURL: URL,
         includeSubfolders: Bool,
@@ -57,7 +57,7 @@ extension FolderChangeWatching {
     }
 }
 
-final class FolderChangeWatcher: FolderChangeWatching {
+final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private static let queueKey = DispatchSpecificKey<UInt8>()
     private let queue = DispatchQueue(label: "minimark.folderwatcher")
     private let pollingInterval: DispatchTimeInterval
@@ -77,6 +77,7 @@ final class FolderChangeWatcher: FolderChangeWatching {
     private var excludedSubdirectoryURLs: [URL] = []
     private var onMarkdownFilesAddedOrChanged: (([ReaderFolderWatchChangeEvent]) -> Void)?
     private var lastSnapshot: [URL: FolderFileSnapshot] = [:]
+    private var startupSequence: UInt64 = 0
 
     init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
@@ -120,25 +121,30 @@ final class FolderChangeWatcher: FolderChangeWatching {
             throw ReaderError.invalidFileURL
         }
 
-        self.watchedFolderURL = normalizedFolderURL
-        self.includesSubfolders = includeSubfolders
-        self.excludedSubdirectoryURLs = excludedSubdirectoryURLs.map(ReaderFileRouting.normalizedFileURL)
-        self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
-        self.lastSnapshot = try buildSnapshot(
-            folderURL: normalizedFolderURL,
-            includeSubfolders: includeSubfolders,
-            excludedSubdirectoryURLs: self.excludedSubdirectoryURLs
-        )
+        let normalizedExcludedSubdirectoryURLs = excludedSubdirectoryURLs.map(ReaderFileRouting.normalizedFileURL)
+        let sequence = queue.sync { () -> UInt64 in
+            startupSequence &+= 1
+            let nextSequence = startupSequence
 
-        synchronizeDirectorySources(
-            folderURL: normalizedFolderURL,
-            includeSubfolders: includeSubfolders,
-            excludedSubdirectoryURLs: self.excludedSubdirectoryURLs
-        )
-        needsDirectorySourceResync = false
-        reconfigureTimerIfNeeded()
+            watchedFolderURL = normalizedFolderURL
+            includesSubfolders = includeSubfolders
+            self.excludedSubdirectoryURLs = normalizedExcludedSubdirectoryURLs
+            self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
+            lastSnapshot = [:]
+            needsDirectorySourceResync = false
+            hasPendingFilesystemSignal = false
 
-        scheduleVerification()
+            return nextSequence
+        }
+
+        queue.async { [weak self] in
+            self?.completeAsyncStartup(
+                folderURL: normalizedFolderURL,
+                includeSubfolders: includeSubfolders,
+                excludedSubdirectoryURLs: normalizedExcludedSubdirectoryURLs,
+                startupSequence: sequence
+            )
+        }
     }
 
     func stopWatching() {
@@ -160,6 +166,7 @@ final class FolderChangeWatcher: FolderChangeWatching {
             self.usesEventSource = false
             self.needsDirectorySourceResync = false
             self.hasPendingFilesystemSignal = false
+            self.startupSequence &+= 1
         }
 
         if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
@@ -167,6 +174,38 @@ final class FolderChangeWatcher: FolderChangeWatching {
         } else {
             queue.sync(execute: stopWork)
         }
+    }
+
+    private func completeAsyncStartup(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL],
+        startupSequence: UInt64
+    ) {
+        guard startupSequence == self.startupSequence else {
+            return
+        }
+
+        let snapshot = (try? buildSnapshot(
+            folderURL: folderURL,
+            includeSubfolders: includeSubfolders,
+            excludedSubdirectoryURLs: excludedSubdirectoryURLs
+        )) ?? [:]
+
+        guard startupSequence == self.startupSequence else {
+            return
+        }
+
+        lastSnapshot = snapshot
+
+        synchronizeDirectorySources(
+            folderURL: folderURL,
+            includeSubfolders: includeSubfolders,
+            excludedSubdirectoryURLs: excludedSubdirectoryURLs
+        )
+        needsDirectorySourceResync = false
+        reconfigureTimerIfNeeded()
+        scheduleVerification()
     }
 
     func markdownFiles(
@@ -465,6 +504,15 @@ final class FolderChangeWatcher: FolderChangeWatching {
 
             var result: [URL] = []
             for case let fileURL as URL in enumerator {
+                if exclusionMatcher.hasNoExcludedDirectories,
+                   shouldSkipEntryBeyondIncludeSubfolderDepth(
+                    fileURL,
+                    rootFolderURL: folderURL,
+                    enumerator: enumerator
+                   ) {
+                    continue
+                }
+
                 if shouldSkipDescendants(for: fileURL, exclusionMatcher: exclusionMatcher, enumerator: enumerator) {
                     continue
                 }
@@ -516,6 +564,15 @@ final class FolderChangeWatcher: FolderChangeWatching {
         }
 
         for case let directoryURL as URL in enumerator {
+            if exclusionMatcher.hasNoExcludedDirectories,
+               shouldSkipEntryBeyondIncludeSubfolderDepth(
+                directoryURL,
+                rootFolderURL: normalizedFolderURL,
+                enumerator: enumerator
+               ) {
+                continue
+            }
+
             if shouldSkipDescendants(for: directoryURL, exclusionMatcher: exclusionMatcher, enumerator: enumerator) {
                 continue
             }
@@ -559,11 +616,70 @@ final class FolderChangeWatcher: FolderChangeWatching {
         enumerator.skipDescendants()
         return true
     }
+
+    private func shouldSkipEntryBeyondIncludeSubfolderDepth(
+        _ url: URL,
+        rootFolderURL: URL,
+        enumerator: FileManager.DirectoryEnumerator
+    ) -> Bool {
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedRootFolderURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
+        let isDirectory = (try? normalizedURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+        let depth = relativePathDepth(
+            for: normalizedURL,
+            relativeTo: normalizedRootFolderURL,
+            isDirectory: isDirectory
+        )
+
+        guard depth > ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
+            return false
+        }
+
+        if isDirectory {
+            enumerator.skipDescendants()
+        }
+
+        return true
+    }
+
+    private func relativePathDepth(for url: URL, relativeTo rootFolderURL: URL, isDirectory: Bool) -> Int {
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedRootFolderURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
+        let rootPath = normalizedRootFolderURL.path
+        let path = normalizedURL.path
+
+        if path == rootPath {
+            return 0
+        }
+
+        let rootPrefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        guard path.hasPrefix(rootPrefix) else {
+            return .max
+        }
+
+        let relativePath = String(path.dropFirst(rootPrefix.count))
+        guard !relativePath.isEmpty else {
+            return 0
+        }
+
+        let componentCount = relativePath.split(separator: "/", omittingEmptySubsequences: true).count
+        guard !isDirectory else {
+            return componentCount
+        }
+
+        // Files should be allowed up to the maximum directory depth, so we do not
+        // count the file name itself as an additional level.
+        return max(0, componentCount - 1)
+    }
 }
 
 private struct FolderWatchExclusionMatcher {
     private let rootFolderPathWithSlash: String
     private let excludedDirectoryPaths: [String]
+
+    var hasNoExcludedDirectories: Bool {
+        excludedDirectoryPaths.isEmpty
+    }
 
     init(rootFolderURL: URL, excludedSubdirectoryURLs: [URL]) {
         let normalizedRootURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)

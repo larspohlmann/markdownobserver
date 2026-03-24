@@ -274,6 +274,7 @@ struct ReaderWindowRootView: View {
                 openDocumentInCurrentWindow(fileURL)
             },
             activeFolderWatch: sharedFolderWatchSession,
+            isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
             canStopFolderWatch: canStopSharedFolderWatch,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchURL: pendingFolderWatchURL,
