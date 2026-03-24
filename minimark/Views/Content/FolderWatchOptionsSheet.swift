@@ -1287,10 +1287,17 @@ private struct FolderWatchTreeNodeRow: View {
         }
 
         var next = Set(excludedSubdirectoryPaths)
+        let prefix = node.path.hasSuffix("/") ? node.path : node.path + "/"
+
         if isExplicitlyExcluded {
-            next.remove(node.path)
+            next = next.filter { path in
+                guard path != node.path else {
+                    return false
+                }
+
+                return !path.hasPrefix(prefix)
+            }
         } else {
-            let prefix = node.path.hasSuffix("/") ? node.path : node.path + "/"
             next = next.filter { !$0.hasPrefix(prefix) }
             next.insert(node.path)
         }
