@@ -79,6 +79,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private let queue = DispatchQueue(label: "minimark.folderwatcher")
     private let pollingInterval: DispatchTimeInterval
     private let fallbackPollingInterval: DispatchTimeInterval
+    private let recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval
     private let verificationDelay: DispatchTimeInterval
     private let maximumDirectoryEventSourceCount: Int
     private let onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)?
@@ -101,12 +102,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     convenience init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
         fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
+        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval = .seconds(
+            ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
+        ),
         verificationDelay: DispatchTimeInterval = .milliseconds(75),
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) {
         self.init(
             pollingInterval: pollingInterval,
             fallbackPollingInterval: fallbackPollingInterval,
+            recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval,
             verificationDelay: verificationDelay,
             maximumDirectoryEventSourceCount: 128,
             onFailure: onFailure
@@ -116,12 +121,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
         fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
+        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval = .seconds(
+            ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
+        ),
         verificationDelay: DispatchTimeInterval = .milliseconds(75),
         maximumDirectoryEventSourceCount: Int = 128,
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) {
         self.pollingInterval = pollingInterval
         self.fallbackPollingInterval = fallbackPollingInterval
+        self.recursiveEventSourceSafetyPollingInterval = recursiveEventSourceSafetyPollingInterval
         self.verificationDelay = verificationDelay
         self.maximumDirectoryEventSourceCount = max(1, maximumDirectoryEventSourceCount)
         self.onFailure = onFailure
@@ -280,6 +289,14 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         return queue.sync { timerInterval == fallbackPollingInterval }
+    }
+
+    var isUsingRecursiveEventSourceSafetyPollingIntervalForTesting: Bool {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            return timerInterval == recursiveEventSourceSafetyPollingInterval
+        }
+
+        return queue.sync { timerInterval == recursiveEventSourceSafetyPollingInterval }
     }
 
     var didCompleteStartupForTesting: Bool {
@@ -443,7 +460,13 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func reconfigureTimerIfNeeded() {
-        let desiredInterval = usesEventSource ? fallbackPollingInterval : pollingInterval
+        let desiredInterval: DispatchTimeInterval
+        if usesEventSource {
+            desiredInterval = includesSubfolders ? recursiveEventSourceSafetyPollingInterval : fallbackPollingInterval
+        } else {
+            desiredInterval = pollingInterval
+        }
+
         guard timer == nil || timerInterval != desiredInterval else {
             return
         }
