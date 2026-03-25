@@ -201,7 +201,7 @@ nonisolated enum ReaderRecentHistory {
             pathText: \.pathText
         )
 
-        return Dictionary(uniqueKeysWithValues: entries.map { entry in
+        return Dictionary(entries.map { entry in
             let excludedCount = entry.options.excludedSubdirectoryPaths.count
             guard entry.options.scope == .includeSubfolders, excludedCount > 0 else {
                 return (entry.folderPath, baseTitlesByPath[entry.folderPath] ?? entry.displayName)
@@ -210,7 +210,7 @@ nonisolated enum ReaderRecentHistory {
             let noun = excludedCount == 1 ? "folder" : "folders"
             let baseTitle = baseTitlesByPath[entry.folderPath] ?? entry.displayName
             return (entry.folderPath, "\(baseTitle) [\(excludedCount) filtered \(noun)]")
-        })
+        }, uniquingKeysWith: { first, _ in first })
     }
 
     private static func menuTitle<Entry>(
@@ -242,7 +242,7 @@ nonisolated enum ReaderRecentHistory {
             pathText: pathText
         )
 
-        return Dictionary(uniqueKeysWithValues: entries.map { entry in
+        return Dictionary(entries.map { entry in
             let key = entry[keyPath: keyPath]
             let resolvedDisplayName = entry[keyPath: displayName]
             return (
@@ -252,7 +252,7 @@ nonisolated enum ReaderRecentHistory {
                     pathText: entry[keyPath: pathText]
                 )
             )
-        })
+        }, uniquingKeysWith: { first, _ in first })
     }
 
     private static func buildMenuDisambiguationContext<Entry>(
@@ -266,9 +266,9 @@ nonisolated enum ReaderRecentHistory {
             }
 
         let allPaths = siblingPathsByDisplayName.values.flatMap { $0 }
-        let parentComponentsByPath = Dictionary(uniqueKeysWithValues: allPaths.map { path in
+        let parentComponentsByPath = Dictionary(allPaths.map { path in
             (path, parentComponents(for: path))
-        })
+        }, uniquingKeysWith: { first, _ in first })
 
         return MenuDisambiguationContext(
             siblingPathsByDisplayName: siblingPathsByDisplayName,

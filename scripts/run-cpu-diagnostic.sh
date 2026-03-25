@@ -9,7 +9,7 @@ Runs a fresh MarkdownObserver CPU diagnostic and exports trace artifacts.
 
 Options:
   --watch-path PATH     Folder to watch during diagnostic
-                        Default: /Users/lars/Documents/work/eigenes
+                        Default: current working directory
   --time-limit DURATION Time limit passed to xctrace (for example: 40s)
                         Default: 40s
   --strict              Use attach mode to guarantee profiling of launched local binary
@@ -26,12 +26,13 @@ Outputs:
 EOF
 }
 
-WATCH_PATH="/Users/lars/Documents/work/eigenes"
+WATCH_PATH="$PWD"
 TIME_LIMIT="40s"
 STRICT_MODE=0
 SKIP_BUILD=0
 APP_PATH=""
 TIMESTAMP=""
+APP_PID=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -90,15 +91,28 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
 fi
 
 resolve_default_app_path() {
-  local app_binary
-  app_binary="$(
+  local app_candidates=()
+  local candidate
+  while IFS= read -r candidate; do
+    app_candidates+=("$candidate")
+  done < <(
     find "$HOME/Library/Developer/Xcode/DerivedData" \
       -type f \
       -path '*/Build/Products/Debug/MarkdownObserver.app/Contents/MacOS/MarkdownObserver' \
       ! -path '*/Index.noindex/*' \
       -perm -111 \
-      -print | \
-    xargs -I{} stat -f '%m %N' "{}" 2>/dev/null | \
+      -print
+  )
+
+  if [[ "${#app_candidates[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  local app_binary
+  app_binary="$(
+    for candidate in "${app_candidates[@]}"; do
+      stat -f '%m %N' "$candidate"
+    done | \
     sort -nr | \
     head -n 1 | \
     cut -d' ' -f2-
@@ -131,6 +145,20 @@ SIGNPOSTS_XML="profiling/watch-eigenes-diagnostic-signposts-${TIMESTAMP}.xml"
 
 export MINIMARK_UI_TEST_WATCH_FOLDER_PATH="$WATCH_PATH"
 
+cleanup() {
+  if [[ -z "${APP_PID:-}" ]]; then
+    return
+  fi
+
+  if kill -0 "$APP_PID" 2>/dev/null; then
+    osascript -e 'tell application "MarkdownObserver" to quit' >/dev/null 2>&1 || true
+    kill "$APP_PID" 2>/dev/null || true
+    wait "$APP_PID" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
 if [[ "$STRICT_MODE" -eq 1 ]]; then
   "$APP_PATH" -minimark-ui-test -minimark-auto-start-watch-folder >/tmp/markdownobserver-diagnostic.log 2>&1 &
   APP_PID=$!
@@ -144,8 +172,6 @@ if [[ "$STRICT_MODE" -eq 1 ]]; then
     --attach "$APP_PID"
   TRACE_EXIT=$?
   set -e
-
-  osascript -e 'tell application "MarkdownObserver" to quit' || true
 else
   set +e
   xcrun xctrace record \

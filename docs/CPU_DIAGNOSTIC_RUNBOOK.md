@@ -29,7 +29,10 @@ Useful variants:
 bash scripts/run-cpu-diagnostic.sh --strict
 
 # Custom folder path and time limit
-bash scripts/run-cpu-diagnostic.sh --watch-path /Users/lars/Documents/work/eigenes --time-limit 60s
+bash scripts/run-cpu-diagnostic.sh --watch-path /path/to/watch-folder --time-limit 60s
+
+# Use current repository folder as watch path
+bash scripts/run-cpu-diagnostic.sh --watch-path "$PWD" --time-limit 60s
 
 # Skip build if you already built and want a faster rerun
 bash scripts/run-cpu-diagnostic.sh --skip-build
@@ -49,7 +52,7 @@ Run these commands from repository root.
 set -euo pipefail
 
 TS="$(date +%Y%m%d-%H%M%S)"
-WATCH_PATH="/Users/lars/Documents/work/eigenes"
+WATCH_PATH="/path/to/watch-folder"
 
 xcodebuild -project minimark.xcodeproj -scheme minimark -configuration Debug -destination 'platform=macOS' build
 
@@ -92,7 +95,7 @@ Use this if you want to ensure the profiled process is the exact local Debug bui
 set -euo pipefail
 
 TS="$(date +%Y%m%d-%H%M%S)"
-WATCH_PATH="/Users/lars/Documents/work/eigenes"
+WATCH_PATH="/path/to/watch-folder"
 
 xcodebuild -project minimark.xcodeproj -scheme minimark -configuration Debug -destination 'platform=macOS' build
 
