@@ -1022,6 +1022,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentFilesMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Opened Files", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
+            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentManuallyOpenedFiles)
 
             if parent.recentManuallyOpenedFiles.isEmpty {
                 let empty = NSMenuItem(title: "No recent manually opened files", action: nil, keyEquivalent: "")
@@ -1030,7 +1031,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
             } else {
                 for entry in parent.recentManuallyOpenedFiles {
                     let recentItem = NSMenuItem(
-                        title: ReaderRecentHistory.menuTitle(for: entry, among: parent.recentManuallyOpenedFiles),
+                        title: titlesByPath[entry.filePath] ?? entry.displayName,
                         action: #selector(openRecentFile(_:)),
                         keyEquivalent: ""
                     )
@@ -1055,6 +1056,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentWatchedFoldersMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Watched Folders", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
+            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentWatchedFolders)
 
             if parent.recentWatchedFolders.isEmpty {
                 let empty = NSMenuItem(title: "No recent watched folders", action: nil, keyEquivalent: "")
@@ -1063,7 +1065,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
             } else {
                 for entry in parent.recentWatchedFolders {
                     let recentItem = NSMenuItem(
-                        title: ReaderRecentHistory.menuTitle(for: entry, among: parent.recentWatchedFolders),
+                        title: titlesByPath[entry.folderPath] ?? entry.displayName,
                         action: #selector(startRecentFolderWatch(_:)),
                         keyEquivalent: ""
                     )

@@ -21,6 +21,12 @@ enum ReaderDocumentIndicatorState: Equatable, Sendable {
 }
 
 struct ReaderWindowTitleFormatter {
+    struct Mutation: Equatable {
+        let effectiveTitle: String
+        let shouldUpdateEffectiveTitle: Bool
+        let shouldWriteHostWindowTitle: Bool
+    }
+
     static let appName = "MarkdownObserver"
 
     static func resolveWindowTitle(
@@ -37,6 +43,18 @@ struct ReaderWindowTitleFormatter {
         }
 
         return documentTitleWithPendingState
+    }
+
+    static func mutation(
+        resolvedTitle: String,
+        currentEffectiveTitle: String,
+        currentHostWindowTitle: String?
+    ) -> Mutation {
+        Mutation(
+            effectiveTitle: resolvedTitle,
+            shouldUpdateEffectiveTitle: currentEffectiveTitle != resolvedTitle,
+            shouldWriteHostWindowTitle: currentHostWindowTitle != resolvedTitle
+        )
     }
 }
 

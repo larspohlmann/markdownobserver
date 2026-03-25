@@ -71,10 +71,17 @@ struct FolderChangeWatcherFailure: Equatable, Sendable {
 }
 
 final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
+    private static let adaptiveSafetyPollingIdleCyclesPerStep = 3
+    private static let adaptiveSafetyPollingMaximumMultiplier = 4
+    private static let adaptiveSafetyPollingMaximumUnsignaledSkips = 2
     private static let queueKey = DispatchSpecificKey<UInt8>()
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "FolderChangeWatcher"
+    )
+    private static let signposter = OSSignposter(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "FolderWatchProfiling"
     )
     private let queue = DispatchQueue(label: "minimark.folderwatcher")
     private let pollingInterval: DispatchTimeInterval
@@ -89,10 +96,15 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var pendingWorkItem: DispatchWorkItem?
     private var usesEventSource = false
     private var needsDirectorySourceResync = false
+    private var adaptiveSafetyPollingMultiplier = 1
+    private var adaptiveSafetyPollingIdleCycles = 0
+    private var unsignaledVerificationSkipCycles = 0
+    private var hasPendingFileSystemSignal = false
 
     private var watchedFolderURL: URL?
     private var includesSubfolders = false
     private var excludedSubdirectoryURLs: [URL] = []
+    private var exclusionMatcher: FolderWatchExclusionMatcher?
     private var onMarkdownFilesAddedOrChanged: (([ReaderFolderWatchChangeEvent]) -> Void)?
     private var lastSnapshot: [URL: FolderFileSnapshot] = [:]
     private var lastReportedFailureByStage: [FolderChangeWatcherFailure.Stage: String] = [:]
@@ -162,11 +174,17 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             watchedFolderURL = normalizedFolderURL
             includesSubfolders = includeSubfolders
             self.excludedSubdirectoryURLs = normalizedExcludedSubdirectoryURLs
+            self.exclusionMatcher = FolderWatchExclusionMatcher(
+                rootFolderURL: normalizedFolderURL,
+                excludedSubdirectoryURLs: normalizedExcludedSubdirectoryURLs
+            )
             self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
             lastSnapshot = [:]
             lastReportedFailureByStage = [:]
             needsDirectorySourceResync = false
             didCompleteStartup = false
+            unsignaledVerificationSkipCycles = 0
+            hasPendingFileSystemSignal = true
 
             return nextSequence
         }
@@ -195,11 +213,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.watchedFolderURL = nil
             self.includesSubfolders = false
             self.excludedSubdirectoryURLs = []
+            self.exclusionMatcher = nil
             self.onMarkdownFilesAddedOrChanged = nil
             self.lastSnapshot = [:]
             self.lastReportedFailureByStage = [:]
             self.usesEventSource = false
             self.needsDirectorySourceResync = false
+            self.adaptiveSafetyPollingMultiplier = 1
+            self.adaptiveSafetyPollingIdleCycles = 0
+            self.unsignaledVerificationSkipCycles = 0
+            self.hasPendingFileSystemSignal = false
             self.didCompleteStartup = false
             self.startupSequence &+= 1
         }
@@ -293,10 +316,18 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
     var isUsingRecursiveEventSourceSafetyPollingIntervalForTesting: Bool {
         if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return timerInterval == recursiveEventSourceSafetyPollingInterval
+            return timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval()
         }
 
-        return queue.sync { timerInterval == recursiveEventSourceSafetyPollingInterval }
+        return queue.sync { timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval() }
+    }
+
+    var currentTimerIntervalForTesting: DispatchTimeInterval? {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            return timerInterval
+        }
+
+        return queue.sync { timerInterval }
     }
 
     var didCompleteStartupForTesting: Bool {
@@ -321,22 +352,46 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func verifyChanges() {
+        let verifySignpostID = Self.signposter.makeSignpostID()
+        let verifyIntervalState = Self.signposter.beginInterval("verifyChanges", id: verifySignpostID)
+        defer {
+            Self.signposter.endInterval("verifyChanges", verifyIntervalState)
+        }
+
         guard let watchedFolderURL, let onMarkdownFilesAddedOrChanged else {
             return
         }
 
-        let exclusionMatcher = FolderWatchExclusionMatcher(
-            rootFolderURL: watchedFolderURL,
-            excludedSubdirectoryURLs: excludedSubdirectoryURLs
-        )
+        guard let exclusionMatcher else {
+            return
+        }
+
+        if shouldSkipIdleVerificationCycle() {
+            adaptRecursiveEventSourceSafetyPollingIfNeeded(
+                changedEventCount: 0,
+                didResynchronizeDirectories: false
+            )
+            return
+        }
+
+        hasPendingFileSystemSignal = false
+        unsignaledVerificationSkipCycles = 0
 
         let currentSnapshot: [URL: FolderFileSnapshot]
         do {
+            let snapshotIntervalState = Self.signposter.beginInterval("buildIncrementalSnapshot", id: verifySignpostID)
+            defer {
+                Self.signposter.endInterval("buildIncrementalSnapshot", snapshotIntervalState)
+            }
             currentSnapshot = try buildIncrementalSnapshot(
                 folderURL: watchedFolderURL,
                 includeSubfolders: includesSubfolders,
                 exclusionMatcher: exclusionMatcher,
                 previousSnapshot: lastSnapshot
+            )
+            Self.signposter.emitEvent(
+                "snapshotCounts",
+                "current \(currentSnapshot.count) previous \(self.lastSnapshot.count) include_subfolders \(self.includesSubfolders ? 1 : 0)"
             )
             clearReportedFailure(for: .verificationSnapshot)
         } catch {
@@ -344,15 +399,20 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             return
         }
 
+        var didResynchronizeDirectories = false
         if needsDirectorySourceResync {
+            let resyncIntervalState = Self.signposter.beginInterval("synchronizeDirectorySources", id: verifySignpostID)
             synchronizeDirectorySources(
                 folderURL: watchedFolderURL,
                 includeSubfolders: includesSubfolders,
                 excludedSubdirectoryURLs: excludedSubdirectoryURLs
             )
+            Self.signposter.endInterval("synchronizeDirectorySources", resyncIntervalState)
             needsDirectorySourceResync = false
+            didResynchronizeDirectories = true
         }
 
+        let diffIntervalState = Self.signposter.beginInterval("diffSnapshots", id: verifySignpostID)
         var changedEvents: [ReaderFolderWatchChangeEvent] = []
         for (url, currentFingerprint) in currentSnapshot {
             if let previous = lastSnapshot[url] {
@@ -371,6 +431,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
                 )
             }
         }
+        Self.signposter.endInterval("diffSnapshots", diffIntervalState)
+        Self.signposter.emitEvent(
+            "diffCounts",
+            "changed \(changedEvents.count) current \(currentSnapshot.count)"
+        )
+
+        adaptRecursiveEventSourceSafetyPollingIfNeeded(
+            changedEventCount: changedEvents.count,
+            didResynchronizeDirectories: didResynchronizeDirectories
+        )
 
         lastSnapshot = currentSnapshot
         guard !changedEvents.isEmpty else {
@@ -423,6 +493,10 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
                 includeSubfolders: includeSubfolders,
                 exclusionMatcher: exclusionMatcher
             )
+            Self.signposter.emitEvent(
+                "watchedDirectoryEnumeration",
+                "directories \(watchedDirectoryURLs.count) include_subfolders \(includeSubfolders ? 1 : 0)"
+            )
             clearReportedFailure(for: .watchedDirectoryEnumeration)
         } catch {
             watchedDirectoryURLs = [folderURL]
@@ -454,6 +528,10 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         usesEventSource = !directorySources.isEmpty
+        Self.signposter.emitEvent(
+            "directorySourceCounts",
+            "sources \(self.directorySources.count) uses_event_sources \(self.usesEventSource ? 1 : 0)"
+        )
         if usedEventSourcesBeforeSync != usesEventSource {
             reconfigureTimerIfNeeded()
         }
@@ -462,7 +540,9 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private func reconfigureTimerIfNeeded() {
         let desiredInterval: DispatchTimeInterval
         if usesEventSource {
-            desiredInterval = includesSubfolders ? recursiveEventSourceSafetyPollingInterval : fallbackPollingInterval
+            desiredInterval = includesSubfolders
+                ? resolvedRecursiveEventSourceSafetyPollingInterval()
+                : fallbackPollingInterval
         } else {
             desiredInterval = pollingInterval
         }
@@ -522,9 +602,95 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func handleDirectorySourceEvent(_ events: DispatchSource.FileSystemEvent) {
+        resetAdaptiveSafetyPollingToBaselineIfNeeded()
+        hasPendingFileSystemSignal = true
+        unsignaledVerificationSkipCycles = 0
+
         let topologyChangeEvents: DispatchSource.FileSystemEvent = [.rename, .delete, .revoke, .write]
         if !events.intersection(topologyChangeEvents).isEmpty {
             needsDirectorySourceResync = needsDirectorySourceResync || includesSubfolders
+        }
+    }
+
+    private func resolvedRecursiveEventSourceSafetyPollingInterval() -> DispatchTimeInterval {
+        scaledInterval(recursiveEventSourceSafetyPollingInterval, multiplier: adaptiveSafetyPollingMultiplier)
+    }
+
+    private func adaptRecursiveEventSourceSafetyPollingIfNeeded(
+        changedEventCount: Int,
+        didResynchronizeDirectories: Bool
+    ) {
+        guard usesEventSource, includesSubfolders else {
+            adaptiveSafetyPollingMultiplier = 1
+            adaptiveSafetyPollingIdleCycles = 0
+            return
+        }
+
+        guard changedEventCount == 0, !didResynchronizeDirectories else {
+            resetAdaptiveSafetyPollingToBaselineIfNeeded()
+            return
+        }
+
+        adaptiveSafetyPollingIdleCycles += 1
+        guard adaptiveSafetyPollingIdleCycles >= Self.adaptiveSafetyPollingIdleCyclesPerStep else {
+            return
+        }
+
+        adaptiveSafetyPollingIdleCycles = 0
+        guard adaptiveSafetyPollingMultiplier < Self.adaptiveSafetyPollingMaximumMultiplier else {
+            return
+        }
+
+        adaptiveSafetyPollingMultiplier += 1
+        reconfigureTimerIfNeeded()
+    }
+
+    private func resetAdaptiveSafetyPollingToBaselineIfNeeded() {
+        adaptiveSafetyPollingIdleCycles = 0
+        guard adaptiveSafetyPollingMultiplier != 1 else {
+            return
+        }
+
+        adaptiveSafetyPollingMultiplier = 1
+        reconfigureTimerIfNeeded()
+    }
+
+    private func shouldSkipIdleVerificationCycle() -> Bool {
+        guard usesEventSource,
+              includesSubfolders,
+              !needsDirectorySourceResync,
+              !hasPendingFileSystemSignal else {
+            unsignaledVerificationSkipCycles = 0
+            return false
+        }
+
+        guard unsignaledVerificationSkipCycles < Self.adaptiveSafetyPollingMaximumUnsignaledSkips else {
+            unsignaledVerificationSkipCycles = 0
+            return false
+        }
+
+        unsignaledVerificationSkipCycles += 1
+        return true
+    }
+
+    private func scaledInterval(_ interval: DispatchTimeInterval, multiplier: Int) -> DispatchTimeInterval {
+        guard multiplier > 1 else {
+            return interval
+        }
+
+        switch interval {
+        case let .seconds(value):
+            return .seconds(value * multiplier)
+        case let .milliseconds(value):
+            return .milliseconds(value * multiplier)
+        case let .microseconds(value):
+            return .microseconds(value * multiplier)
+        case let .nanoseconds(value):
+            return .nanoseconds(value * multiplier)
+        case .never:
+            return .never
+        @unknown default:
+            return interval
         }
     }
 
@@ -534,6 +700,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         exclusionMatcher: FolderWatchExclusionMatcher,
         previousSnapshot: [URL: FolderFileSnapshot]
     ) throws -> [URL: FolderFileSnapshot] {
+        let snapshotSignpostID = Self.signposter.makeSignpostID()
+        let snapshotIntervalState = Self.signposter.beginInterval("buildIncrementalSnapshot.total", id: snapshotSignpostID)
+        defer {
+            Self.signposter.endInterval("buildIncrementalSnapshot.total", snapshotIntervalState)
+        }
+
         let markdownURLs = try enumerateMarkdownFiles(
             folderURL: folderURL,
             includeSubfolders: includeSubfolders,
@@ -560,6 +732,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         includeSubfolders: Bool,
         exclusionMatcher: FolderWatchExclusionMatcher
     ) throws -> [URL] {
+        let enumerateSignpostID = Self.signposter.makeSignpostID()
+        let enumerateIntervalState = Self.signposter.beginInterval("enumerateMarkdownFiles", id: enumerateSignpostID)
+        defer {
+            Self.signposter.endInterval("enumerateMarkdownFiles", enumerateIntervalState)
+        }
+
         guard folderURL.isFileURL else {
             throw ReaderError.invalidFileURL
         }
@@ -567,6 +745,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         let fileManager = FileManager.default
 
         if includeSubfolders {
+            let rootFolderPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
             guard let enumerator = fileManager.enumerator(
                 at: folderURL,
                 includingPropertiesForKeys: [.isRegularFileKey],
@@ -578,25 +757,35 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
             var result: [URL] = []
             for case let fileURL as URL in enumerator {
+                let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
                 if shouldSkipEntryBeyondIncludeSubfolderDepth(
-                    fileURL,
-                    rootFolderURL: folderURL,
+                    normalizedFileURL,
+                    rootFolderPathWithSlash: rootFolderPathWithSlash,
                     enumerator: enumerator
                    ) {
                     continue
                 }
 
-                if shouldSkipDescendants(for: fileURL, exclusionMatcher: exclusionMatcher, enumerator: enumerator) {
+                if shouldSkipDescendants(
+                    forNormalizedURL: normalizedFileURL,
+                    exclusionMatcher: exclusionMatcher,
+                    enumerator: enumerator
+                ) {
                     continue
                 }
 
-                if let normalizedFileURL = regularMarkdownFileURL(from: fileURL) {
-                    guard !exclusionMatcher.excludesFile(normalizedFileURL) else {
+                if let markdownFileURL = regularMarkdownFileURL(fromNormalized: normalizedFileURL) {
+                    guard !exclusionMatcher.excludesNormalizedFilePath(markdownFileURL.path) else {
                         continue
                     }
-                    result.append(normalizedFileURL)
+                    result.append(markdownFileURL)
                 }
             }
+
+            Self.signposter.emitEvent(
+                "enumeratedMarkdownFilesCount",
+                "files \(result.count) include_subfolders 1"
+            )
 
             return result
         } else {
@@ -605,8 +794,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
                 includingPropertiesForKeys: [.isRegularFileKey],
                 options: []
             )
+            let result = urls
+                .map(ReaderFileRouting.normalizedFileURL)
+                .compactMap(regularMarkdownFileURL(fromNormalized:))
+                .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
+            Self.signposter.emitEvent(
+                "enumeratedMarkdownFilesCount",
+                "files \(result.count) include_subfolders 0"
+            )
 
-            return urls.compactMap(regularMarkdownFileURL(from:)).filter { !exclusionMatcher.excludesFile($0) }
+            return result
         }
     }
 
@@ -626,6 +823,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
         var result: [URL] = [normalizedFolderURL]
         let fileManager = FileManager.default
+        let rootFolderPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
 
         guard let enumerator = fileManager.enumerator(
             at: normalizedFolderURL,
@@ -637,21 +835,25 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         for case let directoryURL as URL in enumerator {
+            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
             if shouldSkipEntryBeyondIncludeSubfolderDepth(
-                directoryURL,
-                rootFolderURL: normalizedFolderURL,
+                normalizedDirectoryURL,
+                rootFolderPathWithSlash: rootFolderPathWithSlash,
                 enumerator: enumerator
                ) {
                 continue
             }
 
-            if shouldSkipDescendants(for: directoryURL, exclusionMatcher: exclusionMatcher, enumerator: enumerator) {
+            if shouldSkipDescendants(
+                forNormalizedURL: normalizedDirectoryURL,
+                exclusionMatcher: exclusionMatcher,
+                enumerator: enumerator
+            ) {
                 continue
             }
 
-            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
             if (try? normalizedDirectoryURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-                guard !exclusionMatcher.excludesDirectory(normalizedDirectoryURL) else {
+                guard !exclusionMatcher.excludesNormalizedDirectoryPath(normalizedDirectoryURL.path) else {
                     continue
                 }
                 result.append(normalizedDirectoryURL)
@@ -661,12 +863,11 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         return result
     }
 
-    private func regularMarkdownFileURL(from fileURL: URL) -> URL? {
-        guard ReaderFileRouting.isSupportedMarkdownFileURL(fileURL) else {
+    private func regularMarkdownFileURL(fromNormalized normalizedFileURL: URL) -> URL? {
+        guard ReaderFileRouting.isSupportedMarkdownFileURL(normalizedFileURL) else {
             return nil
         }
 
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         let isRegularFile = (try? normalizedFileURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) ?? false
         guard isRegularFile else {
             return nil
@@ -676,12 +877,11 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func shouldSkipDescendants(
-        for url: URL,
+        forNormalizedURL normalizedURL: URL,
         exclusionMatcher: FolderWatchExclusionMatcher,
         enumerator: FileManager.DirectoryEnumerator
     ) -> Bool {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
-        guard exclusionMatcher.excludesDirectory(normalizedURL) else {
+        guard exclusionMatcher.excludesNormalizedDirectoryPath(normalizedURL.path) else {
             return false
         }
 
@@ -690,16 +890,14 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func shouldSkipEntryBeyondIncludeSubfolderDepth(
-        _ url: URL,
-        rootFolderURL: URL,
+        _ normalizedURL: URL,
+        rootFolderPathWithSlash: String,
         enumerator: FileManager.DirectoryEnumerator
     ) -> Bool {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
-        let normalizedRootFolderURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
         let isDirectory = (try? normalizedURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
         let depth = relativePathDepth(
-            for: normalizedURL,
-            relativeTo: normalizedRootFolderURL,
+            forPath: normalizedURL.path,
+            relativeToPathWithSlash: rootFolderPathWithSlash,
             isDirectory: isDirectory
         )
 
@@ -714,22 +912,18 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         return true
     }
 
-    private func relativePathDepth(for url: URL, relativeTo rootFolderURL: URL, isDirectory: Bool) -> Int {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
-        let normalizedRootFolderURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
-        let rootPath = normalizedRootFolderURL.path
-        let path = normalizedURL.path
+    private func relativePathDepth(forPath path: String, relativeToPathWithSlash rootPathWithSlash: String, isDirectory: Bool) -> Int {
+        let rootPath = String(rootPathWithSlash.dropLast())
 
         if path == rootPath {
             return 0
         }
 
-        let rootPrefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
-        guard path.hasPrefix(rootPrefix) else {
+        guard path.hasPrefix(rootPathWithSlash) else {
             return .max
         }
 
-        let relativePath = String(path.dropFirst(rootPrefix.count))
+        let relativePath = String(path.dropFirst(rootPathWithSlash.count))
         guard !relativePath.isEmpty else {
             return 0
         }
@@ -752,7 +946,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             errorDescription: errorDescription
         )
 
-        let signature = "\(String(reflecting: type(of: error))):\(errorDescription)"
+        let signature = stableErrorKey(for: error)
         if lastReportedFailureByStage[stage] != signature {
             lastReportedFailureByStage[stage] = signature
             Self.logger.error(
@@ -776,9 +970,13 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func sanitizedErrorDescription(for error: any Error) -> String {
-        let typeDescription = String(reflecting: type(of: error))
         let nsError = error as NSError
-        return "\(typeDescription)(domain: \(nsError.domain), code: \(nsError.code))"
+        return "domain: \(nsError.domain), code: \(nsError.code)"
+    }
+
+    private func stableErrorKey(for error: any Error) -> String {
+        let nsError = error as NSError
+        return "\(nsError.domain)#\(nsError.code)"
     }
 }
 
@@ -799,12 +997,24 @@ private struct FolderWatchExclusionMatcher {
             .sorted()
     }
 
+    var normalizedRootPathWithSlash: String {
+        rootFolderPathWithSlash
+    }
+
     func excludesDirectory(_ directoryURL: URL) -> Bool {
-        excludesPath(ReaderFileRouting.normalizedFileURL(directoryURL).path)
+        excludesNormalizedDirectoryPath(ReaderFileRouting.normalizedFileURL(directoryURL).path)
     }
 
     func excludesFile(_ fileURL: URL) -> Bool {
-        excludesPath(ReaderFileRouting.normalizedFileURL(fileURL).path)
+        excludesNormalizedFilePath(ReaderFileRouting.normalizedFileURL(fileURL).path)
+    }
+
+    func excludesNormalizedDirectoryPath(_ normalizedPath: String) -> Bool {
+        excludesPath(normalizedPath)
+    }
+
+    func excludesNormalizedFilePath(_ normalizedPath: String) -> Bool {
+        excludesPath(normalizedPath)
     }
 
     private func excludesPath(_ path: String) -> Bool {

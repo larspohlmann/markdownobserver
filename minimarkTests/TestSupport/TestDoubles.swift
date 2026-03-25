@@ -218,12 +218,14 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
 final class TestSettingsKeyValueStorage: ReaderSettingsKeyValueStoring {
     private var storedValues: [String: Data] = [:]
+    private(set) var setCallCount = 0
 
     func data(forKey defaultName: String) -> Data? {
         storedValues[defaultName]
     }
 
     func set(_ value: Any?, forKey defaultName: String) {
+        setCallCount += 1
         storedValues[defaultName] = value as? Data
     }
 }

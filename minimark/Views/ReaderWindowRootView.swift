@@ -125,7 +125,7 @@ struct ReaderWindowRootView: View {
                 handleHostWindowStateChange()
             }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
-                refreshWindowShellState()
+                applyWindowTitlePresentation()
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
                 applyWindowTitlePresentation()
@@ -135,9 +135,6 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sharedFolderWatchSession) { _, _ in
                 refreshWindowShellRegistrationAndTitle()
-            }
-            .onChange(of: settingsStore.currentSettings) { _, _ in
-                applyWindowTitlePresentation()
             }
             .onChange(of: sidebarDocumentController.selectedFolderWatchAutoOpenWarning) { _, warning in
                 handleFolderWatchAutoOpenWarningChange(warning)

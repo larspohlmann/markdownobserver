@@ -68,6 +68,28 @@ struct ReaderSettingsAndModelsTests {
         #expect(seed.openOrigin == .manual)
     }
 
+    @Test func readerWindowTitleMutationSkipsWritesWhenTitlesAlreadyMatch() {
+        let mutation = ReaderWindowTitleFormatter.mutation(
+            resolvedTitle: "notes.md - MarkdownObserver",
+            currentEffectiveTitle: "notes.md - MarkdownObserver",
+            currentHostWindowTitle: "notes.md - MarkdownObserver"
+        )
+
+        #expect(!mutation.shouldUpdateEffectiveTitle)
+        #expect(!mutation.shouldWriteHostWindowTitle)
+    }
+
+    @Test func readerWindowTitleMutationRequestsWritesWhenTitlesDiffer() {
+        let mutation = ReaderWindowTitleFormatter.mutation(
+            resolvedTitle: "* notes.md - MarkdownObserver | docs",
+            currentEffectiveTitle: "notes.md - MarkdownObserver",
+            currentHostWindowTitle: "notes.md - MarkdownObserver"
+        )
+
+        #expect(mutation.shouldUpdateEffectiveTitle)
+        #expect(mutation.shouldWriteHostWindowTitle)
+    }
+
     @Test func readerWindowDefaultsUseBaseSizeWhenVisibleFrameCanFitIt() {
         let size = ReaderWindowDefaults.size(forVisibleFrame: CGRect(x: 0, y: 0, width: 1600, height: 2200))
 
@@ -404,6 +426,80 @@ struct ReaderSettingsAndModelsTests {
         #expect(
             ReaderRecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha)"
         )
+    }
+
+    @Test func readerRecentHistoryMenuTitlesDisambiguateMultipleDuplicateNames() {
+        let entries = [
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/beta/notes/todo.md")),
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/gamma/tasks/todo.md"))
+        ]
+
+        let titlesByPath = ReaderRecentHistory.menuTitles(for: entries)
+        #expect(titlesByPath[entries[0].filePath] == "todo.md (alpha/notes)")
+        #expect(titlesByPath[entries[1].filePath] == "todo.md (beta/notes)")
+        #expect(titlesByPath[entries[2].filePath] == "todo.md (tasks)")
+    }
+
+    @Test func readerRecentHistoryBulkMenuTitlesMatchPerEntryTitles() {
+        let recentFiles = [
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/todo.md")),
+            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/ideas.md"))
+        ]
+        let recentFolders = [
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
+                options: ReaderFolderWatchOptions(
+                    openMode: .watchChangesOnly,
+                    scope: .includeSubfolders,
+                    excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
+                )
+            ),
+            ReaderRecentWatchedFolder(
+                folderURL: URL(fileURLWithPath: "/work/beta/docs"),
+                options: .default
+            )
+        ]
+
+        let fileTitlesByPath = ReaderRecentHistory.menuTitles(for: recentFiles)
+        let folderTitlesByPath = ReaderRecentHistory.menuTitles(for: recentFolders)
+
+        for entry in recentFiles {
+            #expect(
+                fileTitlesByPath[entry.filePath] == ReaderRecentHistory.menuTitle(for: entry, among: recentFiles)
+            )
+        }
+
+        for entry in recentFolders {
+            #expect(
+                folderTitlesByPath[entry.folderPath] == ReaderRecentHistory.menuTitle(for: entry, among: recentFolders)
+            )
+        }
+    }
+
+    @Test @MainActor func readerSettingsStoreCoalescesPersistCallsWithinThrottleWindow() async {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.persist-throttle.tests"
+        let store = ReaderSettingsStore(
+            storage: storage,
+            storageKey: storageKey,
+            minimumPersistInterval: 0.5
+        )
+
+        store.updateBaseFontSize(16)
+        #expect(storage.setCallCount == 1)
+
+        store.updateBaseFontSize(17)
+        store.updateBaseFontSize(18)
+        #expect(storage.setCallCount == 1)
+
+        try? await Task.sleep(for: .milliseconds(700))
+
+        #expect(storage.setCallCount == 2)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.currentSettings.baseFontSize == 18)
     }
 
     @Test func readerFolderWatchOptionsDecodesLegacyPayloadWithoutExclusions() throws {

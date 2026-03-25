@@ -55,7 +55,7 @@ extension ReaderWindowRootView {
             folderWatchSession: folderWatchSession,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
-        refreshWindowPresentation()
+        applyWindowTitlePresentation()
     }
 
     func prepareFolderWatchOptions(for folderURL: URL) {

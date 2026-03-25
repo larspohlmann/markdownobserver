@@ -31,7 +31,7 @@ extension ReaderWindowRootView {
             origin: origin,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
-        refreshWindowPresentation()
+        applyWindowTitlePresentation()
     }
 
     func startRecentFolderWatch(_ entry: ReaderRecentWatchedFolder) {
