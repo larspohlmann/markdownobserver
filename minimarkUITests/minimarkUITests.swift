@@ -128,7 +128,7 @@ final class minimarkUITests: XCTestCase {
 
     @MainActor
     func testFolderWatchThresholdFlowRequiresExclusionsThenEnablesStartWhenThresholdIsMet() throws {
-        let folderURL = try makeTemporaryFolder(subdirectoryCount: 100)
+        let folderURL = try makeTemporaryFolder(subdirectoryCount: 300)
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
         app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path
@@ -167,7 +167,7 @@ final class minimarkUITests: XCTestCase {
 
     @MainActor
     func testIncludeSubfoldersToggleKeepsSheetResponsiveAroundOptimizationCardStateChanges() throws {
-        let folderURL = try makeTemporaryFolder(subdirectoryCount: 100)
+        let folderURL = try makeTemporaryFolder(subdirectoryCount: 300)
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
         app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path

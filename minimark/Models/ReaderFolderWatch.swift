@@ -6,7 +6,7 @@ nonisolated enum ReaderFolderWatchAutoOpenPolicy {
 }
 
 nonisolated enum ReaderFolderWatchPerformancePolicy {
-    static let exclusionPromptSubdirectoryThreshold = 96
+    static let exclusionPromptSubdirectoryThreshold = 256
     static let maximumSupportedSubdirectoryCount = 9_000
     static let maximumIncludedSubfolderDepth = 5
     static let recursiveEventSourceSafetyPollingIntervalSeconds = 5
