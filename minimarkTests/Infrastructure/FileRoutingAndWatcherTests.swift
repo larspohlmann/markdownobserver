@@ -602,6 +602,10 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting
+        })
+
         #expect(watcher.isUsingEventSourcesForTesting)
         #expect(watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting)
 
