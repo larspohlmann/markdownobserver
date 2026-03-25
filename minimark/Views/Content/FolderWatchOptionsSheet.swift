@@ -284,6 +284,10 @@ struct FolderWatchOptionsSheet: View {
         return AnyShapeStyle(.green)
     }
 
+    private var showsAdvancedSubfolderDetails: Bool {
+        scope == .includeSubfolders
+    }
+
     private var openModeSelectionBinding: Binding<ReaderFolderWatchOpenMode> {
         Binding(
             get: {
@@ -355,23 +359,27 @@ struct FolderWatchOptionsSheet: View {
                     .pickerStyle(.segmented)
                     .accessibilityLabel("Folder scope")
 
-                    FolderWatchScopeSummaryView(
-                        footerText: scopeFooterText,
-                        isLoading: directoryScanModel.isLoading,
-                        scanProgress: directoryScanModel.scanProgress,
-                        summary: directoryScanModel.summary
-                    )
+                    if showsAdvancedSubfolderDetails {
+                        FolderWatchScopeSummaryView(
+                            footerText: scopeFooterText,
+                            isLoading: directoryScanModel.isLoading,
+                            scanProgress: directoryScanModel.scanProgress,
+                            summary: directoryScanModel.summary
+                        )
+                    }
                 }
 
-                FolderWatchLargeTreeWarningCard(
-                    title: optimizationCardTitle,
-                    detail: optimizationCardDetail,
-                    tone: optimizationCardTone,
-                    showsAction: thresholdWarningVisible && !requiresHardLimitRefusal,
-                    onInspect: {
-                        isLargeTreeDialogPresented = true
-                    }
-                )
+                if showsAdvancedSubfolderDetails {
+                    FolderWatchLargeTreeWarningCard(
+                        title: optimizationCardTitle,
+                        detail: optimizationCardDetail,
+                        tone: optimizationCardTone,
+                        showsAction: thresholdWarningVisible && !requiresHardLimitRefusal,
+                        onInspect: {
+                            isLargeTreeDialogPresented = true
+                        }
+                    )
+                }
             }
             .transaction { transaction in
                 transaction.animation = nil
@@ -380,9 +388,11 @@ struct FolderWatchOptionsSheet: View {
             Divider()
 
             HStack {
-                Label(startActionStatusText, systemImage: startActionStatusSymbol)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(startActionStatusColor)
+                if showsAdvancedSubfolderDetails {
+                    Label(startActionStatusText, systemImage: startActionStatusSymbol)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(startActionStatusColor)
+                }
 
                 Spacer()
                 Button("Cancel") {
