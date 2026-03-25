@@ -603,13 +603,15 @@ struct FileRoutingAndWatcherTests {
         defer { watcher.stopWatching() }
 
         #expect(watcher.isUsingEventSourcesForTesting)
-        #expect(watcher.isUsingFallbackPollingIntervalForTesting)
+        #expect(watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting)
 
         let overLimitDirectoryURL = nestedDirectoryURL.appendingPathComponent("level-1", isDirectory: true)
         try FileManager.default.createDirectory(at: overLimitDirectoryURL, withIntermediateDirectories: true)
 
         #expect(await waitUntil(timeout: .seconds(2)) {
-            !watcher.isUsingEventSourcesForTesting && !watcher.isUsingFallbackPollingIntervalForTesting
+            !watcher.isUsingEventSourcesForTesting &&
+            !watcher.isUsingFallbackPollingIntervalForTesting &&
+            !watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting
         })
 
         try "# After".write(to: trackedFileURL, atomically: false, encoding: .utf8)

@@ -9,6 +9,7 @@ nonisolated enum ReaderFolderWatchPerformancePolicy {
     static let exclusionPromptSubdirectoryThreshold = 96
     static let maximumSupportedSubdirectoryCount = 9_000
     static let maximumIncludedSubfolderDepth = 5
+    static let recursiveEventSourceSafetyPollingIntervalSeconds = 5
 }
 
 nonisolated enum ReaderFolderWatchOpenMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
