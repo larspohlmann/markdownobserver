@@ -119,6 +119,25 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
 }
 
 nonisolated enum ReaderRecentHistory {
+    private struct MenuDisambiguationContext {
+        let siblingPathsByDisplayName: [String: [String]]
+        let parentComponentsByPath: [String: [String]]
+
+        func title(displayName: String, pathText: String) -> String {
+            let siblingPaths = siblingPathsByDisplayName[displayName] ?? []
+            guard siblingPaths.count > 1,
+                  let suffix = uniqueParentSuffix(
+                    for: pathText,
+                    among: siblingPaths,
+                    parentComponentsByPath: parentComponentsByPath
+                  ) else {
+                return displayName
+            }
+
+            return "\(displayName) (\(suffix))"
+        }
+    }
+
     static func insertingUniqueFile(
         _ fileURL: URL,
         into existingEntries: [ReaderRecentOpenedFile]
@@ -150,6 +169,10 @@ nonisolated enum ReaderRecentHistory {
         )
     }
 
+    static func menuTitles(for entries: [ReaderRecentOpenedFile]) -> [String: String] {
+        menuTitles(for: entries, keyPath: \.filePath, displayName: \.displayName, pathText: \.pathText)
+    }
+
     static func menuTitle(
         for entry: ReaderRecentWatchedFolder,
         among entries: [ReaderRecentWatchedFolder]
@@ -170,27 +193,96 @@ nonisolated enum ReaderRecentHistory {
         return "\(baseTitle) [\(excludedCount) filtered \(noun)]"
     }
 
+    static func menuTitles(for entries: [ReaderRecentWatchedFolder]) -> [String: String] {
+        let baseTitlesByPath = menuTitles(
+            for: entries,
+            keyPath: \.folderPath,
+            displayName: \.displayName,
+            pathText: \.pathText
+        )
+
+        return Dictionary(uniqueKeysWithValues: entries.map { entry in
+            let excludedCount = entry.options.excludedSubdirectoryPaths.count
+            guard entry.options.scope == .includeSubfolders, excludedCount > 0 else {
+                return (entry.folderPath, baseTitlesByPath[entry.folderPath] ?? entry.displayName)
+            }
+
+            let noun = excludedCount == 1 ? "folder" : "folders"
+            let baseTitle = baseTitlesByPath[entry.folderPath] ?? entry.displayName
+            return (entry.folderPath, "\(baseTitle) [\(excludedCount) filtered \(noun)]")
+        })
+    }
+
     private static func menuTitle<Entry>(
         for entry: Entry,
         among entries: [Entry],
         displayName: KeyPath<Entry, String>,
         pathText: KeyPath<Entry, String>
     ) -> String {
-        let siblingPaths = entries
-            .filter { $0[keyPath: displayName] == entry[keyPath: displayName] }
-            .map { $0[keyPath: pathText] }
-
-        guard siblingPaths.count > 1,
-              let suffix = uniqueParentSuffix(for: entry[keyPath: pathText], among: siblingPaths) else {
-            return entry[keyPath: displayName]
-        }
-
-        return "\(entry[keyPath: displayName]) (\(suffix))"
+        let context = buildMenuDisambiguationContext(
+            for: entries,
+            displayName: displayName,
+            pathText: pathText
+        )
+        return context.title(
+            displayName: entry[keyPath: displayName],
+            pathText: entry[keyPath: pathText]
+        )
     }
 
-    private static func uniqueParentSuffix(for path: String, among siblingPaths: [String]) -> String? {
-        let siblingParentComponents = siblingPaths.map(parentComponents(for:))
-        let targetParentComponents = parentComponents(for: path)
+    private static func menuTitles<Entry>(
+        for entries: [Entry],
+        keyPath: KeyPath<Entry, String>,
+        displayName: KeyPath<Entry, String>,
+        pathText: KeyPath<Entry, String>
+    ) -> [String: String] {
+        let context = buildMenuDisambiguationContext(
+            for: entries,
+            displayName: displayName,
+            pathText: pathText
+        )
+
+        return Dictionary(uniqueKeysWithValues: entries.map { entry in
+            let key = entry[keyPath: keyPath]
+            let resolvedDisplayName = entry[keyPath: displayName]
+            return (
+                key,
+                context.title(
+                    displayName: resolvedDisplayName,
+                    pathText: entry[keyPath: pathText]
+                )
+            )
+        })
+    }
+
+    private static func buildMenuDisambiguationContext<Entry>(
+        for entries: [Entry],
+        displayName: KeyPath<Entry, String>,
+        pathText: KeyPath<Entry, String>
+    ) -> MenuDisambiguationContext {
+        let siblingPathsByDisplayName = Dictionary(grouping: entries, by: { $0[keyPath: displayName] })
+            .mapValues { groupedEntries in
+                groupedEntries.map { $0[keyPath: pathText] }
+            }
+
+        let allPaths = siblingPathsByDisplayName.values.flatMap { $0 }
+        let parentComponentsByPath = Dictionary(uniqueKeysWithValues: allPaths.map { path in
+            (path, parentComponents(for: path))
+        })
+
+        return MenuDisambiguationContext(
+            siblingPathsByDisplayName: siblingPathsByDisplayName,
+            parentComponentsByPath: parentComponentsByPath
+        )
+    }
+
+    private static func uniqueParentSuffix(
+        for path: String,
+        among siblingPaths: [String],
+        parentComponentsByPath: [String: [String]]
+    ) -> String? {
+        let siblingParentComponents = siblingPaths.map { parentComponentsByPath[$0] ?? parentComponents(for: $0) }
+        let targetParentComponents = parentComponentsByPath[path] ?? parentComponents(for: path)
         guard !targetParentComponents.isEmpty else {
             return nil
         }
@@ -346,6 +438,9 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     private let decoder = JSONDecoder()
     private let bookmarkResolver: BookmarkResolver
     private let bookmarkCreator: BookmarkCreator
+    private let minimumPersistInterval: TimeInterval
+    private var pendingPersistWorkItem: DispatchWorkItem?
+    private var lastPersistAt: Date = .distantPast
 
     init(
         storage: ReaderSettingsKeyValueStoring = UserDefaults.standard,
@@ -366,12 +461,14 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
                 includingResourceValuesForKeys: nil,
                 relativeTo: nil
             )
-        }
+        },
+        minimumPersistInterval: TimeInterval = 0.2
     ) {
         self.storage = storage
         self.storageKey = storageKey
         self.bookmarkResolver = bookmarkResolver
         self.bookmarkCreator = bookmarkCreator
+        self.minimumPersistInterval = max(0, minimumPersistInterval)
         let initialSettings: ReaderSettings
 
         if let data = storage.data(forKey: storageKey),
@@ -385,43 +482,43 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     }
 
     func updateAppAppearance(_ appearance: AppAppearance) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.appAppearance = appearance
         }
     }
 
     func updateTheme(_ kind: ReaderThemeKind) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.readerTheme = kind
         }
     }
 
     func updateSyntaxTheme(_ kind: SyntaxThemeKind) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.syntaxTheme = kind
         }
     }
 
     func updateBaseFontSize(_ value: Double) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.baseFontSize = min(max(value, 10), 48)
         }
     }
 
     func updateNotificationsEnabled(_ isEnabled: Bool) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.notificationsEnabled = isEnabled
         }
     }
 
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.multiFileDisplayMode = mode
         }
     }
 
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
-        updateSettings { settings in
+        updateSettings(coalescePersistence: true) { settings in
             settings.sidebarSortMode = mode
         }
     }
@@ -479,7 +576,10 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         }
     }
 
-    private func updateSettings(_ mutate: (inout ReaderSettings) -> Void) {
+    private func updateSettings(
+        coalescePersistence: Bool = false,
+        _ mutate: (inout ReaderSettings) -> Void
+    ) {
         let current = subject.value
         var updated = current
         mutate(&updated)
@@ -488,13 +588,51 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         }
         objectWillChange.send()
         subject.send(updated)
-        persist()
+        if coalescePersistence {
+            schedulePersist()
+        } else {
+            pendingPersistWorkItem?.cancel()
+            pendingPersistWorkItem = nil
+            persist()
+        }
+    }
+
+    private func schedulePersist() {
+        if minimumPersistInterval <= 0 {
+            persist()
+            return
+        }
+
+        let now = Date()
+        let earliestPersistDate = lastPersistAt.addingTimeInterval(minimumPersistInterval)
+        if now >= earliestPersistDate {
+            pendingPersistWorkItem?.cancel()
+            pendingPersistWorkItem = nil
+            persist()
+            return
+        }
+
+        guard pendingPersistWorkItem == nil else {
+            return
+        }
+
+        let delay = earliestPersistDate.timeIntervalSince(now)
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else {
+                return
+            }
+            self.pendingPersistWorkItem = nil
+            self.persist()
+        }
+        pendingPersistWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     private func persist() {
         guard let data = try? encoder.encode(subject.value) else {
             return
         }
+        lastPersistAt = Date()
         storage.set(data, forKey: storageKey)
     }
 

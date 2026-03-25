@@ -391,7 +391,7 @@ struct FileRoutingAndWatcherTests {
         lock.unlock()
         let startupFailureValue = try #require(startupFailure)
         #expect(!startupFailureValue.folderIdentifier.contains("/"))
-        #expect(startupFailureValue.errorDescription.contains("(domain:"))
+        #expect(startupFailureValue.errorDescription.contains("domain:"))
         #expect(!startupFailureValue.errorDescription.contains(missingFolderURL.path))
 
         try FileManager.default.createDirectory(at: missingFolderURL, withIntermediateDirectories: true)
@@ -629,33 +629,64 @@ struct FileRoutingAndWatcherTests {
         })
     }
 
-    @Test @MainActor func profileFolderChangeWatcherStartupSnapshotForLargeCorpus() async throws {
-        let triggerFileURL = URL(fileURLWithPath: "/tmp/minimark-startup-profile-trigger.txt")
-        var triggerConfig: [String: String] = [:]
-        if let triggerText = try? String(contentsOf: triggerFileURL, encoding: .utf8) {
-            for line in triggerText.split(separator: "\n") {
-                let parts = line.split(separator: "=", maxSplits: 1).map(String.init)
-                guard parts.count == 2 else {
-                    continue
-                }
-                triggerConfig[parts[0].trimmingCharacters(in: .whitespaces)] = parts[1].trimmingCharacters(in: .whitespaces)
-            }
-        }
+    @Test @MainActor func recursiveEventSourceSafetyPollingBacksOffWhenIdleAndResetsAfterEvent() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let nestedDirectoryURL = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        let trackedFileURL = nestedDirectoryURL.appendingPathComponent("tracked.md")
+        try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
 
+        try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
+
+        let baseSafetyInterval: DispatchTimeInterval = .milliseconds(60)
+        let watcher = makeFolderChangeWatcher(
+            fallbackPollingInterval: .seconds(5),
+            recursiveEventSourceSafetyPollingInterval: baseSafetyInterval
+        )
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting &&
+            watcher.currentTimerIntervalForTesting == baseSafetyInterval
+        })
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.currentTimerIntervalForTesting == .milliseconds(120)
+        })
+
+        try "# After".write(to: trackedFileURL, atomically: false, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(trackedFileURL) &&
+                $0.kind == .modified &&
+                $0.previousMarkdown == "# Before"
+            })
+        })
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.currentTimerIntervalForTesting == baseSafetyInterval
+        })
+    }
+
+    @Test @MainActor func profileFolderChangeWatcherStartupSnapshotForLargeCorpus() async throws {
         let environment = ProcessInfo.processInfo.environment
-        let isEnabledViaEnvironment = environment["PROFILE_STARTUP_SNAPSHOT"] == "1"
-        let isEnabledViaTriggerFile = triggerConfig["enabled"] == "1"
-        guard isEnabledViaEnvironment || isEnabledViaTriggerFile else {
+        guard environment["PROFILE_STARTUP_SNAPSHOT"] == "1" else {
             return
         }
 
         let maximumProfileFileCount = 20_000
         let maximumProfileDepth = 8
-        let resolvedFileCount = Int(environment["PROFILE_STARTUP_FILE_COUNT"] ?? triggerConfig["file_count"] ?? "4000") ?? 4000
-        let resolvedDepth = Int(environment["PROFILE_STARTUP_DEPTH"] ?? triggerConfig["depth"] ?? "3") ?? 3
+        let resolvedFileCount = Int(environment["PROFILE_STARTUP_FILE_COUNT"] ?? "4000") ?? 4000
+        let resolvedDepth = Int(environment["PROFILE_STARTUP_DEPTH"] ?? "3") ?? 3
         let fileCount = min(max(resolvedFileCount, 1), maximumProfileFileCount)
         let depth = min(max(resolvedDepth, 1), maximumProfileDepth)
-        let includeSubfolders = (environment["PROFILE_STARTUP_INCLUDE_SUBFOLDERS"] ?? triggerConfig["include_subfolders"]) != "0"
+        let includeSubfolders = environment["PROFILE_STARTUP_INCLUDE_SUBFOLDERS"] != "0"
         print(
             "PROFILE_STARTUP_CONFIG file_count=\(fileCount) depth=\(depth) include_subfolders=\(includeSubfolders)"
         )
@@ -693,7 +724,7 @@ struct FileRoutingAndWatcherTests {
             "PROFILE_STARTUP_SNAPSHOT elapsed_ms=\(elapsedText) file_count=\(fileCount) depth=\(depth) include_subfolders=\(includeSubfolders)"
         )
 
-        if let outputPath = environment["PROFILE_STARTUP_OUTPUT_PATH"] ?? triggerConfig["output_path"],
+        if let outputPath = environment["PROFILE_STARTUP_OUTPUT_PATH"],
            !outputPath.isEmpty {
             let outputURL = URL(fileURLWithPath: outputPath)
             let outputText = "elapsed_ms=\(elapsedText)\nfile_count=\(fileCount)\ndepth=\(depth)\ninclude_subfolders=\(includeSubfolders)\n"
@@ -817,6 +848,7 @@ private extension FileRoutingAndWatcherTests {
 
     func makeFolderChangeWatcher(
         fallbackPollingInterval: DispatchTimeInterval = defaultFallbackPollingInterval,
+        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval? = nil,
         maximumDirectoryEventSourceCount: Int? = nil,
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) -> FolderChangeWatcher {
@@ -824,6 +856,9 @@ private extension FileRoutingAndWatcherTests {
             return FolderChangeWatcher(
                 pollingInterval: Self.defaultPollingInterval,
                 fallbackPollingInterval: fallbackPollingInterval,
+                recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval ?? .seconds(
+                    ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
+                ),
                 verificationDelay: Self.defaultVerificationDelay,
                 onFailure: onFailure
             )
@@ -832,6 +867,9 @@ private extension FileRoutingAndWatcherTests {
         return FolderChangeWatcher(
             pollingInterval: Self.defaultPollingInterval,
             fallbackPollingInterval: fallbackPollingInterval,
+            recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval ?? .seconds(
+                ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
+            ),
             verificationDelay: Self.defaultVerificationDelay,
             maximumDirectoryEventSourceCount: maximumDirectoryEventSourceCount,
             onFailure: onFailure
