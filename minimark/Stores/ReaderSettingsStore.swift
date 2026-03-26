@@ -397,10 +397,14 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     }
 }
 
-@MainActor protocol ReaderSettingsStoring: AnyObject {
+@MainActor protocol ReaderSettingsReading: AnyObject {
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> { get }
     var currentSettings: ReaderSettings { get }
+    func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
+    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
+}
 
+@MainActor protocol ReaderSettingsWriting: AnyObject {
     func updateAppAppearance(_ appearance: AppAppearance)
     func updateTheme(_ kind: ReaderThemeKind)
     func updateSyntaxTheme(_ kind: SyntaxThemeKind)
@@ -409,12 +413,12 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
-    func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
     func addRecentManuallyOpenedFile(_ fileURL: URL)
-    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
 }
+
+typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
 @MainActor final class ReaderSettingsStore: ObservableObject, ReaderSettingsStoring {
     typealias BookmarkResolution = (url: URL, isStale: Bool)
@@ -436,8 +440,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     private let subject: CurrentValueSubject<ReaderSettings, Never>
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    private let bookmarkResolver: BookmarkResolver
-    private let bookmarkCreator: BookmarkCreator
+    let bookmarkResolver: BookmarkResolver
+    let bookmarkCreator: BookmarkCreator
     private let minimumPersistInterval: TimeInterval
     private var pendingPersistWorkItem: DispatchWorkItem?
     private var lastPersistAt: Date = .distantPast
@@ -523,60 +527,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         }
     }
 
-    func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions) {
-        updateSettings { settings in
-            settings.recentWatchedFolders = ReaderRecentHistory.insertingUniqueWatchedFolder(
-                folderURL,
-                options: options,
-                into: settings.recentWatchedFolders
-            )
-        }
-    }
-
-    func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        guard let entry = currentSettings.recentWatchedFolders.first(where: { entry in
-            ReaderFileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
-        }) else {
-            return nil
-        }
-
-        return resolveRecentWatchedFolderURL(for: entry)
-    }
-
-    func clearRecentWatchedFolders() {
-        updateSettings { settings in
-            settings.recentWatchedFolders = []
-        }
-    }
-
-    func addRecentManuallyOpenedFile(_ fileURL: URL) {
-        updateSettings { settings in
-            settings.recentManuallyOpenedFiles = ReaderRecentHistory.insertingUniqueFile(
-                fileURL,
-                into: settings.recentManuallyOpenedFiles
-            )
-        }
-    }
-
-    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL? {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        guard let entry = currentSettings.recentManuallyOpenedFiles.first(where: { entry in
-            ReaderFileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
-        }) else {
-            return nil
-        }
-
-        return resolveRecentOpenedFileURL(for: entry)
-    }
-
-    func clearRecentManuallyOpenedFiles() {
-        updateSettings { settings in
-            settings.recentManuallyOpenedFiles = []
-        }
-    }
-
-    private func updateSettings(
+    func updateSettings(
         coalescePersistence: Bool = false,
         _ mutate: (inout ReaderSettings) -> Void
     ) {
@@ -636,88 +587,4 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         storage.set(data, forKey: storageKey)
     }
 
-    private func resolveRecentOpenedFileURL(for entry: ReaderRecentOpenedFile) -> URL {
-        guard let bookmarkData = entry.bookmarkData else {
-            return entry.fileURL
-        }
-
-        do {
-            let resolution = try bookmarkResolver(bookmarkData)
-
-            if resolution.isStale {
-                refreshRecentOpenedFileBookmark(for: entry, resolvedURL: resolution.url)
-            }
-
-            return resolution.url
-        } catch {
-            updateRecentOpenedFileBookmarkData(forPath: entry.filePath, bookmarkData: nil)
-            return entry.fileURL
-        }
-    }
-
-    private func resolveRecentWatchedFolderURL(for entry: ReaderRecentWatchedFolder) -> URL {
-        guard let bookmarkData = entry.bookmarkData else {
-            return entry.folderURL
-        }
-
-        do {
-            let resolution = try bookmarkResolver(bookmarkData)
-
-            if resolution.isStale {
-                refreshRecentWatchedFolderBookmark(for: entry, resolvedURL: resolution.url)
-            }
-
-            return resolution.url
-        } catch {
-            updateRecentWatchedFolderBookmarkData(forPath: entry.folderPath, bookmarkData: nil)
-            return entry.folderURL
-        }
-    }
-
-    private func refreshRecentOpenedFileBookmark(for entry: ReaderRecentOpenedFile, resolvedURL: URL) {
-        let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
-        updateRecentOpenedFileBookmarkData(forPath: entry.filePath, bookmarkData: refreshedBookmarkData)
-    }
-
-    private func refreshRecentWatchedFolderBookmark(for entry: ReaderRecentWatchedFolder, resolvedURL: URL) {
-        let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
-        updateRecentWatchedFolderBookmarkData(forPath: entry.folderPath, bookmarkData: refreshedBookmarkData)
-    }
-
-    private func updateRecentOpenedFileBookmarkData(forPath filePath: String, bookmarkData: Data?) {
-        updateSettings { settings in
-            guard let index = settings.recentManuallyOpenedFiles.firstIndex(where: { $0.filePath == filePath }) else {
-                return
-            }
-
-            let existingEntry = settings.recentManuallyOpenedFiles[index]
-            guard existingEntry.bookmarkData != bookmarkData else {
-                return
-            }
-
-            settings.recentManuallyOpenedFiles[index] = ReaderRecentOpenedFile(
-                filePath: existingEntry.filePath,
-                bookmarkData: bookmarkData
-            )
-        }
-    }
-
-    private func updateRecentWatchedFolderBookmarkData(forPath folderPath: String, bookmarkData: Data?) {
-        updateSettings { settings in
-            guard let index = settings.recentWatchedFolders.firstIndex(where: { $0.folderPath == folderPath }) else {
-                return
-            }
-
-            let existingEntry = settings.recentWatchedFolders[index]
-            guard existingEntry.bookmarkData != bookmarkData else {
-                return
-            }
-
-            settings.recentWatchedFolders[index] = ReaderRecentWatchedFolder(
-                folderPath: existingEntry.folderPath,
-                options: existingEntry.options,
-                bookmarkData: bookmarkData
-            )
-        }
-    }
 }

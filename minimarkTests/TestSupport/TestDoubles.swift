@@ -313,6 +313,61 @@ final class TestSecurityToken: SecurityScopedAccessToken {
     func endAccess() {}
 }
 
+@MainActor
+final class TestReaderAutoOpenSettler: ReaderAutoOpenSettling {
+    var pendingContext: PendingAutoOpenSettlingContext?
+
+    private(set) var beginSettlingCalls: [PendingAutoOpenSettlingContext?] = []
+    private(set) var clearSettlingCallCount = 0
+    private(set) var handleChangeIfNeededCalls: [URL] = []
+
+    var makePendingContextResult: PendingAutoOpenSettlingContext?
+    var handleChangeIfNeededResult = false
+
+    func makePendingContext(
+        origin: ReaderOpenOrigin,
+        initialDiffBaselineMarkdown: String?,
+        loadedMarkdown: String,
+        now: Date
+    ) -> PendingAutoOpenSettlingContext? {
+        makePendingContextResult
+    }
+
+    func beginSettling(_ context: PendingAutoOpenSettlingContext?) {
+        pendingContext = context
+        beginSettlingCalls.append(context)
+    }
+
+    func clearSettling() {
+        pendingContext = nil
+        clearSettlingCallCount += 1
+    }
+
+    func handleChangeIfNeeded(
+        fileURL: URL,
+        loader: (URL) throws -> (markdown: String, modificationDate: Date)
+    ) -> Bool {
+        handleChangeIfNeededCalls.append(fileURL)
+        return handleChangeIfNeededResult
+    }
+}
+
+final class TestReaderDocumentIO: ReaderDocumentIO {
+    private let realIO = ReaderDocumentIOService()
+
+    func load(at accessibleURL: URL) throws -> (markdown: String, modificationDate: Date) {
+        try realIO.load(at: accessibleURL)
+    }
+
+    func write(_ markdown: String, to accessibleURL: URL) throws {
+        try realIO.write(markdown, to: accessibleURL)
+    }
+
+    func modificationDate(for url: URL) -> Date {
+        realIO.modificationDate(for: url)
+    }
+}
+
 final class TestReaderFileActions: ReaderFileActionHandling {
     func registeredApplications(for fileURL: URL) throws -> [ReaderExternalApplication] {
         []
@@ -521,32 +576,20 @@ struct ReaderStoreTestFixture {
             autoRefreshOnExternalChange: autoRefreshOnExternalChange,
             notificationsEnabled: notificationsEnabled
         )
-        if let requestWatchedFolderReauthorization {
-            store = ReaderStore(
-                renderer: renderer,
-                differ: differ,
-                fileWatcher: watcher,
-                folderWatcher: folderWatcher,
-                settingsStore: settings,
-                securityScope: securityScope,
-                fileActions: fileActions,
-                systemNotifier: notifier,
-                autoOpenSettlingInterval: autoOpenSettlingInterval,
-                requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
-            )
-        } else {
-            store = ReaderStore(
-                renderer: renderer,
-                differ: differ,
-                fileWatcher: watcher,
-                folderWatcher: folderWatcher,
-                settingsStore: settings,
-                securityScope: securityScope,
-                fileActions: fileActions,
-                systemNotifier: notifier,
-                autoOpenSettlingInterval: autoOpenSettlingInterval
-            )
-        }
+        let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
+        store = ReaderStore(
+            renderer: renderer,
+            differ: differ,
+            fileWatcher: watcher,
+            folderWatcher: folderWatcher,
+            settingsStore: settings,
+            securityScope: securityScope,
+            fileActions: fileActions,
+            systemNotifier: notifier,
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+            settler: settler,
+            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+        )
     }
 
     func write(content: String, to url: URL) {
@@ -601,15 +644,20 @@ struct ReaderSidebarControllerTestHarness {
                 createdFileWatchers.append(fileWatcher)
                 let watcher = TestFolderWatcher()
                 createdWatchers.append(watcher)
-                return ReaderStore(
+                let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                let store = ReaderStore(
                     renderer: TestMarkdownRenderer(),
                     differ: TestChangedRegionDiffer(),
                     fileWatcher: fileWatcher,
                     folderWatcher: watcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions()
+                    fileActions: TestReaderFileActions(),
+                    systemNotifier: TestReaderSystemNotifier(),
+                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                    settler: settler
                 )
+                return store
             },
             makeFolderWatchController: {
                 ReaderFolderWatchController(

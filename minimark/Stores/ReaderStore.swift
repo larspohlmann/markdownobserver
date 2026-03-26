@@ -50,7 +50,8 @@ final class ReaderStore: ObservableObject {
     let systemNotifier: ReaderSystemNotifying
     let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
     let sourceEditingCoordinator = ReaderSourceEditingCoordinator()
-    private let autoOpenSettlingInterval: TimeInterval
+    private(set) var settler: ReaderAutoOpenSettling
+    private let documentIO: ReaderDocumentIO
     let requestWatchedFolderReauthorization: (URL) -> URL?
 
     private var settingsCancellable: AnyCancellable?
@@ -71,8 +72,6 @@ final class ReaderStore: ObservableObject {
     var onFolderWatchStopped: (() -> Void)?
 
     private var pendingSavedDraftDiffBaselineMarkdown: String?
-    private var pendingAutoOpenSettlingContext: PendingAutoOpenSettlingContext?
-    private var pendingAutoOpenSettlingTask: Task<Void, Never>?
     private var pendingDraftPreviewRenderTask: Task<Void, Never>?
     private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
@@ -86,7 +85,8 @@ final class ReaderStore: ObservableObject {
         fileActions: ReaderFileActionHandling,
         systemNotifier: ReaderSystemNotifying,
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning,
-        autoOpenSettlingInterval: TimeInterval,
+        settler: ReaderAutoOpenSettling,
+        documentIO: ReaderDocumentIO = ReaderDocumentIOService(),
         requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
     ) {
         self.renderer = renderer
@@ -98,7 +98,8 @@ final class ReaderStore: ObservableObject {
         self.fileActions = fileActions
         self.systemNotifier = systemNotifier
         self.folderWatchAutoOpenPlanner = folderWatchAutoOpenPlanner
-        self.autoOpenSettlingInterval = autoOpenSettlingInterval
+        self.settler = settler
+        self.documentIO = documentIO
         if let requestWatchedFolderReauthorization {
             self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
         } else {
@@ -118,9 +119,14 @@ final class ReaderStore: ObservableObject {
             .sink { [weak self] _ in
                 self?.rerenderWithCurrentSettings()
             }
+
+        if let concreteSettler = settler as? ReaderAutoOpenSettler {
+            configureSettler(concreteSettler)
+        }
     }
 
     convenience init() {
+        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
         self.init(
             renderer: MarkdownRenderingService(),
             differ: ChangedRegionDiffer(),
@@ -131,11 +137,12 @@ final class ReaderStore: ObservableObject {
             fileActions: ReaderFileActionService(),
             systemNotifier: ReaderSystemNotifier.shared,
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            autoOpenSettlingInterval: 1.0
+            settler: settler
         )
     }
 
     convenience init(settingsStore: ReaderSettingsStoring) {
+        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
         self.init(
             renderer: MarkdownRenderingService(),
             differ: ChangedRegionDiffer(),
@@ -146,83 +153,34 @@ final class ReaderStore: ObservableObject {
             fileActions: ReaderFileActionService(),
             systemNotifier: ReaderSystemNotifier.shared,
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            autoOpenSettlingInterval: 1.0
+            settler: settler
         )
     }
 
-    convenience init(
-        renderer: MarkdownRendering,
-        differ: ChangedRegionDiffering,
-        fileWatcher: FileChangeWatching,
-        folderWatcher: FolderChangeWatching,
-        settingsStore: ReaderSettingsStoring,
-        securityScope: SecurityScopedResourceAccessing,
-        fileActions: ReaderFileActionHandling,
-        autoOpenSettlingInterval: TimeInterval = 1.0
-    ) {
-        self.init(
-            renderer: renderer,
-            differ: differ,
-            fileWatcher: fileWatcher,
-            folderWatcher: folderWatcher,
-            settingsStore: settingsStore,
-            securityScope: securityScope,
-            fileActions: fileActions,
-            systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            autoOpenSettlingInterval: autoOpenSettlingInterval
-        )
-    }
-
-    convenience init(
-        renderer: MarkdownRendering,
-        differ: ChangedRegionDiffering,
-        fileWatcher: FileChangeWatching,
-        folderWatcher: FolderChangeWatching,
-        settingsStore: ReaderSettingsStoring,
-        securityScope: SecurityScopedResourceAccessing,
-        fileActions: ReaderFileActionHandling,
-        systemNotifier: ReaderSystemNotifying,
-        autoOpenSettlingInterval: TimeInterval = 1.0
-    ) {
-        self.init(
-            renderer: renderer,
-            differ: differ,
-            fileWatcher: fileWatcher,
-            folderWatcher: folderWatcher,
-            settingsStore: settingsStore,
-            securityScope: securityScope,
-            fileActions: fileActions,
-            systemNotifier: systemNotifier,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            autoOpenSettlingInterval: autoOpenSettlingInterval
-        )
-    }
-
-    convenience init(
-        renderer: MarkdownRendering,
-        differ: ChangedRegionDiffering,
-        fileWatcher: FileChangeWatching,
-        folderWatcher: FolderChangeWatching,
-        settingsStore: ReaderSettingsStoring,
-        securityScope: SecurityScopedResourceAccessing,
-        fileActions: ReaderFileActionHandling,
-        systemNotifier: ReaderSystemNotifying,
-        autoOpenSettlingInterval: TimeInterval = 1.0,
-        requestWatchedFolderReauthorization: @escaping (URL) -> URL?
-    ) {
-        self.init(
-            renderer: renderer,
-            differ: differ,
-            fileWatcher: fileWatcher,
-            folderWatcher: folderWatcher,
-            settingsStore: settingsStore,
-            securityScope: securityScope,
-            fileActions: fileActions,
-            systemNotifier: systemNotifier,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            autoOpenSettlingInterval: autoOpenSettlingInterval,
-            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+    private func configureSettler(_ settler: ReaderAutoOpenSettler) {
+        settler.configure(
+            currentFileURL: { [weak self] in self?.fileURL },
+            loadFile: { [weak self] url in
+                guard let self else { throw ReaderError.noOpenFileInReader }
+                return try self.loadMarkdownFile(at: url)
+            },
+            onDocumentSettled: { [weak self] loaded, fileURL, diffBaselineMarkdown in
+                guard let self else { return }
+                do {
+                    try self.presentLoadedDocument(
+                        loaded,
+                        at: fileURL,
+                        diffBaselineMarkdown: diffBaselineMarkdown,
+                        resetDocumentViewMode: false,
+                        acknowledgeExternalChange: true
+                    )
+                } catch {
+                    self.handle(error)
+                }
+            },
+            onLoadStateChanged: { [weak self] state in
+                self?.documentLoadState = state
+            }
         )
     }
 
@@ -345,7 +303,7 @@ final class ReaderStore: ObservableObject {
         isSourceEditing = false
         hasUnsavedDraftChanges = false
 
-        clearPendingAutoOpenSettling()
+        settler.clearSettling()
     }
 
     func dismissFolderWatchAutoOpenWarning() {
@@ -359,7 +317,8 @@ final class ReaderStore: ObservableObject {
         recoveryAttempted: Bool
     ) throws {
         do {
-            try writeMarkdownFile(draftMarkdown, to: fileURL)
+            let accessibleURL = effectiveAccessibleFileURL(for: fileURL, reason: "write")
+            try documentIO.write(draftMarkdown, to: accessibleURL)
             savedMarkdown = draftMarkdown
             let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
             applySourceEditingTransition(transition)
@@ -367,7 +326,7 @@ final class ReaderStore: ObservableObject {
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
             )
-            fileLastModifiedAt = modificationDate(for: fileURL)
+            fileLastModifiedAt = documentIO.modificationDate(for: fileURL)
             pendingSavedDraftDiffBaselineMarkdown = changedRegions.isEmpty ? nil : diffBaselineMarkdown
             hasUnacknowledgedExternalChange = false
             isCurrentFileMissing = false
@@ -685,7 +644,7 @@ final class ReaderStore: ObservableObject {
         openInApplications = []
         isCurrentFileMissing = true
         lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-        clearPendingAutoOpenSettling()
+        settler.clearSettling()
     }
 
     func changedRegions(
@@ -709,7 +668,8 @@ final class ReaderStore: ObservableObject {
             return false
         }
 
-        guard let loaded = try? loadMarkdownFile(at: fileURL) else {
+        let accessibleURL = effectiveAccessibleFileURL(for: fileURL, reason: "read")
+        guard let loaded = try? documentIO.load(at: accessibleURL) else {
             pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
@@ -729,218 +689,9 @@ final class ReaderStore: ObservableObject {
         return true
     }
 
-    func handlePendingAutoOpenSettlingChangeIfNeeded() -> Bool {
-        guard let fileURL else {
-            return false
-        }
-
-        guard let context = pendingAutoOpenSettlingContext else {
-            return false
-        }
-
-        guard let loaded = try? loadMarkdownFile(at: fileURL) else {
-            return false
-        }
-
-        switch evaluatePendingAutoOpenSettling(
-            context: context,
-            loaded: loaded,
-            presentedAs: fileURL,
-            now: Date()
-        ) {
-        case .unhandled:
-            return false
-        case .handled:
-            return true
-        }
-    }
-
-    func setPendingAutoOpenSettlingContext(_ context: PendingAutoOpenSettlingContext?) {
-        pendingAutoOpenSettlingTask?.cancel()
-        pendingAutoOpenSettlingTask = nil
-        pendingAutoOpenSettlingContext = context
-        documentLoadState = context?.showsLoadingOverlay == true ? .settlingAutoOpen : .ready
-
-        guard context != nil else {
-            return
-        }
-
-        schedulePendingAutoOpenSettlingCheck()
-    }
-
-    func clearPendingAutoOpenSettling() {
-        pendingAutoOpenSettlingTask?.cancel()
-        pendingAutoOpenSettlingTask = nil
-        pendingAutoOpenSettlingContext = nil
-        documentLoadState = .ready
-    }
-
-    private func shouldSettleAutoOpenDocument(
-        origin: ReaderOpenOrigin
-    ) -> Bool {
-        origin.isFolderWatchAutoOpen
-    }
-
-    private func shouldShowLoadingDuringAutoOpenSettling(
-        origin: ReaderOpenOrigin,
-        initialDiffBaselineMarkdown: String?,
-        loadedMarkdown: String
-    ) -> Bool {
-        origin == .folderWatchAutoOpen &&
-            initialDiffBaselineMarkdown == nil &&
-            loadedMarkdown.isEmpty
-    }
-
-    func makePendingAutoOpenSettlingContext(
-        origin: ReaderOpenOrigin,
-        initialDiffBaselineMarkdown: String?,
-        loadedMarkdown: String,
-        now: Date
-    ) -> PendingAutoOpenSettlingContext? {
-        guard shouldSettleAutoOpenDocument(origin: origin) else {
-            return nil
-        }
-
-        let showsLoadingOverlay = shouldShowLoadingDuringAutoOpenSettling(
-            origin: origin,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
-            loadedMarkdown: loadedMarkdown
-        )
-
-        return PendingAutoOpenSettlingContext(
-            loadedMarkdown: loadedMarkdown,
-            diffBaselineMarkdown: initialDiffBaselineMarkdown,
-            expiresAt: showsLoadingOverlay ? nil : now.addingTimeInterval(autoOpenSettlingInterval),
-            showsLoadingOverlay: showsLoadingOverlay
-        )
-    }
-
-    private func evaluatePendingAutoOpenSettling(
-        context: PendingAutoOpenSettlingContext,
-        loaded: (markdown: String, modificationDate: Date),
-        presentedAs fileURL: URL,
-        now: Date
-    ) -> PendingAutoOpenSettlingEvaluation {
-        if let expiresAt = context.expiresAt,
-           now > expiresAt {
-            clearPendingAutoOpenSettling()
-            return .unhandled
-        }
-
-        guard loaded.markdown != context.loadedMarkdown else {
-            if !context.showsLoadingOverlay {
-                clearPendingAutoOpenSettling()
-            }
-            return .handled
-        }
-
-        clearPendingAutoOpenSettling()
-
-        do {
-            try presentLoadedDocument(
-                loaded,
-                at: fileURL,
-                diffBaselineMarkdown: context.diffBaselineMarkdown,
-                resetDocumentViewMode: false,
-                acknowledgeExternalChange: true
-            )
-        } catch {
-            handle(error)
-        }
-
-        return .handled
-    }
-
-    private func schedulePendingAutoOpenSettlingCheck() {
-        pendingAutoOpenSettlingTask?.cancel()
-        pendingAutoOpenSettlingTask = Task { @MainActor [weak self] in
-            guard let self else {
-                return
-            }
-
-            while !Task.isCancelled {
-                guard let context = self.pendingAutoOpenSettlingContext else {
-                    return
-                }
-
-                let now = Date()
-                if let expiresAt = context.expiresAt,
-                   now >= expiresAt {
-                    self.clearPendingAutoOpenSettling()
-                    return
-                }
-
-                try? await Task.sleep(for: .milliseconds(100))
-
-                guard !Task.isCancelled else {
-                    return
-                }
-
-                guard let fileURL = self.fileURL else {
-                    self.clearPendingAutoOpenSettling()
-                    return
-                }
-
-                guard let loaded = try? self.loadMarkdownFile(at: fileURL) else {
-                    continue
-                }
-
-                switch self.evaluatePendingAutoOpenSettling(
-                    context: context,
-                    loaded: loaded,
-                    presentedAs: fileURL,
-                    now: now
-                ) {
-                case .unhandled:
-                    continue
-                case .handled:
-                    return
-                }
-            }
-        }
-    }
-
     func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
-        guard url.isFileURL else {
-            throw ReaderError.invalidFileURL
-        }
-
-        do {
-            let accessibleURL = effectiveAccessibleFileURL(for: url, reason: "read")
-            let markdown = try String(contentsOf: accessibleURL, encoding: .utf8)
-                return (markdown: markdown, modificationDate: modificationDate(for: accessibleURL))
-        } catch {
-            throw ReaderError.fileReadFailed(url, underlying: error)
-        }
-    }
-
-    func writeMarkdownFile(_ markdown: String, to url: URL) throws {
-        guard url.isFileURL else {
-            throw ReaderError.invalidFileURL
-        }
-
-        do {
-            let accessibleURL = effectiveAccessibleFileURL(for: url, reason: "write")
-            try markdown.write(to: accessibleURL, atomically: true, encoding: .utf8)
-        } catch {
-            throw ReaderError.fileWriteFailed(url, underlying: error)
-        }
-    }
-
-    func modificationDate(for url: URL) -> Date {
-        let normalizedURL = Self.normalizedFileURL(url)
-
-        if let attributes = try? FileManager.default.attributesOfItem(atPath: normalizedURL.path),
-           let modificationDate = attributes[.modificationDate] as? Date {
-            return modificationDate
-        }
-
-        if let values = try? normalizedURL.resourceValues(forKeys: [.contentModificationDateKey]),
-           let modificationDate = values.contentModificationDate {
-            return modificationDate
-        }
-
-        return .distantPast
+        let accessibleURL = effectiveAccessibleFileURL(for: url, reason: "read")
+        return try documentIO.load(at: accessibleURL)
     }
 
     func saveLogContext(for url: URL?) -> String {
