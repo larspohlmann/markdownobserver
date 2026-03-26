@@ -30,7 +30,9 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
     var pendingContext: PendingAutoOpenSettlingContext? { settlingContext }
 
     #if compiler(>=6.2)
-    nonisolated deinit {}
+    nonisolated deinit {
+        settlingTask?.cancel()
+    }
     #endif
 
     init(settlingInterval: TimeInterval) {
@@ -143,38 +145,33 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
     private func schedulePollLoop() {
         settlingTask?.cancel()
         settlingTask = Task { @MainActor [weak self] in
-            guard let self else {
-                return
-            }
-
             while !Task.isCancelled {
-                guard let context = self.settlingContext else {
-                    return
-                }
+                guard let settler = self else { return }
+                guard let context = settler.settlingContext else { return }
 
                 let now = Date()
-                if let expiresAt = context.expiresAt,
-                   now >= expiresAt {
-                    self.clearSettling()
+                if let expiresAt = context.expiresAt, now >= expiresAt {
+                    settler.clearSettling()
                     return
                 }
 
+                // Release the strong reference before suspending to avoid
+                // retaining the settler (and its owner) across the sleep.
                 try? await Task.sleep(for: .milliseconds(100))
 
-                guard !Task.isCancelled else {
+                guard !Task.isCancelled else { return }
+                guard let settler = self else { return }
+
+                guard let fileURL = settler.currentFileURL?() else {
+                    settler.clearSettling()
                     return
                 }
 
-                guard let fileURL = self.currentFileURL?() else {
-                    self.clearSettling()
-                    return
-                }
-
-                guard let loaded = try? self.loadFile?(fileURL) else {
+                guard let loaded = try? settler.loadFile?(fileURL) else {
                     continue
                 }
 
-                switch self.evaluate(
+                switch settler.evaluate(
                     context: context,
                     loaded: loaded,
                     presentedAs: fileURL,

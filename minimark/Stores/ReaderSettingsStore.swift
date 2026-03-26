@@ -400,8 +400,6 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 @MainActor protocol ReaderSettingsReading: AnyObject {
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> { get }
     var currentSettings: ReaderSettings { get }
-    func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
-    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
 }
 
 @MainActor protocol ReaderSettingsWriting: AnyObject {
@@ -413,8 +411,10 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
+    func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
     func addRecentManuallyOpenedFile(_ fileURL: URL)
+    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
 }
 

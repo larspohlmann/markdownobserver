@@ -119,10 +119,6 @@ final class ReaderStore: ObservableObject {
             .sink { [weak self] _ in
                 self?.rerenderWithCurrentSettings()
             }
-
-        if let concreteSettler = settler as? ReaderAutoOpenSettler {
-            configureSettler(concreteSettler)
-        }
     }
 
     convenience init() {
@@ -139,6 +135,7 @@ final class ReaderStore: ObservableObject {
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
             settler: settler
         )
+        configureSettler(settler)
     }
 
     convenience init(settingsStore: ReaderSettingsStoring) {
@@ -155,9 +152,10 @@ final class ReaderStore: ObservableObject {
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
             settler: settler
         )
+        configureSettler(settler)
     }
 
-    private func configureSettler(_ settler: ReaderAutoOpenSettler) {
+    func configureSettler(_ settler: ReaderAutoOpenSettler) {
         settler.configure(
             currentFileURL: { [weak self] in self?.fileURL },
             loadFile: { [weak self] url in

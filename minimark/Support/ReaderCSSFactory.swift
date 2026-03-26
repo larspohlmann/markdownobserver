@@ -10,7 +10,12 @@ struct ReaderCSSFactory {
 
         guard let url = Bundle.main.url(forResource: name, withExtension: "js"),
               let contents = try? String(contentsOf: url, encoding: .utf8) else {
-            return ""
+            #if DEBUG
+            assertionFailure("Failed to load bundled JS resource named '\(name).js' from main bundle.")
+            #endif
+            let fallback = "console.error('Failed to load bundled JS resource: \(name).js');"
+            bundledJSCache[name] = fallback
+            return fallback
         }
 
         bundledJSCache[name] = contents
