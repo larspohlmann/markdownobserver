@@ -29,7 +29,9 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
 
     var pendingContext: PendingAutoOpenSettlingContext? { settlingContext }
 
+    #if compiler(>=6.2)
     nonisolated deinit {}
+    #endif
 
     init(settlingInterval: TimeInterval) {
         self.settlingInterval = settlingInterval
