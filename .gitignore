@@ -29,3 +29,8 @@ Config/Signing.local.xcconfig
 .github/*
 !.github/workflows/
 !.github/workflows/**
+.claude/
+
+.mcp.json
+
+CLAUDE.md
