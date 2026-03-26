@@ -251,15 +251,21 @@ struct ReaderSidebarDocumentControllerTests {
         let controller = ReaderSidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
-                ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: TestFileWatcher(),
-                    folderWatcher: TestFolderWatcher(),
-                    settingsStore: settingsStore,
-                    securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions()
-                )
+                {
+                    let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                    return ReaderStore(
+                        renderer: TestMarkdownRenderer(),
+                        differ: TestChangedRegionDiffer(),
+                        fileWatcher: TestFileWatcher(),
+                        folderWatcher: TestFolderWatcher(),
+                        settingsStore: settingsStore,
+                        securityScope: TestSecurityScopeAccess(),
+                        fileActions: TestReaderFileActions(),
+                        systemNotifier: TestReaderSystemNotifier(),
+                        folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: settler
+                    )
+                }()
             },
             makeFolderWatchController: {
                 ReaderFolderWatchController(

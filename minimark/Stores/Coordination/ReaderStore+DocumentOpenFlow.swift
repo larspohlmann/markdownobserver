@@ -53,8 +53,8 @@ extension ReaderStore {
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String
     ) {
-        setPendingAutoOpenSettlingContext(
-            makePendingAutoOpenSettlingContext(
+        settler.beginSettling(
+            settler.makePendingContext(
                 origin: origin,
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
                 loadedMarkdown: loadedMarkdown,
