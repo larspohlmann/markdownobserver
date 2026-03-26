@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.4] - 2026-03-26
+
+### Changed
+- Refactored codebase for improved SOLID compliance with protocol-based service abstractions and dependency injection.
+- Raised folder watch optimization threshold to 256 for better large-folder performance.
+- Simplified folder watch UI and refined toolbar watch button.
+- Post-diagnostic CPU optimizations and diagnostic workflow hardening.
+- Reduced idle CPU usage for recursive folder watch.
+
+### Fixed
+- Guarded `nonisolated deinit` behind compiler version check for CI compatibility.
+- Stabilized recursive watch timer assertion.
+- Hardened diagnostics script and duplicate-key handling.
+
+### Chore
+- Ignored Claude and MCP configuration files in repository tracking.
+- Advanced internal build number progression.
+
 ## [1.0.3] - 2026-03-24
 
 ### Added
