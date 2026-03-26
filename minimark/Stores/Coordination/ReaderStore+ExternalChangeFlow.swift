@@ -29,7 +29,7 @@ extension ReaderStore {
     }
 
     func handleObservedFileChange() {
-        if handlePendingAutoOpenSettlingChangeIfNeeded() {
+        if let fileURL, settler.handleChangeIfNeeded(fileURL: fileURL, loader: { url in try self.loadMarkdownFile(at: url) }) {
             return
         }
 
@@ -80,7 +80,7 @@ extension ReaderStore {
                 resetDocumentViewMode: false,
                 acknowledgeExternalChange: acknowledgeExternalChange
             )
-            clearPendingAutoOpenSettling()
+            settler.clearSettling()
         } catch {
             handleDocumentReloadFailure(error, for: fileURL)
         }

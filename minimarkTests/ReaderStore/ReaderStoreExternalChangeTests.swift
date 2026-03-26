@@ -667,6 +667,7 @@ struct ReaderStoreExternalChangeTests {
 
         let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
         let notifier = TestReaderSystemNotifier()
+        let settler = ReaderAutoOpenSettler(settlingInterval: 0.2)
         let store = ReaderStore(
             renderer: TestMarkdownRenderer(),
             differ: TestChangedRegionDiffer(),
@@ -684,7 +685,8 @@ struct ReaderStoreExternalChangeTests {
             securityScope: TestSecurityScopeAccess(),
             fileActions: TestReaderFileActions(),
             systemNotifier: notifier,
-            autoOpenSettlingInterval: 0.2
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+            settler: settler
         )
 
         store.handleIncomingOpenURL(nestedFileURL, origin: .manual)

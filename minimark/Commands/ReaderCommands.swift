@@ -156,11 +156,13 @@ struct ReaderCommands: Commands {
 
     @ViewBuilder
     private func recentOpenedFilesMenuContent() -> some View {
-        if settingsStore.currentSettings.recentManuallyOpenedFiles.isEmpty {
+        let recentFiles = settingsStore.currentSettings.recentManuallyOpenedFiles
+        if recentFiles.isEmpty {
             Text("No recent manually opened files")
         } else {
-            ForEach(settingsStore.currentSettings.recentManuallyOpenedFiles) { entry in
-                Button(ReaderRecentHistory.menuTitle(for: entry, among: settingsStore.currentSettings.recentManuallyOpenedFiles)) {
+            let titlesByPath = ReaderRecentHistory.menuTitles(for: recentFiles)
+            ForEach(recentFiles) { entry in
+                Button(titlesByPath[entry.filePath] ?? entry.displayName) {
                     openRecentOpenedFile(entry)
                 }
             }
@@ -175,11 +177,13 @@ struct ReaderCommands: Commands {
 
     @ViewBuilder
     private func recentWatchedFoldersMenuContent() -> some View {
-        if settingsStore.currentSettings.recentWatchedFolders.isEmpty {
+        let recentFolders = settingsStore.currentSettings.recentWatchedFolders
+        if recentFolders.isEmpty {
             Text("No recent watched folders")
         } else {
-            ForEach(settingsStore.currentSettings.recentWatchedFolders) { entry in
-                Button(ReaderRecentHistory.menuTitle(for: entry, among: settingsStore.currentSettings.recentWatchedFolders)) {
+            let titlesByPath = ReaderRecentHistory.menuTitles(for: recentFolders)
+            ForEach(recentFolders) { entry in
+                Button(titlesByPath[entry.folderPath] ?? entry.displayName) {
                     startRecentWatchedFolder(entry)
                 }
             }

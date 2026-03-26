@@ -2,6 +2,7 @@
 build/
 DerivedData/
 buildServer.json
+profiling/
 
 # macOS / Finder
 .DS_Store
@@ -28,3 +29,8 @@ Config/Signing.local.xcconfig
 .github/*
 !.github/workflows/
 !.github/workflows/**
+.claude/
+
+.mcp.json
+
+CLAUDE.md

@@ -4,8 +4,17 @@ import Foundation
 extension ReaderWindowRootView {
     func applyWindowTitlePresentation() {
         let resolvedTitle = windowCoordinator.resolveWindowTitle(activeFolderWatch: sharedFolderWatchSession)
-        effectiveWindowTitle = resolvedTitle
-        hostWindow?.title = resolvedTitle
+        let mutation = ReaderWindowTitleFormatter.mutation(
+            resolvedTitle: resolvedTitle,
+            currentEffectiveTitle: effectiveWindowTitle,
+            currentHostWindowTitle: hostWindow?.title
+        )
+        if mutation.shouldUpdateEffectiveTitle {
+            effectiveWindowTitle = mutation.effectiveTitle
+        }
+        if mutation.shouldWriteHostWindowTitle {
+            hostWindow?.title = mutation.effectiveTitle
+        }
     }
 
     func enqueueFolderWatchOpen(

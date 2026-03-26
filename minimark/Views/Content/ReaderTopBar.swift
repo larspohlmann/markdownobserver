@@ -192,56 +192,47 @@ struct ReaderTopBar: View {
             activeFolderWatch?.tooltipText ?? "Watch Folder..."
         }
 
+        private var buttonTitle: String {
+            isActive ? "Stop Watching" : "Watch Folder..."
+        }
+
         var body: some View {
-            HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
                 Button {
                     onActivate()
                 } label: {
-                    Image(systemName: "binoculars.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(
-                            width: Metrics.topBarMenuButtonSide,
-                            height: Metrics.topBarMenuButtonSide
-                        )
-                        .background {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(isActive ? highlightColor.opacity(0.18) : Color.primary.opacity(0.09))
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .strokeBorder(
-                                    isActive ? highlightColor.opacity(0.36) : Color.primary.opacity(0.14),
-                                    lineWidth: 1
-                                )
-                        }
-                        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    Label {
+                        Text(buttonTitle)
+                    } icon: {
+                        Image(systemName: "binoculars.fill")
+                            .foregroundStyle(isActive ? .yellow : .secondary)
+                    }
+                    .labelStyle(.titleAndIcon)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(isActive ? highlightColor : .secondary)
+                .controlSize(.small)
+                .tint(isActive ? highlightColor : nil)
                 .help(isActive ? "Stop Watching Folder" : "Watch Folder...")
                 .accessibilityIdentifier("folder-watch-toolbar-button")
                 .accessibilityLabel("Watch folder")
                 .accessibilityValue(isActive ? "Active" : "Inactive")
                 .accessibilityHint(isActive ? "Stops monitoring the current folder" : "Opens the folder picker for starting folder watch")
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(statusText)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(isActive ? highlightColor.opacity(0.9) : .secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: 180, alignment: .leading)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .help(helpText)
-                        .accessibilityHidden(true)
+                Text(statusText)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(isActive ? highlightColor.opacity(0.9) : .secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 280, alignment: .leading)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .help(helpText)
+                    .accessibilityHidden(true)
 
-                    if isInitialScanInProgress {
-                        ProgressView()
-                            .progressViewStyle(.linear)
-                            .frame(width: 140)
-                            .controlSize(.small)
-                            .tint(highlightColor)
-                    }
+                if isInitialScanInProgress {
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .frame(width: 140)
+                        .controlSize(.small)
+                        .tint(highlightColor)
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
@@ -1022,6 +1013,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentFilesMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Opened Files", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
+            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentManuallyOpenedFiles)
 
             if parent.recentManuallyOpenedFiles.isEmpty {
                 let empty = NSMenuItem(title: "No recent manually opened files", action: nil, keyEquivalent: "")
@@ -1030,7 +1022,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
             } else {
                 for entry in parent.recentManuallyOpenedFiles {
                     let recentItem = NSMenuItem(
-                        title: ReaderRecentHistory.menuTitle(for: entry, among: parent.recentManuallyOpenedFiles),
+                        title: titlesByPath[entry.filePath] ?? entry.displayName,
                         action: #selector(openRecentFile(_:)),
                         keyEquivalent: ""
                     )
@@ -1055,6 +1047,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentWatchedFoldersMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Watched Folders", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
+            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentWatchedFolders)
 
             if parent.recentWatchedFolders.isEmpty {
                 let empty = NSMenuItem(title: "No recent watched folders", action: nil, keyEquivalent: "")
@@ -1063,7 +1056,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
             } else {
                 for entry in parent.recentWatchedFolders {
                     let recentItem = NSMenuItem(
-                        title: ReaderRecentHistory.menuTitle(for: entry, among: parent.recentWatchedFolders),
+                        title: titlesByPath[entry.folderPath] ?? entry.displayName,
                         action: #selector(startRecentFolderWatch(_:)),
                         keyEquivalent: ""
                     )
