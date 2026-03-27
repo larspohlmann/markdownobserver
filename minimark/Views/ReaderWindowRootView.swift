@@ -8,7 +8,7 @@ struct ReaderWindowRootView: View {
     }
 
     let seed: ReaderWindowSeed?
-    let settingsStore: ReaderSettingsStore
+    @ObservedObject var settingsStore: ReaderSettingsStore
     let multiFileDisplayMode: ReaderMultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
@@ -280,12 +280,28 @@ struct ReaderWindowRootView: View {
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
             pendingFolderWatchScope: pendingFolderWatchScopeBinding,
             pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPathsBinding,
+            isCurrentWatchAFavorite: isSharedFolderWatchAFavorite,
+            favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
             recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
             recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
             onRequestFolderWatch: prepareFolderWatchOptions,
             onConfirmFolderWatch: confirmFolderWatch,
             onCancelFolderWatch: cancelFolderWatch,
             onStopFolderWatch: stopFolderWatch,
+            onSaveFolderWatchAsFavorite: { name in
+                saveSharedFolderWatchAsFavorite(name: name)
+            },
+            onRemoveCurrentWatchFromFavorites: {
+                removeSharedFolderWatchFromFavorites()
+            },
+            onStartFavoriteWatch: startFavoriteWatch,
+            onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
+            onRenameFavoriteWatchedFolder: { id, newName in
+                settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
+            },
+            onRemoveFavoriteWatchedFolder: { id in
+                settingsStore.removeFavoriteWatchedFolder(id: id)
+            },
             onStartRecentManuallyOpenedFile: { entry in
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
                 openDocumentInCurrentWindow(resolvedURL)

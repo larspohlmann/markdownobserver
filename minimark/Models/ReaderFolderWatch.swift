@@ -176,6 +176,20 @@ nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Senda
         return rows
     }
 
+    nonisolated var excludedSubdirectoryRelativePaths: [String] {
+        guard options.scope == .includeSubfolders else {
+            return []
+        }
+
+        let folderPath = folderURL.path.hasSuffix("/") ? folderURL.path : folderURL.path + "/"
+        return options.excludedSubdirectoryPaths.compactMap { absolutePath in
+            guard absolutePath.hasPrefix(folderPath) else {
+                return nil
+            }
+            return String(absolutePath.dropFirst(folderPath.count))
+        }.sorted()
+    }
+
     nonisolated var tooltipText: String {
         var lines = [
             "Watching folder",

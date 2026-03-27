@@ -11,6 +11,8 @@ struct ReaderTopBar: View {
     let folderWatchHighlightColor: Color
     let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
+    let isCurrentWatchAFavorite: Bool
+    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
@@ -18,6 +20,12 @@ struct ReaderTopBar: View {
     let onOpenFile: (URL) -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
+    let onSaveFolderWatchAsFavorite: (String) -> Void
+    let onRemoveCurrentWatchFromFavorites: () -> Void
+    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+    let onClearFavoriteWatchedFolders: () -> Void
+    let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
+    let onRemoveFavoriteWatchedFolder: (UUID) -> Void
     let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
@@ -71,6 +79,15 @@ struct ReaderTopBar: View {
                 }
                 .layoutPriority(4)
 
+                if activeFolderWatch != nil {
+                    FavoriteStarToggle(
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        folderDisplayName: activeFolderWatch?.detailSummaryTitle ?? "",
+                        onSave: onSaveFolderWatchAsFavorite,
+                        onRemove: onRemoveCurrentWatchFromFavorites
+                    )
+                }
+
                 DocumentContext(readerStore: readerStore)
                     .frame(maxWidth: .infinity)
                     .layoutPriority(0)
@@ -82,6 +99,7 @@ struct ReaderTopBar: View {
                     documentViewMode: documentViewMode,
                     showSourceEditingControls: showSourceEditingControls,
                     apps: readerStore.openInApplications,
+                    favoriteWatchedFolders: favoriteWatchedFolders,
                     recentWatchedFolders: recentWatchedFolders,
                     recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                     iconProvider: appIconImage(for:),
@@ -98,6 +116,10 @@ struct ReaderTopBar: View {
                     },
                     onRequestFolderWatch: onRequestFolderWatch,
                     onStopFolderWatch: onStopFolderWatch,
+                    onStartFavoriteWatch: onStartFavoriteWatch,
+                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+                    onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
+                    onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
                     onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                     onStartRecentFolderWatch: onStartRecentFolderWatch,
                     onClearRecentWatchedFolders: onClearRecentWatchedFolders,
@@ -406,6 +428,48 @@ struct ReaderTopBar: View {
         }
     }
 
+    private struct FavoriteStarToggle: View {
+        let isCurrentWatchAFavorite: Bool
+        let folderDisplayName: String
+        let onSave: (String) -> Void
+        let onRemove: () -> Void
+
+        @State private var isShowingSaveSheet = false
+        @State private var favoriteName = ""
+
+        var body: some View {
+            Button {
+                if isCurrentWatchAFavorite {
+                    onRemove()
+                } else {
+                    favoriteName = folderDisplayName
+                    isShowingSaveSheet = true
+                }
+            } label: {
+                Image(systemName: isCurrentWatchAFavorite ? "star.fill" : "star")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(isCurrentWatchAFavorite ? .yellow : .secondary)
+                    .frame(width: Metrics.changeNavigationButtonSide, height: Metrics.changeNavigationButtonSide)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(isCurrentWatchAFavorite ? "Remove from favorites" : "Save as favorite")
+            .accessibilityLabel(isCurrentWatchAFavorite ? "Remove from favorites" : "Save as favorite")
+            .sheet(isPresented: $isShowingSaveSheet) {
+                SaveFavoriteSheet(
+                    name: $favoriteName,
+                    onSave: { name in
+                        onSave(name)
+                        isShowingSaveSheet = false
+                    },
+                    onCancel: {
+                        isShowingSaveSheet = false
+                    }
+                )
+            }
+        }
+    }
+
     fileprivate struct LastExternalChangeText: View {
         let changedAt: Date
 
@@ -424,10 +488,14 @@ struct ReaderTopBar: View {
 
     fileprivate struct FolderWatchStatusChip: View {
         let activeFolderWatch: ReaderFolderWatchSession
+        let isCurrentWatchAFavorite: Bool
         let canStopFolderWatch: Bool
         let onStopFolderWatch: () -> Void
+        let onSaveFolderWatchAsFavorite: (String) -> Void
 
         @State private var isShowingDetails = false
+        @State private var isShowingSaveSheet = false
+        @State private var favoriteName = ""
 
         var body: some View {
             HStack(spacing: Metrics.chipInnerSpacing) {
@@ -450,7 +518,19 @@ struct ReaderTopBar: View {
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
-                    FolderWatchDetailsPopover(activeFolderWatch: activeFolderWatch)
+                    FolderWatchDetailsPopover(
+                        activeFolderWatch: activeFolderWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
+                    )
+                }
+                .contextMenu {
+                    if !isCurrentWatchAFavorite {
+                        Button("Save as Favorite") {
+                            favoriteName = activeFolderWatch.detailSummaryTitle
+                            isShowingSaveSheet = true
+                        }
+                    }
                 }
                 .help(activeFolderWatch.tooltipText)
                 .accessibilityLabel("Folder watch details")
@@ -485,6 +565,18 @@ struct ReaderTopBar: View {
             }
             .fixedSize(horizontal: true, vertical: true)
             .accessibilityElement(children: .contain)
+            .sheet(isPresented: $isShowingSaveSheet) {
+                SaveFavoriteSheet(
+                    name: $favoriteName,
+                    onSave: { name in
+                        onSaveFolderWatchAsFavorite(name)
+                        isShowingSaveSheet = false
+                    },
+                    onCancel: {
+                        isShowingSaveSheet = false
+                    }
+                )
+            }
         }
     }
 
@@ -495,6 +587,7 @@ struct ReaderTopBar: View {
         let documentViewMode: ReaderDocumentViewMode
         let showSourceEditingControls: Bool
         let apps: [ReaderExternalApplication]
+        let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
         let recentWatchedFolders: [ReaderRecentWatchedFolder]
         let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
         let iconProvider: (ReaderExternalApplication) -> NSImage?
@@ -507,10 +600,16 @@ struct ReaderTopBar: View {
         let onRevealInFinder: () -> Void
         let onRequestFolderWatch: (URL) -> Void
         let onStopFolderWatch: () -> Void
+        let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+        let onClearFavoriteWatchedFolders: () -> Void
+        let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
+        let onRemoveFavoriteWatchedFolder: (UUID) -> Void
         let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
         let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
         let onClearRecentWatchedFolders: () -> Void
         let onClearRecentManuallyOpenedFiles: () -> Void
+
+        @State private var isEditingFavorites = false
 
         var body: some View {
             HStack(spacing: 8) {
@@ -531,6 +630,7 @@ struct ReaderTopBar: View {
                     hasFile: hasFile,
                     hasActiveFolderWatch: hasActiveFolderWatch,
                     apps: apps,
+                    favoriteWatchedFolders: favoriteWatchedFolders,
                     recentWatchedFolders: recentWatchedFolders,
                     recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                     iconProvider: iconProvider,
@@ -539,6 +639,9 @@ struct ReaderTopBar: View {
                     onRevealInFinder: onRevealInFinder,
                     onRequestFolderWatch: onRequestFolderWatch,
                     onStopFolderWatch: onStopFolderWatch,
+                    onStartFavoriteWatch: onStartFavoriteWatch,
+                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+                    onEditFavoriteWatchedFolders: { isEditingFavorites = true },
                     onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                     onStartRecentFolderWatch: onStartRecentFolderWatch,
                     onClearRecentWatchedFolders: onClearRecentWatchedFolders,
@@ -548,6 +651,14 @@ struct ReaderTopBar: View {
                 .accessibilityHint("Open a file, choose an app, reveal in Finder, or manage folder watch")
                 .frame(width: Metrics.topBarMenuButtonSide, height: Metrics.topBarMenuButtonSide)
                 .fixedSize()
+            }
+            .sheet(isPresented: $isEditingFavorites) {
+                EditFavoritesSheet(
+                    favorites: favoriteWatchedFolders,
+                    onRename: onRenameFavoriteWatchedFolder,
+                    onDelete: onRemoveFavoriteWatchedFolder,
+                    onDismiss: { isEditingFavorites = false }
+                )
             }
         }
     }
@@ -813,6 +924,11 @@ struct ReaderTopBar: View {
 
 struct FolderWatchDetailsPopover: View {
     let activeFolderWatch: ReaderFolderWatchSession
+    var isCurrentWatchAFavorite: Bool = false
+    var onSaveFolderWatchAsFavorite: ((String) -> Void)?
+
+    @State private var isShowingSaveSheet = false
+    @State private var favoriteName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -834,6 +950,12 @@ struct FolderWatchDetailsPopover: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                }
+
+                Spacer()
+
+                if onSaveFolderWatchAsFavorite != nil {
+                    favoriteStarButton
                 }
             }
 
@@ -867,9 +989,129 @@ struct FolderWatchDetailsPopover: View {
                     }
                 }
             }
+
+            if !activeFolderWatch.excludedSubdirectoryRelativePaths.isEmpty {
+                ExcludedSubdirectoriesSection(
+                    relativePaths: activeFolderWatch.excludedSubdirectoryRelativePaths
+                )
+            }
         }
         .padding(16)
         .frame(width: 320, alignment: .leading)
+        .sheet(isPresented: $isShowingSaveSheet) {
+            SaveFavoriteSheet(
+                name: $favoriteName,
+                onSave: { name in
+                    onSaveFolderWatchAsFavorite?(name)
+                    isShowingSaveSheet = false
+                },
+                onCancel: {
+                    isShowingSaveSheet = false
+                }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var favoriteStarButton: some View {
+        if isCurrentWatchAFavorite {
+            Image(systemName: "star.fill")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.yellow)
+                .help("This watch configuration is saved as a favorite")
+                .accessibilityLabel("Favorite saved")
+        } else {
+            Button {
+                favoriteName = activeFolderWatch.detailSummaryTitle
+                isShowingSaveSheet = true
+            } label: {
+                Image(systemName: "star")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Save as favorite")
+            .accessibilityLabel("Save as favorite")
+        }
+    }
+}
+
+struct SaveFavoriteSheet: View {
+    @Binding var name: String
+    let onSave: (String) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Save as Favorite")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+
+            TextField("Name", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit {
+                    guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                    onSave(name.trimmingCharacters(in: .whitespaces))
+                }
+
+            HStack(spacing: 12) {
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+
+                Button("Save") {
+                    onSave(name.trimmingCharacters(in: .whitespaces))
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 280)
+    }
+}
+
+private struct ExcludedSubdirectoriesSection: View {
+    let relativePaths: [String]
+
+    private static let collapsedLimit = 10
+
+    @State private var isExpanded = false
+
+    private var visiblePaths: [String] {
+        if isExpanded || relativePaths.count <= Self.collapsedLimit {
+            return relativePaths
+        }
+        return Array(relativePaths.prefix(Self.collapsedLimit))
+    }
+
+    private var hasMore: Bool {
+        !isExpanded && relativePaths.count > Self.collapsedLimit
+    }
+
+    var body: some View {
+        Divider()
+
+        DisclosureGroup("Filtered subdirectories") {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(visiblePaths, id: \.self) { path in
+                    Text(path)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                if hasMore {
+                    Button("and \(relativePaths.count - Self.collapsedLimit) more...") {
+                        isExpanded = true
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.tint)
+                }
+            }
+        }
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.secondary)
     }
 }
 
@@ -877,6 +1119,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
     let hasFile: Bool
     let hasActiveFolderWatch: Bool
     let apps: [ReaderExternalApplication]
+    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
@@ -885,6 +1128,9 @@ private struct OpenInMenuButton: NSViewRepresentable {
     let onRevealInFinder: () -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
+    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+    let onClearFavoriteWatchedFolders: () -> Void
+    let onEditFavoriteWatchedFolders: () -> Void
     let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
@@ -996,6 +1242,8 @@ private struct OpenInMenuButton: NSViewRepresentable {
             watchFolder.target = self
             menu.addItem(watchFolder)
 
+            menu.addItem(makeFavoriteWatchedFoldersMenuItem())
+
             menu.addItem(makeRecentWatchedFoldersMenuItem())
 
             let stopWatching = NSMenuItem(title: "Stop Watching Folder", action: #selector(stopWatchingFolder), keyEquivalent: "")
@@ -1038,6 +1286,50 @@ private struct OpenInMenuButton: NSViewRepresentable {
             let clearItem = NSMenuItem(title: "Clear History", action: #selector(clearRecentFiles), keyEquivalent: "")
             clearItem.target = self
             clearItem.isEnabled = !parent.recentManuallyOpenedFiles.isEmpty
+            submenu.addItem(clearItem)
+
+            item.submenu = submenu
+            return item
+        }
+
+        private func makeFavoriteWatchedFoldersMenuItem() -> NSMenuItem {
+            let item = NSMenuItem(title: "Favorite Watched Folders", action: nil, keyEquivalent: "")
+            let submenu = NSMenu(title: item.title)
+
+            if parent.favoriteWatchedFolders.isEmpty {
+                let empty = NSMenuItem(title: "No favorite watched folders", action: nil, keyEquivalent: "")
+                empty.isEnabled = false
+                submenu.addItem(empty)
+            } else {
+                for entry in parent.favoriteWatchedFolders {
+                    let favoriteItem = NSMenuItem(
+                        title: entry.name,
+                        action: #selector(startFavoriteWatch(_:)),
+                        keyEquivalent: ""
+                    )
+                    favoriteItem.target = self
+                    favoriteItem.representedObject = entry.id.uuidString
+                    favoriteItem.image = NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Favorite")
+                    favoriteItem.image?.isTemplate = true
+                    favoriteItem.toolTip = [
+                        entry.pathText,
+                        "When watch starts: \(entry.options.openMode.label)",
+                        "Scope: \(entry.options.scope.label)"
+                    ].joined(separator: "\n")
+                    submenu.addItem(favoriteItem)
+                }
+
+                submenu.addItem(.separator())
+            }
+
+            let editItem = NSMenuItem(title: "Edit Favorites\u{2026}", action: #selector(editFavoriteWatchedFolders), keyEquivalent: "")
+            editItem.target = self
+            editItem.isEnabled = !parent.favoriteWatchedFolders.isEmpty
+            submenu.addItem(editItem)
+
+            let clearItem = NSMenuItem(title: "Clear Favorites", action: #selector(clearFavoriteWatchedFolders), keyEquivalent: "")
+            clearItem.target = self
+            clearItem.isEnabled = !parent.favoriteWatchedFolders.isEmpty
             submenu.addItem(clearItem)
 
             item.submenu = submenu
@@ -1133,6 +1425,24 @@ private struct OpenInMenuButton: NSViewRepresentable {
 
         @objc private func clearRecentFiles() {
             parent.onClearRecentManuallyOpenedFiles()
+        }
+
+        @objc private func startFavoriteWatch(_ sender: NSMenuItem) {
+            guard let idString = sender.representedObject as? String,
+                  let id = UUID(uuidString: idString),
+                  let entry = parent.favoriteWatchedFolders.first(where: { $0.id == id }) else {
+                return
+            }
+
+            parent.onStartFavoriteWatch(entry)
+        }
+
+        @objc private func editFavoriteWatchedFolders() {
+            parent.onEditFavoriteWatchedFolders()
+        }
+
+        @objc private func clearFavoriteWatchedFolders() {
+            parent.onClearFavoriteWatchedFolders()
         }
 
         @objc private func clearRecentWatchedFolders() {
