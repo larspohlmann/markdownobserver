@@ -4,6 +4,8 @@ A native macOS Markdown reader focused on fast preview, practical workspace work
 
 [![Download on the App Store](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/app/id6760550501)
 
+**Website:** [lars-pohlmann.de/markdownwatcher](https://lars-pohlmann.de/markdownwatcher/)
+
 ## Install
 
 - App Store: https://apps.apple.com/app/id6760550501

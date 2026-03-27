@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lars-pohlmann.de/markdownwatcher/sitemap.xml
