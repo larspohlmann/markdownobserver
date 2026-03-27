@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarkdownObserver — Native macOS Markdown Reader with Folder Watching & Change Tracking</title>
+    <meta name="description" content="MarkdownObserver is a native macOS app for previewing Markdown files with live folder watching, change tracking, and syntax highlighting. Works alongside AI coding agents like Claude Code and Cursor. Open source, MIT licensed.">
+    <meta name="keywords" content="markdown reader, macOS markdown viewer, markdown preview, folder watching, change tracking, syntax highlighting, AI agent markdown, Claude Code, open source markdown app, SwiftUI">
+    <link rel="canonical" href="https://lars-pohlmann.de/markdownwatcher/">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Lars Pohlmann">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="MarkdownObserver — Native macOS Markdown Reader">
+    <meta property="og:description" content="Preview Markdown files, watch folders for changes, track diffs. Works alongside AI coding agents. Open source.">
+    <meta property="og:image" content="https://lars-pohlmann.de/markdownwatcher/assets/screenshot_0020.png">
+    <meta property="og:image:width" content="1440">
+    <meta property="og:image:height" content="900">
+    <meta property="og:image:alt" content="MarkdownObserver showing rendered Markdown alongside source view on macOS">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lars-pohlmann.de/markdownwatcher/">
+    <meta property="og:site_name" content="MarkdownObserver">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MarkdownObserver — Native macOS Markdown Reader">
+    <meta name="twitter:description" content="Preview Markdown files, watch folders for changes, track diffs. Works alongside AI coding agents.">
+    <meta name="twitter:image" content="https://lars-pohlmann.de/markdownwatcher/assets/screenshot_0020.png">
+    <meta name="twitter:image:alt" content="MarkdownObserver showing rendered Markdown alongside source view on macOS">
+
+    <link rel="icon" type="image/png" sizes="256x256" href="assets/appicon-256.png">
+    <link rel="apple-touch-icon" href="assets/appicon-256.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================
+           Reset & Custom Properties
+           ============================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #141414;
+            --bg-warm: #1C1C1C;
+            --surface: #1E1E1E;
+            --text: #EAEAEA;
+            --text-secondary: #999;
+            --accent: #D4973F;
+            --accent-hover: #E8AB52;
+            --green: #3DA57A;
+            --green-hover: #4EBF8E;
+            --border: #2A2A2A;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.2), 0 12px 24px rgba(0,0,0,0.3);
+            --shadow-lg: 0 4px 8px rgba(0,0,0,0.2), 0 12px 24px rgba(0,0,0,0.3), 0 24px 48px rgba(0,0,0,0.4);
+            --radius: 12px;
+            --font-display: 'DM Sans', system-ui, -apple-system, sans-serif;
+            --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+            --max-width: 1200px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-body);
+            font-size: 15px;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ============================================
+           Typography — modular scale (1.25 ratio)
+           15 → 18 → 22 → 28 → 36
+           ============================================ */
+        h1 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            line-height: 1.08;
+            letter-spacing: -0.035em;
+        }
+        h2 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.025em;
+        }
+        h3 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        a:hover { color: var(--accent-hover); }
+
+        img { display: block; max-width: 100%; height: auto; }
+
+        /* ============================================
+           Navigation
+           ============================================ */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            background: rgba(20, 20, 20, 0.82);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            border-radius: 7px;
+        }
+        .nav-brand span {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+        .nav-links a {
+            color: var(--text-secondary);
+            font-size: 0.8667rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #EAEAEA;
+            color: #141414 !important;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .nav-cta:hover { background: #fff; color: #141414 !important; }
+        .nav-cta svg { flex-shrink: 0; }
+
+        /* ============================================
+           Hero
+           ============================================ */
+        .hero {
+            text-align: center;
+            padding: 64px 24px 0;
+        }
+        .hero-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            margin: 0 auto 20px;
+        }
+        .hero h1 {
+            font-size: clamp(2.25rem, 4.5vw, 3rem);
+            margin-bottom: 10px;
+        }
+        .hero-tagline {
+            font-family: var(--font-body);
+            font-weight: 400;
+            font-size: clamp(1rem, 1.8vw, 1.133rem);
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+        .hero-description {
+            max-width: 500px;
+            margin: 0 auto 28px;
+            color: var(--text-secondary);
+            font-size: 0.933rem;
+            line-height: 1.65;
+        }
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 48px;
+        }
+        .app-store-badge {
+            height: 40px;
+            transition: opacity 0.2s;
+        }
+        .app-store-badge:hover { opacity: 0.85; }
+        .btn-github {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-weight: 500;
+            font-size: 0.867rem;
+            background: var(--surface);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .btn-github:hover {
+            border-color: #444;
+            box-shadow: var(--shadow-sm);
+            color: var(--text);
+        }
+        .btn-github svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .hero-screenshot {
+            max-width: 1000px;
+            margin: 0 auto;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .hero-screenshot img { width: 100%; display: block; }
+
+        /* ============================================
+           Sections (shared)
+           ============================================ */
+        section {
+            padding: 72px 24px;
+        }
+        .section-title {
+            font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            max-width: 480px;
+            margin: 0 auto 40px;
+            font-size: 0.867rem;
+        }
+
+        /* ============================================
+           AI Agent Callout
+           ============================================ */
+        .callout-section {
+            padding: 56px 24px;
+            background: var(--bg-warm);
+        }
+        .callout-inner {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .callout-inner h2 {
+            font-size: clamp(1.2rem, 2vw, 1.4rem);
+            margin-bottom: 12px;
+        }
+        .callout-inner p {
+            color: var(--text-secondary);
+            font-size: 0.933rem;
+            line-height: 1.6;
+        }
+
+        /* ============================================
+           Video
+           ============================================ */
+        .video-section {
+            padding-top: 56px;
+        }
+        .video-section .section-title {
+            margin-bottom: 24px;
+        }
+        .video-container {
+            max-width: 880px;
+            margin: 0 auto;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            background: #000;
+        }
+        .video-container video {
+            width: 100%;
+            display: block;
+        }
+
+        /* ============================================
+           Features Grid
+           ============================================ */
+        .features-section {
+            background: var(--bg);
+        }
+        .features-grid {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .feature-icon {
+            width: 36px;
+            height: 36px;
+            margin-bottom: 14px;
+            color: var(--accent);
+        }
+        .feature-card h3 {
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.833rem;
+            line-height: 1.55;
+        }
+
+        /* ============================================
+           Screenshot Gallery
+           ============================================ */
+        .gallery-section {
+            padding-left: 0;
+            padding-right: 0;
+            overflow: hidden;
+        }
+        .gallery-section .section-title {
+            padding: 0 24px;
+        }
+        .gallery-section .section-subtitle {
+            padding: 0 24px;
+        }
+        .gallery-scroll {
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 8px max(24px, calc((100vw - 900px) / 2)) 24px;
+        }
+        .gallery-scroll::-webkit-scrollbar { display: none; }
+        .gallery-item {
+            flex: 0 0 auto;
+            width: min(82vw, 860px);
+            scroll-snap-align: center;
+        }
+        .gallery-item img {
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+        }
+        .gallery-caption {
+            text-align: center;
+            margin-top: 10px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* ============================================
+           Open Source
+           ============================================ */
+        .oss-section {
+            background: linear-gradient(160deg, #1A1A1A 0%, #222 100%);
+        }
+        .oss-inner {
+            max-width: 680px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .oss-inner .section-title {
+            margin-bottom: 16px;
+        }
+        .oss-description {
+            color: var(--text-secondary);
+            font-size: 0.933rem;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+        .oss-code {
+            background: #0D0D0D;
+            color: #B0B0B0;
+            border-radius: 10px;
+            padding: 20px 24px;
+            text-align: left;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.8;
+            white-space: pre;
+            overflow-x: auto;
+            margin-bottom: 32px;
+        }
+        .oss-code .comment { color: #6B6560; }
+        .btn-green {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--green);
+            color: #fff !important;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.867rem;
+            transition: background 0.2s;
+        }
+        .btn-green:hover { background: var(--green-hover); color: #fff !important; }
+        .btn-green svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+        /* ============================================
+           Footer
+           ============================================ */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 48px 24px 40px;
+            text-align: center;
+        }
+        .footer-links {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+            list-style: none;
+        }
+        .footer-links a {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .footer-links a:hover { color: var(--text); }
+        .footer-copy {
+            color: var(--text-secondary);
+            font-size: 0.733rem;
+            opacity: 0.6;
+        }
+
+        /* ============================================
+           Scroll Animations
+           ============================================ */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ============================================
+           Responsive — Tablet
+           ============================================ */
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* ============================================
+           Responsive — Small Tablet / Large Phone
+           ============================================ */
+        @media (max-width: 768px) {
+            .hero { padding: 48px 20px 0; }
+            .hero-icon { width: 60px; height: 60px; border-radius: 14px; }
+            .hero-actions { margin-bottom: 36px; }
+
+            section { padding: 56px 20px; }
+            .callout-section { padding: 44px 20px; }
+            .video-section { padding-top: 44px; }
+
+            .gallery-item { width: 88vw; }
+            .gallery-scroll { gap: 16px; }
+        }
+
+        @media (max-width: 640px) {
+            .nav-link-hide { display: none; }
+            .nav-links { gap: 16px; }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .feature-card:hover {
+                transform: none;
+            }
+        }
+
+        /* ============================================
+           Responsive — Phone
+           ============================================ */
+        @media (max-width: 480px) {
+            .nav-inner { padding: 0 16px; height: 48px; }
+            .nav-brand span { font-size: 0.933rem; }
+            .nav-cta { padding: 6px 12px; font-size: 0.8rem; }
+
+            .hero { padding: 36px 16px 0; }
+            .hero h1 { font-size: 1.85rem; }
+            .hero-tagline { font-size: 0.933rem; }
+            .hero-description { font-size: 0.867rem; margin-bottom: 24px; }
+            .hero-actions { margin-bottom: 28px; gap: 10px; }
+            .hero-actions .app-store-badge { height: 36px; }
+            .btn-github { padding: 7px 14px; font-size: 0.8rem; }
+
+            section { padding: 44px 16px; }
+            .callout-section { padding: 36px 16px; }
+            .callout-inner h2 { font-size: 1.15rem; }
+            .callout-inner p { font-size: 0.867rem; }
+            .video-section { padding-top: 36px; }
+
+            .section-title { font-size: 1.25rem; }
+            .section-subtitle { margin-bottom: 28px; }
+
+            .feature-card { padding: 20px; }
+            .feature-card p { font-size: 0.8rem; }
+
+            .gallery-item { width: 92vw; }
+
+            .oss-description { font-size: 0.867rem; }
+
+            .footer-links { gap: 16px; }
+            .footer-links a { font-size: 0.733rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==========================================
+         Navigation
+         ========================================== -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#" class="nav-brand">
+                <img src="assets/appicon-256.png" alt="MarkdownObserver icon" width="32" height="32">
+                <span>MarkdownObserver</span>
+            </a>
+            <ul class="nav-links">
+                <li class="nav-link-hide"><a href="#features">Features</a></li>
+                <li class="nav-link-hide"><a href="#screenshots">Screenshots</a></li>
+                <li class="nav-link-hide"><a href="https://github.com/larspohlmann/markdownobserver" target="_blank" rel="noopener">GitHub</a></li>
+                <li><a href="https://apps.apple.com/app/id6760550501" target="_blank" rel="noopener" class="nav-cta">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    App Store
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+    <!-- ==========================================
+         Hero
+         ========================================== -->
+    <section class="hero">
+        <img src="assets/appicon-256.png" alt="MarkdownObserver" class="hero-icon fade-in" width="80" height="80">
+        <h1 class="fade-in">MarkdownObserver</h1>
+        <p class="hero-tagline fade-in">A native macOS Markdown reader.</p>
+        <p class="hero-description fade-in">
+            Preview Markdown files, watch folders for changes, and see diffs —
+            useful when AI agents write Markdown you need to review, or when
+            you want a live preview alongside your editor.
+        </p>
+        <div class="hero-actions fade-in">
+            <a href="https://apps.apple.com/app/id6760550501" target="_blank" rel="noopener">
+                <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" class="app-store-badge" height="44">
+            </a>
+            <a href="https://github.com/larspohlmann/markdownobserver" target="_blank" rel="noopener" class="btn-github">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.1-.4-.6-1.6.1-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.2.9 2.3v3.4c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
+                View on GitHub
+            </a>
+        </div>
+        <div class="hero-screenshot fade-in">
+            <img src="assets/screenshot_0020.png" alt="MarkdownObserver macOS app showing rendered Markdown preview alongside syntax-highlighted source view" width="1440" height="900">
+        </div>
+    </section>
+
+    <!-- ==========================================
+         AI Agent Callout
+         ========================================== -->
+    <section class="callout-section">
+        <div class="callout-inner fade-in">
+            <h2>Works well with AI agents.</h2>
+            <p>
+                Point MarkdownObserver at your project folder. When Claude Code, Cursor,
+                or any other tool writes a Markdown file, the rendered preview updates
+                automatically. Change tracking shows you exactly what was added or
+                modified — no manual refresh, no switching windows.
+            </p>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         Video
+         ========================================== -->
+    <section class="video-section" id="video">
+        <h2 class="section-title fade-in">See it in action</h2>
+        <div class="video-container fade-in">
+            <video controls preload="metadata" playsinline>
+                <source src="assets/capture.mp4" type="video/mp4">
+            </video>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         Features
+         ========================================== -->
+    <section class="features-section" id="features">
+        <h2 class="section-title fade-in">What it does</h2>
+        <p class="section-subtitle fade-in">Built with SwiftUI.</p>
+        <div class="features-grid">
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="4" width="28" height="32" rx="3"/>
+                    <path d="M14 12h4l-2-3-2 3zM20 12h6"/>
+                    <path d="M14 18h12" opacity="0.5"/>
+                    <path d="M14 23h10" opacity="0.5"/>
+                    <path d="M14 28h8" opacity="0.5"/>
+                </svg>
+                <h3>Markdown Rendering</h3>
+                <p>Renders Markdown in a WKWebView with syntax highlighting. Supports fenced code blocks, task lists, footnotes, definition lists, and custom attributes. Theme changes inject CSS without reloading.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 14c0-2 1-3 3-3h8l3 3h12c2 0 3 1 3 3v12c0 2-1 3-3 3H7c-2 0-3-1-3-3z"/>
+                    <circle cx="20" cy="23" r="5"/>
+                    <circle cx="20" cy="23" r="2"/>
+                </svg>
+                <h3>File & Folder Watching</h3>
+                <p>Point it at a folder and every Markdown file is tracked. When an AI agent — Claude Code, Cursor, Copilot — writes or updates a <code>.md</code> file, the change is picked up within seconds. kqueue with polling fallback, handles rename-over-write.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="4" width="28" height="32" rx="3"/>
+                    <path d="M14 14h12" opacity="0.3"/>
+                    <path d="M14 20h12" stroke="#2D7D5F" stroke-width="2.2"/>
+                    <path d="M14 26h8" stroke="#C4863A" stroke-width="2.2"/>
+                    <circle cx="10" cy="20" r="1.8" fill="#2D7D5F" stroke="none"/>
+                    <circle cx="10" cy="26" r="1.8" fill="#C4863A" stroke="none"/>
+                </svg>
+                <h3>Change Tracking</h3>
+                <p>Line-level LCS diff via the Differ library with token-level inline comparison. Gutter markers for added, edited, and deleted regions. Expandable before/after panels.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="14" cy="16" r="7" fill="#C4863A" fill-opacity="0.12" stroke="#C4863A"/>
+                    <circle cx="26" cy="16" r="7" fill="#2D7D5F" fill-opacity="0.12" stroke="#2D7D5F"/>
+                    <circle cx="20" cy="26" r="7" fill="#6B6560" fill-opacity="0.12" stroke="#6B6560"/>
+                </svg>
+                <h3>12 Syntax Themes</h3>
+                <p>Monokai, GitHub, Dracula, Nord, Gruvbox, Solarized, One Light/Dark, Xcode, and more. Four reader themes. Font size 10–48 pt, adjustable with &#8984;+/&#8984;&minus;.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="6" width="32" height="28" rx="3"/>
+                    <line x1="20" y1="6" x2="20" y2="34"/>
+                    <path d="M9 14h6M9 19h4M9 24h5" opacity="0.6"/>
+                    <path d="M25 14h6M25 19h4M25 24h6" opacity="0.6"/>
+                </svg>
+                <h3>Source View</h3>
+                <p>CodeMirror-powered read-only source view with syntax highlighting. Inline editing with live preview (5&nbsp;ms debounce). Bidirectional scroll sync between panes.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="6" width="32" height="28" rx="3"/>
+                    <line x1="15" y1="6" x2="15" y2="34"/>
+                    <rect x="4" y="6" width="11" height="28" rx="3" fill="currentColor" fill-opacity="0.06" stroke="none"/>
+                    <path d="M7.5 14h4M7.5 19h4M7.5 24h4" stroke-width="1.5" opacity="0.45"/>
+                    <path d="M20 14h11M20 19h9M20 24h7" opacity="0.35"/>
+                </svg>
+                <h3>Multi-Document Workspace</h3>
+                <p>Sidebar with five sort modes, batch operations, context menus. Open in default app, reveal in Finder. Folder watch sessions shared across all documents in a window.</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==========================================
+         Screenshot Gallery
+         ========================================== -->
+    <section class="gallery-section" id="screenshots">
+        <h2 class="section-title fade-in">Screenshots</h2>
+        <div class="gallery-scroll">
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_0013.png" alt="MarkdownObserver dark theme with syntax-highlighted code blocks on macOS" width="1440" height="900" loading="lazy">
+                <p class="gallery-caption">Dark theme with syntax highlighting</p>
+            </div>
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_0022.png" alt="MarkdownObserver change tracking showing diff gutter markers for added and edited lines" width="1440" height="900" loading="lazy">
+                <p class="gallery-caption">Change tracking with gutter markers</p>
+            </div>
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_0017.png" alt="MarkdownObserver settings panel for themes, typography, and notification preferences" width="1440" height="900" loading="lazy">
+                <p class="gallery-caption">Settings: themes, typography, notifications</p>
+            </div>
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_0014.png" alt="MarkdownObserver folder watch configuration dialog for monitoring Markdown files" width="1440" height="900" loading="lazy">
+                <p class="gallery-caption">Folder watch configuration</p>
+            </div>
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_0018.png" alt="MarkdownObserver with alternative syntax highlighting color theme on macOS" width="1440" height="900" loading="lazy">
+                <p class="gallery-caption">Alternative syntax theme</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         Open Source
+         ========================================== -->
+    <section class="oss-section" id="source">
+        <div class="oss-inner">
+            <h2 class="section-title fade-in">Open source, MIT licensed.</h2>
+            <p class="oss-description fade-in">
+                Built with Swift and SwiftUI.<br>
+                Rendering runs entirely local — no network calls, no telemetry.
+            </p>
+            <a href="https://github.com/larspohlmann/markdownobserver" target="_blank" rel="noopener" class="btn-green fade-in">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.1-.4-.6-1.6.1-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.2.9 2.3v3.4c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
+                View on GitHub
+            </a>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- ==========================================
+         Footer
+         ========================================== -->
+    <footer>
+        <ul class="footer-links">
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="https://lars-pohlmann.de/imprint.html" target="_blank" rel="noopener">Imprint</a></li>
+            <li><a href="https://lars-pohlmann.de" target="_blank" rel="noopener">lars-pohlmann.de</a></li>
+            <li><a href="https://github.com/larspohlmann/markdownobserver" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://apps.apple.com/app/id6760550501" target="_blank" rel="noopener">App Store</a></li>
+        </ul>
+        <p class="footer-copy">&copy; 2026 Lars Pohlmann</p>
+    </footer>
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MarkdownObserver",
+        "operatingSystem": "macOS",
+        "applicationCategory": "DeveloperApplication",
+        "description": "A native macOS Markdown reader with live folder watching, change tracking, and syntax highlighting. Works alongside AI coding agents.",
+        "url": "https://lars-pohlmann.de/markdownwatcher/",
+        "downloadUrl": "https://apps.apple.com/app/id6760550501",
+        "screenshot": "https://lars-pohlmann.de/markdownwatcher/assets/screenshot_0020.png",
+        "softwareVersion": "1.0.4",
+        "author": {
+            "@type": "Person",
+            "name": "Lars Pohlmann",
+            "url": "https://lars-pohlmann.de"
+        },
+        "license": "https://opensource.org/licenses/MIT",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
+        },
+        "featureList": [
+            "Live Markdown preview",
+            "File and folder watching",
+            "Change tracking with diff view",
+            "12 syntax highlighting themes",
+            "Source view with CodeMirror",
+            "Multi-document workspace",
+            "Works with AI coding agents"
+        ]
+    }
+    </script>
+
+    <!-- ==========================================
+         Scripts
+         ========================================== -->
+    <script>
+        // Scroll-triggered fade-in
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        // Stagger feature cards
+        document.querySelectorAll('.features-grid .fade-in').forEach((el, i) => {
+            el.style.transitionDelay = `${i * 80}ms`;
+        });
+
+        // Stagger gallery items
+        document.querySelectorAll('.gallery-scroll .fade-in').forEach((el, i) => {
+            el.style.transitionDelay = `${i * 100}ms`;
+        });
+
+        // Observe all fade-in elements
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', e => {
+                const id = link.getAttribute('href');
+                if (id === '#') return;
+                const target = document.querySelector(id);
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

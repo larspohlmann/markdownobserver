@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — MarkdownObserver</title>
+    <meta name="description" content="Privacy policy for MarkdownObserver, a native macOS Markdown reader. No data collection, no tracking, no telemetry.">
+    <link rel="canonical" href="https://lars-pohlmann.de/markdownwatcher/privacy-policy.html">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/png" sizes="256x256" href="assets/appicon-256.png">
+    <link rel="apple-touch-icon" href="assets/appicon-256.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #141414;
+            --bg-warm: #1C1C1C;
+            --surface: #1E1E1E;
+            --text: #EAEAEA;
+            --text-secondary: #999;
+            --accent: #D4973F;
+            --accent-hover: #E8AB52;
+            --border: #2A2A2A;
+            --font-display: 'DM Sans', system-ui, -apple-system, sans-serif;
+            --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+
+        h1, h2 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+        }
+
+        a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+        a:hover { color: var(--accent-hover); }
+
+        /* Navigation */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            background: rgba(20, 20, 20, 0.82);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            border-radius: 7px;
+            display: block;
+        }
+        .nav-brand span {
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        .nav-back {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .nav-back:hover { color: var(--text); }
+
+        /* Content */
+        .content {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 64px 24px 80px;
+        }
+
+        .content h1 {
+            font-size: clamp(1.75rem, 3vw, 2.25rem);
+            margin-bottom: 8px;
+        }
+
+        .updated {
+            margin: 0 0 40px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .content section + section {
+            margin-top: 32px;
+        }
+
+        .content h2 {
+            font-size: 1.35rem;
+            margin-bottom: 8px;
+        }
+
+        .content p {
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .footer-links {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            list-style: none;
+        }
+        .footer-links a {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .footer-links a:hover { color: var(--text); }
+        .footer-copy {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 480px) {
+            .nav-inner { padding: 0 16px; height: 48px; }
+            .nav-brand span { font-size: 1rem; }
+            .content { padding: 40px 16px 64px; }
+            .content h1 { font-size: 1.5rem; }
+            .footer-links { gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-brand">
+                <img src="assets/appicon-256.png" alt="MarkdownObserver icon" width="32" height="32">
+                <span>MarkdownObserver</span>
+            </a>
+            <a href="index.html" class="nav-back">&larr; Back</a>
+        </div>
+    </nav>
+
+    <main class="content">
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: March 27, 2026</p>
+
+        <section>
+            <h2>Overview</h2>
+            <p>
+                MarkdownObserver is a local-first macOS app for viewing and monitoring Markdown files.
+                We are committed to protecting your privacy.
+            </p>
+        </section>
+
+        <section>
+            <h2>Information We Collect</h2>
+            <p>
+                MarkdownObserver does not collect, transmit, sell, or share personal data.
+                Your files stay on your device unless you choose to store them elsewhere.
+            </p>
+        </section>
+
+        <section>
+            <h2>File and Folder Access</h2>
+            <p>
+                The app may request access to files or folders you choose so it can read and monitor
+                Markdown content. This access is used only for app functionality and is not used for
+                analytics, advertising, or profiling.
+            </p>
+        </section>
+
+        <section>
+            <h2>Analytics and Tracking</h2>
+            <p>
+                MarkdownObserver does not use third-party analytics SDKs, tracking technologies, or
+                advertising identifiers.
+            </p>
+        </section>
+
+        <section>
+            <h2>Third-Party Services</h2>
+            <p>
+                MarkdownObserver does not send your data to external servers as part of normal app use.
+            </p>
+        </section>
+
+        <section>
+            <h2>Children's Privacy</h2>
+            <p>
+                MarkdownObserver is not directed to children under 13, and we do not knowingly collect
+                personal information from children.
+            </p>
+        </section>
+
+        <section>
+            <h2>Changes to This Policy</h2>
+            <p>
+                We may update this Privacy Policy from time to time. The updated version will be posted
+                on this page with a revised "Last updated" date.
+            </p>
+        </section>
+
+        <section>
+            <h2>Contact</h2>
+            <p>
+                If you have questions about this Privacy Policy, please open an issue in the project
+                repository: <a href="https://github.com/larsaugustin/markdownobserver-open-source/issues">GitHub Issues</a>.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <ul class="footer-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="https://lars-pohlmann.de/imprint.html" target="_blank" rel="noopener">Imprint</a></li>
+            <li><a href="https://lars-pohlmann.de" target="_blank" rel="noopener">lars-pohlmann.de</a></li>
+            <li><a href="https://github.com/larspohlmann/markdownobserver" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://apps.apple.com/app/id6760550501" target="_blank" rel="noopener">App Store</a></li>
+        </ul>
+        <p class="footer-copy">&copy; 2026 Lars Pohlmann</p>
+    </footer>
+</body>
+</html>
