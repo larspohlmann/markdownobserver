@@ -81,12 +81,20 @@ struct ContentView: View {
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
+    let isCurrentWatchAFavorite: Bool
+    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let onRequestFolderWatch: (URL) -> Void
     let onConfirmFolderWatch: (ReaderFolderWatchOptions) -> Void
     let onCancelFolderWatch: () -> Void
     let onStopFolderWatch: () -> Void
+    let onSaveFolderWatchAsFavorite: (String) -> Void
+    let onRemoveCurrentWatchFromFavorites: () -> Void
+    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+    let onClearFavoriteWatchedFolders: () -> Void
+    let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
+    let onRemoveFavoriteWatchedFolder: (UUID) -> Void
     let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
@@ -119,6 +127,8 @@ struct ContentView: View {
                 folderWatchHighlightColor: folderWatchHighlightColor,
                 canNavigateChangedRegions: canNavigateChangedRegions,
                 canStopFolderWatch: canStopFolderWatch,
+                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                favoriteWatchedFolders: favoriteWatchedFolders,
                 recentWatchedFolders: recentWatchedFolders,
                 recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                 onNavigateChangedRegion: requestChangedRegionNavigation,
@@ -130,6 +140,12 @@ struct ContentView: View {
                 },
                 onRequestFolderWatch: onRequestFolderWatch,
                 onStopFolderWatch: onStopFolderWatch,
+                onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite,
+                onRemoveCurrentWatchFromFavorites: onRemoveCurrentWatchFromFavorites,
+                onStartFavoriteWatch: onStartFavoriteWatch,
+                onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+                onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
+                onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
                 onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: onClearRecentWatchedFolders,
@@ -186,10 +202,12 @@ struct ContentView: View {
             if activeFolderWatch != nil || readerStore.hasOpenDocument {
                 ReaderStatusBar(
                     activeFolderWatch: activeFolderWatch,
+                    isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                     watchIndicatorColor: folderWatchHighlightColor,
                     canStopFolderWatch: canStopFolderWatch,
                     statusTimestamp: readerStore.statusBarTimestamp,
-                    onStopFolderWatch: onStopFolderWatch
+                    onStopFolderWatch: onStopFolderWatch,
+                    onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
                 )
             }
         }
@@ -823,12 +841,20 @@ private final class SplitScrollCoordinator: ObservableObject {
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
         pendingFolderWatchExcludedSubdirectoryPaths: .constant([]),
+        isCurrentWatchAFavorite: false,
+        favoriteWatchedFolders: [],
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
         onRequestFolderWatch: { _ in },
         onConfirmFolderWatch: { _ in },
         onCancelFolderWatch: {},
         onStopFolderWatch: {},
+        onSaveFolderWatchAsFavorite: { _ in },
+        onRemoveCurrentWatchFromFavorites: {},
+        onStartFavoriteWatch: { _ in },
+        onClearFavoriteWatchedFolders: {},
+        onRenameFavoriteWatchedFolder: { _, _ in },
+        onRemoveFavoriteWatchedFolder: { _ in },
         onStartRecentManuallyOpenedFile: { _ in },
         onStartRecentFolderWatch: { _ in },
         onClearRecentWatchedFolders: {},

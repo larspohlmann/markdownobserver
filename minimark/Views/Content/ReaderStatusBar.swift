@@ -2,10 +2,12 @@ import SwiftUI
 
 struct ReaderStatusBar: View {
     let activeFolderWatch: ReaderFolderWatchSession?
+    let isCurrentWatchAFavorite: Bool
     let watchIndicatorColor: Color
     let canStopFolderWatch: Bool
     let statusTimestamp: ReaderStatusBarTimestamp?
     let onStopFolderWatch: () -> Void
+    let onSaveFolderWatchAsFavorite: (String) -> Void
 
     private enum Metrics {
         static let horizontalPadding: CGFloat = 10
@@ -20,9 +22,11 @@ struct ReaderStatusBar: View {
             if let activeFolderWatch {
                 CompactFolderWatchStatus(
                     activeFolderWatch: activeFolderWatch,
+                    isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                     watchIndicatorColor: watchIndicatorColor,
                     canStopFolderWatch: canStopFolderWatch,
-                    onStopFolderWatch: onStopFolderWatch
+                    onStopFolderWatch: onStopFolderWatch,
+                    onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
                 )
                 .layoutPriority(1)
             }
@@ -49,9 +53,11 @@ struct ReaderStatusBar: View {
 
     private struct CompactFolderWatchStatus: View {
         let activeFolderWatch: ReaderFolderWatchSession
+        let isCurrentWatchAFavorite: Bool
         let watchIndicatorColor: Color
         let canStopFolderWatch: Bool
         let onStopFolderWatch: () -> Void
+        let onSaveFolderWatchAsFavorite: (String) -> Void
 
         @State private var isShowingDetails = false
         @State private var isPulsing = false
@@ -84,7 +90,11 @@ struct ReaderStatusBar: View {
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
-                    FolderWatchDetailsPopover(activeFolderWatch: activeFolderWatch)
+                    FolderWatchDetailsPopover(
+                        activeFolderWatch: activeFolderWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
+                    )
                 }
                 .help(activeFolderWatch.tooltipText)
                 .accessibilityLabel("Folder watch details")

@@ -102,6 +102,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.value
     }
 
+    private(set) var recordedFavoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = []
     private(set) var recordedRecentWatchedFolders: [ReaderRecentWatchedFolder] = []
     private(set) var recordedRecentManuallyOpenedFiles: [ReaderRecentOpenedFile] = []
 
@@ -163,6 +164,50 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
         var next = subject.value
         next.sidebarSortMode = mode
+        subject.send(next)
+    }
+
+    func addFavoriteWatchedFolder(name: String, folderURL: URL, options: ReaderFolderWatchOptions) {
+        var next = subject.value
+        next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
+            name: name,
+            folderURL: folderURL,
+            options: options,
+            into: next.favoriteWatchedFolders
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func removeFavoriteWatchedFolder(id: UUID) {
+        var next = subject.value
+        next.favoriteWatchedFolders = ReaderFavoriteHistory.removingFavorite(
+            id: id,
+            from: next.favoriteWatchedFolders
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func renameFavoriteWatchedFolder(id: UUID, newName: String) {
+        var next = subject.value
+        next.favoriteWatchedFolders = ReaderFavoriteHistory.renamingFavorite(
+            id: id,
+            newName: newName,
+            in: next.favoriteWatchedFolders
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
+        entry.folderURL
+    }
+
+    func clearFavoriteWatchedFolders() {
+        var next = subject.value
+        next.favoriteWatchedFolders = []
+        recordedFavoriteWatchedFolders = []
         subject.send(next)
     }
 

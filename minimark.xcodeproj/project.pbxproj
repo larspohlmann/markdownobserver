@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E10000000000000000000069 /* ReaderFavoriteWatchedFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000069 /* ReaderFavoriteWatchedFolder.swift */; };
+		E10000000000000000000070 /* ReaderSettingsStore+Favorites.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000070 /* ReaderSettingsStore+Favorites.swift */; };
+		E10000000000000000000071 /* ReaderStore+FavoritesFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000071 /* ReaderStore+FavoritesFlow.swift */; };
 		E10000000000000000000001 /* ReaderCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000001 /* ReaderCommands.swift */; };
 		E10000000000000000000002 /* AppWindowID.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000002 /* AppWindowID.swift */; };
 		E10000000000000000000003 /* ChangedRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000003 /* ChangedRegion.swift */; };
@@ -69,6 +72,7 @@
 		E10000000000000000000039 /* ReaderSidebarSelectedStoreProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */; };
 		E1000000000000000000003A /* ReaderSettingsGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000003C /* ReaderSettingsGuidance.swift */; };
 		E10000000000000000000040 /* ReaderSettingsAndModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000040 /* ReaderSettingsAndModelsTests.swift */; };
+		E10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift */; };
 		E10000000000000000000041 /* FolderWatchCoordinationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000041 /* FolderWatchCoordinationTests.swift */; };
 		E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */; };
 		E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */; };
@@ -79,6 +83,7 @@
 		E10000000000000000000048 /* ReaderTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000048 /* ReaderTopBar.swift */; };
 		E10000000000000000000049 /* ReaderStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000049 /* ReaderStatusBar.swift */; };
 		E1000000000000000000004A /* FolderWatchOptionsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004A /* FolderWatchOptionsSheet.swift */; };
+		E10000000000000000000073 /* EditFavoritesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000073 /* EditFavoritesSheet.swift */; };
 		E1000000000000000000004B /* ContentDocumentSurfaceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */; };
 		E1000000000000000000004C /* ReaderStatusFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004C /* ReaderStatusFormatting.swift */; };
 		E1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */; };
@@ -175,6 +180,9 @@
 		D1000000000000000000002E /* highlight.min.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = highlight.min.js; sourceTree = "<group>"; };
 		D10000000000000000000067 /* markdownobserver-inline-diff.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdownobserver-inline-diff.js"; sourceTree = "<group>"; };
 		D10000000000000000000068 /* markdownobserver-runtime.js */ = {isa = PBXFileReference; lastKnownFileType = text; path = "markdownobserver-runtime.js"; sourceTree = "<group>"; };
+		D10000000000000000000069 /* ReaderFavoriteWatchedFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFavoriteWatchedFolder.swift; sourceTree = "<group>"; };
+		D10000000000000000000070 /* ReaderSettingsStore+Favorites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderSettingsStore+Favorites.swift"; sourceTree = "<group>"; };
+		D10000000000000000000071 /* ReaderStore+FavoritesFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderStore+FavoritesFlow.swift"; sourceTree = "<group>"; };
 		D10000000000000000000030 /* minimarkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkUITests.swift; sourceTree = "<group>"; };
 		D10000000000000000000031 /* minimarkUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000032 /* ReaderSidebarSortMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarSortMode.swift; sourceTree = "<group>"; };
@@ -190,6 +198,7 @@
 		D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarSelectedStoreProjection.swift; sourceTree = "<group>"; };
 		D1000000000000000000003C /* ReaderSettingsGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsGuidance.swift; sourceTree = "<group>"; };
 		D10000000000000000000040 /* ReaderSettingsAndModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsAndModelsTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFavoriteWatchedFolderTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000041 /* FolderWatchCoordinationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatchCoordinationTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarDocumentControllerTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreExternalChangeTests.swift; sourceTree = "<group>"; };
@@ -200,6 +209,7 @@
 		D10000000000000000000048 /* ReaderTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTopBar.swift; sourceTree = "<group>"; };
 		D10000000000000000000049 /* ReaderStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStatusBar.swift; sourceTree = "<group>"; };
 		D1000000000000000000004A /* FolderWatchOptionsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatchOptionsSheet.swift; sourceTree = "<group>"; };
+		D10000000000000000000073 /* EditFavoritesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditFavoritesSheet.swift; sourceTree = "<group>"; };
 		D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentDocumentSurfaceViews.swift; sourceTree = "<group>"; };
 		D1000000000000000000004C /* ReaderStatusFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStatusFormatting.swift; sourceTree = "<group>"; };
 		D1000000000000000000004D /* MarkdownSourceHTMLRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownSourceHTMLRenderer.swift; sourceTree = "<group>"; };
@@ -335,6 +345,7 @@
 				D10000000000000000000002 /* AppWindowID.swift */,
 				D10000000000000000000003 /* ChangedRegion.swift */,
 				D10000000000000000000004 /* ReaderExternalApplication.swift */,
+				D10000000000000000000069 /* ReaderFavoriteWatchedFolder.swift */,
 				D10000000000000000000005 /* ReaderFolderWatch.swift */,
 				D10000000000000000000006 /* ReaderMultiFileDisplayMode.swift */,
 				D10000000000000000000032 /* ReaderSidebarSortMode.swift */,
@@ -369,6 +380,7 @@
 			children = (
 				D10000000000000000000061 /* ReaderAutoOpenSettler.swift */,
 				D10000000000000000000012 /* ReaderSettingsStore.swift */,
+				D10000000000000000000070 /* ReaderSettingsStore+Favorites.swift */,
 				D10000000000000000000065 /* ReaderSettingsStore+RecentItems.swift */,
 				D1000000000000000000003A /* ReaderSidebarFolderWatchOwnership.swift */,
 				D1000000000000000000003B /* ReaderSidebarSelectedStoreProjection.swift */,
@@ -462,6 +474,7 @@
 		C1000000000000000000000B /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				D10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift */,
 				D10000000000000000000040 /* ReaderSettingsAndModelsTests.swift */,
 			);
 			path = Core;
@@ -520,6 +533,7 @@
 			isa = PBXGroup;
 			children = (
 				D1000000000000000000004B /* ContentDocumentSurfaceViews.swift */,
+				D10000000000000000000073 /* EditFavoritesSheet.swift */,
 				D10000000000000000000063 /* FolderWatchDirectoryScanModel.swift */,
 				D1000000000000000000004A /* FolderWatchOptionsSheet.swift */,
 				D10000000000000000000049 /* ReaderStatusBar.swift */,
@@ -534,6 +548,7 @@
 			children = (
 				D10000000000000000000052 /* ReaderStoreCoordinators.swift */,
 				D10000000000000000000058 /* ReaderStore+SourceEditing.swift */,
+				D10000000000000000000071 /* ReaderStore+FavoritesFlow.swift */,
 				D10000000000000000000060 /* ReaderStore+FolderWatchLifecycleFlow.swift */,
 				D1000000000000000000005A /* ReaderStore+SecurityScopeFlow.swift */,
 				D1000000000000000000005E /* ReaderStore+DocumentOpenFlow.swift */,
@@ -753,6 +768,9 @@
 				E10000000000000000000033 /* ReaderSystemNotificationService.swift in Sources */,
 				E10000000000000000000011 /* SecurityScopedResourceAccess.swift in Sources */,
 				E10000000000000000000012 /* ReaderSettingsStore.swift in Sources */,
+				E10000000000000000000069 /* ReaderFavoriteWatchedFolder.swift in Sources */,
+				E10000000000000000000070 /* ReaderSettingsStore+Favorites.swift in Sources */,
+				E10000000000000000000071 /* ReaderStore+FavoritesFlow.swift in Sources */,
 				E10000000000000000000065 /* ReaderSettingsStore+RecentItems.swift in Sources */,
 				E10000000000000000000038 /* ReaderSidebarFolderWatchOwnership.swift in Sources */,
 				E10000000000000000000039 /* ReaderSidebarSelectedStoreProjection.swift in Sources */,
@@ -784,6 +802,7 @@
 				E1000000000000000000001E /* AboutWindowView.swift in Sources */,
 				E1000000000000000000004B /* ContentDocumentSurfaceViews.swift in Sources */,
 				E10000000000000000000063 /* FolderWatchDirectoryScanModel.swift in Sources */,
+				E10000000000000000000073 /* EditFavoritesSheet.swift in Sources */,
 				E1000000000000000000004A /* FolderWatchOptionsSheet.swift in Sources */,
 				E10000000000000000000037 /* FolderWatchAutoOpenFlowView.swift in Sources */,
 				E1000000000000000000001F /* MarkdownWebView.swift in Sources */,
@@ -813,6 +832,7 @@
 				E10000000000000000000041 /* FolderWatchCoordinationTests.swift in Sources */,
 				E10000000000000000000062 /* ReaderAutoOpenSettlerTests.swift in Sources */,
 				E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */,
+				E10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift in Sources */,
 				E10000000000000000000040 /* ReaderSettingsAndModelsTests.swift in Sources */,
 				E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */,
 				E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */,
