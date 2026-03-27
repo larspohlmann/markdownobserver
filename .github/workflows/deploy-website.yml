@@ -1,0 +1,35 @@
+name: Deploy Website
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
+      - name: Deploy via SFTP
+        env:
+          SFTP_SERVER: ${{ secrets.WEB_FTP_SERVER }}
+          SFTP_USERNAME: ${{ secrets.WEB_FTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.WEB_FTP_PASSWORD }}
+          SFTP_SERVER_DIR: ${{ secrets.WEB_FTP_SERVER_DIR }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SFTP_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+          {
+            echo 'set sftp:connect-program ""'
+            echo 'set sftp:auto-confirm yes'
+            echo 'set net:max-retries 3'
+            printf 'open -u "%s,%s" sftp://%s\n' "$SFTP_USERNAME" "$SFTP_PASSWORD" "$SFTP_SERVER"
+            printf 'mirror --reverse --delete --verbose webpage/ %s\n' "$SFTP_SERVER_DIR"
+            echo 'bye'
+          } > /tmp/deploy.lftp
+          lftp -f /tmp/deploy.lftp
