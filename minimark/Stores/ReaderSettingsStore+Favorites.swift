@@ -31,7 +31,7 @@ extension ReaderSettingsStore {
         }
     }
 
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL? {
+    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
         guard let bookmarkData = entry.bookmarkData else {
             return entry.folderURL
         }
@@ -58,7 +58,23 @@ extension ReaderSettingsStore {
 
     private func refreshFavoriteWatchedFolderBookmark(for entry: ReaderFavoriteWatchedFolder, resolvedURL: URL) {
         let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
-        updateFavoriteWatchedFolderBookmarkData(id: entry.id, bookmarkData: refreshedBookmarkData)
+        let normalizedResolvedPath = ReaderFileRouting.normalizedFileURL(resolvedURL).path
+
+        updateSettings { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == entry.id }) else {
+                return
+            }
+
+            let existing = settings.favoriteWatchedFolders[index]
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: normalizedResolvedPath,
+                options: existing.options,
+                bookmarkData: refreshedBookmarkData ?? existing.bookmarkData,
+                createdAt: existing.createdAt
+            )
+        }
     }
 
     private func updateFavoriteWatchedFolderBookmarkData(id: UUID, bookmarkData: Data?) {

@@ -200,7 +200,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL? {
+    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
         entry.folderURL
     }
 

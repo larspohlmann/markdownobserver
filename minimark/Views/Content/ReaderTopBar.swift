@@ -1090,7 +1090,7 @@ private struct ExcludedSubdirectoriesSection: View {
     var body: some View {
         Divider()
 
-        DisclosureGroup("Filtered subdirectories") {
+        DisclosureGroup("Filtered subdirectories", isExpanded: $isExpanded) {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(visiblePaths, id: \.self) { path in
                     Text(path)

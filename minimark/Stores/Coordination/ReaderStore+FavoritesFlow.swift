@@ -39,7 +39,7 @@ extension ReaderStore {
     }
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
-        let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry) ?? entry.folderURL
+        let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
         startWatchingFolder(folderURL: resolvedURL, options: entry.options)
     }
 }

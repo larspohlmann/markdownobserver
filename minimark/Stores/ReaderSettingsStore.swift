@@ -419,7 +419,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func addFavoriteWatchedFolder(name: String, folderURL: URL, options: ReaderFolderWatchOptions)
     func removeFavoriteWatchedFolder(id: UUID)
     func renameFavoriteWatchedFolder(id: UUID, newName: String)
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL?
+    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
