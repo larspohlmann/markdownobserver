@@ -155,6 +155,14 @@
       if (!isSafeURL(urlValue)) {
         return false;
       }
+      // data:image URIs are validated by isSafeURL — skip
+      // the default markdown-it validator which blocks the data: scheme.
+      if (typeof urlValue === "string") {
+        var c = urlValue.trim().replace(/[\u0000-\u001F\u007F\s]+/g, "").toLowerCase();
+        if (c.indexOf("data:") === 0) {
+          return true;
+        }
+      }
       if (typeof defaultValidateLink === "function") {
         return defaultValidateLink(urlValue);
       }
@@ -176,10 +184,13 @@
     if (
       compact.indexOf("javascript:") === 0 ||
       compact.indexOf("vbscript:") === 0 ||
-      compact.indexOf("data:") === 0 ||
       compact.indexOf("file:") === 0
     ) {
       return false;
+    }
+
+    if (compact.indexOf("data:") === 0) {
+      return /^data:image\/(?!svg\+xml)[a-z0-9.+-]+[;,]/.test(compact);
     }
 
     if (trimmed.indexOf("//") === 0) {
@@ -210,7 +221,10 @@
   }
 
   function sanitizeURL(urlValue) {
-    return isSafeURL(urlValue) ? urlValue : "#";
+    if (!isSafeURL(urlValue)) {
+      return "#";
+    }
+    return urlValue;
   }
 
   function sanitizeRenderedHTML(rawHTML) {

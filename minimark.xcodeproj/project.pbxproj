@@ -24,6 +24,7 @@
 		E1000000000000000000000C /* FolderChangeWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000C /* FolderChangeWatcher.swift */; };
 		E10000000000000000000066 /* FolderSnapshotDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000066 /* FolderSnapshotDiffer.swift */; };
 		E1000000000000000000000D /* MarkdownRenderingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000D /* MarkdownRenderingService.swift */; };
+		E10000000000000000000075 /* MarkdownImageResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000075 /* MarkdownImageResolver.swift */; };
 		E1000000000000000000000E /* MarkdownRuntimePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000E /* MarkdownRuntimePayload.swift */; };
 		E1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift */; };
 		E10000000000000000000010 /* ReaderFileActionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000010 /* ReaderFileActionService.swift */; };
@@ -77,6 +78,7 @@
 		E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */; };
 		E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */; };
 		E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000044 /* RenderingAndDiffTests.swift */; };
+		E10000000000000000000074 /* URLSanitizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000074 /* URLSanitizationTests.swift */; };
 		E10000000000000000000045 /* FileRoutingAndWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */; };
 		E10000000000000000000046 /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000046 /* TestDoubles.swift */; };
 		E10000000000000000000047 /* MarkdownDocumentIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000047 /* MarkdownDocumentIcon.icns */; };
@@ -146,6 +148,7 @@
 		D1000000000000000000000C /* FolderChangeWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderChangeWatcher.swift; sourceTree = "<group>"; };
 		D10000000000000000000066 /* FolderSnapshotDiffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderSnapshotDiffer.swift; sourceTree = "<group>"; };
 		D1000000000000000000000D /* MarkdownRenderingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRenderingService.swift; sourceTree = "<group>"; };
+		D10000000000000000000075 /* MarkdownImageResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownImageResolver.swift; sourceTree = "<group>"; };
 		D1000000000000000000000E /* MarkdownRuntimePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRuntimePayload.swift; sourceTree = "<group>"; };
 		D1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderDefaultMarkdownAssociationService.swift; sourceTree = "<group>"; };
 		D10000000000000000000010 /* ReaderFileActionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFileActionService.swift; sourceTree = "<group>"; };
@@ -203,6 +206,7 @@
 		D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarDocumentControllerTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreExternalChangeTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000044 /* RenderingAndDiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingAndDiffTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000074 /* URLSanitizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSanitizationTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRoutingAndWatcherTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000046 /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDoubles.swift; sourceTree = "<group>"; };
 		D10000000000000000000047 /* MarkdownDocumentIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = MarkdownDocumentIcon.icns; sourceTree = "<group>"; };
@@ -363,6 +367,7 @@
 				D1000000000000000000000B /* FileChangeWatcher.swift */,
 				D1000000000000000000000C /* FolderChangeWatcher.swift */,
 				D10000000000000000000066 /* FolderSnapshotDiffer.swift */,
+				D10000000000000000000075 /* MarkdownImageResolver.swift */,
 				D1000000000000000000000D /* MarkdownRenderingService.swift */,
 				D1000000000000000000000E /* MarkdownRuntimePayload.swift */,
 				D10000000000000000000034 /* ReaderFolderWatchAutoOpenPlanner.swift */,
@@ -509,6 +514,7 @@
 			isa = PBXGroup;
 			children = (
 				D10000000000000000000044 /* RenderingAndDiffTests.swift */,
+				D10000000000000000000074 /* URLSanitizationTests.swift */,
 			);
 			path = Rendering;
 			sourceTree = "<group>";
@@ -760,6 +766,7 @@
 				E1000000000000000000000C /* FolderChangeWatcher.swift in Sources */,
 				E10000000000000000000066 /* FolderSnapshotDiffer.swift in Sources */,
 				E10000000000000000000032 /* ReaderFolderWatchAutoOpenPlanner.swift in Sources */,
+				E10000000000000000000075 /* MarkdownImageResolver.swift in Sources */,
 				E1000000000000000000000D /* MarkdownRenderingService.swift in Sources */,
 				E1000000000000000000000E /* MarkdownRuntimePayload.swift in Sources */,
 				E1000000000000000000000F /* ReaderDefaultMarkdownAssociationService.swift in Sources */,
@@ -836,6 +843,7 @@
 				E10000000000000000000040 /* ReaderSettingsAndModelsTests.swift in Sources */,
 				E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */,
 				E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */,
+				E10000000000000000000074 /* URLSanitizationTests.swift in Sources */,
 				E10000000000000000000046 /* TestDoubles.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

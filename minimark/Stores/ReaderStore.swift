@@ -573,8 +573,12 @@ final class ReaderStore: ObservableObject {
         let settings = settingsStore.currentSettings
         let theme = ReaderTheme.theme(for: settings.readerTheme)
 
-        let rendered = try renderer.render(
+        let resolvedMarkdown = MarkdownImageResolver.resolve(
             markdown: sourceMarkdown,
+            documentDirectoryURL: fileURL?.deletingLastPathComponent()
+        )
+        let rendered = try renderer.render(
+            markdown: resolvedMarkdown,
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions,
             readerTheme: theme,
