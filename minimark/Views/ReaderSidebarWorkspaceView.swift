@@ -56,10 +56,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             } else if filteredSelection != selectedDocumentIDs {
                 selectedDocumentIDs = filteredSelection
             }
-
-            let activeGroupIDs = Set(controller.documents.map { document in
-                document.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) ?? ""
-            })
+        }
+        .onChange(of: activeDirectoryPaths) { _, paths in
+            let activeGroupIDs = Set(paths)
             collapsedGroupIDs.formIntersection(activeGroupIDs)
             pinnedGroupIDs.formIntersection(activeGroupIDs)
         }
@@ -122,6 +121,12 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             pinnedGroupIDs.remove(groupID)
         } else {
             pinnedGroupIDs.insert(groupID)
+        }
+    }
+
+    private var activeDirectoryPaths: [String] {
+        controller.documents.map { document in
+            document.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) ?? ""
         }
     }
 

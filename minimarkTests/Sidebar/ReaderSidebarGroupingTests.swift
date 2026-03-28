@@ -281,14 +281,12 @@ struct ReaderSidebarGroupingTests {
 private struct ReaderSidebarGroupingTestHarness {
     let temporaryDirectoryURL: URL
     let documents: [ReaderSidebarDocumentController.Document]
-    private let subdirectoryNames: [String]
 
     init(subdirectories: [String], filesPerSubdirectory: Int) throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("minimark-grouping-tests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         temporaryDirectoryURL = directory
-        subdirectoryNames = subdirectories
 
         let settingsStore = ReaderSettingsStore(
             storage: TestSettingsKeyValueStorage(),

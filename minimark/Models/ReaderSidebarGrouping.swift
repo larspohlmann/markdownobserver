@@ -101,7 +101,7 @@ enum ReaderSidebarGrouping {
         }.max()
     }
 
-    static func sortedByNewestModificationDate(_ groups: [Group]) -> [Group] {
+    private static func sortedByNewestModificationDate(_ groups: [Group]) -> [Group] {
         groups.sorted { lhs, rhs in
             switch (lhs.newestModificationDate, rhs.newestModificationDate) {
             case let (l?, r?) where l != r:
