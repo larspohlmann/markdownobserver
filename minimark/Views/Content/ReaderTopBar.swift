@@ -1,9 +1,34 @@
 import AppKit
 import SwiftUI
 
+private struct PointingHandCursor: ViewModifier {
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { hovering in
+                if hovering, !isHovering {
+                    NSCursor.pointingHand.push()
+                    isHovering = true
+                } else if !hovering, isHovering {
+                    NSCursor.pop()
+                    isHovering = false
+                }
+            }
+            .onDisappear {
+                if isHovering {
+                    NSCursor.pop()
+                    isHovering = false
+                }
+            }
+    }
+}
+
 private func abbreviatePathWithTilde(_ path: String) -> String {
     let home = NSHomeDirectory()
-    if path.hasPrefix(home) {
+    if path == home {
+        return "~"
+    } else if path.hasPrefix(home + "/") {
         return "~" + path.dropFirst(home.count)
     }
     return path
@@ -68,6 +93,8 @@ struct ReaderTopBar: View {
             HStack(spacing: 0) {
                 FolderWatchToolbarButton(
                     activeFolderWatch: activeFolderWatch,
+                    isInitialScanInProgress: isFolderWatchInitialScanInProgress,
+                    didInitialScanFail: didFolderWatchInitialScanFail,
                     favoriteWatchedFolders: favoriteWatchedFolders,
                     recentWatchedFolders: recentWatchedFolders,
                     onActivate: handleFolderWatchToolbarButton,
@@ -145,7 +172,6 @@ struct ReaderTopBar: View {
                 WatchStrip(
                     activeFolderWatch: activeWatch,
                     isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                    highlightColor: folderWatchHighlightColor,
                     canStop: canStopFolderWatch,
                     onStop: onStopFolderWatch,
                     onSaveFavorite: onSaveFolderWatchAsFavorite,
@@ -220,6 +246,8 @@ struct ReaderTopBar: View {
 
     private struct FolderWatchToolbarButton: View {
         let activeFolderWatch: ReaderFolderWatchSession?
+        let isInitialScanInProgress: Bool
+        let didInitialScanFail: Bool
         let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
         let recentWatchedFolders: [ReaderRecentWatchedFolder]
         let onActivate: () -> Void
@@ -289,6 +317,19 @@ struct ReaderTopBar: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .strokeBorder(borderColor, lineWidth: 1)
+            }
+            .overlay(alignment: .topTrailing) {
+                if isInitialScanInProgress {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .controlSize(.small)
+                        .offset(x: -4, y: 4)
+                } else if didInitialScanFail {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red)
+                        .offset(x: -4, y: 4)
+                }
             }
             .fixedSize(horizontal: true, vertical: true)
         }
@@ -479,10 +520,15 @@ struct ReaderTopBar: View {
 
         private var breadcrumbPath: String {
             guard let url = readerStore.fileURL else { return "" }
-            let path = url.deletingLastPathComponent().path
-            return abbreviatePathWithTilde(path)
+            let abbreviated = abbreviatePathWithTilde(url.deletingLastPathComponent().path)
+            let components = abbreviated
                 .split(separator: "/", omittingEmptySubsequences: true)
-                .joined(separator: " \u{203A} ")
+                .map(String.init)
+            let joined = components.joined(separator: " \u{203A} ")
+            if abbreviated.hasPrefix("/") {
+                return joined.isEmpty ? "/" : "/ \u{203A} " + joined
+            }
+            return joined
         }
 
         var body: some View {
@@ -500,19 +546,12 @@ struct ReaderTopBar: View {
                         BreadcrumbTimestampLine(
                             breadcrumbPath: breadcrumbPath,
                             statusTimestamp: readerStore.statusBarTimestamp,
-                            hasFile: true,
                             isCurrentFileMissing: readerStore.isCurrentFileMissing
                         )
                     }
                 }
                 .buttonStyle(.plain)
-                .onHover { hovering in
-                    if hovering {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
-                    }
-                }
+                .modifier(PointingHandCursor())
                 .help("Reveal in Finder")
                 .accessibilityLabel("Current document")
                 .accessibilityValue(titleText)
@@ -537,7 +576,6 @@ struct ReaderTopBar: View {
     private struct BreadcrumbTimestampLine: View {
         let breadcrumbPath: String
         let statusTimestamp: ReaderStatusBarTimestamp?
-        let hasFile: Bool
         let isCurrentFileMissing: Bool
 
         var body: some View {
@@ -570,7 +608,6 @@ struct ReaderTopBar: View {
     private struct WatchStrip: View {
         let activeFolderWatch: ReaderFolderWatchSession
         let isCurrentWatchAFavorite: Bool
-        let highlightColor: Color
         let canStop: Bool
         let onStop: () -> Void
         let onSaveFavorite: (String) -> Void
@@ -626,13 +663,7 @@ struct ReaderTopBar: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .onHover { hovering in
-                    if hovering {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
-                    }
-                }
+                .modifier(PointingHandCursor())
                 .help("Reveal in Finder")
                 .accessibilityLabel("Watched folder path")
                 .accessibilityValue(tildeAbbreviatedPath)
