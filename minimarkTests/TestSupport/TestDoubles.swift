@@ -259,6 +259,32 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         recordedRecentManuallyOpenedFiles = []
         subject.send(next)
     }
+
+    private(set) var recordedTrustedImageFolders: [ReaderTrustedImageFolder] = []
+
+    func addTrustedImageFolder(_ folderURL: URL) {
+        var next = subject.value
+        next.trustedImageFolders = ReaderTrustedImageFolderHistory.insertingUnique(
+            folderURL,
+            into: next.trustedImageFolders
+        )
+        recordedTrustedImageFolders = next.trustedImageFolders
+        subject.send(next)
+    }
+
+    func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let filePath = normalizedFileURL.path
+
+        for entry in subject.value.trustedImageFolders {
+            let folderPath = entry.folderPath.hasSuffix("/") ? entry.folderPath : entry.folderPath + "/"
+            if filePath.hasPrefix(folderPath) {
+                return entry.folderURL
+            }
+        }
+
+        return nil
+    }
 }
 
 final class TestSettingsKeyValueStorage: ReaderSettingsKeyValueStoring {

@@ -20,20 +20,18 @@ struct BundledReaderRuntimeAssetResolver: ReaderRuntimeAssetResolving {
 }
 
 enum ReaderBundledAssets {
-    // Absolute file:// URLs so scripts load regardless of the WKWebView baseURL.
-    private static let bundleResourcesURL: URL = Bundle.main.resourceURL ?? Bundle.main.bundleURL
-
-    static let markdownItScriptPath = bundleResourcesURL.appendingPathComponent("markdown-it.min.js").absoluteString
-    static let highlightJSScriptPath = bundleResourcesURL.appendingPathComponent("highlight.min.js").absoluteString
-    static let codeMirrorSourceViewScriptPath = bundleResourcesURL.appendingPathComponent("codemirror-source-view.js").absoluteString
-    static let taskListsScriptPath = bundleResourcesURL.appendingPathComponent("markdown-it-task-lists.min.js").absoluteString
-    static let footnoteScriptPath = bundleResourcesURL.appendingPathComponent("markdown-it-footnote.min.js").absoluteString
-    static let attrsScriptPath = bundleResourcesURL.appendingPathComponent("markdown-it-attrs.min.js").absoluteString
-    static let deflistScriptPath = bundleResourcesURL.appendingPathComponent("markdown-it-deflist.min.js").absoluteString
+    // Resolved relative to Bundle.main.bundleURL used by WKWebView loadHTMLString.
+    static let markdownItScriptPath = "Contents/Resources/markdown-it.min.js"
+    static let highlightJSScriptPath = "Contents/Resources/highlight.min.js"
+    static let codeMirrorSourceViewScriptPath = "Contents/Resources/codemirror-source-view.js"
+    static let taskListsScriptPath = "Contents/Resources/markdown-it-task-lists.min.js"
+    static let footnoteScriptPath = "Contents/Resources/markdown-it-footnote.min.js"
+    static let attrsScriptPath = "Contents/Resources/markdown-it-attrs.min.js"
+    static let deflistScriptPath = "Contents/Resources/markdown-it-deflist.min.js"
 
     static func requiredRuntimeAssets() throws -> ReaderRuntimeAssets {
-        guard let markdownURL = URL(string: markdownItScriptPath),
-              FileManager.default.fileExists(atPath: markdownURL.path) else {
+        let markdownURL = Bundle.main.bundleURL.appendingPathComponent(markdownItScriptPath)
+        guard FileManager.default.fileExists(atPath: markdownURL.path) else {
             throw ReaderError.markdownRuntimeUnavailable(markdownItScriptPath)
         }
 
@@ -71,11 +69,8 @@ enum ReaderBundledAssets {
         availableScriptPath(deflistScriptPath)
     }
 
-    private static func availableScriptPath(_ absoluteURLString: String) -> String? {
-        guard let fileURL = URL(string: absoluteURLString),
-              FileManager.default.fileExists(atPath: fileURL.path) else {
-            return nil
-        }
-        return absoluteURLString
+    private static func availableScriptPath(_ path: String) -> String? {
+        let fileURL = Bundle.main.bundleURL.appendingPathComponent(path)
+        return FileManager.default.fileExists(atPath: fileURL.path) ? path : nil
     }
 }

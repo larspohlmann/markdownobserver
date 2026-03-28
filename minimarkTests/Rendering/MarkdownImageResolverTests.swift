@@ -34,14 +34,14 @@ struct MarkdownImageResolverTests {
     @Test func resolvesRelativePath() throws {
         let md = "![alt](assets/photo.png)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result.contains("data:image/png;base64,"))
-        #expect(!result.contains("assets/photo.png"))
+        #expect(result.markdown.contains("data:image/png;base64,"))
+        #expect(!result.markdown.contains("assets/photo.png"))
     }
 
     @Test func resolvesRelativePathWithTitle() throws {
         let md = #"![alt](assets/photo.png "My Title")"#
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result.contains("data:image/png;base64,"))
+        #expect(result.markdown.contains("data:image/png;base64,"))
     }
 
     // MARK: - file:// URLs
@@ -49,7 +49,7 @@ struct MarkdownImageResolverTests {
     @Test func resolvesFileURL() throws {
         let md = "![img](file:///\(imageFile.path))"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result.contains("data:image/png;base64,"))
+        #expect(result.markdown.contains("data:image/png;base64,"))
     }
 
     // MARK: - Non-local URLs left as-is
@@ -57,19 +57,19 @@ struct MarkdownImageResolverTests {
     @Test func skipsHTTPURLs() throws {
         let md = "![alt](https://example.com/img.png)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result == md)
+        #expect(result.markdown == md)
     }
 
     @Test func skipsDataURIs() throws {
         let md = "![alt](data:image/png;base64,abc)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result == md)
+        #expect(result.markdown == md)
     }
 
     @Test func skipsUnknownSchemes() throws {
         let md = "![alt](mailto:test@example.com)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result == md)
+        #expect(result.markdown == md)
     }
 
     // MARK: - Missing files
@@ -77,7 +77,7 @@ struct MarkdownImageResolverTests {
     @Test func skipsMissingFiles() throws {
         let md = "![alt](does-not-exist.png)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result == md)
+        #expect(result.markdown == md)
     }
 
     // MARK: - Non-image files
@@ -87,7 +87,7 @@ struct MarkdownImageResolverTests {
         try "hello".write(to: txtFile, atomically: true, encoding: .utf8)
         let md = "![alt](readme.txt)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result == md)
+        #expect(result.markdown == md)
     }
 
     // MARK: - Code blocks not rewritten
@@ -99,14 +99,14 @@ struct MarkdownImageResolverTests {
         ```
         """
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(!result.contains("data:image/png;base64,"))
-        #expect(result.contains("assets/photo.png"))
+        #expect(!result.markdown.contains("data:image/png;base64,"))
+        #expect(result.markdown.contains("assets/photo.png"))
     }
 
     @Test func skipsImagesInsideInlineCode() throws {
         let md = "Use `![alt](assets/photo.png)` in your markdown."
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(!result.contains("data:image/png;base64,"))
+        #expect(!result.markdown.contains("data:image/png;base64,"))
     }
 
     // MARK: - No document directory
@@ -114,7 +114,7 @@ struct MarkdownImageResolverTests {
     @Test func returnsUnchangedWhenNoDocumentDir() throws {
         let md = "![alt](test.png)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: nil)
-        #expect(result == md)
+        #expect(result.markdown == md)
     }
 
     // MARK: - Fragments
@@ -122,6 +122,32 @@ struct MarkdownImageResolverTests {
     @Test func skipsFragmentReferences() throws {
         let md = "![alt](#section)"
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
-        #expect(result == md)
+        #expect(result.markdown == md)
+    }
+
+    // MARK: - needsDirectoryAccess
+
+    @Test func needsDirectoryAccessIsFalseWhenImagesResolve() throws {
+        let md = "![alt](assets/photo.png)"
+        let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
+        #expect(result.needsDirectoryAccess == false)
+    }
+
+    @Test func needsDirectoryAccessIsFalseWhenNoImages() throws {
+        let md = "Hello world"
+        let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
+        #expect(result.needsDirectoryAccess == false)
+    }
+
+    @Test func needsDirectoryAccessIsFalseWhenNoDocDir() throws {
+        let md = "![alt](test.png)"
+        let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: nil)
+        #expect(result.needsDirectoryAccess == false)
+    }
+
+    @Test func needsDirectoryAccessIsFalseForMissingFiles() throws {
+        let md = "![alt](does-not-exist.png)"
+        let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
+        #expect(result.needsDirectoryAccess == false)
     }
 }

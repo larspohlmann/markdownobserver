@@ -118,6 +118,47 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
     }
 }
 
+nonisolated struct ReaderTrustedImageFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
+    static let maximumCount = 30
+
+    let folderPath: String
+    let bookmarkData: Data?
+
+    nonisolated var id: String {
+        folderPath
+    }
+
+    nonisolated var folderURL: URL {
+        URL(fileURLWithPath: folderPath)
+    }
+
+    init(folderURL: URL) {
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        folderPath = normalizedURL.path
+        bookmarkData = try? folderURL.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+    }
+
+    init(folderPath: String, bookmarkData: Data?) {
+        self.folderPath = folderPath
+        self.bookmarkData = bookmarkData
+    }
+}
+
+nonisolated enum ReaderTrustedImageFolderHistory {
+    static func insertingUnique(
+        _ folderURL: URL,
+        into existingEntries: [ReaderTrustedImageFolder]
+    ) -> [ReaderTrustedImageFolder] {
+        let newEntry = ReaderTrustedImageFolder(folderURL: folderURL)
+        let deduplicated = existingEntries.filter { $0.folderPath != newEntry.folderPath }
+        return Array(([newEntry] + deduplicated).prefix(ReaderTrustedImageFolder.maximumCount))
+    }
+}
+
 nonisolated enum ReaderRecentHistory {
     private struct MenuDisambiguationContext {
         let siblingPathsByDisplayName: [String: [String]]
@@ -332,6 +373,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     var recentWatchedFolders: [ReaderRecentWatchedFolder]
     var recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
+    var trustedImageFolders: [ReaderTrustedImageFolder]
 
     init(
         appAppearance: AppAppearance,
@@ -344,7 +386,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         sidebarSortMode: ReaderSidebarSortMode,
         favoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = [],
         recentWatchedFolders: [ReaderRecentWatchedFolder],
-        recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
+        recentManuallyOpenedFiles: [ReaderRecentOpenedFile],
+        trustedImageFolders: [ReaderTrustedImageFolder] = []
     ) {
         self.appAppearance = appAppearance
         self.readerTheme = readerTheme
@@ -357,6 +400,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         self.favoriteWatchedFolders = favoriteWatchedFolders
         self.recentWatchedFolders = recentWatchedFolders
         self.recentManuallyOpenedFiles = recentManuallyOpenedFiles
+        self.trustedImageFolders = trustedImageFolders
     }
 
     enum CodingKeys: String, CodingKey {
@@ -371,6 +415,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         case favoriteWatchedFolders
         case recentWatchedFolders
         case recentManuallyOpenedFiles
+        case trustedImageFolders
     }
 
     static let `default` = ReaderSettings(
@@ -384,7 +429,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         sidebarSortMode: .openOrder,
         favoriteWatchedFolders: [],
         recentWatchedFolders: [],
-        recentManuallyOpenedFiles: []
+        recentManuallyOpenedFiles: [],
+        trustedImageFolders: []
     )
 
     init(from decoder: Decoder) throws {
@@ -400,6 +446,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         favoriteWatchedFolders = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
         recentWatchedFolders = try container.decodeIfPresent([ReaderRecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
         recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
+        trustedImageFolders = try container.decodeIfPresent([ReaderTrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
     }
 }
 
@@ -427,6 +474,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func addRecentManuallyOpenedFile(_ fileURL: URL)
     func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
+    func addTrustedImageFolder(_ folderURL: URL)
+    func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL?
 }
 
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting

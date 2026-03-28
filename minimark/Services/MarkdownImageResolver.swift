@@ -6,6 +6,12 @@ import UniformTypeIdentifiers
 /// bypassing WebKit's sandboxed process file access restrictions.
 enum MarkdownImageResolver {
 
+    struct Result {
+        let markdown: String
+        /// True if some local images exist but couldn't be read (sandbox restriction).
+        let needsDirectoryAccess: Bool
+    }
+
     /// Maximum image file size to inline (2 MB). Larger images are left as-is
     /// to avoid bloating the HTML string and memory usage.
     private static let maxImageSize = 2_000_000
@@ -15,26 +21,23 @@ enum MarkdownImageResolver {
     private static var cache = [String: String]()
 
     /// Resolves relative and file:// image references to data URIs.
-    /// - Parameters:
-    ///   - markdown: The raw markdown text.
-    ///   - documentDirectoryURL: The directory containing the markdown file.
-    /// - Returns: Markdown with local image references replaced by data URIs.
-    static func resolve(markdown: String, documentDirectoryURL: URL?) -> String {
-        guard let documentDirectoryURL else { return markdown }
+    static func resolve(markdown: String, documentDirectoryURL: URL?) -> Result {
+        guard let documentDirectoryURL else {
+            return Result(markdown: markdown, needsDirectoryAccess: false)
+        }
 
         // Match ![alt](url) and ![alt](url "title"), skipping content
         // inside fenced code blocks (``` ... ```) and inline code (` ... `).
         let pattern = #"(?:^|\n)(`{3,})[^\n]*\n[\s\S]*?\n\1|`[^`\n]+`|!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines]) else {
-            return markdown
+            return Result(markdown: markdown, needsDirectoryAccess: false)
         }
 
         var result = markdown
+        var hasUnreadableImages = false
         let matches = regex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
 
-        // Process matches in reverse order so replacements don't shift indices.
         for match in matches.reversed() {
-            // Groups 2 and 3 are only set for image matches (not code blocks/spans).
             guard match.range(at: 2).location != NSNotFound,
                   match.range(at: 3).location != NSNotFound,
                   let urlRange = Range(match.range(at: 3), in: markdown) else {
@@ -43,36 +46,46 @@ enum MarkdownImageResolver {
 
             let urlString = String(markdown[urlRange]).trimmingCharacters(in: .whitespaces)
 
-            guard let dataURI = dataURI(for: urlString, relativeTo: documentDirectoryURL) else {
-                continue
+            switch resolveImage(for: urlString, relativeTo: documentDirectoryURL) {
+            case .resolved(let dataURI):
+                let fullRange = Range(match.range, in: result)!
+                let altRange = Range(match.range(at: 2), in: markdown)!
+                let altText = String(markdown[altRange])
+                result.replaceSubrange(fullRange, with: "![\(altText)](\(dataURI))")
+            case .unreadable:
+                hasUnreadableImages = true
+            case .skip:
+                break
             }
-
-            let fullRange = Range(match.range, in: result)!
-            let altRange = Range(match.range(at: 2), in: markdown)!
-            let altText = String(markdown[altRange])
-            result.replaceSubrange(fullRange, with: "![\(altText)](\(dataURI))")
         }
 
-        return result
+        return Result(markdown: result, needsDirectoryAccess: hasUnreadableImages)
     }
 
-    private static func dataURI(for urlString: String, relativeTo baseURL: URL) -> String? {
+    // MARK: - Private
+
+    private enum ImageResolution {
+        case resolved(String)
+        case unreadable
+        case skip
+    }
+
+    private static func resolveImage(for urlString: String, relativeTo baseURL: URL) -> ImageResolution {
         let fileURL: URL
 
         if urlString.hasPrefix("#") {
-            return nil
+            return .skip
         }
 
         let lowercased = urlString.lowercased()
         if lowercased.hasPrefix("file:///") {
-            guard let url = URL(string: urlString) else { return nil }
+            guard let url = URL(string: urlString) else { return .skip }
             fileURL = url
         } else if urlString.hasPrefix("/") {
             fileURL = URL(fileURLWithPath: urlString)
         } else if hasURLScheme(urlString) {
-            return nil // data:, http(s):, mailto:, etc. — leave as-is
+            return .skip // data:, http(s):, mailto:, etc.
         } else {
-            // Relative path — strip <...> angle bracket wrappers if present
             var cleaned = urlString
             if cleaned.hasPrefix("<") && cleaned.hasSuffix(">") {
                 cleaned = String(cleaned.dropFirst().dropLast())
@@ -81,34 +94,36 @@ enum MarkdownImageResolver {
         }
 
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return nil
+            return .skip
         }
 
         guard let mimeType = imageMIMEType(for: fileURL) else {
-            return nil // Not an image file
+            return .skip
         }
 
-        // Check cache by path + modification date.
+        guard FileManager.default.isReadableFile(atPath: fileURL.path) else {
+            return .unreadable
+        }
+
         let cacheKey = cacheKey(for: fileURL)
         if let cached = cache[cacheKey] {
-            return cached
+            return .resolved(cached)
         }
 
-        // Skip files that are too large to inline.
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
               let fileSize = attrs[.size] as? Int,
               fileSize <= maxImageSize else {
-            return nil
+            return .skip
         }
 
         guard let data = try? Data(contentsOf: fileURL) else {
-            return nil
+            return .unreadable
         }
 
         let base64 = data.base64EncodedString()
-        let result = "data:\(mimeType);base64,\(base64)"
-        cache[cacheKey] = result
-        return result
+        let dataURI = "data:\(mimeType);base64,\(base64)"
+        cache[cacheKey] = dataURI
+        return .resolved(dataURI)
     }
 
     private static func cacheKey(for url: URL) -> String {

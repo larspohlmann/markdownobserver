@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Combine
 import OSLog
@@ -167,6 +168,10 @@ struct ContentView: View {
                         fileName: readerStore.fileDisplayName,
                         message: readerStore.lastError
                     )
+                } else if readerStore.needsImageDirectoryAccess {
+                    ImageAccessWarningBar {
+                        promptForImageDirectoryAccess()
+                    }
                 }
 
                 documentSurfaceLayout
@@ -394,6 +399,28 @@ struct ContentView: View {
         }
 
         onCancelFolderWatch()
+    }
+
+    private func promptForImageDirectoryAccess() {
+        guard let directoryURL = readerStore.fileURL?.deletingLastPathComponent() else {
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.title = "Grant Image Access"
+        panel.message = "Select the folder containing your images to display them in the preview."
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.prompt = "Grant Access"
+        panel.directoryURL = directoryURL
+
+        guard panel.runModal() == .OK, let selectedURL = panel.url else {
+            return
+        }
+
+        readerStore.grantImageDirectoryAccess(folderURL: selectedURL)
     }
 
     private func handleDroppedFileURLs(_ fileURLs: [URL]) {
