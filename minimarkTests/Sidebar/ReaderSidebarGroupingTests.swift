@@ -7,7 +7,7 @@ struct ReaderSidebarGroupingTests {
 
     // MARK: - Display Name Disambiguation
 
-    @Test func disambiguatedDisplayNamesReturnsFolderNamesForDistinctDirectories() {
+    @Test @MainActor func disambiguatedDisplayNamesReturnsFolderNamesForDistinctDirectories() {
         let paths = ["/Users/me/project/src", "/Users/me/project/tests"]
         let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
 
@@ -15,7 +15,7 @@ struct ReaderSidebarGroupingTests {
         #expect(names["/Users/me/project/tests"] == "tests")
     }
 
-    @Test func disambiguatedDisplayNamesAddsParentWhenFolderNamesCollide() {
+    @Test @MainActor func disambiguatedDisplayNamesAddsParentWhenFolderNamesCollide() {
         let paths = [
             "/Users/me/project/a/docs",
             "/Users/me/project/b/docs"
@@ -26,14 +26,14 @@ struct ReaderSidebarGroupingTests {
         #expect(names["/Users/me/project/b/docs"] == "b/docs")
     }
 
-    @Test func disambiguatedDisplayNamesHandlesSinglePath() {
+    @Test @MainActor func disambiguatedDisplayNamesHandlesSinglePath() {
         let paths = ["/Users/me/project/src"]
         let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
 
         #expect(names["/Users/me/project/src"] == "src")
     }
 
-    @Test func disambiguatedDisplayNamesHandlesEmptyPathForUntitled() {
+    @Test @MainActor func disambiguatedDisplayNamesHandlesEmptyPathForUntitled() {
         let paths = ["", "/Users/me/project/src"]
         let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
 

@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 enum ReaderSidebarGrouping {
     case flat([ReaderSidebarDocumentController.Document])
     case grouped([Group])
