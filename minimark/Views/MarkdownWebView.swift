@@ -150,8 +150,8 @@ struct MarkdownWebView: NSViewRepresentable {
         #if DEBUG
         webView.isInspectable = true
         #endif
-    let containerView = MarkdownWebContainerView(webView: webView)
-    context.coordinator.attach(webView, containerView: containerView)
+        let containerView = MarkdownWebContainerView(webView: webView)
+        context.coordinator.attach(webView, containerView: containerView)
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
         webView.dropDelegate = context.coordinator

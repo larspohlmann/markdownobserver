@@ -6,6 +6,14 @@ import UniformTypeIdentifiers
 /// bypassing WebKit's sandboxed process file access restrictions.
 enum MarkdownImageResolver {
 
+    /// Maximum image file size to inline (2 MB). Larger images are left as-is
+    /// to avoid bloating the HTML string and memory usage.
+    private static let maxImageSize = 2_000_000
+
+    /// Cache of resolved data URIs keyed by absolute file path + modification date.
+    /// Prevents repeated disk reads and base64 encoding across re-renders.
+    private static var cache = [String: String]()
+
     /// Resolves relative and file:// image references to data URIs.
     /// - Parameters:
     ///   - markdown: The raw markdown text.
@@ -14,16 +22,22 @@ enum MarkdownImageResolver {
     static func resolve(markdown: String, documentDirectoryURL: URL?) -> String {
         guard let documentDirectoryURL else { return markdown }
 
-        let pattern = #"!\[([^\]]*)\]\(([^)]+)\)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return markdown }
+        // Match ![alt](url) and ![alt](url "title"), skipping content
+        // inside fenced code blocks (``` ... ```) and inline code (` ... `).
+        let pattern = #"(?:^|\n)(`{3,})[^\n]*\n[\s\S]*?\n\1|`[^`\n]+`|!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines]) else {
+            return markdown
+        }
 
         var result = markdown
         let matches = regex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
 
         // Process matches in reverse order so replacements don't shift indices.
         for match in matches.reversed() {
-            guard match.numberOfRanges >= 3,
-                  let urlRange = Range(match.range(at: 2), in: markdown) else {
+            // Groups 2 and 3 are only set for image matches (not code blocks/spans).
+            guard match.range(at: 2).location != NSNotFound,
+                  match.range(at: 3).location != NSNotFound,
+                  let urlRange = Range(match.range(at: 3), in: markdown) else {
                 continue
             }
 
@@ -34,7 +48,7 @@ enum MarkdownImageResolver {
             }
 
             let fullRange = Range(match.range, in: result)!
-            let altRange = Range(match.range(at: 1), in: markdown)!
+            let altRange = Range(match.range(at: 2), in: markdown)!
             let altText = String(markdown[altRange])
             result.replaceSubrange(fullRange, with: "![\(altText)](\(dataURI))")
         }
@@ -57,8 +71,12 @@ enum MarkdownImageResolver {
         } else if urlString.hasPrefix("/") {
             fileURL = URL(fileURLWithPath: urlString)
         } else {
-            // Relative path
-            fileURL = baseURL.appendingPathComponent(urlString).standardized
+            // Relative path — strip <...> angle bracket wrappers if present
+            var cleaned = urlString
+            if cleaned.hasPrefix("<") && cleaned.hasSuffix(">") {
+                cleaned = String(cleaned.dropFirst().dropLast())
+            }
+            fileURL = baseURL.appendingPathComponent(cleaned).standardized
         }
 
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -69,12 +87,32 @@ enum MarkdownImageResolver {
             return nil // Not an image file
         }
 
+        // Check cache by path + modification date.
+        let cacheKey = cacheKey(for: fileURL)
+        if let cached = cache[cacheKey] {
+            return cached
+        }
+
+        // Skip files that are too large to inline.
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+              let fileSize = attrs[.size] as? Int,
+              fileSize <= maxImageSize else {
+            return nil
+        }
+
         guard let data = try? Data(contentsOf: fileURL) else {
             return nil
         }
 
         let base64 = data.base64EncodedString()
-        return "data:\(mimeType);base64,\(base64)"
+        let result = "data:\(mimeType);base64,\(base64)"
+        cache[cacheKey] = result
+        return result
+    }
+
+    private static func cacheKey(for url: URL) -> String {
+        let mtime = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+        return "\(url.path)|\(mtime?.timeIntervalSince1970 ?? 0)"
     }
 
     private static func imageMIMEType(for url: URL) -> String? {

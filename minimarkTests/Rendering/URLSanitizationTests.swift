@@ -12,8 +12,7 @@ import Testing
 struct URLSanitizationTests {
 
     /// The isSafeURL function extracted from markdownobserver-runtime.js.
-    /// This must be kept in sync with the source. The test
-    /// ``sourceMatchesEmbeddedFunction`` validates this.
+    /// This must be kept in sync with the source in markdownobserver-runtime.js.
     private static let isSafeURLSource = """
     function isSafeURL(urlValue) {
         if (typeof urlValue !== "string") {
