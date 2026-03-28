@@ -61,6 +61,7 @@
 		E1000000000000000000002E /* minimarkUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000030 /* minimarkUITests.swift */; };
 		E1000000000000000000002F /* minimarkUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000031 /* minimarkUITestsLaunchTests.swift */; };
 		E10000000000000000000030 /* ReaderSidebarSortMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000032 /* ReaderSidebarSortMode.swift */; };
+		E10000000000000000000077 /* ReaderSidebarGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000077 /* ReaderSidebarGrouping.swift */; };
 		E10000000000000000000031 /* AppAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000033 /* AppAppearance.swift */; };
 		E10000000000000000000032 /* ReaderFolderWatchAutoOpenPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000034 /* ReaderFolderWatchAutoOpenPlanner.swift */; };
 		E10000000000000000000033 /* ReaderSystemNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000035 /* ReaderSystemNotificationService.swift */; };
@@ -76,6 +77,7 @@
 		E10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift */; };
 		E10000000000000000000041 /* FolderWatchCoordinationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000041 /* FolderWatchCoordinationTests.swift */; };
 		E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */; };
+		E10000000000000000000078 /* ReaderSidebarGroupingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000078 /* ReaderSidebarGroupingTests.swift */; };
 		E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */; };
 		E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000044 /* RenderingAndDiffTests.swift */; };
 		E10000000000000000000074 /* URLSanitizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000074 /* URLSanitizationTests.swift */; };
@@ -190,6 +192,7 @@
 		D10000000000000000000030 /* minimarkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkUITests.swift; sourceTree = "<group>"; };
 		D10000000000000000000031 /* minimarkUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = minimarkUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000032 /* ReaderSidebarSortMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarSortMode.swift; sourceTree = "<group>"; };
+		D10000000000000000000077 /* ReaderSidebarGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarGrouping.swift; sourceTree = "<group>"; };
 		D10000000000000000000033 /* AppAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAppearance.swift; sourceTree = "<group>"; };
 		D10000000000000000000034 /* ReaderFolderWatchAutoOpenPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFolderWatchAutoOpenPlanner.swift; sourceTree = "<group>"; };
 		D10000000000000000000035 /* ReaderSystemNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSystemNotificationService.swift; sourceTree = "<group>"; };
@@ -205,6 +208,7 @@
 		D10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFavoriteWatchedFolderTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000041 /* FolderWatchCoordinationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatchCoordinationTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarDocumentControllerTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000078 /* ReaderSidebarGroupingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSidebarGroupingTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreExternalChangeTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000044 /* RenderingAndDiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingAndDiffTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000074 /* URLSanitizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSanitizationTests.swift; sourceTree = "<group>"; };
@@ -354,6 +358,7 @@
 				D10000000000000000000069 /* ReaderFavoriteWatchedFolder.swift */,
 				D10000000000000000000005 /* ReaderFolderWatch.swift */,
 				D10000000000000000000006 /* ReaderMultiFileDisplayMode.swift */,
+				D10000000000000000000077 /* ReaderSidebarGrouping.swift */,
 				D10000000000000000000032 /* ReaderSidebarSortMode.swift */,
 				D10000000000000000000007 /* ReaderTheme.swift */,
 				D10000000000000000000008 /* ReaderWindowSeed.swift */,
@@ -499,6 +504,7 @@
 			isa = PBXGroup;
 			children = (
 				D10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift */,
+				D10000000000000000000078 /* ReaderSidebarGroupingTests.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -760,6 +766,7 @@
 				E10000000000000000000004 /* ReaderExternalApplication.swift in Sources */,
 				E10000000000000000000005 /* ReaderFolderWatch.swift in Sources */,
 				E10000000000000000000006 /* ReaderMultiFileDisplayMode.swift in Sources */,
+				E10000000000000000000077 /* ReaderSidebarGrouping.swift in Sources */,
 				E10000000000000000000030 /* ReaderSidebarSortMode.swift in Sources */,
 				E10000000000000000000007 /* ReaderTheme.swift in Sources */,
 				E10000000000000000000008 /* ReaderWindowSeed.swift in Sources */,
@@ -845,6 +852,7 @@
 				E10000000000000000000072 /* ReaderFavoriteWatchedFolderTests.swift in Sources */,
 				E10000000000000000000040 /* ReaderSettingsAndModelsTests.swift in Sources */,
 				E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */,
+				E10000000000000000000078 /* ReaderSidebarGroupingTests.swift in Sources */,
 				E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */,
 				E10000000000000000000074 /* URLSanitizationTests.swift in Sources */,
 				E10000000000000000000076 /* MarkdownImageResolverTests.swift in Sources */,

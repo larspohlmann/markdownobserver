@@ -1,0 +1,346 @@
+import Foundation
+import Testing
+@testable import minimark
+
+@Suite
+struct ReaderSidebarGroupingTests {
+
+    // MARK: - Display Name Disambiguation
+
+    @Test func disambiguatedDisplayNamesReturnsFolderNamesForDistinctDirectories() {
+        let paths = ["/Users/me/project/src", "/Users/me/project/tests"]
+        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
+
+        #expect(names["/Users/me/project/src"] == "src")
+        #expect(names["/Users/me/project/tests"] == "tests")
+    }
+
+    @Test func disambiguatedDisplayNamesAddsParentWhenFolderNamesCollide() {
+        let paths = [
+            "/Users/me/project/a/docs",
+            "/Users/me/project/b/docs"
+        ]
+        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
+
+        #expect(names["/Users/me/project/a/docs"] == "a/docs")
+        #expect(names["/Users/me/project/b/docs"] == "b/docs")
+    }
+
+    @Test func disambiguatedDisplayNamesHandlesSinglePath() {
+        let paths = ["/Users/me/project/src"]
+        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
+
+        #expect(names["/Users/me/project/src"] == "src")
+    }
+
+    @Test func disambiguatedDisplayNamesHandlesEmptyPathForUntitled() {
+        let paths = ["", "/Users/me/project/src"]
+        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
+
+        #expect(names[""] == "Untitled")
+        #expect(names["/Users/me/project/src"] == "src")
+    }
+
+    // MARK: - Grouping Logic
+
+    @Test @MainActor func singleDirectoryReturnsFlat() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["docs"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents)
+
+        guard case .flat(let documents) = grouping else {
+            Issue.record("Expected flat grouping for single directory")
+            return
+        }
+        #expect(documents.count == 2)
+    }
+
+    @Test @MainActor func multipleDirectoriesReturnsGrouped() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src", "tests"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents)
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result for multiple directories")
+            return
+        }
+        #expect(groups.count == 2)
+        #expect(groups.allSatisfy { $0.documents.count == 2 })
+    }
+
+    @Test @MainActor func groupsSortByNewestModificationDate() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["older", "newer"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        // Set modification dates: "newer" group has a more recent date
+        let olderDoc = harness.documentsInSubdirectory("older").first!
+        let newerDoc = harness.documentsInSubdirectory("newer").first!
+        olderDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        newerDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents)
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups.count == 2)
+        #expect(groups[0].displayName == "newer")
+        #expect(groups[1].displayName == "older")
+    }
+
+    @Test @MainActor func groupSortUpdatesWhenModificationDateChanges() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let alphaDoc = harness.documentsInSubdirectory("alpha").first!
+        let betaDoc = harness.documentsInSubdirectory("beta").first!
+
+        // Initially beta is newer
+        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+
+        let grouping1 = ReaderSidebarGrouping.group(harness.documents)
+        guard case .grouped(let groups1) = grouping1 else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups1[0].displayName == "beta")
+
+        // Now alpha gets modified more recently
+        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
+
+        let grouping2 = ReaderSidebarGrouping.group(harness.documents)
+        guard case .grouped(let groups2) = grouping2 else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups2[0].displayName == "alpha")
+    }
+
+    // MARK: - Indicator Aggregation
+
+    @Test @MainActor func aggregatedIndicatorReturnsNoneWhenNoChanges() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["docs"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
+        #expect(state == .none)
+    }
+
+    @Test @MainActor func aggregatedIndicatorReturnsExternalChangeWhenAnyDocumentHasChange() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["docs"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
+
+        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
+        #expect(state == .externalChange)
+    }
+
+    @Test @MainActor func aggregatedIndicatorReturnsDeletedWhenAnyDocumentIsMissing() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["docs"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].readerStore.testSetIsCurrentFileMissing(true)
+
+        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
+        #expect(state == .deletedExternalChange)
+    }
+
+    // MARK: - Group Pinning
+
+    @Test @MainActor func pinnedGroupsSortBeforeUnpinnedGroups() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta", "gamma"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        // Give all groups the same mod date so only pinning affects order
+        for doc in harness.documents {
+            doc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        }
+
+        let gammaPath = harness.directoryPath(for: "gamma")
+        let grouping = ReaderSidebarGrouping.group(harness.documents, pinnedGroupIDs: [gammaPath])
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups[0].displayName == "gamma")
+        #expect(groups[0].isPinned == true)
+        #expect(groups[1].isPinned == false)
+        #expect(groups[2].isPinned == false)
+    }
+
+    @Test @MainActor func pinnedGroupsSortByModificationDateAmongThemselves() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta", "gamma"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let alphaDoc = harness.documentsInSubdirectory("alpha").first!
+        let gammaDoc = harness.documentsInSubdirectory("gamma").first!
+        let betaDoc = harness.documentsInSubdirectory("beta").first!
+
+        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
+        gammaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+
+        let alphaPath = harness.directoryPath(for: "alpha")
+        let gammaPath = harness.directoryPath(for: "gamma")
+
+        let grouping = ReaderSidebarGrouping.group(
+            harness.documents,
+            pinnedGroupIDs: [alphaPath, gammaPath]
+        )
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        // Pinned first (alpha newer than gamma), then unpinned
+        #expect(groups[0].displayName == "alpha")
+        #expect(groups[0].isPinned == true)
+        #expect(groups[1].displayName == "gamma")
+        #expect(groups[1].isPinned == true)
+        #expect(groups[2].displayName == "beta")
+        #expect(groups[2].isPinned == false)
+    }
+
+    @Test @MainActor func unpinnedGroupsStillSortByModificationDate() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let alphaDoc = harness.documentsInSubdirectory("alpha").first!
+        let betaDoc = harness.documentsInSubdirectory("beta").first!
+
+        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents, pinnedGroupIDs: [])
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups[0].displayName == "beta")
+        #expect(groups[1].displayName == "alpha")
+    }
+
+    @Test @MainActor func aggregatedIndicatorDeletedTakesPriorityOverExternalChange() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["docs"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        // One doc has external change, another has deleted change
+        harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[1].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[1].readerStore.testSetIsCurrentFileMissing(true)
+
+        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
+        #expect(state == .deletedExternalChange)
+    }
+}
+
+// MARK: - Test Harness
+
+@MainActor
+private struct ReaderSidebarGroupingTestHarness {
+    let temporaryDirectoryURL: URL
+    let documents: [ReaderSidebarDocumentController.Document]
+    private let subdirectoryNames: [String]
+
+    init(subdirectories: [String], filesPerSubdirectory: Int) throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("minimark-grouping-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        temporaryDirectoryURL = directory
+        subdirectoryNames = subdirectories
+
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.grouping.tests.\(UUID().uuidString)"
+        )
+
+        var allDocuments: [ReaderSidebarDocumentController.Document] = []
+
+        for subdirectory in subdirectories {
+            let subURL = directory.appendingPathComponent(subdirectory, isDirectory: true)
+            try FileManager.default.createDirectory(at: subURL, withIntermediateDirectories: true)
+
+            for i in 0..<filesPerSubdirectory {
+                let fileURL = subURL.appendingPathComponent("file\(i).md")
+                try "# File \(i)".write(to: fileURL, atomically: true, encoding: .utf8)
+
+                let store = ReaderStore(
+                    renderer: TestMarkdownRenderer(),
+                    differ: TestChangedRegionDiffer(),
+                    fileWatcher: TestFileWatcher(),
+                    folderWatcher: TestFolderWatcher(),
+                    settingsStore: settingsStore,
+                    securityScope: TestSecurityScopeAccess(),
+                    fileActions: TestReaderFileActions(),
+                    systemNotifier: TestReaderSystemNotifier(),
+                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0)
+                )
+                store.testSetFileURL(fileURL)
+                store.testSetFileDisplayName(fileURL.lastPathComponent)
+
+                allDocuments.append(
+                    ReaderSidebarDocumentController.Document(id: UUID(), readerStore: store)
+                )
+            }
+        }
+
+        documents = allDocuments
+    }
+
+    func documentsInSubdirectory(_ name: String) -> [ReaderSidebarDocumentController.Document] {
+        let subURL = temporaryDirectoryURL.appendingPathComponent(name, isDirectory: true)
+        return documents.filter { doc in
+            doc.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)
+        }
+    }
+
+    func directoryPath(for subdirectory: String) -> String {
+        temporaryDirectoryURL.appendingPathComponent(subdirectory, isDirectory: true).path(percentEncoded: false)
+    }
+
+    func cleanup() {
+        try? FileManager.default.removeItem(at: temporaryDirectoryURL)
+    }
+}

@@ -20,6 +20,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
     @State private var selectedDocumentIDs: Set<UUID> = []
+    @State private var collapsedGroupIDs: Set<String> = []
+    @State private var pinnedGroupIDs: Set<String> = []
 
     var body: some View {
         Group {
@@ -54,6 +56,12 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             } else if filteredSelection != selectedDocumentIDs {
                 selectedDocumentIDs = filteredSelection
             }
+
+            let activeGroupIDs = Set(controller.documents.compactMap {
+                $0.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false)
+            })
+            collapsedGroupIDs.formIntersection(activeGroupIDs)
+            pinnedGroupIDs.formIntersection(activeGroupIDs)
         }
     }
 
@@ -92,49 +100,72 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
+    private func sidebarGrouping(for documents: [ReaderSidebarDocumentController.Document]) -> ReaderSidebarGrouping {
+        ReaderSidebarGrouping.group(documents, pinnedGroupIDs: pinnedGroupIDs)
+    }
+
+    private func isGroupExpanded(_ groupID: String) -> Binding<Bool> {
+        Binding(
+            get: { !collapsedGroupIDs.contains(groupID) },
+            set: { isExpanded in
+                if isExpanded {
+                    collapsedGroupIDs.remove(groupID)
+                } else {
+                    collapsedGroupIDs.insert(groupID)
+                }
+            }
+        )
+    }
+
+    private func toggleGroupPin(_ groupID: String) {
+        if pinnedGroupIDs.contains(groupID) {
+            pinnedGroupIDs.remove(groupID)
+        } else {
+            pinnedGroupIDs.insert(groupID)
+        }
+    }
+
     private var watchedDocumentIDs: Set<UUID> {
         controller.watchedDocumentIDs()
     }
 
     private var sidebarColumn: some View {
-        VStack(spacing: 0) {
+        let sortedDocuments = displayedDocuments
+        let grouping = sidebarGrouping(for: sortedDocuments)
+
+        return VStack(spacing: 0) {
             List(
-                displayedDocuments,
                 selection: Binding(
                     get: { selectedDocumentIDs },
                     set: { updateSelection($0) }
                 )
-            ) { document in
-                ReaderSidebarDocumentRow(
-                    documentID: document.id,
-                    documents: displayedDocuments,
-                    readerStore: document.readerStore,
-                    watchedDocumentIDs: watchedDocumentIDs,
-                    selectedDocumentIDs: selectedDocumentIDs,
-                    canClose: true,
-                    onOpenInDefaultApp: {
-                        onOpenInDefaultApp($0)
-                    },
-                    onOpenInApplication: { application, documentIDs in
-                        onOpenInApplication(application, documentIDs)
-                    },
-                    onRevealInFinder: {
-                        onRevealInFinder($0)
-                    },
-                    onStopWatchingFolders: {
-                        onStopWatchingFolders($0)
-                    },
-                    onClose: {
-                        onCloseDocuments($0)
-                    },
-                    onCloseOthers: {
-                        onCloseOtherDocuments($0)
-                    },
-                    onCloseAll: {
-                        onCloseAllDocuments()
+            ) {
+                switch grouping {
+                case .flat(let documents):
+                    ForEach(documents) { document in
+                        documentRow(for: document, allDocuments: sortedDocuments)
+                            .tag(document.id)
                     }
-                )
-                .tag(document.id)
+                case .grouped(let groups):
+                    ForEach(groups) { group in
+                        DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
+                            ForEach(group.documents) { document in
+                                documentRow(for: document, allDocuments: sortedDocuments)
+                                    .tag(document.id)
+                            }
+                        } label: {
+                            ReaderSidebarGroupHeader(
+                                displayName: group.displayName,
+                                isPinned: group.isPinned,
+                                indicatorState: group.indicatorState,
+                                settings: settingsStore.currentSettings,
+                                onTogglePin: {
+                                    toggleGroupPin(group.id)
+                                }
+                            )
+                        }
+                    }
+                }
             }
             .listStyle(.sidebar)
 
@@ -158,6 +189,41 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
             idealWidth: ReaderSidebarWorkspaceMetrics.sidebarIdealWidth,
             maxHeight: .infinity
+        )
+    }
+
+    private func documentRow(
+        for document: ReaderSidebarDocumentController.Document,
+        allDocuments: [ReaderSidebarDocumentController.Document]
+    ) -> some View {
+        ReaderSidebarDocumentRow(
+            documentID: document.id,
+            documents: allDocuments,
+            readerStore: document.readerStore,
+            watchedDocumentIDs: watchedDocumentIDs,
+            selectedDocumentIDs: selectedDocumentIDs,
+            canClose: true,
+            onOpenInDefaultApp: {
+                onOpenInDefaultApp($0)
+            },
+            onOpenInApplication: { application, documentIDs in
+                onOpenInApplication(application, documentIDs)
+            },
+            onRevealInFinder: {
+                onRevealInFinder($0)
+            },
+            onStopWatchingFolders: {
+                onStopWatchingFolders($0)
+            },
+            onClose: {
+                onCloseDocuments($0)
+            },
+            onCloseOthers: {
+                onCloseOtherDocuments($0)
+            },
+            onCloseAll: {
+                onCloseAllDocuments()
+            }
         )
     }
 
@@ -334,14 +400,7 @@ private struct ReaderSidebarDocumentRow: View {
     }
 
     private var changedIndicatorColor: Color {
-        switch indicatorState {
-        case .deletedExternalChange:
-            return Color(hex: readerStore.currentSettings.syntaxTheme.changeDeletedHex) ?? .accentColor
-        case .externalChange:
-            return Color.folderWatchHighlight(for: readerStore.currentSettings, colorScheme: colorScheme)
-        case .none:
-            return .clear
-        }
+        indicatorState.color(for: readerStore.currentSettings, colorScheme: colorScheme)
     }
 
     private var indicatorState: ReaderDocumentIndicatorState {
@@ -490,5 +549,41 @@ private struct ReaderSidebarDocumentRow: View {
             relativeTo: now
         )
         return "Last modified \(relativeText)"
+    }
+}
+
+private struct ReaderSidebarGroupHeader: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let displayName: String
+    let isPinned: Bool
+    let indicatorState: ReaderDocumentIndicatorState
+    let settings: ReaderSettings
+    let onTogglePin: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(displayName)
+
+            if indicatorState.showsIndicator {
+                Circle()
+                    .fill(indicatorState.color(for: settings, colorScheme: colorScheme))
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+            }
+
+            Spacer()
+
+            Button {
+                onTogglePin()
+            } label: {
+                Image(systemName: isPinned ? "pin.fill" : "pin")
+                    .font(.system(size: 9))
+                    .foregroundStyle(isPinned ? .primary : .tertiary)
+            }
+            .buttonStyle(.plain)
+            .help(isPinned ? "Unpin Group" : "Pin Group")
+            .accessibilityLabel(isPinned ? "Unpin Group" : "Pin Group")
+        }
     }
 }

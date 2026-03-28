@@ -750,4 +750,14 @@ final class ReaderStore: ObservableObject {
     static func isSupportedMarkdownFileURL(_ url: URL) -> Bool {
         ReaderFileRouting.isSupportedMarkdownFileURL(url)
     }
+
+    // MARK: - Test Helpers
+
+    #if DEBUG
+    func testSetFileURL(_ url: URL?) { fileURL = url }
+    func testSetFileDisplayName(_ name: String) { fileDisplayName = name }
+    func testSetFileLastModifiedAt(_ date: Date?) { fileLastModifiedAt = date }
+    func testSetHasUnacknowledgedExternalChange(_ value: Bool) { hasUnacknowledgedExternalChange = value }
+    func testSetIsCurrentFileMissing(_ value: Bool) { isCurrentFileMissing = value }
+    #endif
 }
