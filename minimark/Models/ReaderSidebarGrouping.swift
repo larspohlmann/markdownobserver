@@ -104,8 +104,10 @@ enum ReaderSidebarGrouping {
     static func sortedByNewestModificationDate(_ groups: [Group]) -> [Group] {
         groups.sorted { lhs, rhs in
             switch (lhs.newestModificationDate, rhs.newestModificationDate) {
-            case let (l?, r?):
+            case let (l?, r?) where l != r:
                 return l > r
+            case (.some, .some):
+                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
             case (.some, .none):
                 return true
             case (.none, .some):

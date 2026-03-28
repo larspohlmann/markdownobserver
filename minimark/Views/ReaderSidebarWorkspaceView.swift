@@ -57,8 +57,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 selectedDocumentIDs = filteredSelection
             }
 
-            let activeGroupIDs = Set(controller.documents.compactMap {
-                $0.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false)
+            let activeGroupIDs = Set(controller.documents.map { document in
+                document.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) ?? ""
             })
             collapsedGroupIDs.formIntersection(activeGroupIDs)
             pinnedGroupIDs.formIntersection(activeGroupIDs)
