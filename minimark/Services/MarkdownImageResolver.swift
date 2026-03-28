@@ -51,7 +51,11 @@ enum MarkdownImageResolver {
                 let fullRange = Range(match.range, in: result)!
                 let altRange = Range(match.range(at: 2), in: markdown)!
                 let altText = String(markdown[altRange])
-                result.replaceSubrange(fullRange, with: "![\(altText)](\(dataURI))")
+                // Preserve any trailing title/content after the URL (e.g. "title")
+                let urlEndInMarkdown = urlRange.upperBound
+                let matchEndInMarkdown = Range(match.range, in: markdown)!.upperBound
+                let trailing = String(markdown[urlEndInMarkdown..<matchEndInMarkdown])
+                result.replaceSubrange(fullRange, with: "![\(altText)](\(dataURI)\(trailing)")
             case .unreadable:
                 hasUnreadableImages = true
             case .skip:

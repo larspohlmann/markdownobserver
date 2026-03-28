@@ -42,6 +42,7 @@ struct MarkdownImageResolverTests {
         let md = #"![alt](assets/photo.png "My Title")"#
         let result = MarkdownImageResolver.resolve(markdown: md, documentDirectoryURL: testDir)
         #expect(result.markdown.contains("data:image/png;base64,"))
+        #expect(result.markdown.contains(#""My Title")"#))
     }
 
     // MARK: - file:// URLs

@@ -260,15 +260,17 @@ extension ReaderStore {
             return
         }
 
-        // Skip if already active for the right directory
+        // Skip if already active for the right directory (directory is within token's scope)
         if let documentDirectoryScopeToken,
            documentDirectoryScopeToken.didStartAccess,
-           Self.normalizedFileURL(URL(fileURLWithPath: documentDirectoryScopeToken.url.path))
-               .path.hasPrefix(Self.normalizedFileURL(directoryURL).path) {
+           Self.normalizedFileURL(directoryURL)
+               .path.hasPrefix(Self.normalizedFileURL(URL(fileURLWithPath: documentDirectoryScopeToken.url.path)).path) {
             return
         }
 
-        guard let resolvedURL = settingsStore.resolvedTrustedImageFolderURL(containing: directoryURL) else {
+        guard let resolvedURL = settingsStore.resolvedTrustedImageFolderURL(
+            containing: directoryURL.appendingPathComponent("dummy")
+        ) else {
             return
         }
 
