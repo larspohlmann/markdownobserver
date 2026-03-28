@@ -21,7 +21,7 @@ struct BundledReaderRuntimeAssetResolver: ReaderRuntimeAssetResolving {
 
 enum ReaderBundledAssets {
     // Absolute file:// URLs so scripts load regardless of the WKWebView baseURL.
-    private static let bundleResourcesURL = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources")
+    private static let bundleResourcesURL: URL = Bundle.main.resourceURL ?? Bundle.main.bundleURL
 
     static let markdownItScriptPath = bundleResourcesURL.appendingPathComponent("markdown-it.min.js").absoluteString
     static let highlightJSScriptPath = bundleResourcesURL.appendingPathComponent("highlight.min.js").absoluteString

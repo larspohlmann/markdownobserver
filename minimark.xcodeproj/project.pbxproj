@@ -79,6 +79,7 @@
 		E10000000000000000000043 /* ReaderStoreExternalChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */; };
 		E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000044 /* RenderingAndDiffTests.swift */; };
 		E10000000000000000000074 /* URLSanitizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000074 /* URLSanitizationTests.swift */; };
+		E10000000000000000000076 /* MarkdownImageResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000076 /* MarkdownImageResolverTests.swift */; };
 		E10000000000000000000045 /* FileRoutingAndWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */; };
 		E10000000000000000000046 /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000046 /* TestDoubles.swift */; };
 		E10000000000000000000047 /* MarkdownDocumentIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000047 /* MarkdownDocumentIcon.icns */; };
@@ -207,6 +208,7 @@
 		D10000000000000000000043 /* ReaderStoreExternalChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderStoreExternalChangeTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000044 /* RenderingAndDiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingAndDiffTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000074 /* URLSanitizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSanitizationTests.swift; sourceTree = "<group>"; };
+		D10000000000000000000076 /* MarkdownImageResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownImageResolverTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000045 /* FileRoutingAndWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRoutingAndWatcherTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000046 /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDoubles.swift; sourceTree = "<group>"; };
 		D10000000000000000000047 /* MarkdownDocumentIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = MarkdownDocumentIcon.icns; sourceTree = "<group>"; };
@@ -514,6 +516,7 @@
 			isa = PBXGroup;
 			children = (
 				D10000000000000000000044 /* RenderingAndDiffTests.swift */,
+				D10000000000000000000076 /* MarkdownImageResolverTests.swift */,
 				D10000000000000000000074 /* URLSanitizationTests.swift */,
 			);
 			path = Rendering;
@@ -844,6 +847,7 @@
 				E10000000000000000000042 /* ReaderSidebarDocumentControllerTests.swift in Sources */,
 				E10000000000000000000044 /* RenderingAndDiffTests.swift in Sources */,
 				E10000000000000000000074 /* URLSanitizationTests.swift in Sources */,
+				E10000000000000000000076 /* MarkdownImageResolverTests.swift in Sources */,
 				E10000000000000000000046 /* TestDoubles.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

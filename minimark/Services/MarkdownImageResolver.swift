@@ -59,17 +59,18 @@ enum MarkdownImageResolver {
     private static func dataURI(for urlString: String, relativeTo baseURL: URL) -> String? {
         let fileURL: URL
 
-        if urlString.lowercased().hasPrefix("data:") {
-            return nil // Already a data URI
-        } else if urlString.lowercased().hasPrefix("http://") || urlString.lowercased().hasPrefix("https://") {
-            return nil // Remote URL — leave as-is
-        } else if urlString.hasPrefix("#") {
-            return nil // Fragment
-        } else if urlString.lowercased().hasPrefix("file:///") {
+        if urlString.hasPrefix("#") {
+            return nil
+        }
+
+        let lowercased = urlString.lowercased()
+        if lowercased.hasPrefix("file:///") {
             guard let url = URL(string: urlString) else { return nil }
             fileURL = url
         } else if urlString.hasPrefix("/") {
             fileURL = URL(fileURLWithPath: urlString)
+        } else if hasURLScheme(urlString) {
+            return nil // data:, http(s):, mailto:, etc. — leave as-is
         } else {
             // Relative path — strip <...> angle bracket wrappers if present
             var cleaned = urlString
@@ -113,6 +114,15 @@ enum MarkdownImageResolver {
     private static func cacheKey(for url: URL) -> String {
         let mtime = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
         return "\(url.path)|\(mtime?.timeIntervalSince1970 ?? 0)"
+    }
+
+    private static func hasURLScheme(_ string: String) -> Bool {
+        guard let colonIndex = string.firstIndex(of: ":"),
+              let first = string.first, first.isLetter else {
+            return false
+        }
+        let scheme = string[string.startIndex..<colonIndex]
+        return scheme.dropFirst().allSatisfy { $0.isLetter || $0.isNumber || $0 == "+" || $0 == "-" || $0 == "." }
     }
 
     private static func imageMIMEType(for url: URL) -> String? {
