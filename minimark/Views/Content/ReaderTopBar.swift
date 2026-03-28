@@ -1,6 +1,39 @@
 import AppKit
 import SwiftUI
 
+private struct PointingHandCursor: ViewModifier {
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { hovering in
+                if hovering, !isHovering {
+                    NSCursor.pointingHand.push()
+                    isHovering = true
+                } else if !hovering, isHovering {
+                    NSCursor.pop()
+                    isHovering = false
+                }
+            }
+            .onDisappear {
+                if isHovering {
+                    NSCursor.pop()
+                    isHovering = false
+                }
+            }
+    }
+}
+
+private func abbreviatePathWithTilde(_ path: String) -> String {
+    let home = NSHomeDirectory()
+    if path == home {
+        return "~"
+    } else if path.hasPrefix(home + "/") {
+        return "~" + path.dropFirst(home.count)
+    }
+    return path
+}
+
 struct ReaderTopBar: View {
     @ObservedObject var readerStore: ReaderStore
     let documentViewMode: ReaderDocumentViewMode
@@ -36,99 +69,118 @@ struct ReaderTopBar: View {
 
     private enum Metrics {
         static let barHorizontalPadding: CGFloat = 12
-        static let barVerticalPadding: CGFloat = 8
+        static let mainBarHeight: CGFloat = 44
+        static let watchStripHeight: CGFloat = 30
+        static let watchButtonMinWidth: CGFloat = 120
+        static let controlHeight: CGFloat = 28
+        static let watchButtonToDocSpacing: CGFloat = 16
         static let editingBannerVerticalPadding: CGFloat = 3
         static let editingBannerTextSpacing: CGFloat = 6
         static let editingBannerLabelSize: CGFloat = 10
         static let editingBannerIconSize: CGFloat = 8
         static let editingBannerButtonIconSize: CGFloat = 8
         static let editingBannerButtonHeight: CGFloat = 16
-        static let sectionSpacing: CGFloat = 12
-        static let controlGroupSpacing: CGFloat = 8
-        static let chipHorizontalPadding: CGFloat = 10
-        static let chipVerticalPadding: CGFloat = 5
-        static let chipInnerSpacing: CGFloat = 8
-        static let chipStopButtonSide: CGFloat = 18
-        static let chipDetailIconSide: CGFloat = 12
-        static let topBarMenuButtonSide: CGFloat = 24
-        static let changeNavigationButtonSide: CGFloat = 24
-        static let documentModeButtonWidth: CGFloat = 28
-        static let splitDocumentModeButtonWidth: CGFloat = 32
-        static let documentModeControlHeight: CGFloat = 28
         static let editingBannerCornerRadius: CGFloat = 8
+        static let trailingControlSpacing: CGFloat = 5
+        static let watchStripHorizontalPadding: CGFloat = 14
+        static let watchStripButtonHeight: CGFloat = 22
     }
+
+    @State private var isEditingFavorites = false
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: Metrics.sectionSpacing) {
-                HStack(spacing: Metrics.controlGroupSpacing) {
-                    FolderWatchToolbarButton(
-                        activeFolderWatch: activeFolderWatch,
-                        isInitialScanInProgress: isFolderWatchInitialScanInProgress,
-                        didInitialScanFail: didFolderWatchInitialScanFail,
-                        highlightColor: folderWatchHighlightColor,
-                        onActivate: handleFolderWatchToolbarButton
-                    )
+            HStack(spacing: 0) {
+                FolderWatchToolbarButton(
+                    activeFolderWatch: activeFolderWatch,
+                    isInitialScanInProgress: isFolderWatchInitialScanInProgress,
+                    didInitialScanFail: didFolderWatchInitialScanFail,
+                    favoriteWatchedFolders: favoriteWatchedFolders,
+                    recentWatchedFolders: recentWatchedFolders,
+                    onActivate: handleFolderWatchToolbarButton,
+                    onStartFavoriteWatch: onStartFavoriteWatch,
+                    onStartRecentFolderWatch: onStartRecentFolderWatch,
+                    onEditFavoriteWatchedFolders: { isEditingFavorites = true },
+                    onClearRecentWatchedFolders: onClearRecentWatchedFolders
+                )
 
+                Spacer().frame(width: Metrics.watchButtonToDocSpacing)
+
+                BreadcrumbDocumentContext(
+                    readerStore: readerStore,
+                    onRevealInFinder: { readerStore.revealCurrentFileInFinder() }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: Metrics.trailingControlSpacing) {
                     if canNavigateChangedRegions {
                         ChangeNavigationControls(
                             canNavigate: canNavigateChangedRegions,
                             onNavigateChangedRegion: onNavigateChangedRegion
                         )
                     }
-                }
-                .layoutPriority(4)
 
-                if activeFolderWatch != nil {
-                    FavoriteStarToggle(
-                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                        folderDisplayName: activeFolderWatch?.detailSummaryTitle ?? "",
-                        onSave: onSaveFolderWatchAsFavorite,
-                        onRemove: onRemoveCurrentWatchFromFavorites
+                    if showSourceEditingControls && !readerStore.isSourceEditing {
+                        SourceEditingControls(
+                            canStartEditing: readerStore.canStartSourceEditing,
+                            onStartEditing: onStartSourceEditing
+                        )
+                    }
+
+                    DocumentViewModeSwitch(
+                        hasFile: readerStore.fileURL != nil,
+                        documentViewMode: documentViewMode,
+                        onSetDocumentViewMode: onSetDocumentViewMode
                     )
+
+                    OpenInMenuButton(
+                        hasFile: readerStore.fileURL != nil,
+                        hasActiveFolderWatch: canStopFolderWatch,
+                        apps: readerStore.openInApplications,
+                        favoriteWatchedFolders: favoriteWatchedFolders,
+                        recentWatchedFolders: recentWatchedFolders,
+                        recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+                        iconProvider: appIconImage(for:),
+                        onOpenFile: onOpenFile,
+                        onOpenApp: { app in
+                            readerStore.openCurrentFileInApplication(app)
+                        },
+                        onRevealInFinder: {
+                            readerStore.revealCurrentFileInFinder()
+                        },
+                        onRequestFolderWatch: onRequestFolderWatch,
+                        onStopFolderWatch: onStopFolderWatch,
+                        onStartFavoriteWatch: onStartFavoriteWatch,
+                        onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+                        onEditFavoriteWatchedFolders: { isEditingFavorites = true },
+                        onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
+                        onStartRecentFolderWatch: onStartRecentFolderWatch,
+                        onClearRecentWatchedFolders: onClearRecentWatchedFolders,
+                        onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
+                    )
+                    .accessibilityLabel("Open in and watch actions")
+                    .accessibilityHint("Open a file, choose an app, reveal in Finder, or manage folder watch")
+                    .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
+                    .fixedSize()
                 }
-
-                DocumentContext(readerStore: readerStore)
-                    .frame(maxWidth: .infinity)
-                    .layoutPriority(0)
-
-                TrailingActions(
-                    readerStore: readerStore,
-                    hasFile: readerStore.fileURL != nil,
-                    hasActiveFolderWatch: canStopFolderWatch,
-                    documentViewMode: documentViewMode,
-                    showSourceEditingControls: showSourceEditingControls,
-                    apps: readerStore.openInApplications,
-                    favoriteWatchedFolders: favoriteWatchedFolders,
-                    recentWatchedFolders: recentWatchedFolders,
-                    recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-                    iconProvider: appIconImage(for:),
-                    onStartSourceEditing: onStartSourceEditing,
-                    onSaveSourceDraft: onSaveSourceDraft,
-                    onDiscardSourceDraft: onDiscardSourceDraft,
-                    onSetDocumentViewMode: onSetDocumentViewMode,
-                    onOpenFile: onOpenFile,
-                    onOpenApp: { app in
-                        readerStore.openCurrentFileInApplication(app)
-                    },
-                    onRevealInFinder: {
-                        readerStore.revealCurrentFileInFinder()
-                    },
-                    onRequestFolderWatch: onRequestFolderWatch,
-                    onStopFolderWatch: onStopFolderWatch,
-                    onStartFavoriteWatch: onStartFavoriteWatch,
-                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-                    onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
-                    onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
-                    onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-                    onStartRecentFolderWatch: onStartRecentFolderWatch,
-                    onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                    onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
-                )
-                .layoutPriority(3)
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, Metrics.barHorizontalPadding)
-            .padding(.vertical, Metrics.barVerticalPadding)
+            .frame(height: Metrics.mainBarHeight)
+
+            if let activeWatch = activeFolderWatch {
+                WatchStrip(
+                    activeFolderWatch: activeWatch,
+                    isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                    canStop: canStopFolderWatch,
+                    onStop: onStopFolderWatch,
+                    onSaveFavorite: onSaveFolderWatchAsFavorite,
+                    onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
+                    onRevealInFinder: {
+                        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                    }
+                )
+            }
 
             if readerStore.isSourceEditing {
                 SourceEditingStatusBar(
@@ -157,14 +209,17 @@ struct ReaderTopBar: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
             readerStore.refreshOpenInApplications()
         }
+        .sheet(isPresented: $isEditingFavorites) {
+            EditFavoritesSheet(
+                favorites: favoriteWatchedFolders,
+                onRename: onRenameFavoriteWatchedFolder,
+                onDelete: onRemoveFavoriteWatchedFolder,
+                onDismiss: { isEditingFavorites = false }
+            )
+        }
     }
 
     private func handleFolderWatchToolbarButton() {
-        if canStopFolderWatch {
-            onStopFolderWatch()
-            return
-        }
-
         promptForFolderWatch()
     }
 
@@ -193,71 +248,207 @@ struct ReaderTopBar: View {
         let activeFolderWatch: ReaderFolderWatchSession?
         let isInitialScanInProgress: Bool
         let didInitialScanFail: Bool
-        let highlightColor: Color
+        let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
+        let recentWatchedFolders: [ReaderRecentWatchedFolder]
         let onActivate: () -> Void
+        let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+        let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
+        let onEditFavoriteWatchedFolders: () -> Void
+        let onClearRecentWatchedFolders: () -> Void
 
-        private var isActive: Bool {
-            activeFolderWatch != nil
+        @Environment(\.colorScheme) private var colorScheme
+        @State private var isMenuPresented = false
+
+        private var isActive: Bool { activeFolderWatch != nil }
+
+        private var activeButtonColor: Color {
+            colorScheme == .dark
+                ? Color(red: 0.59, green: 0.49, blue: 1.0)
+                : Color(red: 0.34, green: 0.24, blue: 0.71)
         }
 
-        private var statusText: String {
-            if isInitialScanInProgress {
-                return "Scanning folder tree..."
-            }
-            if didInitialScanFail {
-                return "Initial scan failed"
-            }
-            return activeFolderWatch?.statusLabel ?? "Not watching"
+        private var backgroundFill: Color {
+            isActive ? activeButtonColor.opacity(colorScheme == .dark ? 0.10 : 0.07) : Color.primary.opacity(0.04)
         }
 
-        private var helpText: String {
-            activeFolderWatch?.tooltipText ?? "Watch Folder..."
-        }
-
-        private var buttonTitle: String {
-            isActive ? "Stop Watching" : "Watch Folder..."
+        private var borderColor: Color {
+            isActive ? activeButtonColor.opacity(colorScheme == .dark ? 0.20 : 0.18) : Color.primary.opacity(0.08)
         }
 
         var body: some View {
-            VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 0) {
                 Button {
                     onActivate()
                 } label: {
-                    Label {
-                        Text(buttonTitle)
-                    } icon: {
-                        Image(systemName: "binoculars.fill")
-                            .foregroundStyle(isActive ? .yellow : .secondary)
-                    }
-                    .labelStyle(.titleAndIcon)
+                    mainButtonLabel
                 }
-                .controlSize(.small)
-                .tint(isActive ? highlightColor : nil)
-                .help(isActive ? "Stop Watching Folder" : "Watch Folder...")
+                .buttonStyle(.plain)
+                .help(isActive ? "Watch a different folder" : "Watch Folder...")
                 .accessibilityIdentifier("folder-watch-toolbar-button")
                 .accessibilityLabel("Watch folder")
                 .accessibilityValue(isActive ? "Active" : "Inactive")
-                .accessibilityHint(isActive ? "Stops monitoring the current folder" : "Opens the folder picker for starting folder watch")
+                .accessibilityHint("Opens the folder picker for starting folder watch")
 
-                Text(statusText)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(isActive ? highlightColor.opacity(0.9) : .secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 280, alignment: .leading)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .help(helpText)
-                    .accessibilityHidden(true)
+                Rectangle()
+                    .fill(isActive ? activeButtonColor.opacity(0.18) : Color.primary.opacity(0.08))
+                    .frame(width: 1, height: 16)
 
-                if isInitialScanInProgress {
-                    ProgressView()
-                        .progressViewStyle(.linear)
-                        .frame(width: 140)
-                        .controlSize(.small)
-                        .tint(highlightColor)
+                Button {
+                    isMenuPresented = true
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .bold))
+                        .frame(width: 22, height: Metrics.controlHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Favorites and recent watches")
+                .accessibilityLabel("Watch menu")
+                .popover(isPresented: $isMenuPresented, arrowEdge: .bottom) {
+                    watchMenuPopover
                 }
             }
-            .fixedSize(horizontal: true, vertical: false)
+            .foregroundStyle(isActive ? AnyShapeStyle(activeButtonColor) : AnyShapeStyle(.primary))
+            .background {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(backgroundFill)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(borderColor, lineWidth: 1)
+            }
+            .overlay(alignment: .topTrailing) {
+                Group {
+                    if isInitialScanInProgress {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .controlSize(.small)
+                    } else if didInitialScanFail {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red)
+                    }
+                }
+                .offset(x: -4, y: 4)
+                .allowsHitTesting(false)
+            }
+            .fixedSize(horizontal: true, vertical: true)
+        }
+
+        private var mainButtonLabel: some View {
+            HStack(spacing: 6) {
+                Image(systemName: "binoculars.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color(nsColor: .secondaryLabelColor))
+
+                Text(isActive ? "Watching" : "Watch Folder")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+            }
+            .frame(minWidth: Metrics.watchButtonMinWidth, alignment: .leading)
+            .frame(height: Metrics.controlHeight)
+            .padding(.leading, 10)
+            .padding(.trailing, 6)
+            .contentShape(Rectangle())
+        }
+
+        @ViewBuilder
+        private var watchMenuPopover: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                if !favoriteWatchedFolders.isEmpty {
+                    menuSectionHeader("Favorites")
+
+                    ForEach(favoriteWatchedFolders) { entry in
+                        Button {
+                            isMenuPresented = false
+                            onStartFavoriteWatch(entry)
+                        } label: {
+                            Label {
+                                Text(entry.name)
+                                    .lineLimit(1)
+                            } icon: {
+                                Image(systemName: "star.fill")
+                                    .foregroundStyle(.yellow)
+                                    .font(.system(size: 10))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+
+                    Divider().padding(.vertical, 4)
+
+                    Button("Edit Favorites\u{2026}") {
+                        isMenuPresented = false
+                        onEditFavoriteWatchedFolders()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+
+                if !recentWatchedFolders.isEmpty {
+                    if !favoriteWatchedFolders.isEmpty {
+                        Divider().padding(.vertical, 4)
+                    }
+
+                    menuSectionHeader("Recent")
+
+                    let titlesByPath = ReaderRecentHistory.menuTitles(for: recentWatchedFolders)
+                    ForEach(recentWatchedFolders) { entry in
+                        Button {
+                            isMenuPresented = false
+                            onStartRecentFolderWatch(entry)
+                        } label: {
+                            Text(titlesByPath[entry.folderPath] ?? entry.displayName)
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+
+                    Button("Clear History") {
+                        isMenuPresented = false
+                        onClearRecentWatchedFolders()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+
+                if favoriteWatchedFolders.isEmpty && recentWatchedFolders.isEmpty {
+                    Text("No favorites or recent watches")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                }
+            }
+            .font(.system(size: 13))
+            .padding(.vertical, 8)
+            .frame(minWidth: 220, maxWidth: 320)
+        }
+
+        private func menuSectionHeader(_ title: String) -> some View {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
         }
     }
 
@@ -293,8 +484,8 @@ struct ReaderTopBar: View {
                 Image(systemName: symbolName)
                     .font(.system(size: 11, weight: .semibold))
                     .frame(
-                        width: Metrics.changeNavigationButtonSide,
-                        height: Metrics.changeNavigationButtonSide
+                        width: Metrics.controlHeight,
+                        height: Metrics.controlHeight
                     )
                     .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
@@ -315,116 +506,210 @@ struct ReaderTopBar: View {
         }
     }
 
-    private struct DocumentContext: View {
+    private struct BreadcrumbDocumentContext: View {
         @ObservedObject var readerStore: ReaderStore
+        let onRevealInFinder: () -> Void
+
+        private var hasFile: Bool { readerStore.fileURL != nil }
 
         private var titleText: String {
             if readerStore.fileDisplayName.isEmpty {
                 return "No document open"
             }
-
             return readerStore.fileDisplayName
         }
 
-        var body: some View {
-            VStack(spacing: 2) {
-                Text(titleText)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .help(readerStore.fileURL?.path ?? titleText)
-                    .accessibilityLabel("Current document")
-                    .accessibilityValue(titleText)
-
-                RefreshStatusText(
-                    statusTimestamp: readerStore.statusBarTimestamp,
-                    hasFile: readerStore.fileURL != nil,
-                    isCurrentFileMissing: readerStore.isCurrentFileMissing
-                )
+        private var breadcrumbPath: String {
+            guard let url = readerStore.fileURL else { return "" }
+            let abbreviated = abbreviatePathWithTilde(url.deletingLastPathComponent().path)
+            let components = abbreviated
+                .split(separator: "/", omittingEmptySubsequences: true)
+                .map(String.init)
+            let joined = components.joined(separator: " \u{203A} ")
+            if abbreviated.hasPrefix("/") {
+                return joined.isEmpty ? "/" : "/ \u{203A} " + joined
             }
-            .frame(maxWidth: .infinity)
+            return joined
+        }
+
+        var body: some View {
+            if hasFile {
+                Button {
+                    onRevealInFinder()
+                } label: {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(titleText)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        BreadcrumbTimestampLine(
+                            breadcrumbPath: breadcrumbPath,
+                            statusTimestamp: readerStore.statusBarTimestamp,
+                            isCurrentFileMissing: readerStore.isCurrentFileMissing
+                        )
+                    }
+                }
+                .buttonStyle(.plain)
+                .modifier(PointingHandCursor())
+                .help("Reveal in Finder")
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Current document")
+                .accessibilityHint("Reveals this file in Finder")
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("No document open")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    Text("Open a Markdown file to start reading")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                .accessibilityLabel("No document open")
+            }
         }
     }
 
-    private struct RefreshStatusText: View {
+    private struct BreadcrumbTimestampLine: View {
+        let breadcrumbPath: String
         let statusTimestamp: ReaderStatusBarTimestamp?
-        let hasFile: Bool
         let isCurrentFileMissing: Bool
 
         var body: some View {
             TimelineView(.periodic(from: .now, by: 20)) { context in
-                Text(refreshText(relativeTo: context.date))
-                    .font(.system(size: 11, weight: .regular, design: .rounded))
+                Text(lineText(relativeTo: context.date))
+                    .font(.system(size: 10, weight: .regular))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                    .truncationMode(.tail)
-                    .accessibilityLabel(accessibilityLabel)
-                    .accessibilityValue(accessibilityValue(relativeTo: context.date))
+                    .truncationMode(.head)
             }
         }
 
-        private func refreshText(relativeTo now: Date) -> String {
-            if let availabilityMessage = availabilityMessage(noFileMessage: "Open a Markdown file to start reading") {
-                return availabilityMessage
-            }
-
-            guard let statusTimestamp else {
-                return "Ready"
-            }
-
-            return text(for: statusTimestamp, relativeTo: now)
-        }
-
-        private func accessibilityValue(relativeTo now: Date) -> String {
-            if let availabilityMessage = availabilityMessage(noFileMessage: "No document open") {
-                return availabilityMessage
-            }
-
-            guard let statusTimestamp else {
-                return "Ready"
-            }
-
-            return relativeText(for: statusTimestamp, relativeTo: now)
-        }
-
-        private var accessibilityLabel: String {
-            switch statusTimestamp {
-            case .updated:
-                return "Content refreshed"
-            case .lastModified:
-                return "Last modified"
-            case nil:
-                return "Content status"
-            }
-        }
-
-        private func text(for timestamp: ReaderStatusBarTimestamp, relativeTo now: Date) -> String {
-            switch timestamp {
-            case .updated:
-                return "Updated \(relativeText(for: timestamp, relativeTo: now))"
-            case .lastModified:
-                return "Last modified \(relativeText(for: timestamp, relativeTo: now))"
-            }
-        }
-
-        private func relativeText(for timestamp: ReaderStatusBarTimestamp, relativeTo now: Date) -> String {
-            switch timestamp {
-            case let .updated(date), let .lastModified(date):
-                return ReaderStatusFormatting.relativeText(for: date, relativeTo: now)
-            }
-        }
-
-        private func availabilityMessage(noFileMessage: String) -> String? {
-            if !hasFile {
-                return noFileMessage
-            }
-
+        private func lineText(relativeTo now: Date) -> String {
+            var parts = breadcrumbPath
             if isCurrentFileMissing {
-                return "File deleted externally"
+                parts += " \u{00B7} File deleted externally"
+            } else if let statusTimestamp {
+                let date: Date
+                switch statusTimestamp {
+                case let .updated(d), let .lastModified(d):
+                    date = d
+                }
+                let relative = ReaderStatusFormatting.relativeText(for: date, relativeTo: now)
+                parts += " \u{00B7} \(relative)"
             }
+            return parts
+        }
+    }
 
-            return nil
+    private struct WatchStrip: View {
+        let activeFolderWatch: ReaderFolderWatchSession
+        let isCurrentWatchAFavorite: Bool
+        let canStop: Bool
+        let onStop: () -> Void
+        let onSaveFavorite: (String) -> Void
+        let onRemoveFavorite: () -> Void
+        let onRevealInFinder: () -> Void
+
+        @Environment(\.colorScheme) private var colorScheme
+
+        private var stripGreen: Color {
+            colorScheme == .dark
+                ? Color(red: 0.30, green: 0.81, blue: 0.49)
+                : Color(red: 0.13, green: 0.54, blue: 0.33)
+        }
+
+        private var stripBackground: Color {
+            stripGreen.opacity(colorScheme == .dark ? 0.055 : 0.06)
+        }
+
+        private var stripBorder: Color {
+            stripGreen.opacity(colorScheme == .dark ? 0.10 : 0.12)
+        }
+
+        private var tildeAbbreviatedPath: String {
+            abbreviatePathWithTilde(activeFolderWatch.folderURL.path)
+        }
+
+        private var filteredCount: Int {
+            activeFolderWatch.excludedSubdirectoryRelativePaths.count
+        }
+
+        var body: some View {
+            HStack(spacing: 8) {
+                Text("WATCHING")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(stripGreen.opacity(0.55))
+                    .tracking(0.4)
+
+                Button {
+                    onRevealInFinder()
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(tildeAbbreviatedPath)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(stripGreen.opacity(0.85))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        if filteredCount > 0 {
+                            Text("[\(filteredCount) filtered]")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(stripGreen.opacity(0.45))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .modifier(PointingHandCursor())
+                .help("Reveal in Finder")
+                .accessibilityLabel("Watched folder path")
+                .accessibilityValue(tildeAbbreviatedPath)
+                .accessibilityHint("Opens the watched folder in Finder")
+
+                Spacer(minLength: 0)
+
+                FavoriteStarToggle(
+                    isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                    folderDisplayName: activeFolderWatch.detailSummaryTitle,
+                    onSave: onSaveFavorite,
+                    onRemove: onRemoveFavorite
+                )
+
+                Button {
+                    onStop()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 7, weight: .bold))
+                        Text("Stop")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(height: Metrics.watchStripButtonHeight)
+                    .contentShape(RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary.opacity(0.4))
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.primary.opacity(0.08)))
+                .disabled(!canStop)
+                .accessibilityLabel("Stop watching folder")
+                .accessibilityHint("Stops monitoring the current folder")
+            }
+            .padding(.horizontal, Metrics.watchStripHorizontalPadding)
+            .frame(minHeight: Metrics.watchStripHeight)
+            .background(stripBackground)
+            .overlay(alignment: .top) {
+                Rectangle().fill(stripBorder).frame(height: 1)
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(stripBorder).frame(height: 1)
+            }
+            .accessibilityElement(children: .contain)
         }
     }
 
@@ -449,7 +734,7 @@ struct ReaderTopBar: View {
                 Image(systemName: isCurrentWatchAFavorite ? "star.fill" : "star")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(isCurrentWatchAFavorite ? .yellow : .secondary)
-                    .frame(width: Metrics.changeNavigationButtonSide, height: Metrics.changeNavigationButtonSide)
+                    .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -465,199 +750,6 @@ struct ReaderTopBar: View {
                     onCancel: {
                         isShowingSaveSheet = false
                     }
-                )
-            }
-        }
-    }
-
-    fileprivate struct LastExternalChangeText: View {
-        let changedAt: Date
-
-        var body: some View {
-            TimelineView(.periodic(from: .now, by: 20)) { context in
-                Text("Last changed: \(ReaderStatusFormatting.relativeText(for: changedAt, relativeTo: context.date))")
-                    .font(.system(size: 12, weight: .regular, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .accessibilityLabel("Last external change")
-                    .accessibilityValue(ReaderStatusFormatting.relativeText(for: changedAt, relativeTo: context.date))
-            }
-        }
-    }
-
-    fileprivate struct FolderWatchStatusChip: View {
-        let activeFolderWatch: ReaderFolderWatchSession
-        let isCurrentWatchAFavorite: Bool
-        let canStopFolderWatch: Bool
-        let onStopFolderWatch: () -> Void
-        let onSaveFolderWatchAsFavorite: (String) -> Void
-
-        @State private var isShowingDetails = false
-        @State private var isShowingSaveSheet = false
-        @State private var favoriteName = ""
-
-        var body: some View {
-            HStack(spacing: Metrics.chipInnerSpacing) {
-                Button {
-                    isShowingDetails = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "eye")
-                            .font(.system(size: 11, weight: .semibold))
-
-                        Text(activeFolderWatch.chipLabel)
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-
-                        Image(systemName: "info.circle")
-                            .font(.system(size: Metrics.chipDetailIconSide, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
-                    FolderWatchDetailsPopover(
-                        activeFolderWatch: activeFolderWatch,
-                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                        onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
-                    )
-                }
-                .contextMenu {
-                    if !isCurrentWatchAFavorite {
-                        Button("Save as Favorite") {
-                            favoriteName = activeFolderWatch.detailSummaryTitle
-                            isShowingSaveSheet = true
-                        }
-                    }
-                }
-                .help(activeFolderWatch.tooltipText)
-                .accessibilityLabel("Folder watch details")
-                .accessibilityValue(activeFolderWatch.accessibilityValue)
-                .accessibilityHint("Shows details about the watched folder")
-
-                Rectangle()
-                    .fill(Color.primary.opacity(0.10))
-                    .frame(width: 1, height: 14)
-
-                Button {
-                    onStopFolderWatch()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
-                        .frame(width: Metrics.chipStopButtonSide, height: Metrics.chipStopButtonSide)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .disabled(!canStopFolderWatch)
-                .foregroundStyle(canStopFolderWatch ? .secondary : .tertiary)
-                .accessibilityLabel("Stop watching folder")
-                .accessibilityHint("Stops monitoring the current folder")
-            }
-            .padding(.leading, Metrics.chipHorizontalPadding)
-            .padding(.trailing, Metrics.chipHorizontalPadding - 1)
-            .padding(.vertical, Metrics.chipVerticalPadding)
-            .background(.thinMaterial, in: Capsule(style: .continuous))
-            .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.13), lineWidth: 1)
-            }
-            .fixedSize(horizontal: true, vertical: true)
-            .accessibilityElement(children: .contain)
-            .sheet(isPresented: $isShowingSaveSheet) {
-                SaveFavoriteSheet(
-                    name: $favoriteName,
-                    onSave: { name in
-                        onSaveFolderWatchAsFavorite(name)
-                        isShowingSaveSheet = false
-                    },
-                    onCancel: {
-                        isShowingSaveSheet = false
-                    }
-                )
-            }
-        }
-    }
-
-    private struct TrailingActions: View {
-        @ObservedObject var readerStore: ReaderStore
-        let hasFile: Bool
-        let hasActiveFolderWatch: Bool
-        let documentViewMode: ReaderDocumentViewMode
-        let showSourceEditingControls: Bool
-        let apps: [ReaderExternalApplication]
-        let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-        let recentWatchedFolders: [ReaderRecentWatchedFolder]
-        let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-        let iconProvider: (ReaderExternalApplication) -> NSImage?
-        let onStartSourceEditing: () -> Void
-        let onSaveSourceDraft: () -> Void
-        let onDiscardSourceDraft: () -> Void
-        let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
-        let onOpenFile: (URL) -> Void
-        let onOpenApp: (ReaderExternalApplication) -> Void
-        let onRevealInFinder: () -> Void
-        let onRequestFolderWatch: (URL) -> Void
-        let onStopFolderWatch: () -> Void
-        let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-        let onClearFavoriteWatchedFolders: () -> Void
-        let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
-        let onRemoveFavoriteWatchedFolder: (UUID) -> Void
-        let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-        let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-        let onClearRecentWatchedFolders: () -> Void
-        let onClearRecentManuallyOpenedFiles: () -> Void
-
-        @State private var isEditingFavorites = false
-
-        var body: some View {
-            HStack(spacing: 8) {
-                if showSourceEditingControls && !readerStore.isSourceEditing {
-                    SourceEditingControls(
-                        canStartEditing: readerStore.canStartSourceEditing,
-                        onStartEditing: onStartSourceEditing
-                    )
-                }
-
-                DocumentViewModeSwitch(
-                    hasFile: hasFile,
-                    documentViewMode: documentViewMode,
-                    onSetDocumentViewMode: onSetDocumentViewMode
-                )
-
-                OpenInMenuButton(
-                    hasFile: hasFile,
-                    hasActiveFolderWatch: hasActiveFolderWatch,
-                    apps: apps,
-                    favoriteWatchedFolders: favoriteWatchedFolders,
-                    recentWatchedFolders: recentWatchedFolders,
-                    recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-                    iconProvider: iconProvider,
-                    onOpenFile: onOpenFile,
-                    onOpenApp: onOpenApp,
-                    onRevealInFinder: onRevealInFinder,
-                    onRequestFolderWatch: onRequestFolderWatch,
-                    onStopFolderWatch: onStopFolderWatch,
-                    onStartFavoriteWatch: onStartFavoriteWatch,
-                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-                    onEditFavoriteWatchedFolders: { isEditingFavorites = true },
-                    onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-                    onStartRecentFolderWatch: onStartRecentFolderWatch,
-                    onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                    onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
-                )
-                .accessibilityLabel("Open in and watch actions")
-                .accessibilityHint("Open a file, choose an app, reveal in Finder, or manage folder watch")
-                .frame(width: Metrics.topBarMenuButtonSide, height: Metrics.topBarMenuButtonSide)
-                .fixedSize()
-            }
-            .sheet(isPresented: $isEditingFavorites) {
-                EditFavoritesSheet(
-                    favorites: favoriteWatchedFolders,
-                    onRename: onRenameFavoriteWatchedFolder,
-                    onDelete: onRemoveFavoriteWatchedFolder,
-                    onDismiss: { isEditingFavorites = false }
                 )
             }
         }
@@ -685,7 +777,7 @@ struct ReaderTopBar: View {
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                 }
                 .padding(.horizontal, 12)
-                .frame(height: Metrics.documentModeControlHeight)
+                .frame(height: Metrics.controlHeight)
                 .contentShape(Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
@@ -837,26 +929,17 @@ struct ReaderTopBar: View {
 
         var body: some View {
             HStack(spacing: 2) {
-                modeButton(
-                    mode: .preview,
-                    symbolName: "doc.richtext"
-                )
-
-                modeButton(
-                    mode: .split,
-                    symbolName: "rectangle.split.2x1",
-                    width: Metrics.splitDocumentModeButtonWidth
-                )
-
-                modeButton(
-                    mode: .source,
-                    symbolName: "text.alignleft"
-                )
+                ForEach(ReaderDocumentViewMode.allCases, id: \.self) { mode in
+                    modeButton(mode: mode)
+                }
             }
             .padding(2)
-            .background(.thinMaterial, in: Capsule(style: .continuous))
+            .background {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(.thinMaterial)
+            }
             .overlay {
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
             }
             .accessibilityElement(children: .contain)
@@ -864,22 +947,16 @@ struct ReaderTopBar: View {
             .accessibilityHint("Switch between rendered preview, split view, and markdown source")
         }
 
-        private func modeButton(
-            mode: ReaderDocumentViewMode,
-            symbolName: String,
-            width: CGFloat = Metrics.documentModeButtonWidth
-        ) -> some View {
+        private func modeButton(mode: ReaderDocumentViewMode) -> some View {
             let isSelected = documentViewMode == mode
 
             return Button {
                 onSetDocumentViewMode(mode)
             } label: {
-                Image(systemName: symbolName)
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(
-                        width: width,
-                        height: Metrics.documentModeControlHeight
-                    )
+                Text(mode.displayName)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .padding(.horizontal, 8)
+                    .frame(height: Metrics.controlHeight)
                     .background {
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(isSelected ? Color.accentColor.opacity(0.18) : .clear)
@@ -1141,12 +1218,12 @@ private struct OpenInMenuButton: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSButton {
-        let button = NSButton(frame: NSRect(x: 0, y: 0, width: 24, height: 24))
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: 28, height: 28))
         button.setButtonType(.momentaryChange)
         button.isBordered = false
         button.title = ""
         button.imagePosition = .imageOnly
-        button.image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: "Open in")
+        button.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: "More actions")
         button.contentTintColor = .labelColor
         button.imageScaling = .scaleProportionallyDown
         button.target = context.coordinator
