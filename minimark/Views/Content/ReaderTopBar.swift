@@ -100,7 +100,6 @@ struct ReaderTopBar: View {
                     onActivate: handleFolderWatchToolbarButton,
                     onStartFavoriteWatch: onStartFavoriteWatch,
                     onStartRecentFolderWatch: onStartRecentFolderWatch,
-                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
                     onEditFavoriteWatchedFolders: { isEditingFavorites = true },
                     onClearRecentWatchedFolders: onClearRecentWatchedFolders
                 )
@@ -254,7 +253,6 @@ struct ReaderTopBar: View {
         let onActivate: () -> Void
         let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
         let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-        let onClearFavoriteWatchedFolders: () -> Void
         let onEditFavoriteWatchedFolders: () -> Void
         let onClearRecentWatchedFolders: () -> Void
 
@@ -320,17 +318,19 @@ struct ReaderTopBar: View {
                     .strokeBorder(borderColor, lineWidth: 1)
             }
             .overlay(alignment: .topTrailing) {
-                if isInitialScanInProgress {
-                    ProgressView()
-                        .scaleEffect(0.6)
-                        .controlSize(.small)
-                        .offset(x: -4, y: 4)
-                } else if didInitialScanFail {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.red)
-                        .offset(x: -4, y: 4)
+                Group {
+                    if isInitialScanInProgress {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .controlSize(.small)
+                    } else if didInitialScanFail {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red)
+                    }
                 }
+                .offset(x: -4, y: 4)
+                .allowsHitTesting(false)
             }
             .fixedSize(horizontal: true, vertical: true)
         }
@@ -554,8 +554,8 @@ struct ReaderTopBar: View {
                 .buttonStyle(.plain)
                 .modifier(PointingHandCursor())
                 .help("Reveal in Finder")
+                .accessibilityElement(children: .combine)
                 .accessibilityLabel("Current document")
-                .accessibilityValue(titleText)
                 .accessibilityHint("Reveals this file in Finder")
             } else {
                 VStack(alignment: .leading, spacing: 1) {
