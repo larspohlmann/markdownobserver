@@ -164,6 +164,7 @@ struct ReaderTopBar: View {
                     .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
                     .fixedSize()
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, Metrics.barHorizontalPadding)
             .frame(height: Metrics.mainBarHeight)
