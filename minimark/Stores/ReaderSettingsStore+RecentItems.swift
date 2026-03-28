@@ -120,6 +120,64 @@ extension ReaderSettingsStore {
         }
     }
 
+    // MARK: - Trusted Image Folders
+
+    func addTrustedImageFolder(_ folderURL: URL) {
+        updateSettings { settings in
+            settings.trustedImageFolders = ReaderTrustedImageFolderHistory.insertingUnique(
+                folderURL,
+                into: settings.trustedImageFolders
+            )
+        }
+    }
+
+    func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let filePath = normalizedFileURL.path
+
+        for entry in currentSettings.trustedImageFolders {
+            let folderPath = entry.folderPath.hasSuffix("/") ? entry.folderPath : entry.folderPath + "/"
+            guard filePath.hasPrefix(folderPath) else { continue }
+
+            guard let bookmarkData = entry.bookmarkData else { continue }
+
+            do {
+                let resolution = try bookmarkResolver(bookmarkData)
+                if resolution.isStale {
+                    refreshTrustedImageFolderBookmark(for: entry, resolvedURL: resolution.url)
+                }
+                return resolution.url
+            } catch {
+                updateTrustedImageFolderBookmarkData(forPath: entry.folderPath, bookmarkData: nil)
+            }
+        }
+
+        return nil
+    }
+
+    private func refreshTrustedImageFolderBookmark(for entry: ReaderTrustedImageFolder, resolvedURL: URL) {
+        let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
+        updateTrustedImageFolderBookmarkData(forPath: entry.folderPath, bookmarkData: refreshedBookmarkData)
+    }
+
+    private func updateTrustedImageFolderBookmarkData(forPath folderPath: String, bookmarkData: Data?) {
+        updateSettings { settings in
+            guard let index = settings.trustedImageFolders.firstIndex(where: { $0.folderPath == folderPath }) else {
+                return
+            }
+
+            let existingEntry = settings.trustedImageFolders[index]
+            guard existingEntry.bookmarkData != bookmarkData else {
+                return
+            }
+
+            settings.trustedImageFolders[index] = ReaderTrustedImageFolder(
+                folderPath: existingEntry.folderPath,
+                bookmarkData: bookmarkData
+            )
+        }
+    }
+
     private func updateRecentWatchedFolderBookmarkData(forPath folderPath: String, bookmarkData: Data?) {
         updateSettings { settings in
             guard let index = settings.recentWatchedFolders.firstIndex(where: { $0.folderPath == folderPath }) else {

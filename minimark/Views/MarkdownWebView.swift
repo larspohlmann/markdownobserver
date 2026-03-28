@@ -147,8 +147,11 @@ struct MarkdownWebView: NSViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditorDiagnosticMessageName)
 
         let webView = DropAwareWKWebView(frame: .zero, configuration: configuration)
-    let containerView = MarkdownWebContainerView(webView: webView)
-    context.coordinator.attach(webView, containerView: containerView)
+        #if DEBUG
+        webView.isInspectable = true
+        #endif
+        let containerView = MarkdownWebContainerView(webView: webView)
+        context.coordinator.attach(webView, containerView: containerView)
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
         webView.dropDelegate = context.coordinator

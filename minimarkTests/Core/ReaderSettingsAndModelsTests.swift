@@ -502,6 +502,128 @@ struct ReaderSettingsAndModelsTests {
         #expect(reloadedStore.currentSettings.baseFontSize == 18)
     }
 
+    // MARK: - Trusted Image Folders
+
+    @Test @MainActor func trustedImageFolderInsertDeduplicatesAndPersists() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.trusted-image.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        let folderA = URL(fileURLWithPath: "/tmp/docs-a", isDirectory: true)
+        let folderB = URL(fileURLWithPath: "/tmp/docs-b", isDirectory: true)
+
+        store.addTrustedImageFolder(folderA)
+        store.addTrustedImageFolder(folderB)
+        store.addTrustedImageFolder(folderA) // duplicate
+
+        #expect(store.currentSettings.trustedImageFolders.count == 2)
+        #expect(store.currentSettings.trustedImageFolders[0].folderPath == folderA.path)
+        #expect(store.currentSettings.trustedImageFolders[1].folderPath == folderB.path)
+    }
+
+    @Test @MainActor func trustedImageFolderResolvesContainingFolder() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.trusted-image-resolve.tests"
+        let folderURL = URL(fileURLWithPath: "/tmp/my-notes", isDirectory: true)
+        let resolvedURL = URL(fileURLWithPath: "/tmp/resolved-notes", isDirectory: true)
+        let bookmarkData = Data([0x01, 0x02, 0x03])
+
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [],
+            trustedImageFolders: [
+                ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: bookmarkData)
+            ]
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        let store = ReaderSettingsStore(
+            storage: storage,
+            storageKey: storageKey,
+            bookmarkResolver: { _ in (resolvedURL, false) }
+        )
+
+        let fileInFolder = URL(fileURLWithPath: "/tmp/my-notes/readme.md")
+        let result = store.resolvedTrustedImageFolderURL(containing: fileInFolder)
+        #expect(result?.path == resolvedURL.path)
+    }
+
+    @Test @MainActor func trustedImageFolderReturnsNilForFileOutsideTrustedFolders() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.trusted-image-outside.tests"
+        let folderURL = URL(fileURLWithPath: "/tmp/my-notes", isDirectory: true)
+        let bookmarkData = Data([0x01, 0x02, 0x03])
+
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [],
+            trustedImageFolders: [
+                ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: bookmarkData)
+            ]
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        let store = ReaderSettingsStore(
+            storage: storage,
+            storageKey: storageKey,
+            bookmarkResolver: { _ in (folderURL, false) }
+        )
+
+        let fileOutside = URL(fileURLWithPath: "/tmp/other-folder/readme.md")
+        let result = store.resolvedTrustedImageFolderURL(containing: fileOutside)
+        #expect(result == nil)
+    }
+
+    @Test @MainActor func trustedImageFolderClearsInvalidBookmark() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.trusted-image-invalid.tests"
+        let folderURL = URL(fileURLWithPath: "/tmp/invalid-trust", isDirectory: true)
+
+        let seededSettings = ReaderSettings(
+            appAppearance: .system,
+            readerTheme: .blackOnWhite,
+            syntaxTheme: .monokai,
+            baseFontSize: 15,
+            autoRefreshOnExternalChange: true,
+            notificationsEnabled: true,
+            multiFileDisplayMode: .sidebarLeft,
+            sidebarSortMode: .openOrder,
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [],
+            trustedImageFolders: [
+                ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: Data([0xAA, 0xBB]))
+            ]
+        )
+        storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
+
+        let store = ReaderSettingsStore(
+            storage: storage,
+            storageKey: storageKey,
+            bookmarkResolver: { _ in throw NSError(domain: "test", code: 1) }
+        )
+
+        let fileInFolder = URL(fileURLWithPath: "/tmp/invalid-trust/readme.md")
+        let result = store.resolvedTrustedImageFolderURL(containing: fileInFolder)
+        #expect(result == nil)
+        #expect(store.currentSettings.trustedImageFolders.first?.bookmarkData == nil)
+    }
+
     @Test func readerFolderWatchOptionsDecodesLegacyPayloadWithoutExclusions() throws {
         let legacyJSON = "{\"openMode\":\"watchChangesOnly\",\"scope\":\"includeSubfolders\"}".data(using: .utf8)!
         let decoded = try JSONDecoder().decode(ReaderFolderWatchOptions.self, from: legacyJSON)

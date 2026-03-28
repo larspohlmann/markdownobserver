@@ -75,6 +75,51 @@ struct DeletedFileWarningBar: View {
     }
 }
 
+struct ImageAccessWarningBar: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let onGrantAccess: () -> Void
+
+    private var tint: Color {
+        Color(nsColor: .systemOrange)
+    }
+
+    private var backgroundColor: Color {
+        tint.opacity(colorScheme == .dark ? 0.15 : 0.10)
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tint)
+
+            Text("Some images can't be displayed.")
+                .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 0)
+
+            Button("Grant Folder Access") {
+                onGrantAccess()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(backgroundColor)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(tint.opacity(0.40))
+                .frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Image access required")
+    }
+}
+
 struct NativeMarkdownFallbackView: View {
     let markdown: String
     let onRetryPreview: () -> Void

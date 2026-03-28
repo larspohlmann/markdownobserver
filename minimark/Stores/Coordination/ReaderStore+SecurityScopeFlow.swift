@@ -247,4 +247,53 @@ extension ReaderStore {
             startedAt: session.startedAt
         )
     }
+
+    // MARK: - Trusted Image Folder Access
+
+    func activateTrustedImageFolderAccessIfNeeded(for directoryURL: URL?) {
+        guard let directoryURL else { return }
+
+        // Skip if folder watch already grants access to this directory
+        if let activeFolderWatchSession,
+           watchedFolderSession(activeFolderWatchSession, appliesTo: directoryURL.appendingPathComponent("dummy")),
+           folderSecurityScopeToken?.didStartAccess == true {
+            return
+        }
+
+        // Skip if already active for the right directory (directory is within token's scope)
+        if let documentDirectoryScopeToken,
+           documentDirectoryScopeToken.didStartAccess,
+           Self.normalizedFileURL(directoryURL)
+               .path.hasPrefix(Self.normalizedFileURL(URL(fileURLWithPath: documentDirectoryScopeToken.url.path)).path) {
+            return
+        }
+
+        guard let resolvedURL = settingsStore.resolvedTrustedImageFolderURL(
+            containing: directoryURL.appendingPathComponent("dummy")
+        ) else {
+            return
+        }
+
+        documentDirectoryScopeToken?.endAccess()
+        documentDirectoryScopeToken = securityScope.beginAccess(to: resolvedURL)
+        logSaveInfo(
+            "trusted image folder scope activated: directory=\(redactedPathText(for: directoryURL)) started=\(documentDirectoryScopeToken?.didStartAccess == true)"
+        )
+    }
+
+    func grantImageDirectoryAccess(folderURL: URL) {
+        settingsStore.addTrustedImageFolder(folderURL)
+
+        documentDirectoryScopeToken?.endAccess()
+        documentDirectoryScopeToken = securityScope.beginAccess(to: folderURL)
+        logSaveInfo(
+            "image directory access granted: folder=\(redactedPathText(for: folderURL)) started=\(documentDirectoryScopeToken?.didStartAccess == true)"
+        )
+
+        do {
+            try renderCurrentMarkdownImmediately()
+        } catch {
+            logSaveError("re-render after granting image access failed: \(error.localizedDescription)")
+        }
+    }
 }
