@@ -53,6 +53,9 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
     let borderHex: String
     let linkHex: String
     let changedBlockHex: String
+    let changeAddedHex: String
+    let changeEditedHex: String
+    let changeDeletedHex: String
 
     static let `default` = ReaderTheme.theme(for: .blackOnWhite)
 
@@ -67,7 +70,10 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 codeBackgroundHex: "#F3F3F3",
                 borderHex: "#D9D9D9",
                 linkHex: "#005FCC",
-                changedBlockHex: "#FFF5CC"
+                changedBlockHex: "#FFF5CC",
+                changeAddedHex: "#2DA44E",
+                changeEditedHex: "#BF8700",
+                changeDeletedHex: "#CF222E"
             )
         case .whiteOnBlack:
             return ReaderTheme(
@@ -78,7 +84,10 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 codeBackgroundHex: "#1A1A1A",
                 borderHex: "#303030",
                 linkHex: "#7DB4FF",
-                changedBlockHex: "#2C3A20"
+                changedBlockHex: "#2C3A20",
+                changeAddedHex: "#3FB950",
+                changeEditedHex: "#D29922",
+                changeDeletedHex: "#F85149"
             )
         case .darkGreyOnLightGrey:
             return ReaderTheme(
@@ -89,7 +98,10 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 codeBackgroundHex: "#D9D9D9",
                 borderHex: "#B8B8B8",
                 linkHex: "#004F9A",
-                changedBlockHex: "#F0E3B5"
+                changedBlockHex: "#F0E3B5",
+                changeAddedHex: "#1A7F37",
+                changeEditedHex: "#9A6700",
+                changeDeletedHex: "#CF222E"
             )
         case .lightGreyOnDarkGrey:
             return ReaderTheme(
@@ -100,7 +112,10 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 codeBackgroundHex: "#3A3A3A",
                 borderHex: "#5A5A5A",
                 linkHex: "#8AB9FF",
-                changedBlockHex: "#4D5128"
+                changedBlockHex: "#4D5128",
+                changeAddedHex: "#3FB950",
+                changeEditedHex: "#D29922",
+                changeDeletedHex: "#F85149"
             )
         }
     }
@@ -116,6 +131,9 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
           --reader-border: \(borderHex);
           --reader-link: \(linkHex);
           --reader-changed-bg: \(changedBlockHex);
+          --reader-changed-added: \(changeAddedHex);
+          --reader-changed-edited: \(changeEditedHex);
+          --reader-changed-deleted: \(changeDeletedHex);
           --reader-font-size: \(String(format: "%.1f", clampedSize))px;
         }
         """

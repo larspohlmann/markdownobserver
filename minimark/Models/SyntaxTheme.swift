@@ -75,9 +75,6 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
         let palette = syntaxPalette
         return """
                 :root {
-                    --reader-changed-added: \(palette.changeAddedHex);
-                    --reader-changed-edited: \(palette.changeEditedHex);
-                    --reader-changed-deleted: \(palette.changeDeletedHex);
                     --reader-mark-signal: \(palette.markSignalHex);
                     --reader-blockquote-accent: \(palette.blockquoteAccentHex);
                     --reader-blockquote-bg: \(palette.blockquoteBackgroundHex);
