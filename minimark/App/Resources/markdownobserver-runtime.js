@@ -1454,13 +1454,19 @@
       var placeholder = document.createElement("div");
       placeholder.className = "reader-deleted-placeholder";
       placeholder.setAttribute("data-deleted-region-index", String(i));
+      placeholder.setAttribute("role", "status");
       placeholder.textContent = label;
-      placeholder.setAttribute("aria-hidden", "true");
+
+      var insertTarget = anchorEl;
+      var parentTag = anchorEl.parentNode && anchorEl.parentNode.tagName;
+      if (parentTag === "UL" || parentTag === "OL" || parentTag === "TABLE" || parentTag === "TBODY") {
+        insertTarget = anchorEl.parentNode;
+      }
       var placement = safeAnchorPlacement(region);
       if (placement === "before") {
-        anchorEl.insertAdjacentElement("beforebegin", placeholder);
+        insertTarget.insertAdjacentElement("beforebegin", placeholder);
       } else {
-        anchorEl.insertAdjacentElement("afterend", placeholder);
+        insertTarget.insertAdjacentElement("afterend", placeholder);
       }
     }
   }
