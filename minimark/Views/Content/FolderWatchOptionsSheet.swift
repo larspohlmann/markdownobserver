@@ -14,9 +14,9 @@ struct FolderWatchOptionsSheet: View {
     @State private var expandedDirectoryPaths: Set<String> = []
 
     private enum Metrics {
-        static let sectionSpacing: CGFloat = 14
         static let contentSpacing: CGFloat = 16
-        static let width: CGFloat = 560
+        static let width: CGFloat = 480
+        static let pickerWidth: CGFloat = 230
     }
 
     private var selectedFolderName: String {
@@ -48,10 +48,6 @@ struct FolderWatchOptionsSheet: View {
                 return "Will monitor the full folder tree and open Markdown files only when changes arrive."
             }
         }
-    }
-
-    private var selectionStateKey: String {
-        "\(openMode.rawValue)|\(scope.rawValue)"
     }
 
     private var normalizedExcludedSubdirectoryPaths: [String] {
@@ -137,38 +133,6 @@ struct FolderWatchOptionsSheet: View {
         }
 
         return summary.subdirectoryCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
-    }
-
-    private var scopeFooterText: String {
-        guard scope == .includeSubfolders, folderURL != nil else {
-            return "Enable subfolder watching to evaluate large-tree performance guidance."
-        }
-
-        let depthNote = "Include Subfolders scans up to \(ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels deep."
-
-        if directoryScanModel.isLoading {
-            if let progress = directoryScanModel.scanProgress {
-                return "Scanning subdirectories... \(progress.scannedDirectoryCount) folders processed. \(depthNote)"
-            }
-            return "Scanning subdirectories... \(depthNote)"
-        }
-
-        if requiresHardLimitRefusal {
-            return "This folder has more than \(ReaderFolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount) subdirectories. Include Subfolders is unavailable for this folder. \(depthNote)"
-        }
-
-        if let summary = directoryScanModel.summary {
-            let subdirectoryLabel = summary.subdirectoryCount == 1 ? "subdirectory" : "subdirectories"
-            let markdownLabel = summary.markdownFileCount == 1 ? "Markdown file" : "Markdown files"
-
-            if summary.subdirectoryCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold {
-                return "Large tree detected: \(summary.subdirectoryCount) \(subdirectoryLabel), \(summary.markdownFileCount) \(markdownLabel). Deactivate one or more subdirectories before starting watch. \(depthNote)"
-            }
-
-            return "Detected \(summary.subdirectoryCount) \(subdirectoryLabel) and \(summary.markdownFileCount) \(markdownLabel). \(depthNote)"
-        }
-
-        return "Subdirectory metrics unavailable. \(depthNote)"
     }
 
     private var thresholdWarningTitle: String {
@@ -319,37 +283,94 @@ struct FolderWatchOptionsSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.contentSpacing) {
-            FolderWatchHeaderView()
+            // MARK: Header
+            HStack(alignment: .center, spacing: 14) {
+                Image(systemName: "binoculars.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.tint)
+                    .frame(width: 38, height: 38)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.12))
+                    )
 
-            FolderWatchSummaryCard(
-                folderName: selectedFolderName,
-                folderPath: selectedFolderPath,
-                summary: selectionSummary,
-                openModeLabel: openMode == .openAllMarkdownFiles ? "Open Existing Files" : "Watch Changes Only",
-                scopeLabel: scope == .includeSubfolders ? "Include Subfolders" : "Selected Folder Only",
-                hasFolderSelection: folderURL != nil,
-                selectionStateKey: selectionStateKey
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Watch Folder")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .accessibilityAddTraits(.isHeader)
+
+                    Text("Configure how file changes are monitored")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // MARK: Folder bar
+            let hasFolderSelection = folderURL != nil
+            HStack(spacing: 10) {
+                Image(systemName: hasFolderSelection ? "folder.fill" : "folder.badge.questionmark")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(hasFolderSelection ? .primary : .secondary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectedFolderName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(hasFolderSelection ? .primary : .secondary)
+                        .lineLimit(1)
+
+                    Text(selectedFolderPath)
+                        .font(.system(size: 10.5, weight: .regular, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                        .help(selectedFolderPath)
+                        .accessibilityLabel("Folder path")
+                        .accessibilityValue(selectedFolderPath)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.primary.opacity(0.04))
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+            )
+            .accessibilityIdentifier("folder-watch-summary-card")
 
-            VStack(spacing: Metrics.sectionSpacing) {
-                FolderWatchOptionSection(
-                    title: "When watch starts",
-                    description: "Choose whether MarkdownObserver opens existing Markdown files immediately or waits for incoming changes."
-                ) {
+            // MARK: Option rows
+            VStack(spacing: 0) {
+                HStack {
+                    Text("On start")
+                        .font(.system(size: 13, weight: .medium))
+
+                    Spacer()
+
                     Picker("Watch start mode", selection: openModeSelectionBinding) {
-                        Text("Open Existing Files")
+                        Text("Open Existing")
                             .tag(ReaderFolderWatchOpenMode.openAllMarkdownFiles)
-                        Text("Watch Changes Only")
+                        Text("Watch Only")
                             .tag(ReaderFolderWatchOpenMode.watchChangesOnly)
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: Metrics.pickerWidth)
                     .accessibilityLabel("Watch start mode")
                 }
+                .padding(.vertical, 10)
 
-                FolderWatchOptionSection(
-                    title: "Folder scope",
-                    description: "Control whether watch activity stays in the selected folder or follows subfolders."
-                ) {
+                Divider()
+
+                HStack {
+                    Text("Scope")
+                        .font(.system(size: 13, weight: .medium))
+
+                    Spacer()
+
                     Picker("Folder scope", selection: scopeSelectionBinding) {
                         Text("Selected Folder")
                             .tag(ReaderFolderWatchScope.selectedFolderOnly)
@@ -357,44 +378,96 @@ struct FolderWatchOptionsSheet: View {
                             .tag(ReaderFolderWatchScope.includeSubfolders)
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: Metrics.pickerWidth)
                     .accessibilityLabel("Folder scope")
-
-                    if showsAdvancedSubfolderDetails {
-                        FolderWatchScopeSummaryView(
-                            footerText: scopeFooterText,
-                            isLoading: directoryScanModel.isLoading,
-                            scanProgress: directoryScanModel.scanProgress,
-                            summary: directoryScanModel.summary
-                        )
-                    }
                 }
+                .padding(.vertical, 10)
 
                 if showsAdvancedSubfolderDetails {
-                    FolderWatchLargeTreeWarningCard(
-                        title: optimizationCardTitle,
-                        detail: optimizationCardDetail,
-                        tone: optimizationCardTone,
-                        showsAction: thresholdWarningVisible && !requiresHardLimitRefusal,
-                        onInspect: {
-                            isLargeTreeDialogPresented = true
+                    Divider()
+
+                    if directoryScanModel.isLoading {
+                        let scanText = directoryScanModel.scanProgress.map {
+                            "Scanning... \($0.scannedDirectoryCount) folders"
+                        } ?? "Scanning subfolders..."
+
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+
+                            Text(scanText)
+                                .font(.system(size: 11.5, weight: .medium))
+                                .foregroundStyle(.secondary)
                         }
-                    )
+                        .padding(.vertical, 8)
+                    } else if let summary = directoryScanModel.summary {
+                        HStack(spacing: 8) {
+                            FolderWatchMetricPill(
+                                title: "\(summary.subdirectoryCount) " +
+                                    (summary.subdirectoryCount == 1 ? "subdirectory" : "subdirectories"),
+                                symbol: "folder.badge.gearshape"
+                            )
+
+                            FolderWatchMetricPill(
+                                title: "\(summary.markdownFileCount) " +
+                                    (summary.markdownFileCount == 1 ? "file" : "files"),
+                                symbol: "doc.text.magnifyingglass"
+                            )
+                        }
+                        .padding(.vertical, 8)
+                    }
                 }
             }
             .transaction { transaction in
                 transaction.animation = nil
             }
 
+            // MARK: Summary
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(Color.accentColor.opacity(0.4))
+                    .frame(width: 3)
+
+                Text(selectionSummary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.06))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            // MARK: Warning card (only when tree exceeds threshold)
+            if showsAdvancedSubfolderDetails && (thresholdWarningVisible || requiresHardLimitRefusal) {
+                FolderWatchLargeTreeWarningCard(
+                    title: optimizationCardTitle,
+                    detail: optimizationCardDetail,
+                    tone: optimizationCardTone,
+                    showsAction: thresholdWarningVisible && !requiresHardLimitRefusal,
+                    onInspect: {
+                        isLargeTreeDialogPresented = true
+                    }
+                )
+            }
+
             Divider()
 
+            // MARK: Actions
             HStack {
-                if showsAdvancedSubfolderDetails {
+                if showsAdvancedSubfolderDetails && (requiresHardLimitRefusal || requiresExclusionSelectionBeforeStart) {
                     Label(startActionStatusText, systemImage: startActionStatusSymbol)
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(startActionStatusColor)
                 }
 
                 Spacer()
+
                 Button("Cancel") {
                     onCancel()
                 }
@@ -549,59 +622,6 @@ struct FolderWatchOptionsSheet: View {
         }
 
         return false
-    }
-}
-
-private struct FolderWatchScopeSummaryView: View {
-    let footerText: String
-    let isLoading: Bool
-    let scanProgress: FolderWatchDirectoryScanProgress?
-    let summary: FolderWatchDirectoryScanSummary?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                FolderWatchMetricPill(
-                    title: summary == nil ? "Subdirectories" : "\(summary?.subdirectoryCount ?? 0)",
-                    symbol: "folder.badge.gearshape"
-                )
-
-                FolderWatchMetricPill(
-                    title: summary == nil ? "Markdown files" : "\(summary?.markdownFileCount ?? 0)",
-                    symbol: "doc.text.magnifyingglass"
-                )
-
-                Spacer()
-
-                if isLoading {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if let scanProgress {
-                            Text("\(scanProgress.scannedDirectoryCount) scanned")
-                                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.secondary)
-                            ProgressView(value: scanProgress.fractionCompleted)
-                                .progressViewStyle(.linear)
-                                .frame(width: 120)
-                                .controlSize(.small)
-                        } else {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                    }
-                }
-            }
-
-            Text(footerText)
-                .font(.system(size: 11.5, weight: .regular))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(0.04))
-        )
     }
 }
 
@@ -1368,143 +1388,3 @@ private struct FolderWatchTreeNodeRow: View {
     }
 }
 
-private struct FolderWatchHeaderView: View {
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: "binoculars.fill")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.tint)
-                .frame(width: 38, height: 38)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
-                )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Watch Folder")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .accessibilityAddTraits(.isHeader)
-
-                Text("Monitor a folder for Markdown activity and decide how MarkdownObserver should respond when watch begins.")
-                    .font(.system(size: 12.5, weight: .regular))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-}
-
-private struct FolderWatchSummaryCard: View {
-    let folderName: String
-    let folderPath: String
-    let summary: String
-    let openModeLabel: String
-    let scopeLabel: String
-    let hasFolderSelection: Bool
-    let selectionStateKey: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: hasFolderSelection ? "folder.fill" : "folder.badge.questionmark")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(hasFolderSelection ? .primary : .secondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(Color.primary.opacity(0.07))
-                    )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(hasFolderSelection ? "Selected folder" : "Folder required")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-
-                    Text(folderName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(hasFolderSelection ? .primary : .secondary)
-                        .lineLimit(1)
-
-                    Text(folderPath)
-                        .font(.system(size: 11.5, weight: .regular, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                        .textSelection(.enabled)
-                        .accessibilityLabel("Folder path")
-                        .accessibilityValue(folderPath)
-                }
-            }
-
-            HStack(spacing: 8) {
-                FolderWatchMetricPill(
-                    title: openModeLabel,
-                    symbol: "bolt.horizontal.circle"
-                )
-
-                FolderWatchMetricPill(
-                    title: scopeLabel,
-                    symbol: "arrow.triangle.branch"
-                )
-
-                Spacer()
-            }
-
-            Text(summary)
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.08))
-                )
-                .accessibilityLabel("Watch summary")
-                .accessibilityValue(summary)
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.regularMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-        )
-        .accessibilityIdentifier("folder-watch-summary-card")
-        .accessibilityValue(selectionStateKey)
-    }
-}
-
-private struct FolderWatchOptionSection<Content: View>: View {
-    let title: String
-    let description: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-
-                Text(description)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            content
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        )
-    }
-}
