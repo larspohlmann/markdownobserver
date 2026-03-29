@@ -547,14 +547,14 @@
     return Number.isFinite(number) ? number : fallback;
   }
 
-  function computeGutterToggleTop(row) {
-    var toggleSize = 14;
+  function computeGutterIconTop(row) {
+    var iconSize = 18;
     var rowHeight = Number(row && row.height) || 0;
-    var maxTop = Math.max(0, rowHeight - toggleSize);
+    var maxTop = Math.max(0, rowHeight - iconSize);
     var anchorElement = row && row.anchorElement;
 
     if (row && row.kind === "deleted") {
-      return clampMarkerTop(Math.max(0, (rowHeight - toggleSize) / 2), maxTop);
+      return clampMarkerTop(Math.max(0, (rowHeight - iconSize) / 2), maxTop);
     }
 
     if (!anchorElement) {
@@ -566,8 +566,7 @@
     var lineHeight = parsePixelNumber(style.lineHeight, fontSize * 1.45);
     var paddingTop = parsePixelNumber(style.paddingTop, 0);
 
-    // Center the icon within the first text line box for consistent perceived alignment.
-    var top = paddingTop + Math.max(0, (lineHeight - toggleSize) / 2);
+    var top = paddingTop + Math.max(0, (lineHeight - iconSize) / 2);
     return clampMarkerTop(top, maxTop);
   }
 
@@ -671,7 +670,7 @@
       return 1;
     }
 
-    var markerRowWidth = 24;
+    var markerRowWidth = 32;
 
     for (var markerIndex = 0; markerIndex < markers.length; markerIndex += 1) {
       var marker = markers[markerIndex];
@@ -913,10 +912,37 @@
     return null;
   }
 
-  function normalizeChangedRegionsToMarkerRows(anchorIndex, regions, rootHeight) {
+  function buildDeletedPlaceholderRectMap(root) {
+    var map = Object.create(null);
+    if (!root) {
+      return map;
+    }
+    var placeholders = root.querySelectorAll(".reader-deleted-placeholder[data-deleted-region-index]");
+    if (placeholders.length === 0) {
+      return map;
+    }
+    var rootRect = root.getBoundingClientRect();
+    for (var pi = 0; pi < placeholders.length; pi += 1) {
+      var el = placeholders[pi];
+      var idx = el.getAttribute("data-deleted-region-index");
+      if (idx === null) {
+        continue;
+      }
+      var rect = el.getBoundingClientRect();
+      var t = rect.top - rootRect.top + root.scrollTop;
+      var b = rect.bottom - rootRect.top + root.scrollTop;
+      if (Number.isFinite(t) && Number.isFinite(b) && b > t) {
+        map[idx] = { top: t, bottom: b };
+      }
+    }
+    return map;
+  }
+
+  function normalizeChangedRegionsToMarkerRows(anchorIndex, regions, rootHeight, root) {
     var markers = [];
     var maxTop = Math.max(0, rootHeight - 1);
     var deletedMarkerThickness = 28;
+    var placeholderRects = buildDeletedPlaceholderRectMap(root);
 
     for (var i = 0; i < regions.length; i += 1) {
       var region = regions[i];
@@ -929,10 +955,16 @@
       var top = anchors[0].top;
       var bottom = anchors[0].bottom;
       if (safeRegionKind(region.kind) === "deleted") {
-        var boundary = deletedMarkerBoundary(anchorIndex, region, anchors, regionKey);
-        if (Number.isFinite(boundary)) {
-          top = boundary - (deletedMarkerThickness / 2);
-          bottom = boundary + (deletedMarkerThickness / 2);
+        var phRect = placeholderRects[String(i)];
+        if (phRect) {
+          top = phRect.top;
+          bottom = phRect.bottom;
+        } else {
+          var boundary = deletedMarkerBoundary(anchorIndex, region, anchors, regionKey);
+          if (Number.isFinite(boundary)) {
+            top = boundary - (deletedMarkerThickness / 2);
+            bottom = boundary + (deletedMarkerThickness / 2);
+          }
         }
       } else {
         for (var anchorIndexValue = 1; anchorIndexValue < anchors.length; anchorIndexValue += 1) {
@@ -1133,28 +1165,31 @@
 
     rowElement.style.top = String(row.top) + "px";
     rowElement.style.left = String(row.laneOffset || 0) + "px";
-    rowElement.style.width = String(row.rowWidth || 24) + "px";
+    rowElement.style.width = String(row.rowWidth || 32) + "px";
     rowElement.style.height = String(row.height) + "px";
     rowElement.style.zIndex = String(changedRegionMarkerPaintRank(row.kind) + 1);
     rowElement.setAttribute("title", row.tooltip);
     rowElement.style.setProperty(
-      "--reader-gutter-toggle-top",
-      String(computeGutterToggleTop(row)) + "px"
+      "--reader-gutter-icon-top",
+      String(computeGutterIconTop(row)) + "px"
     );
     rowElement.classList.toggle("reader-gutter-row-active", row.key === activeNavigatedChangedRegionKey);
 
-    var barElement = document.createElement("span");
-    barElement.className = "reader-gutter-bar";
-    rowElement.appendChild(barElement);
+    var pillElement = document.createElement("span");
+    pillElement.className = "reader-gutter-pill";
+    var accentElement = document.createElement("span");
+    accentElement.className = "reader-gutter-pill-accent";
+    pillElement.appendChild(accentElement);
+    rowElement.appendChild(pillElement);
 
     if (row.supportsToggle) {
       var panelID = makeInlinePanelID(row.key);
       rowElement.setAttribute("aria-controls", panelID);
 
-      var toggleGlyph = document.createElement("span");
-      toggleGlyph.className = "reader-gutter-toggle";
-      toggleGlyph.setAttribute("aria-hidden", "true");
-      rowElement.appendChild(toggleGlyph);
+      var iconElement = document.createElement("span");
+      iconElement.className = "reader-gutter-icon";
+      iconElement.setAttribute("aria-hidden", "true");
+      rowElement.appendChild(iconElement);
 
       setGutterRowExpandedState(rowElement, row, !!expandedComparisonRows[row.key]);
 
@@ -1178,9 +1213,9 @@
     rowElement.setAttribute("aria-expanded", isExpanded ? "true" : "false");
     rowElement.setAttribute("aria-label", buildChangedRegionActionLabel(row, isExpanded));
 
-    var toggle = rowElement.querySelector(".reader-gutter-toggle");
-    if (toggle) {
-      toggle.textContent = isExpanded ? "-" : "+";
+    var icon = rowElement.querySelector(".reader-gutter-icon");
+    if (icon) {
+      icon.textContent = isExpanded ? "\u2039" : "\u203A";
     }
   }
 
@@ -1346,6 +1381,96 @@
     }
   }
 
+  function clearContentHighlights(root) {
+    if (!root) {
+      return;
+    }
+    var nodes = root.querySelectorAll(
+      ".reader-content-highlight-added, .reader-content-highlight-edited, .reader-content-highlight-deleted"
+    );
+    for (var ni = 0; ni < nodes.length; ni += 1) {
+      var cl = nodes[ni].classList;
+      cl.remove("reader-content-highlight-added", "reader-content-highlight-edited", "reader-content-highlight-deleted");
+    }
+  }
+
+  function applyContentHighlights(root, anchorIndex, regions) {
+    clearContentHighlights(root);
+    if (!root || !Array.isArray(regions) || regions.length === 0) {
+      return;
+    }
+
+    for (var i = 0; i < regions.length; i += 1) {
+      var region = regions[i];
+      var kind = safeRegionKind(region.kind);
+      if (kind === "deleted") {
+        continue;
+      }
+      var anchors = collectAnchorsForRegion(anchorIndex, region);
+      var highlightClass = "reader-content-highlight-" + kind;
+      for (var ai = 0; ai < anchors.length; ai += 1) {
+        if (anchors[ai].element) {
+          anchors[ai].element.classList.add(highlightClass);
+        }
+      }
+    }
+  }
+
+  function removeDeletedPlaceholders(root) {
+    if (!root) {
+      return;
+    }
+    var placeholders = root.querySelectorAll(".reader-deleted-placeholder");
+    for (var i = 0; i < placeholders.length; i += 1) {
+      if (placeholders[i].parentNode) {
+        placeholders[i].parentNode.removeChild(placeholders[i]);
+      }
+    }
+  }
+
+  function renderDeletedPlaceholders(root, anchorIndex, regions) {
+    removeDeletedPlaceholders(root);
+    if (!root || !Array.isArray(regions) || regions.length === 0) {
+      return;
+    }
+
+    for (var i = 0; i < regions.length; i += 1) {
+      var region = regions[i];
+      if (safeRegionKind(region.kind) !== "deleted") {
+        continue;
+      }
+      var anchors = collectAnchorsForRegion(anchorIndex, region);
+      if (anchors.length === 0) {
+        continue;
+      }
+      var anchorEl = anchors[0].element;
+      if (!anchorEl || !anchorEl.parentNode) {
+        continue;
+      }
+      var lineCount = Number(region.deletedLineCount) || 0;
+      var label = lineCount === 1
+        ? "1 line removed"
+        : (lineCount > 1 ? lineCount + " lines removed" : "Content removed");
+      var placeholder = document.createElement("div");
+      placeholder.className = "reader-deleted-placeholder";
+      placeholder.setAttribute("data-deleted-region-index", String(i));
+      placeholder.setAttribute("role", "status");
+      placeholder.textContent = label;
+
+      var insertTarget = anchorEl;
+      var parentTag = anchorEl.parentNode && anchorEl.parentNode.tagName;
+      if (parentTag === "UL" || parentTag === "OL" || parentTag === "TABLE" || parentTag === "TBODY") {
+        insertTarget = anchorEl.parentNode;
+      }
+      var placement = safeAnchorPlacement(region);
+      if (placement === "before") {
+        insertTarget.insertAdjacentElement("beforebegin", placeholder);
+      } else {
+        insertTarget.insertAdjacentElement("afterend", placeholder);
+      }
+    }
+  }
+
   function renderChangedRegionGutter(root, gutter, regions) {
     if (!gutter) {
       return;
@@ -1359,6 +1484,8 @@
     gutter.innerHTML = "";
     if (!root || !Array.isArray(regions) || regions.length === 0) {
       applyChangedRegionLaneCount(root, 1);
+      clearContentHighlights(root);
+      removeDeletedPlaceholders(root);
       if (root) {
         removeInlineComparisonPanels(root);
       }
@@ -1370,11 +1497,24 @@
     var anchorIndex = buildSourceLineAnchorIndex(root);
     if (anchorIndex.length === 0) {
       applyChangedRegionLaneCount(root, 1);
+      clearContentHighlights(root);
+      removeDeletedPlaceholders(root);
       removeInlineComparisonPanels(root);
       return;
     }
 
-    var markers = normalizeChangedRegionsToMarkerRows(anchorIndex, regions, root.scrollHeight);
+    applyContentHighlights(root, anchorIndex, regions);
+    renderDeletedPlaceholders(root, anchorIndex, regions);
+
+    var hasDeletedPlaceholders = false;
+    for (var di = 0; di < regions.length; di += 1) {
+      if (safeRegionKind(regions[di].kind) === "deleted") {
+        hasDeletedPlaceholders = true;
+        break;
+      }
+    }
+    var markerAnchorIndex = hasDeletedPlaceholders ? buildSourceLineAnchorIndex(root) : anchorIndex;
+    var markers = normalizeChangedRegionsToMarkerRows(markerAnchorIndex, regions, root.scrollHeight, root);
     var laneCount = assignMarkerLanes(markers);
     applyChangedRegionLaneCount(root, laneCount);
     latestChangedRegionRenderState.markers = markers;
