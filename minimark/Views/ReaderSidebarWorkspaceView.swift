@@ -4,8 +4,7 @@ private enum ReaderSidebarWorkspaceMetrics {
     static let sidebarMinimumWidth: CGFloat = 220
     static let sidebarIdealWidth: CGFloat = 250
     static let detailMinimumWidth: CGFloat = 420
-    /// Matches ReaderTopBar.Metrics.mainBarHeight so toolbar and top bar align.
-    static let toolbarHeight: CGFloat = 44
+    static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
 }
 
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
@@ -482,6 +481,8 @@ private struct ReaderSidebarDocumentRow: View {
                 }
                 .buttonStyle(.plain)
                 .opacity(isHovered || isSelected ? 1 : 0)
+                .allowsHitTesting(isHovered || isSelected)
+                .accessibilityHidden(!(isHovered || isSelected))
                 .help("Close")
             }
         }
@@ -595,6 +596,7 @@ private struct ReaderSidebarGroupHeader: View {
                 .padding(.vertical, 1)
                 .background(.quaternary.opacity(0.5))
                 .clipShape(Capsule())
+                .accessibilityLabel("\(documentCount) document\(documentCount == 1 ? "" : "s")")
 
             Button {
                 onTogglePin()
