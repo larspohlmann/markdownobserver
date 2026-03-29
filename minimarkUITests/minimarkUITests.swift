@@ -21,6 +21,7 @@ final class minimarkUITests: XCTestCase {
     private let deactivateAllButtonTitle = "Deactivate All"
     private let startWatchingAnywayButtonTitle = "Start Watching Anyway"
     private let dialogStartButtonIdentifier = "folder-watch-dialog-start-button"
+    private let simulateGroupedSidebarArgument = "-minimark-simulate-grouped-sidebar"
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -186,6 +187,34 @@ final class minimarkUITests: XCTestCase {
             XCTAssertTrue(sheet.buttons[startButtonIdentifier].isEnabled)
         }
     }
+
+    // MARK: - Grouped Sidebar
+
+    @MainActor
+    func testGroupedSidebarShowsDocumentsFromMultipleSubdirectories() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
+        app.launch()
+
+        let sidebar = app.outlines.firstMatch
+        XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should appear with multiple documents")
+
+        waitForCondition(timeout: 5) {
+            app.outlines.firstMatch.disclosureTriangles.count >= 3
+        }
+
+        let disclosureTriangles = sidebar.disclosureTriangles
+        XCTAssertGreaterThanOrEqual(disclosureTriangles.count, 3, "Should have at least 3 folder groups")
+
+        let groupPredicate = NSPredicate(format: "label CONTAINS[c] 'project' OR label CONTAINS[c] 'docs' OR label CONTAINS[c] 'plans'")
+        let groupHeaders = sidebar.staticTexts.matching(groupPredicate)
+        XCTAssertGreaterThanOrEqual(groupHeaders.count, 2, "Should show disambiguated folder group headers")
+
+        XCTAssertTrue(sidebar.staticTexts["README.md"].exists, "README.md should be visible in sidebar")
+        XCTAssertTrue(sidebar.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
+    }
+
+    // MARK: - Helpers
 
     private func makeTemporaryFolder() throws -> URL {
         let directoryURL = FileManager.default.temporaryDirectory

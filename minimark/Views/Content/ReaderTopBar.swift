@@ -34,6 +34,10 @@ private func abbreviatePathWithTilde(_ path: String) -> String {
     return path
 }
 
+enum ReaderTopBarMetrics {
+    static let mainBarHeight: CGFloat = 44
+}
+
 struct ReaderTopBar: View {
     @ObservedObject var readerStore: ReaderStore
     let documentViewMode: ReaderDocumentViewMode
@@ -69,7 +73,7 @@ struct ReaderTopBar: View {
 
     private enum Metrics {
         static let barHorizontalPadding: CGFloat = 12
-        static let mainBarHeight: CGFloat = 44
+        static let mainBarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
         static let watchStripHeight: CGFloat = 30
         static let watchButtonMinWidth: CGFloat = 120
         static let controlHeight: CGFloat = 28
