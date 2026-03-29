@@ -5,12 +5,14 @@ struct ReaderUITestLaunchConfiguration {
     static let presentWatchFolderSheetArgument = "-minimark-present-watch-folder-sheet"
     static let autoStartWatchFolderArgument = "-minimark-auto-start-watch-folder"
     static let simulateAutoOpenWatchFlowArgument = "-minimark-simulate-auto-open-watch-flow"
+    static let simulateGroupedSidebarArgument = "-minimark-simulate-grouped-sidebar"
     static let watchFolderPathEnvironmentKey = "MINIMARK_UI_TEST_WATCH_FOLDER_PATH"
 
     let isUITestModeEnabled: Bool
     let shouldPresentWatchFolderSheet: Bool
     let shouldAutoStartWatchingFolder: Bool
     let shouldSimulateAutoOpenWatchFlow: Bool
+    let shouldSimulateGroupedSidebar: Bool
     let watchFolderURL: URL?
 
     static var current: ReaderUITestLaunchConfiguration {
@@ -20,6 +22,7 @@ struct ReaderUITestLaunchConfiguration {
         let shouldPresentWatchFolderSheet = isUITestModeEnabled && arguments.contains(presentWatchFolderSheetArgument)
         let shouldAutoStartWatchingFolder = isUITestModeEnabled && arguments.contains(autoStartWatchFolderArgument)
         let shouldSimulateAutoOpenWatchFlow = isUITestModeEnabled && arguments.contains(simulateAutoOpenWatchFlowArgument)
+        let shouldSimulateGroupedSidebar = isUITestModeEnabled && arguments.contains(simulateGroupedSidebarArgument)
 
         let watchFolderURL: URL?
         if let folderPath = processInfo.environment[watchFolderPathEnvironmentKey], !folderPath.isEmpty {
@@ -33,6 +36,7 @@ struct ReaderUITestLaunchConfiguration {
             shouldPresentWatchFolderSheet: shouldPresentWatchFolderSheet,
             shouldAutoStartWatchingFolder: shouldAutoStartWatchingFolder,
             shouldSimulateAutoOpenWatchFlow: shouldSimulateAutoOpenWatchFlow,
+            shouldSimulateGroupedSidebar: shouldSimulateGroupedSidebar,
             watchFolderURL: watchFolderURL
         )
     }

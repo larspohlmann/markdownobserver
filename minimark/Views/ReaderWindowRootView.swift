@@ -334,6 +334,9 @@ struct ReaderWindowRootView: View {
             switch action {
             case .none:
                 hasAppliedUITestLaunchConfiguration = true
+            case .simulateGroupedSidebar:
+                startUITestGroupedSidebarFlow()
+                hasAppliedUITestLaunchConfiguration = true
             case .simulateAutoOpenWatchFlow:
                 startUITestAutoOpenWatchFlow()
                 hasAppliedUITestLaunchConfiguration = true
@@ -355,6 +358,15 @@ struct ReaderWindowRootView: View {
             configuration: ReaderUITestLaunchConfiguration.current,
             hostWindowAvailable: hostWindow != nil
         )
+    }
+
+    private func startUITestGroupedSidebarFlow() {
+        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { fileURLs in
+            sidebarDocumentController.openDocumentsBurst(
+                at: fileURLs,
+                origin: .manual
+            )
+        }
     }
 
     private func startUITestAutoOpenWatchFlow() {
