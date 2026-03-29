@@ -322,7 +322,9 @@ struct FolderWatchOptionsSheet: View {
                         .font(.system(size: 10.5, weight: .regular, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .truncationMode(.middle)
                         .textSelection(.enabled)
+                        .help(selectedFolderPath)
                         .accessibilityLabel("Folder path")
                         .accessibilityValue(selectedFolderPath)
                 }
@@ -370,9 +372,9 @@ struct FolderWatchOptionsSheet: View {
                     Spacer()
 
                     Picker("Folder scope", selection: scopeSelectionBinding) {
-                        Text("This Folder")
+                        Text("Selected Folder")
                             .tag(ReaderFolderWatchScope.selectedFolderOnly)
-                        Text("Subfolders")
+                        Text("Include Subfolders")
                             .tag(ReaderFolderWatchScope.includeSubfolders)
                     }
                     .pickerStyle(.segmented)
@@ -402,12 +404,14 @@ struct FolderWatchOptionsSheet: View {
                     } else if let summary = directoryScanModel.summary {
                         HStack(spacing: 8) {
                             FolderWatchMetricPill(
-                                title: "\(summary.subdirectoryCount) subdirs",
+                                title: "\(summary.subdirectoryCount) " +
+                                    (summary.subdirectoryCount == 1 ? "subdirectory" : "subdirectories"),
                                 symbol: "folder.badge.gearshape"
                             )
 
                             FolderWatchMetricPill(
-                                title: "\(summary.markdownFileCount) files",
+                                title: "\(summary.markdownFileCount) " +
+                                    (summary.markdownFileCount == 1 ? "file" : "files"),
                                 symbol: "doc.text.magnifyingglass"
                             )
                         }
