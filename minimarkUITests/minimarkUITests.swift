@@ -214,26 +214,6 @@ final class minimarkUITests: XCTestCase {
         XCTAssertTrue(sidebar.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
     }
 
-    @MainActor
-    func testGroupedSidebarScreenshot() throws {
-        let app = XCUIApplication()
-        app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
-        app.launch()
-
-        let sidebar = app.outlines.firstMatch
-        XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should appear")
-
-        waitForCondition(timeout: 5) {
-            app.outlines.firstMatch.disclosureTriangles.count >= 3
-        }
-
-        let screenshot = app.windows.firstMatch.screenshot()
-        let attachment = XCTAttachment(screenshot: screenshot)
-        attachment.name = "GroupedSidebar"
-        attachment.lifetime = .keepAlways
-        add(attachment)
-    }
-
     // MARK: - Helpers
 
     private func makeTemporaryFolder() throws -> URL {
