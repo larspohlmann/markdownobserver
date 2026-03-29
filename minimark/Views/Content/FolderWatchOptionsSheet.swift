@@ -835,8 +835,9 @@ private struct LargeFolderExclusionDialog: View {
     }
 
     private var progressRingFraction: Double {
-        guard !preparedSubdirectoryPaths.isEmpty else { return 0 }
-        return Double(activeSubdirectoryCount) / Double(preparedSubdirectoryPaths.count)
+        guard threshold > 0 else { return 0 }
+        let fraction = Double(activeSubdirectoryCount) / Double(threshold)
+        return min(1.0, fraction)
     }
 
     private var progressRingColor: Color {
@@ -1193,7 +1194,11 @@ private struct FolderWatchTreeNodeRow: View {
     private var toggleBinding: Binding<Bool> {
         Binding(
             get: { isActive },
-            set: { _ in toggleExclusion() }
+            set: { newValue in
+                if newValue != isActive {
+                    toggleExclusion()
+                }
+            }
         )
     }
 
@@ -1236,7 +1241,9 @@ private struct FolderWatchTreeNodeRow: View {
                 .controlSize(.mini)
                 .labelsHidden()
                 .disabled(!canToggle)
-                .help(isExcludedByAncestor ? "Inherited" : "")
+                .help(isExcludedByAncestor ? "Exclusion inherited from a parent folder" : "Toggle to include or exclude this folder")
+                .accessibilityLabel("\(node.name)")
+                .accessibilityValue(isEffectivelyExcluded ? (isExcludedByAncestor ? "Inherited" : "Deactivated") : "Active")
             }
             .padding(.leading, CGFloat(level) * 16)
             .padding(.horizontal, 10)
