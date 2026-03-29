@@ -334,6 +334,10 @@ struct ReaderWindowRootView: View {
             switch action {
             case .none:
                 hasAppliedUITestLaunchConfiguration = true
+            case .simulateScreenshotShowcase(let contentURL):
+                applyScreenshotWindowSize()
+                startUITestScreenshotShowcaseFlow(contentURL: contentURL)
+                hasAppliedUITestLaunchConfiguration = true
             case .simulateGroupedSidebar:
                 startUITestGroupedSidebarFlow()
                 hasAppliedUITestLaunchConfiguration = true
@@ -341,7 +345,13 @@ struct ReaderWindowRootView: View {
                 startUITestAutoOpenWatchFlow()
                 hasAppliedUITestLaunchConfiguration = true
             case .presentWatchFolderSheet(let watchFolderURL):
-                prepareFolderWatchOptions(for: watchFolderURL)
+                var options = ReaderFolderWatchOptions.default
+                if ProcessInfo.processInfo.environment[
+                    ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
+                ] == "includeSubfolders" {
+                    options.scope = .includeSubfolders
+                }
+                presentFolderWatchOptions(for: watchFolderURL, options: options)
                 hasAppliedUITestLaunchConfiguration = true
             case .startWatchingFolder(let watchFolderURL):
                 startWatchingFolder(folderURL: watchFolderURL, options: .default)
@@ -357,6 +367,50 @@ struct ReaderWindowRootView: View {
         ReaderWindowUITestFlowSupport.resolveLaunchAction(
             configuration: ReaderUITestLaunchConfiguration.current,
             hostWindowAvailable: hostWindow != nil
+        )
+    }
+
+    private func applyScreenshotWindowSize() {
+        guard let sizeStr = ProcessInfo.processInfo.environment[
+            ReaderUITestLaunchConfiguration.screenshotWindowSizeEnvironmentKey
+        ], !sizeStr.isEmpty else { return }
+
+        let parts = sizeStr.split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return }
+
+        if let window = hostWindow {
+            let frame = NSRect(
+                x: window.frame.origin.x,
+                y: window.frame.origin.y,
+                width: parts[0],
+                height: parts[1]
+            )
+            window.setFrame(frame, display: true, animate: false)
+        }
+    }
+
+    private func startUITestScreenshotShowcaseFlow(contentURL: URL) {
+        ReaderWindowUITestFlowSupport.startScreenshotShowcaseFlow(
+            contentURL: contentURL,
+            openDocumentsBurst: { fileURLs in
+                sidebarDocumentController.openDocumentsBurst(
+                    at: fileURLs,
+                    origin: .manual
+                )
+            },
+            focusDocument: { fileURL in
+                sidebarDocumentController.focusDocument(at: fileURL)
+            },
+            setDocumentViewMode: { mode in
+                if let activeStore = sidebarDocumentController.selectedDocument?.readerStore {
+                    activeStore.setDocumentViewMode(mode)
+                }
+            },
+            presentWatchFolderSheet: { watchURL, scope in
+                var options = ReaderFolderWatchOptions.default
+                options.scope = scope
+                presentFolderWatchOptions(for: watchURL, options: options)
+            }
         )
     }
 

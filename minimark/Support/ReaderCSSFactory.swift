@@ -1,6 +1,15 @@
 import Foundation
 
 struct ReaderCSSFactory {
+    static var screenshotAutoExpandMetaTag: String {
+        let shouldExpand = ProcessInfo.processInfo.environment[
+            ReaderUITestLaunchConfiguration.screenshotExpandFirstEditEnvironmentKey
+        ] == "true"
+        return shouldExpand
+            ? "<meta name=\"minimark-auto-expand-first-edit\" content=\"true\" />"
+            : ""
+    }
+
     private static var bundledJSCache: [String: String] = [:]
 
     private static func loadBundledJS(named name: String) -> String {
@@ -547,6 +556,7 @@ struct ReaderCSSFactory {
           <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
           <meta name="minimark-runtime-payload-base64" content="\(payloadBase64)" />
           <meta name="minimark-runtime-css-base64" content="\(cssBase64)" />
+          \(Self.screenshotAutoExpandMetaTag)
           <style id="minimark-runtime-style">
           \(css)
           </style>
