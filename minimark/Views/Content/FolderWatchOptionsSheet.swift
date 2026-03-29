@@ -433,6 +433,7 @@ struct FolderWatchOptionsSheet: View {
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(.secondary)
                     .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
             }
@@ -825,27 +826,6 @@ private struct LargeFolderExclusionDialog: View {
         max(0, activeSubdirectoryCount - threshold)
     }
 
-    private var thresholdProgressText: String {
-        if remainingToDeactivateCount == 0 {
-            return "Threshold satisfied. You can start watching now."
-        }
-
-        let noun = remainingToDeactivateCount == 1 ? "subdirectory" : "subdirectories"
-        return "Deactivate \(remainingToDeactivateCount) more \(noun) to reach the threshold."
-    }
-
-    private var thresholdProgressSymbol: String {
-        remainingToDeactivateCount == 0 ? "checkmark.seal.fill" : "exclamationmark.circle.fill"
-    }
-
-    private var thresholdProgressStyle: AnyShapeStyle {
-        remainingToDeactivateCount == 0 ? AnyShapeStyle(.green) : AnyShapeStyle(.orange)
-    }
-
-    private var confirmButtonTitle: String {
-        "Start Watching"
-    }
-
     private var footerNeedText: String {
         if remainingToDeactivateCount == 0 {
             return "Threshold met"
@@ -854,121 +834,41 @@ private struct LargeFolderExclusionDialog: View {
         return "Need \(remainingToDeactivateCount) more"
     }
 
+    private var progressRingFraction: Double {
+        guard threshold > 0 else { return 0 }
+        let fraction = Double(activeSubdirectoryCount) / Double(threshold)
+        return min(1.0, fraction)
+    }
+
+    private var progressRingColor: Color {
+        remainingToDeactivateCount == 0 ? .green : .orange
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "speedometer")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .frame(width: 34, height: 34)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color.accentColor.opacity(0.15))
-                        )
+        VStack(alignment: .leading, spacing: 16) {
+            // MARK: Header row
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Optimize Large Folder Watch")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Optimize Large Folder Watch")
-                            .font(.system(size: 19, weight: .semibold, design: .rounded))
-
-                        Label("Depth limit: \(ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels", systemImage: "arrow.down.to.line.compact")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.orange)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.orange.opacity(0.16))
-                            )
-
-                        Text("This folder tree exceeds \(threshold) subdirectories. Deactivate one or more subdirectories to reduce scan pressure and avoid freezes.")
-                            .font(.system(size: 12.5, weight: .regular))
+                    if let summary = scanModel.summary {
+                        Text("\(summary.subdirectoryCount) subdirectories found")
+                            .font(.system(size: 12.5))
                             .foregroundStyle(.secondary)
                     }
-                }
 
-                HStack(spacing: 8) {
-                    FolderWatchMetricPill(
-                        title: "Threshold \(threshold)",
-                        symbol: "gauge.with.dots.needle.50percent"
-                    )
-
-                    FolderWatchMetricPill(
-                        title: "\(excludedSet.count) manually deactivated",
-                        symbol: "line.3.horizontal.decrease.circle"
-                    )
-
-                    Spacer()
-                }
-            }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.primary.opacity(0.04))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.primary.opacity(0.07), lineWidth: 0.5)
-            )
-
-            Group {
-                if scanModel.isLoading {
-                    VStack(spacing: 10) {
-                        if let progress = scanModel.scanProgress {
-                            ProgressView(value: progress.fractionCompleted)
-                                .progressViewStyle(.linear)
-                                .frame(width: 320)
-                                .controlSize(.small)
-
-                            Text("Scanning subdirectories... \(progress.scannedDirectoryCount) folders processed")
-                                .font(.system(size: 12.5, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Scanning subdirectories...")
-                                .font(.system(size: 12.5, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
-                } else if let summary = scanModel.summary {
-                    HStack(spacing: 14) {
-                        Label("\(summary.subdirectoryCount) subdirectories", systemImage: "folder.fill.badge.plus")
-                        Label("\(summary.markdownFileCount) Markdown files", systemImage: "doc.richtext")
-                    }
-                    .font(.system(size: 12.5, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                    HStack(spacing: 10) {
-                        Label(
-                            "\(activeSubdirectoryCount) active / \(effectiveExcludedSubdirectoryCount) deactivated",
-                            systemImage: "dial.medium"
+                    Label("Depth limit: \(ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels", systemImage: "arrow.down.to.line.compact")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.orange.opacity(0.16))
                         )
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-
-                        Spacer()
-                    }
 
                     HStack(spacing: 8) {
-                        Image(systemName: thresholdProgressSymbol)
-                            .foregroundStyle(thresholdProgressStyle)
-
-                        Text(thresholdProgressText)
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .foregroundStyle(thresholdProgressStyle)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.primary.opacity(0.05))
-                    )
-
-                    HStack(spacing: 10) {
                         Button {
                             excludedSubdirectoryPaths = preparedSubdirectoryPaths
                         } label: {
@@ -982,51 +882,103 @@ private struct LargeFolderExclusionDialog: View {
                             Label("Activate All", systemImage: "checkmark.circle")
                         }
                         .disabled(!hasExcludedSubdirectories)
-
-                        Spacer()
                     }
                     .buttonStyle(.bordered)
-
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 6) {
-                            ForEach(rootNodes) { node in
-                                FolderWatchTreeNodeRow(
-                                    node: node,
-                                    level: 0,
-                                    excludedSubdirectoryPathSet: excludedSet,
-                                    expandedDirectoryPaths: $expandedDirectoryPaths,
-                                    excludedSubdirectoryPaths: $excludedSubdirectoryPaths
-                                )
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .frame(minHeight: 260)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                    )
-                } else {
-                    Text("Unable to scan this folder tree.")
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
+                    .controlSize(.small)
                 }
+
+                Spacer()
+
+                ZStack {
+                    Circle()
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 5)
+
+                    Circle()
+                        .trim(from: 0, to: progressRingFraction)
+                        .stroke(progressRingColor, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+
+                    VStack(spacing: 1) {
+                        Text("\(activeSubdirectoryCount)")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(progressRingColor)
+
+                        Text("/\(threshold)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 70, height: 70)
             }
 
-            Divider()
-
-            HStack(spacing: 12) {
-                let count = excludedSet.count
-                let noun = count == 1 ? "subdirectory" : "subdirectories"
-                Label("\(count) \(noun) deactivated", systemImage: count > 0 ? "checkmark.circle.fill" : "xmark.circle")
-                    .font(.system(size: 12.5, weight: .medium))
-                    .foregroundStyle(count > 0 ? .green : .secondary)
+            // MARK: Status divider
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.12))
+                    .frame(height: 1)
 
                 Text(footerNeedText)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(remainingToDeactivateCount == 0 ? .green : .orange)
+                    .foregroundStyle(progressRingColor)
+                    .fixedSize()
 
+                Rectangle()
+                    .fill(Color.primary.opacity(0.12))
+                    .frame(height: 1)
+            }
+
+            // MARK: Folder list
+            if scanModel.isLoading {
+                VStack(spacing: 10) {
+                    if let progress = scanModel.scanProgress {
+                        ProgressView(value: progress.fractionCompleted)
+                            .progressViewStyle(.linear)
+                            .frame(width: 320)
+                            .controlSize(.small)
+
+                        Text("Scanning subdirectories... \(progress.scannedDirectoryCount) folders processed")
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Scanning subdirectories...")
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 280, alignment: .center)
+            } else if scanModel.summary != nil {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(rootNodes) { node in
+                            FolderWatchTreeNodeRow(
+                                node: node,
+                                level: 0,
+                                excludedSubdirectoryPathSet: excludedSet,
+                                expandedDirectoryPaths: $expandedDirectoryPaths,
+                                excludedSubdirectoryPaths: $excludedSubdirectoryPaths
+                            )
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .frame(minHeight: 280)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+            } else {
+                Text("Unable to scan this folder tree.")
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 280, alignment: .center)
+            }
+
+            // MARK: Footer
+            Divider()
+
+            HStack {
                 Spacer()
 
                 Button("Cancel") {
@@ -1035,7 +987,7 @@ private struct LargeFolderExclusionDialog: View {
                 .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
-                Button(confirmButtonTitle) {
+                Button("Start Watching") {
                     onConfirm()
                 }
                 .accessibilityIdentifier("folder-watch-dialog-start-button")
@@ -1050,7 +1002,7 @@ private struct LargeFolderExclusionDialog: View {
             }
         }
         .padding(22)
-        .frame(width: 700)
+        .frame(width: 620)
         .onAppear {
             didNormalizeInitialExclusionSelection = false
             scheduleSubdirectoryPreparation()
@@ -1235,41 +1187,28 @@ private struct FolderWatchTreeNodeRow: View {
         expandedDirectoryPaths.contains(node.path)
     }
 
-    private var statusTitle: String {
-        if isExcludedByAncestor {
-            return "Inherited"
-        }
-
-        return isEffectivelyExcluded ? "Deactivated" : "Active"
+    private var isActive: Bool {
+        !isEffectivelyExcluded
     }
 
-    private var statusSymbol: String {
-        if isExcludedByAncestor {
-            return "arrow.turn.down.right"
-        }
-
-        return isEffectivelyExcluded ? "slash.circle.fill" : "checkmark.circle.fill"
+    private var toggleBinding: Binding<Bool> {
+        Binding(
+            get: { isActive },
+            set: { newValue in
+                if newValue != isActive {
+                    toggleExclusion()
+                }
+            }
+        )
     }
 
-    private var statusHint: String {
-        if isExcludedByAncestor {
-            return "Inherited from parent"
-        }
-
-        return isEffectivelyExcluded ? "Click to activate" : "Click to deactivate"
-    }
-
-    private var toggleTitle: String {
-        isExplicitlyExcluded ? "Activate" : "Deactivate"
-    }
-
-    private var statusTint: AnyShapeStyle {
-        isEffectivelyExcluded ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green)
+    private var inlineStats: String {
+        "\(node.subdirectoryCount) sub \u{00B7} \(node.markdownFileCount) files"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
                 Button {
                     toggleExpanded()
                 } label: {
@@ -1285,56 +1224,34 @@ private struct FolderWatchTreeNodeRow: View {
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(isEffectivelyExcluded ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(node.name)
-                        .font(.system(size: 12.5, weight: .medium))
-                        .lineLimit(1)
+                Text(node.name)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .lineLimit(1)
 
-                    HStack(spacing: 10) {
-                        Label("\(node.subdirectoryCount)", systemImage: "folder")
-                        Label("\(node.markdownFileCount)", systemImage: "doc.text")
-                    }
+                Text(inlineStats)
                     .font(.system(size: 10.5, weight: .regular, design: .monospaced))
                     .foregroundStyle(.secondary)
-                }
 
                 Spacer()
 
-                HStack(spacing: 6) {
-                    Label(statusTitle, systemImage: statusSymbol)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(statusTint)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(
-                                    isEffectivelyExcluded
-                                        ? Color.secondary.opacity(0.10)
-                                        : Color.green.opacity(0.13)
-                                )
-                        )
-
-                    Button(toggleTitle) {
-                        toggleExclusion()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .disabled(!canToggle)
-                    .accessibilityHint(statusHint)
+                Toggle(isOn: toggleBinding) {
+                    EmptyView()
                 }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
+                .disabled(!canToggle)
+                .help(isExcludedByAncestor ? "Exclusion inherited from a parent folder" : "Toggle to include or exclude this folder")
+                .accessibilityLabel("\(node.name)")
+                .accessibilityValue(isEffectivelyExcluded ? (isExcludedByAncestor ? "Inherited" : "Deactivated") : "Active")
             }
             .padding(.leading, CGFloat(level) * 16)
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
+            .opacity(isEffectivelyExcluded ? 0.5 : 1.0)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isEffectivelyExcluded ? Color.secondary.opacity(0.08) : Color.primary.opacity(0.02))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isEffectivelyExcluded ? Color.secondary.opacity(0.04) : Color.clear)
             )
 
             if hasChildren && isExpanded {
