@@ -713,6 +713,47 @@ struct FolderWatchCoordinationTests {
         #expect(flushBatch?.openOrigin == .folderWatchAutoOpen)
     }
 
+    @Test @MainActor func folderWatchControllerDoesNotSetWarningForLiveEventsExceedingLimit() async throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/watched-\(UUID().uuidString)", isDirectory: true)
+        let watcher = TestFolderWatcher()
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.live-no-warning.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        controller.openEventsHandler = { events, _, _ in
+            openedEvents.append(contentsOf: events)
+        }
+
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .selectedFolderOnly
+            )
+        )
+
+        let liveEvents = (0..<(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
+            ReaderFolderWatchChangeEvent(
+                fileURL: folderURL.appendingPathComponent(String(format: "live-%02d.md", index)),
+                kind: .added
+            )
+        }
+        watcher.emitChangedMarkdownEvents(liveEvents)
+
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(controller.folderWatchAutoOpenWarning == nil)
+        #expect(openedEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+    }
+
     @Test @MainActor func focusNotificationTargetFallsBackToWatchedFolderWindow() {
         ReaderWindowRegistry.shared.resetForTesting()
         defer { ReaderWindowRegistry.shared.resetForTesting() }

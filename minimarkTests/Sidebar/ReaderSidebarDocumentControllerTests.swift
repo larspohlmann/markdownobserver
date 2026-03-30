@@ -376,7 +376,7 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
     }
 
-    @Test @MainActor func sidebarControllerLiveBurstPublishesWarningForOmittedFiles() async throws {
+    @Test @MainActor func sidebarControllerLiveBurstDoesNotPublishWarningForOmittedFiles() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -404,9 +404,7 @@ struct ReaderSidebarDocumentControllerTests {
         await Task.yield()
 
         #expect(harness.controller.documents.count == autoOpenLimit + 1)
-        #expect(harness.controller.selectedFolderWatchAutoOpenWarning?.autoOpenedFileCount == autoOpenLimit)
-        #expect(harness.controller.selectedFolderWatchAutoOpenWarning?.folderURL == ReaderFileRouting.normalizedFileURL(harness.temporaryDirectoryURL))
-        #expect(harness.controller.selectedFolderWatchAutoOpenWarning?.omittedFileURLs == Array(fileURLs.dropFirst(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))
+        #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
     }
 
     @Test @MainActor func sidebarControllerCloseOtherDocumentsKeepsRequestedDocumentOnly() throws {
