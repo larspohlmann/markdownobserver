@@ -61,7 +61,8 @@ struct ContentView: View {
         let onScrollSyncObservation: (ScrollSyncObservation) -> Void
         let onSourceEdit: (String) -> Void
         let onDroppedFileURLs: ([URL]) -> Void
-        let onDropTargetedChange: (Bool) -> Void
+        let onDropTargetedChange: (DropTargetingUpdate) -> Void
+        let canAcceptDroppedFileURLs: ([URL]) -> Bool
         let onRetryFallback: () -> Void
     }
 
@@ -103,6 +104,7 @@ struct ContentView: View {
 
     @StateObject private var splitScrollCoordinator = SplitScrollCoordinator()
     @State private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
+    @State private var blockedFolderDropTargetedSurfaces: Set<DocumentSurfaceRole> = []
     @State private var previewMode: PreviewMode = .web
     @State private var previewReloadToken = 0
     @State private var sourceMode: SourceMode = .web
@@ -178,7 +180,11 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
-                if isDragTargeted {
+                if isBlockedFolderDropTargeted {
+                    FolderDropBlockedOverlayView()
+                        .padding(10)
+                        .allowsHitTesting(false)
+                } else if isDragTargeted {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(Color.accentColor.opacity(0.65), lineWidth: 2)
                         .padding(10)
@@ -199,6 +205,9 @@ struct ContentView: View {
             }
             .onChange(of: sourceHTMLInputs) { _, _ in
                 handleSourceHTMLInputsChange()
+            }
+            .onChange(of: activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
+                clearDropTargetState()
             }
             .onAppear {
                 handleSurfaceAppear()
@@ -345,7 +354,7 @@ struct ContentView: View {
             sourceReloadToken += 1
             sourceMode = .web
         }
-        dragTargetedSurfaces.removeAll()
+        clearDropTargetState()
         splitScrollCoordinator.reset()
     }
 
@@ -354,7 +363,7 @@ struct ContentView: View {
             return
         }
 
-        dragTargetedSurfaces.remove(.preview)
+        clearDropTargetState(for: .preview)
         splitScrollCoordinator.reset()
     }
 
@@ -363,7 +372,7 @@ struct ContentView: View {
             return
         }
 
-        dragTargetedSurfaces.remove(.source)
+        clearDropTargetState(for: .source)
         splitScrollCoordinator.reset()
     }
 
@@ -424,6 +433,15 @@ struct ContentView: View {
     }
 
     private func handleDroppedFileURLs(_ fileURLs: [URL]) {
+        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
+            guard activeFolderWatch == nil else {
+                return
+            }
+
+            onRequestFolderWatch(droppedFolderURL)
+            return
+        }
+
         let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
         guard !markdownURLs.isEmpty else {
             return
@@ -507,6 +525,10 @@ struct ContentView: View {
         !dragTargetedSurfaces.isEmpty
     }
 
+    private var isBlockedFolderDropTargeted: Bool {
+        !blockedFolderDropTargetedSurfaces.isEmpty
+    }
+
     private var minimumSurfaceWidth: CGFloat? {
         readerStore.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
     }
@@ -555,9 +577,10 @@ struct ContentView: View {
                 },
                 onSourceEdit: { _ in },
                 onDroppedFileURLs: handleDroppedFileURLs,
-                onDropTargetedChange: { isTargeted in
-                    updateDropTargetState(for: surface, isTargeted: isTargeted)
+                onDropTargetedChange: { update in
+                    updateDropTargetState(for: surface, update: update)
                 },
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onRetryFallback: {
                     previewReloadToken += 1
                     previewMode = .web
@@ -592,9 +615,10 @@ struct ContentView: View {
                     readerStore.updateSourceDraft(markdown)
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
-                onDropTargetedChange: { isTargeted in
-                    updateDropTargetState(for: surface, isTargeted: isTargeted)
+                onDropTargetedChange: { update in
+                    updateDropTargetState(for: surface, update: update)
                 },
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onRetryFallback: {
                     sourceReloadToken += 1
                     sourceMode = .web
@@ -677,12 +701,34 @@ struct ContentView: View {
         )
     }
 
-    private func updateDropTargetState(for surface: DocumentSurfaceRole, isTargeted: Bool) {
-        if isTargeted {
+    private func updateDropTargetState(for surface: DocumentSurfaceRole, update: DropTargetingUpdate) {
+        if update.isTargeted {
             dragTargetedSurfaces.insert(surface)
         } else {
             dragTargetedSurfaces.remove(surface)
         }
+
+        let isBlockedFolderDrop = update.isTargeted && !update.canDrop && update.containsDirectoryHint
+        if isBlockedFolderDrop {
+            blockedFolderDropTargetedSurfaces.insert(surface)
+        } else {
+            blockedFolderDropTargetedSurfaces.remove(surface)
+        }
+    }
+
+    private func clearDropTargetState(for surface: DocumentSurfaceRole? = nil) {
+        guard let surface else {
+            dragTargetedSurfaces.removeAll()
+            blockedFolderDropTargetedSurfaces.removeAll()
+            return
+        }
+
+        dragTargetedSurfaces.remove(surface)
+        blockedFolderDropTargetedSurfaces.remove(surface)
+    }
+
+    private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || activeFolderWatch == nil
     }
 
     private func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
@@ -742,7 +788,8 @@ private struct DocumentSurfaceHost: View {
                     onScrollSyncObservation: configuration.onScrollSyncObservation,
                     onSourceEdit: configuration.onSourceEdit,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
-                    onDropTargetedChange: configuration.onDropTargetedChange
+                    onDropTargetedChange: configuration.onDropTargetedChange,
+                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs
                 )
             } else {
                 fallbackSurface
@@ -764,6 +811,39 @@ private struct DocumentSurfaceHost: View {
             MarkdownSourceFallbackView(
                 markdown: fallbackMarkdown,
                 onRetryHighlighting: configuration.onRetryFallback
+            )
+        }
+    }
+}
+
+private struct FolderDropBlockedOverlayView: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.black.opacity(0.24))
+
+            VStack(spacing: 6) {
+                Image(systemName: "folder.badge.minus")
+                    .font(.system(size: 22, weight: .semibold))
+
+                Text("Already Watching a Folder")
+                    .font(.headline)
+
+                Text("Stop the current folder watch before dropping another folder.")
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            .foregroundStyle(Color.black)
+            .padding(20)
+            .frame(maxWidth: 460)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(nsColor: .systemYellow))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.orange, lineWidth: 2)
             )
         }
     }

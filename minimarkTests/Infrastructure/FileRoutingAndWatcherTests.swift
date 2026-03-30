@@ -40,6 +40,40 @@ struct FileRoutingAndWatcherTests {
         }
     }
 
+    @Test func firstDroppedDirectoryURLReturnsNormalizedDirectoryWhenPresent() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let droppedDirectoryURL = directoryURL.appendingPathComponent("drop-target", isDirectory: true)
+        try FileManager.default.createDirectory(at: droppedDirectoryURL, withIntermediateDirectories: false)
+
+        let droppedFileURL = directoryURL.appendingPathComponent("notes.md")
+        try "# Notes".write(to: droppedFileURL, atomically: false, encoding: .utf8)
+
+        let firstDirectoryURL = ReaderFileRouting.firstDroppedDirectoryURL(from: [droppedFileURL, droppedDirectoryURL])
+
+        #expect(firstDirectoryURL == ReaderFileRouting.normalizedFileURL(droppedDirectoryURL))
+    }
+
+    @Test func firstDroppedDirectoryURLReturnsNilWhenNoDirectoryIsPresent() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let droppedFileURL = directoryURL.appendingPathComponent("notes.md")
+        try "# Notes".write(to: droppedFileURL, atomically: false, encoding: .utf8)
+
+        #expect(ReaderFileRouting.firstDroppedDirectoryURL(from: [droppedFileURL]) == nil)
+    }
+
+    @Test func containsLikelyDirectoryPathUsesURLDirectoryHints() {
+        let tempDirectory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+        let folderHintURL = tempDirectory.appendingPathComponent("watch-folder", isDirectory: true)
+        let fileHintURL = tempDirectory.appendingPathComponent("notes.md", isDirectory: false)
+
+        #expect(ReaderFileRouting.containsLikelyDirectoryPath(in: [fileHintURL, folderHintURL]))
+        #expect(!ReaderFileRouting.containsLikelyDirectoryPath(in: [fileHintURL]))
+    }
+
     @Test @MainActor func fileChangeWatcherDetectsContentChangeWithRestoredMetadata() async throws {
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }
