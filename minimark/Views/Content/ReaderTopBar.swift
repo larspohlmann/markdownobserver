@@ -54,7 +54,7 @@ struct ReaderTopBar: View {
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
-    let onOpenFile: (URL) -> Void
+    let onOpenFiles: ([URL]) -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
     let onSaveFolderWatchAsFavorite: (String) -> Void
@@ -145,7 +145,7 @@ struct ReaderTopBar: View {
                         recentWatchedFolders: recentWatchedFolders,
                         recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                         iconProvider: appIconImage(for:),
-                        onOpenFile: onOpenFile,
+                        onOpenFiles: onOpenFiles,
                         onOpenApp: { app in
                             readerStore.openCurrentFileInApplication(app)
                         },
@@ -1228,7 +1228,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onOpenFile: (URL) -> Void
+    let onOpenFiles: ([URL]) -> Void
     let onOpenApp: (ReaderExternalApplication) -> Void
     let onRevealInFinder: () -> Void
     let onRequestFolderWatch: (URL) -> Void
@@ -1293,7 +1293,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
         @objc func showMenu(_ sender: NSButton) {
             let menu = NSMenu()
 
-            let openFile = NSMenuItem(title: "Open File...", action: #selector(openFileFromPicker), keyEquivalent: "")
+            let openFile = NSMenuItem(title: "Open File(s)...", action: #selector(openFileFromPicker), keyEquivalent: "")
             openFile.target = self
             menu.addItem(openFile)
 
@@ -1488,11 +1488,11 @@ private struct OpenInMenuButton: NSViewRepresentable {
         }
 
         @objc private func openFileFromPicker() {
-            guard let fileURL = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: false)?.first else {
+            guard let fileURLs = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: true) else {
                 return
             }
 
-            parent.onOpenFile(fileURL)
+            parent.onOpenFiles(fileURLs)
         }
 
         @objc private func openRecentFile(_ sender: NSMenuItem) {

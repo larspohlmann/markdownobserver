@@ -14,6 +14,22 @@ extension ReaderWindowRootView {
             return
         }
 
+        openAdditionalDocumentInCurrentWindow(
+            fileURL,
+            folderWatchSession: folderWatchSession,
+            origin: origin,
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+        )
+    }
+
+    func openAdditionalDocumentInCurrentWindow(
+        _ fileURL: URL,
+        folderWatchSession: ReaderFolderWatchSession? = nil,
+        origin: ReaderOpenOrigin = .manual,
+        initialDiffBaselineMarkdown: String? = nil
+    ) {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+
         if folderWatchSession != nil {
             enqueueFolderWatchOpen(
                 folderWatchChangeEvent(
@@ -32,6 +48,18 @@ extension ReaderWindowRootView {
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
         applyWindowTitlePresentation()
+    }
+
+    func openAdditionalDocumentsInCurrentWindow(
+        _ fileURLs: [URL],
+        origin: ReaderOpenOrigin = .manual,
+        preferEmptySelection: Bool = true
+    ) {
+        openSidebarDocumentsBurst(
+            at: fileURLs,
+            origin: origin,
+            preferEmptySelection: preferEmptySelection
+        )
     }
 
     var isSharedFolderWatchAFavorite: Bool {
