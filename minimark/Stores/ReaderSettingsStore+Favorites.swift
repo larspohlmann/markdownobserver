@@ -88,6 +88,15 @@ extension ReaderSettingsStore {
         }
     }
 
+    func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
+        updateSettings { settings in
+            settings.favoriteWatchedFolders = ReaderFavoriteHistory.reordering(
+                ids: orderedIDs,
+                in: settings.favoriteWatchedFolders
+            )
+        }
+    }
+
     func clearFavoriteWatchedFolders() {
         updateSettings { settings in
             settings.favoriteWatchedFolders = []

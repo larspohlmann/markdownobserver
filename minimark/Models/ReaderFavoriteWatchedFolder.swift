@@ -257,6 +257,21 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             .filter { $0.hasPrefix(folderPathWithSlash) }
     }
 
+    nonisolated var excludedSubdirectoryRelativePaths: [String] {
+        guard options.scope == .includeSubfolders else {
+            return []
+        }
+
+        let folderPathValue = folderURL.path
+        let folderPathWithSlash = folderPathValue.hasSuffix("/") ? folderPathValue : folderPathValue + "/"
+        return options.excludedSubdirectoryPaths.compactMap { absolutePath in
+            guard absolutePath.hasPrefix(folderPathWithSlash) else {
+                return nil
+            }
+            return String(absolutePath.dropFirst(folderPathWithSlash.count))
+        }.sorted()
+    }
+
     func matches(folderPath: String, options: ReaderFolderWatchOptions) -> Bool {
         self.folderPath == folderPath && self.options == options
     }
@@ -312,5 +327,18 @@ nonisolated enum ReaderFavoriteHistory {
                 createdAt: entry.createdAt
             )
         }
+    }
+
+    static func reordering(
+        ids orderedIDs: [UUID],
+        in existingEntries: [ReaderFavoriteWatchedFolder]
+    ) -> [ReaderFavoriteWatchedFolder] {
+        let lookup = Dictionary(uniqueKeysWithValues: existingEntries.map { ($0.id, $0) })
+        var result = orderedIDs.compactMap { lookup[$0] }
+        let resultIDs = Set(result.map(\.id))
+        for entry in existingEntries where !resultIDs.contains(entry.id) {
+            result.append(entry)
+        }
+        return result
     }
 }
