@@ -212,18 +212,6 @@ struct ContentView: View {
             .onAppear {
                 handleSurfaceAppear()
             }
-
-            if activeFolderWatch != nil || readerStore.hasOpenDocument {
-                ReaderStatusBar(
-                    activeFolderWatch: activeFolderWatch,
-                    isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                    watchIndicatorColor: folderWatchHighlightColor,
-                    canStopFolderWatch: canStopFolderWatch,
-                    statusTimestamp: readerStore.statusBarTimestamp,
-                    onStopFolderWatch: onStopFolderWatch,
-                    onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
-                )
-            }
         }
         .overlay(alignment: .bottomLeading) {
             if isUITestModeEnabled {

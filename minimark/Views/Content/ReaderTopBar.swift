@@ -621,6 +621,7 @@ struct ReaderTopBar: View {
         let onRevealInFinder: () -> Void
 
         @Environment(\.colorScheme) private var colorScheme
+        @State private var isShowingDetails = false
 
         private var stripGreen: Color {
             colorScheme == .dark
@@ -646,6 +647,28 @@ struct ReaderTopBar: View {
 
         var body: some View {
             HStack(spacing: 8) {
+                Button {
+                    isShowingDetails = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(stripGreen.opacity(0.72))
+                .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
+                    FolderWatchDetailsPopover(
+                        activeFolderWatch: activeFolderWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        onSaveFolderWatchAsFavorite: onSaveFavorite
+                    )
+                }
+                .help(activeFolderWatch.tooltipText)
+                .accessibilityLabel("Folder watch details")
+                .accessibilityValue(activeFolderWatch.accessibilityValue)
+                .accessibilityHint("Shows details about the watched folder")
+
                 Text("WATCHING")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(stripGreen.opacity(0.55))
