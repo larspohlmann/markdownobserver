@@ -51,6 +51,10 @@ struct ReaderWindowRootView: View {
         pendingFolderWatchRequest?.folderURL
     }
 
+    private var openSidebarDocumentPathSnapshot: Set<String> {
+        Set(currentSidebarOpenDocumentFileURLs().map(\.path))
+    }
+
     private var pendingFolderWatchOpenModeBinding: Binding<ReaderFolderWatchOpenMode> {
         Binding(
             get: {
@@ -154,6 +158,10 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sharedFolderWatchSession) { _, _ in
                 refreshWindowShellRegistrationAndTitle()
+                syncSharedFavoriteOpenDocumentsIfNeeded()
+            }
+            .onChange(of: openSidebarDocumentPathSnapshot) { _, _ in
+                syncSharedFavoriteOpenDocumentsIfNeeded()
             }
             .onChange(of: sidebarDocumentController.selectedFolderWatchAutoOpenWarning) { _, warning in
                 handleFolderWatchAutoOpenWarningChange(warning)

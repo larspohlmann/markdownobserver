@@ -298,6 +298,45 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(controller.selectedReaderStore.fileURL == nil)
     }
 
+    @Test @MainActor func sidebarControllerRestoresFavoriteSavedOpenDocuments() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let nestedDirectoryURL = harness.temporaryDirectoryURL.appendingPathComponent("nested", isDirectory: true)
+        try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
+        let nestedFileURL = nestedDirectoryURL.appendingPathComponent("nested.md")
+        try "# Nested".write(to: nestedFileURL, atomically: true, encoding: .utf8)
+
+        let favoriteEntry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            openDocumentFileURLs: [
+                harness.primaryFileURL,
+                harness.secondaryFileURL,
+                nestedFileURL
+            ]
+        )
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: favoriteEntry.options
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: favoriteEntry.resolvedOpenDocumentFileURLs(relativeTo: harness.temporaryDirectoryURL),
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: harness.controller.activeFolderWatchSession,
+            preferEmptySelection: true
+        )
+
+        #expect(harness.controller.documents.count == 2)
+        #expect(harness.controller.documents.compactMap { $0.readerStore.fileURL?.path } == [
+            harness.primaryFileURL.path,
+            harness.secondaryFileURL.path
+        ])
+    }
+
     @Test @MainActor func sidebarControllerMirrorsSelectedStoreProjectionAcrossSelectionChanges() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
@@ -374,6 +413,27 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.pendingFileSelectionRequest != nil)
         #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + 1)
         #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
+    }
+
+    @Test @MainActor func sidebarControllerCanSkipInitialAutoOpenPromptForFavoriteRestore() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        let fileURLs = (0...autoOpenLimit).map { index in
+            harness.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
+        }
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            performInitialAutoOpen: false
+        )
+
+        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.documents.count == 1)
+        #expect(harness.controller.selectedReaderStore.fileURL == nil)
     }
 
     @Test @MainActor func sidebarControllerLiveBurstDoesNotPublishWarningForOmittedFiles() async throws {

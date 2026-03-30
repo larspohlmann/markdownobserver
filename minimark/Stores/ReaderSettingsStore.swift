@@ -470,9 +470,19 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
     func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode)
-    func addFavoriteWatchedFolder(name: String, folderURL: URL, options: ReaderFolderWatchOptions)
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        openDocumentFileURLs: [URL]
+    )
     func removeFavoriteWatchedFolder(id: UUID)
     func renameFavoriteWatchedFolder(id: UUID, newName: String)
+    func updateFavoriteWatchedFolderOpenDocuments(
+        id: UUID,
+        folderURL: URL,
+        openDocumentFileURLs: [URL]
+    )
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
