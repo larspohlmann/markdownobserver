@@ -442,6 +442,7 @@ struct ReaderTopBar: View {
                 }
             }
             .font(.system(size: 13))
+            .foregroundStyle(Color(nsColor: .labelColor))
             .padding(.vertical, 8)
             .frame(minWidth: 220, maxWidth: 320)
         }
