@@ -36,6 +36,10 @@ final class ReaderFolderWatchController {
         didSet { onStateChange?() }
     }
 
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
+        didSet { onStateChange?() }
+    }
+
     init(
         folderWatcher: FolderChangeWatching,
         settingsStore: ReaderSettingsStoring,
@@ -67,6 +71,7 @@ final class ReaderFolderWatchController {
     func startWatching(folderURL: URL, options: ReaderFolderWatchOptions) throws {
         stopWatching()
         folderWatchAutoOpenWarning = nil
+        pendingFileSelectionRequest = nil
         folderWatchAutoOpenPlanner.resetTransientState()
         didInitialMarkdownScanFail = false
 
@@ -146,6 +151,7 @@ final class ReaderFolderWatchController {
         activeFolderWatchSession = nil
         lastWatchedFolderEventAt = nil
         folderWatchAutoOpenWarning = nil
+        pendingFileSelectionRequest = nil
         isInitialMarkdownScanInProgress = false
         didInitialMarkdownScanFail = false
     }
@@ -286,6 +292,18 @@ final class ReaderFolderWatchController {
         guard activeFolderWatchSession == session else {
             return
         }
+
+        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount {
+            pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
+                folderURL: session.folderURL,
+                session: session,
+                allFileURLs: markdownURLs
+            )
+            isInitialMarkdownScanInProgress = false
+            return
+        }
+
+        pendingFileSelectionRequest = nil
 
         let initialMarkdownEvents = markdownURLs.map {
             ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)

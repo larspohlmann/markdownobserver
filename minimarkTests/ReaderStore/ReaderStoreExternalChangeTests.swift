@@ -774,7 +774,7 @@ struct ReaderStoreExternalChangeTests {
         ])
     }
 
-    @Test @MainActor func openAllMarkdownFilesCapsInitialAutoOpenAndPublishesWarning() throws {
+    @Test @MainActor func openAllMarkdownFilesShowsFileSelectionWhenOverThreshold() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
@@ -798,16 +798,46 @@ struct ReaderStoreExternalChangeTests {
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
-        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fileURLs[0]))
-        #expect(openedAdditionalDocuments == Array(fileURLs.dropFirst().prefix(autoOpenLimit - 1)).map(ReaderFileRouting.normalizedFileURL))
-        #expect(fixture.store.folderWatchAutoOpenWarning?.autoOpenedFileCount == autoOpenLimit)
-        #expect(fixture.store.folderWatchAutoOpenWarning?.remainingFileCount == additionalFileCount)
-        #expect(fixture.store.folderWatchAutoOpenWarning?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        // When file count exceeds threshold, no files are auto-opened.
+        // Instead, a pendingFileSelectionRequest is published for the UI to present.
+        #expect(openedAdditionalDocuments.isEmpty)
+        #expect(fixture.store.folderWatchAutoOpenWarning == nil)
+        #expect(fixture.store.pendingFileSelectionRequest != nil)
+        #expect(fixture.store.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + additionalFileCount)
         #expect(
-            fixture.store.folderWatchAutoOpenWarning?.omittedFileURLs == Array(
-                fileURLs.dropFirst(autoOpenLimit)
-            ).map(ReaderFileRouting.normalizedFileURL)
+            fixture.store.pendingFileSelectionRequest.map { ReaderFileRouting.normalizedFileURL($0.folderURL) }
+            == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL)
         )
+    }
+
+    @Test @MainActor func openAllMarkdownFilesAutoOpensWhenAtOrBelowThreshold() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        let fileURLs = (0..<autoOpenLimit).map { index in
+            let fileURL = fixture.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
+            fixture.write(content: "# File \(index)", to: fileURL)
+            return fileURL
+        }
+
+        fixture.folderWatcher.markdownFilesToReturn = fileURLs
+
+        var openedAdditionalDocuments: [URL] = []
+        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
+            openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
+        }
+
+        fixture.store.startWatchingFolder(
+            folderURL: fixture.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        )
+
+        // When file count is at or below threshold, files are auto-opened without a selection dialog.
+        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fileURLs[0]))
+        #expect(openedAdditionalDocuments.count == autoOpenLimit - 1)
+        #expect(fixture.store.pendingFileSelectionRequest == nil)
+        #expect(fixture.store.folderWatchAutoOpenWarning == nil)
     }
 
     @Test @MainActor func watchedFolderChangesOpenMarkdownAsAdditionalDocuments() async throws {

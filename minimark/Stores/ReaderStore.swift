@@ -31,6 +31,7 @@ final class ReaderStore: ObservableObject {
     @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     @Published private(set) var lastWatchedFolderEventAt: Date?
     @Published private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
     @Published private(set) var needsImageDirectoryAccess = false
 
     var windowTitle: String {

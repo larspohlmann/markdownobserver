@@ -643,7 +643,7 @@ private struct FolderWatchMetricPill: View {
     }
 }
 
-private struct FolderWatchPrimaryActionButtonStyle: ButtonStyle {
+struct FolderWatchPrimaryActionButtonStyle: ButtonStyle {
     let tint: Color
     @Environment(\.isEnabled) private var isEnabled
 
@@ -677,7 +677,7 @@ private struct FolderWatchPrimaryActionButtonStyle: ButtonStyle {
     }
 }
 
-private struct FolderWatchSecondaryActionButtonStyle: ButtonStyle {
+struct FolderWatchSecondaryActionButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -705,7 +705,7 @@ private struct FolderWatchSecondaryActionButtonStyle: ButtonStyle {
     }
 }
 
-private struct FolderWatchLargeTreeWarningCard: View {
+struct FolderWatchLargeTreeWarningCard: View {
     enum Tone {
         case neutral
         case success

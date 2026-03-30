@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum ReaderFolderWatchAutoOpenPolicy {
     static let maximumInitialAutoOpenFileCount = 12
     static let maximumLiveAutoOpenFileCount = 12
+    static let performanceWarningFileCount = 50
 }
 
 nonisolated enum ReaderFolderWatchPerformancePolicy {
@@ -225,5 +226,19 @@ nonisolated struct ReaderFolderWatchAutoOpenWarning: Equatable, Identifiable, Se
 
     nonisolated var totalFileCount: Int {
         autoOpenedFileCount + remainingFileCount
+    }
+}
+
+@MainActor
+final class ReaderFolderWatchFileSelectionRequest: Identifiable {
+    let id = UUID()
+    let folderURL: URL
+    let session: ReaderFolderWatchSession
+    let allFileURLs: [URL]
+
+    init(folderURL: URL, session: ReaderFolderWatchSession, allFileURLs: [URL]) {
+        self.folderURL = folderURL
+        self.session = session
+        self.allFileURLs = allFileURLs
     }
 }

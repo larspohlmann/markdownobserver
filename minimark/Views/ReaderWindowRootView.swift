@@ -109,6 +109,25 @@ struct ReaderWindowRootView: View {
                     }
                 )
             }
+            .sheet(item: $sidebarDocumentController.pendingFileSelectionRequest, onDismiss: {
+                sidebarDocumentController.dismissPendingFileSelectionRequest()
+            }) { request in
+                FolderWatchFileSelectionSheetWrapper(
+                    request: request,
+                    onSkip: {
+                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                    },
+                    onConfirm: { selectedFileURLs in
+                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                        openSidebarDocumentsBurst(
+                            at: selectedFileURLs,
+                            origin: .folderWatchInitialBatchAutoOpen,
+                            folderWatchSession: request.session,
+                            preferEmptySelection: false
+                        )
+                    }
+                )
+            }
             .background(
                 WindowAccessor { window in
                     handleWindowAccessorUpdate(window)
