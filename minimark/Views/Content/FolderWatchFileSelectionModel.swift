@@ -8,15 +8,9 @@ struct FileSelectionNode: Identifiable, Equatable {
     let fileURL: URL?
     var children: [FileSelectionNode]
     var markdownFileCount: Int
+    let cachedFileURLs: [URL]
 
     var id: String { path }
-
-    var allFileURLs: [URL] {
-        if let fileURL {
-            return [fileURL]
-        }
-        return children.flatMap(\.allFileURLs)
-    }
 }
 
 @MainActor
@@ -56,38 +50,38 @@ final class FolderWatchFileSelectionModel: ObservableObject {
     }
 
     func isSelected(_ fileURL: URL) -> Bool {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        return selectedFileURLs.contains(normalizedURL)
+        selectedFileURLs.contains(fileURL)
     }
 
     func toggleFile(_ fileURL: URL) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        if selectedFileURLs.contains(normalizedURL) {
-            selectedFileURLs.remove(normalizedURL)
+        if selectedFileURLs.contains(fileURL) {
+            selectedFileURLs.remove(fileURL)
         } else {
-            selectedFileURLs.insert(normalizedURL)
+            selectedFileURLs.insert(fileURL)
         }
     }
 
-    func allFilesInNode(_ node: FileSelectionNode) -> [URL] {
-        node.allFileURLs
-    }
-
     func isNodeFullySelected(_ node: FileSelectionNode) -> Bool {
-        let nodeFiles = node.allFileURLs
+        let nodeFiles = node.cachedFileURLs
         guard !nodeFiles.isEmpty else { return false }
         return nodeFiles.allSatisfy { selectedFileURLs.contains($0) }
     }
 
     func isNodePartiallySelected(_ node: FileSelectionNode) -> Bool {
-        let nodeFiles = node.allFileURLs
+        let nodeFiles = node.cachedFileURLs
         guard !nodeFiles.isEmpty else { return false }
-        let selectedInNode = nodeFiles.filter { selectedFileURLs.contains($0) }
-        return !selectedInNode.isEmpty && selectedInNode.count < nodeFiles.count
+        var found = false
+        var foundAll = true
+        for url in nodeFiles {
+            if selectedFileURLs.contains(url) { found = true }
+            else { foundAll = false }
+            if found && !foundAll { return true }
+        }
+        return false
     }
 
     func toggleFolder(_ node: FileSelectionNode) {
-        let nodeFiles = node.allFileURLs
+        let nodeFiles = node.cachedFileURLs
         if isNodeFullySelected(node) {
             for fileURL in nodeFiles {
                 selectedFileURLs.remove(fileURL)
@@ -100,7 +94,7 @@ final class FolderWatchFileSelectionModel: ObservableObject {
     }
 
     private static func buildTree(folderURL: URL, fileURLs: [URL]) -> [FileSelectionNode] {
-        let normalizedFolderPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        let normalizedFolderPath = folderURL.path
         let folderPathPrefix = normalizedFolderPath.hasSuffix("/")
             ? normalizedFolderPath
             : normalizedFolderPath + "/"
@@ -113,36 +107,28 @@ final class FolderWatchFileSelectionModel: ObservableObject {
         var directoriesByPath: [String: IntermediateDirectory] = [:]
 
         for fileURL in fileURLs {
-            let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-            let directoryPath = normalizedFileURL.deletingLastPathComponent().path
+            let directoryPath = fileURL.deletingLastPathComponent().path
 
-            directoriesByPath[directoryPath, default: IntermediateDirectory()].files.append(normalizedFileURL)
+            directoriesByPath[directoryPath, default: IntermediateDirectory()].files.append(fileURL)
 
-            // Register intermediate directories up to the root
             var currentPath = directoryPath
             while currentPath.hasPrefix(folderPathPrefix), currentPath != normalizedFolderPath {
-                let parentPath = URL(fileURLWithPath: currentPath).deletingLastPathComponent().path
-                let normalizedParent = parentPath.hasSuffix("/") && parentPath.count > 1
-                    ? String(parentPath.dropLast())
-                    : parentPath
-                directoriesByPath[normalizedParent, default: IntermediateDirectory()].subdirectories.insert(currentPath)
-                currentPath = normalizedParent
+                let parentPath = (currentPath as NSString).deletingLastPathComponent
+                directoriesByPath[parentPath, default: IntermediateDirectory()].subdirectories.insert(currentPath)
+                currentPath = parentPath
             }
         }
 
         func buildNode(directoryPath: String) -> FileSelectionNode {
             let info = directoriesByPath[directoryPath] ?? IntermediateDirectory()
-            let directoryName = URL(fileURLWithPath: directoryPath).lastPathComponent
+            let directoryName = (directoryPath as NSString).lastPathComponent
 
             var children: [FileSelectionNode] = []
 
-            // Add subdirectory nodes
-            let sortedSubdirs = info.subdirectories.sorted()
-            for subdirPath in sortedSubdirs {
+            for subdirPath in info.subdirectories.sorted() {
                 children.append(buildNode(directoryPath: subdirPath))
             }
 
-            // Add file nodes
             let sortedFiles = info.files.sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending })
             for fileURL in sortedFiles {
                 children.append(FileSelectionNode(
@@ -151,11 +137,13 @@ final class FolderWatchFileSelectionModel: ObservableObject {
                     isDirectory: false,
                     fileURL: fileURL,
                     children: [],
-                    markdownFileCount: 1
+                    markdownFileCount: 1,
+                    cachedFileURLs: [fileURL]
                 ))
             }
 
             let totalFileCount = children.reduce(0) { $0 + $1.markdownFileCount }
+            let allCachedURLs = children.flatMap(\.cachedFileURLs)
 
             return FileSelectionNode(
                 path: directoryPath,
@@ -163,32 +151,11 @@ final class FolderWatchFileSelectionModel: ObservableObject {
                 isDirectory: true,
                 fileURL: nil,
                 children: children,
-                markdownFileCount: totalFileCount
+                markdownFileCount: totalFileCount,
+                cachedFileURLs: allCachedURLs
             )
         }
 
-        let rootInfo = directoriesByPath[normalizedFolderPath] ?? IntermediateDirectory()
-        var rootChildren: [FileSelectionNode] = []
-
-        // Add subdirectory nodes at root level
-        let sortedSubdirs = rootInfo.subdirectories.sorted()
-        for subdirPath in sortedSubdirs {
-            rootChildren.append(buildNode(directoryPath: subdirPath))
-        }
-
-        // Add file nodes at root level
-        let sortedFiles = rootInfo.files.sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending })
-        for fileURL in sortedFiles {
-            rootChildren.append(FileSelectionNode(
-                path: fileURL.path,
-                name: fileURL.lastPathComponent,
-                isDirectory: false,
-                fileURL: fileURL,
-                children: [],
-                markdownFileCount: 1
-            ))
-        }
-
-        return rootChildren
+        return buildNode(directoryPath: normalizedFolderPath).children
     }
 }

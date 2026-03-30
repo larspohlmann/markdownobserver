@@ -253,10 +253,6 @@ private struct FileSelectionTreeNodeRow: View {
             .padding(.leading, CGFloat(level) * 16)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.clear)
-            )
 
             if hasChildren && isExpanded {
                 ForEach(node.children) { child in
