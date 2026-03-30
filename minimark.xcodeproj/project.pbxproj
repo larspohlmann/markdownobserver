@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 71;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -31,8 +31,8 @@
 		4619224E2F5ABC7E00DD137D /* MarkdownObserver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarkdownObserver.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4619225D2F5ABC8000DD137D /* minimarkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = minimarkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		461922672F5ABC8000DD137D /* minimarkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = minimarkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D10000000000000000000050 /* OpenSourceDefaults.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/OpenSourceDefaults.xcconfig; sourceTree = SOURCE_ROOT; };
-		D10000000000000000000051 /* Signing.local.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.local.example.xcconfig; sourceTree = SOURCE_ROOT; };
+		D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/OpenSourceDefaults.xcconfig; sourceTree = SOURCE_ROOT; };
+		D10000000000000000000051 /* Config/Signing.local.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.local.example.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -40,31 +40,15 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/Info.plist,
-				App/minimark.entitlements,
 			);
 			target = 4619224D2F5ABC7E00DD137D /* minimark */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		461922502F5ABC7E00DD137D /* minimark */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B10000000000000000000001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			path = minimark;
-			sourceTree = "<group>";
-		};
-		461922602F5ABC8000DD137D /* minimarkTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = minimarkTests;
-			sourceTree = "<group>";
-		};
-		4619226A2F5ABC8000DD137D /* minimarkUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = minimarkUITests;
-			sourceTree = "<group>";
-		};
+		461922502F5ABC7E00DD137D /* minimark */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B10000000000000000000001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = minimark; sourceTree = "<group>"; };
+		461922602F5ABC8000DD137D /* minimarkTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = minimarkTests; sourceTree = "<group>"; };
+		4619226A2F5ABC8000DD137D /* minimarkUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = minimarkUITests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,8 +101,8 @@
 		C10000000000000000000013 /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				D10000000000000000000050 /* OpenSourceDefaults.xcconfig */,
-				D10000000000000000000051 /* Signing.local.example.xcconfig */,
+				D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */,
+				D10000000000000000000051 /* Config/Signing.local.example.xcconfig */,
 			);
 			name = Config;
 			sourceTree = "<group>";
@@ -305,7 +289,7 @@
 /* Begin XCBuildConfiguration section */
 		4619226F2F5ABC8000DD137D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -371,7 +355,7 @@
 		};
 		461922702F5ABC8000DD137D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -430,7 +414,7 @@
 		};
 		461922722F5ABC8000DD137D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -467,7 +451,7 @@
 		};
 		461922732F5ABC8000DD137D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -504,7 +488,7 @@
 		};
 		461922752F5ABC8000DD137D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -526,7 +510,7 @@
 		};
 		461922762F5ABC8000DD137D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -548,7 +532,7 @@
 		};
 		461922782F5ABC8000DD137D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
@@ -568,7 +552,7 @@
 		};
 		461922792F5ABC8000DD137D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D10000000000000000000050 /* OpenSourceDefaults.xcconfig */;
+			baseConfigurationReference = D10000000000000000000050 /* Config/OpenSourceDefaults.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
