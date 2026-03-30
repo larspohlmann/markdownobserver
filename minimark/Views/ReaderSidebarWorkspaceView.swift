@@ -175,6 +175,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                                 }
                             )
                         }
+                        .disclosureGroupStyle(SidebarGroupDisclosureStyle())
                     }
                 }
             }
@@ -576,7 +577,7 @@ private struct ReaderSidebarGroupHeader: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(displayName)
-                .font(.system(size: 11.5, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -609,6 +610,41 @@ private struct ReaderSidebarGroupHeader: View {
             .buttonStyle(.plain)
             .help(isPinned ? "Unpin Group" : "Pin Group")
             .accessibilityLabel(isPinned ? "Unpin Group" : "Pin Group")
+        }
+    }
+}
+
+private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                configuration.isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .background(.quaternary.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    .rotationEffect(configuration.isExpanded ? .degrees(90) : .zero)
+                    .animation(.easeInOut(duration: 0.15), value: configuration.isExpanded)
+
+                configuration.label
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color(nsColor: .labelColor).opacity(0.04))
+            )
+        }
+        .buttonStyle(.plain)
+
+        if configuration.isExpanded {
+            configuration.content
+                .padding(.leading, 12)
         }
     }
 }
