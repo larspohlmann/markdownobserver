@@ -370,6 +370,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var notificationsEnabled: Bool
     var multiFileDisplayMode: ReaderMultiFileDisplayMode
     var sidebarSortMode: ReaderSidebarSortMode
+    var sidebarGroupSortMode: ReaderSidebarSortMode
     var favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     var recentWatchedFolders: [ReaderRecentWatchedFolder]
     var recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
@@ -384,6 +385,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         notificationsEnabled: Bool,
         multiFileDisplayMode: ReaderMultiFileDisplayMode,
         sidebarSortMode: ReaderSidebarSortMode,
+        sidebarGroupSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
         favoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = [],
         recentWatchedFolders: [ReaderRecentWatchedFolder],
         recentManuallyOpenedFiles: [ReaderRecentOpenedFile],
@@ -397,6 +399,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         self.notificationsEnabled = notificationsEnabled
         self.multiFileDisplayMode = multiFileDisplayMode
         self.sidebarSortMode = sidebarSortMode
+        self.sidebarGroupSortMode = sidebarGroupSortMode
         self.favoriteWatchedFolders = favoriteWatchedFolders
         self.recentWatchedFolders = recentWatchedFolders
         self.recentManuallyOpenedFiles = recentManuallyOpenedFiles
@@ -412,6 +415,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         case notificationsEnabled
         case multiFileDisplayMode
         case sidebarSortMode
+        case sidebarGroupSortMode
         case favoriteWatchedFolders
         case recentWatchedFolders
         case recentManuallyOpenedFiles
@@ -427,6 +431,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         notificationsEnabled: true,
         multiFileDisplayMode: .sidebarLeft,
         sidebarSortMode: .openOrder,
+        sidebarGroupSortMode: .lastChangedNewestFirst,
         favoriteWatchedFolders: [],
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
@@ -443,6 +448,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
         multiFileDisplayMode = try container.decode(ReaderMultiFileDisplayMode.self, forKey: .multiFileDisplayMode)
         sidebarSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarSortMode) ?? .openOrder
+        sidebarGroupSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarGroupSortMode) ?? .lastChangedNewestFirst
         favoriteWatchedFolders = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
         recentWatchedFolders = try container.decodeIfPresent([ReaderRecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
         recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
@@ -463,9 +469,20 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateNotificationsEnabled(_ isEnabled: Bool)
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
-    func addFavoriteWatchedFolder(name: String, folderURL: URL, options: ReaderFolderWatchOptions)
+    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode)
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        openDocumentFileURLs: [URL]
+    )
     func removeFavoriteWatchedFolder(id: UUID)
     func renameFavoriteWatchedFolder(id: UUID, newName: String)
+    func updateFavoriteWatchedFolderOpenDocuments(
+        id: UUID,
+        folderURL: URL,
+        openDocumentFileURLs: [URL]
+    )
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
@@ -584,6 +601,12 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
         updateSettings(coalescePersistence: true) { settings in
             settings.sidebarSortMode = mode
+        }
+    }
+
+    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
+        updateSettings(coalescePersistence: true) { settings in
+            settings.sidebarGroupSortMode = mode
         }
     }
 

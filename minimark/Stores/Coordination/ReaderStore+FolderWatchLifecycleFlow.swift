@@ -35,6 +35,7 @@ extension ReaderStore {
     private func prepareForFolderWatchStart() {
         stopWatchingFolder()
         setFolderWatchAutoOpenWarning(nil)
+        pendingFileSelectionRequest = nil
         folderWatchAutoOpenPlanner.resetTransientState()
     }
 
@@ -88,8 +89,25 @@ extension ReaderStore {
             return
         }
 
-        let initialPlan = try initialFolderWatchAutoOpenPlan(
-            folderURL: folderURL,
+        let markdownURLs = try folderWatcher.markdownFiles(
+            in: folderURL,
+            includeSubfolders: session.options.scope == .includeSubfolders,
+            excludedSubdirectoryURLs: session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
+        )
+
+        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount {
+            pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
+                folderURL: session.folderURL,
+                session: session,
+                allFileURLs: markdownURLs
+            )
+            return
+        }
+
+        pendingFileSelectionRequest = nil
+
+        let initialPlan = initialFolderWatchAutoOpenPlan(
+            markdownURLs: markdownURLs,
             session: session
         )
 
@@ -98,14 +116,9 @@ extension ReaderStore {
     }
 
     private func initialFolderWatchAutoOpenPlan(
-        folderURL: URL,
+        markdownURLs: [URL],
         session: ReaderFolderWatchSession
-    ) throws -> ReaderFolderWatchAutoOpenPlan {
-        let markdownURLs = try folderWatcher.markdownFiles(
-            in: folderURL,
-            includeSubfolders: session.options.scope == .includeSubfolders,
-            excludedSubdirectoryURLs: session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
-        )
+    ) -> ReaderFolderWatchAutoOpenPlan {
         let initialMarkdownEvents = markdownURLs.map {
             ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
         }
@@ -120,6 +133,7 @@ extension ReaderStore {
     private func resetFolderWatchState(notifyIfNeeded: Bool) {
         folderWatcher.stopWatching()
         folderWatchAutoOpenPlanner.resetTransientState()
+        pendingFileSelectionRequest = nil
         folderSecurityScopeToken?.endAccess()
         folderSecurityScopeToken = nil
         setActiveFolderWatchSession(nil)

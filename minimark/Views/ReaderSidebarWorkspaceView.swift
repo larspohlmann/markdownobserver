@@ -87,12 +87,16 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var currentSidebarSortMode: ReaderSidebarSortMode {
+    private var currentFileSidebarSortMode: ReaderSidebarSortMode {
         settingsStore.currentSettings.sidebarSortMode
     }
 
+    private var currentGroupSidebarSortMode: ReaderSidebarSortMode {
+        settingsStore.currentSettings.sidebarGroupSortMode
+    }
+
     private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
-        currentSidebarSortMode.sorted(controller.documents) { document in
+        currentFileSidebarSortMode.sorted(controller.documents) { document in
             ReaderSidebarSortDescriptor(
                 displayName: document.readerStore.fileDisplayName,
                 lastChangedAt: document.readerStore.fileLastModifiedAt ?? document.readerStore.lastExternalChangeAt ?? document.readerStore.lastRefreshAt
@@ -101,7 +105,21 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private func sidebarGrouping(for documents: [ReaderSidebarDocumentController.Document]) -> ReaderSidebarGrouping {
-        ReaderSidebarGrouping.group(documents, pinnedGroupIDs: pinnedGroupIDs)
+        let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
+
+        if currentGroupSidebarSortMode == .openOrder {
+            let allowedDocumentIDs = Set(documents.map(\.id))
+            directoryOrderSourceDocuments = controller.documents.filter { allowedDocumentIDs.contains($0.id) }
+        } else {
+            directoryOrderSourceDocuments = documents
+        }
+
+        return ReaderSidebarGrouping.group(
+            documents,
+            sortMode: currentGroupSidebarSortMode,
+            directoryOrderSourceDocuments: directoryOrderSourceDocuments,
+            pinnedGroupIDs: pinnedGroupIDs
+        )
     }
 
     private func isGroupExpanded(_ groupID: String) -> Binding<Bool> {
@@ -172,9 +190,13 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                                 settings: settingsStore.currentSettings,
                                 onTogglePin: {
                                     toggleGroupPin(group.id)
+                                },
+                                onCloseGroup: {
+                                    onCloseDocuments(Set(group.documents.map(\.id)))
                                 }
                             )
                         }
+                        .disclosureGroupStyle(SidebarGroupDisclosureStyle())
                     }
                 }
             }
@@ -202,7 +224,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
             Spacer(minLength: 0)
 
-            sidebarSortMenu
+            sidebarGroupSortMenu
+
+            sidebarFileSortMenu
 
             sidebarPlacementButton
         }
@@ -270,13 +294,13 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             )
     }
 
-    private var sidebarSortMenu: some View {
+    private var sidebarGroupSortMenu: some View {
         Menu {
             ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
                 Button {
-                    settingsStore.updateSidebarSortMode(mode)
+                    settingsStore.updateSidebarGroupSortMode(mode)
                 } label: {
-                    if mode == currentSidebarSortMode {
+                    if mode == currentGroupSidebarSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
                     } else {
                         Text(mode.displayName)
@@ -285,9 +309,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             }
         } label: {
             HStack(spacing: 3) {
-                Image(systemName: "arrow.up.arrow.down")
+                Image(systemName: "folder")
                     .font(.system(size: 9, weight: .medium))
-                Text(currentSidebarSortMode.footerLabel)
+                Text(currentGroupSidebarSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
@@ -301,9 +325,45 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize(horizontal: true, vertical: false)
-        .help("Sort sidebar by \(currentSidebarSortMode.displayName)")
-        .accessibilityLabel("Sidebar sorting")
-        .accessibilityValue(currentSidebarSortMode.displayName)
+        .help("Sort groups by \(currentGroupSidebarSortMode.displayName)")
+        .accessibilityLabel("Sidebar group sorting")
+        .accessibilityValue(currentGroupSidebarSortMode.displayName)
+    }
+
+    private var sidebarFileSortMenu: some View {
+        Menu {
+            ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
+                Button {
+                    settingsStore.updateSidebarSortMode(mode)
+                } label: {
+                    if mode == currentFileSidebarSortMode {
+                        Label(mode.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(mode.displayName)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "doc")
+                    .font(.system(size: 9, weight: .medium))
+                Text(currentFileSidebarSortMode.footerLabel)
+                    .font(.system(size: 10, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(Capsule())
+            .contentShape(Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Sort files by \(currentFileSidebarSortMode.displayName)")
+        .accessibilityLabel("Sidebar file sorting")
+        .accessibilityValue(currentFileSidebarSortMode.displayName)
     }
 
     private var sidebarPlacementButton: some View {
@@ -573,11 +633,32 @@ private struct ReaderSidebarGroupHeader: View {
     let indicatorState: ReaderDocumentIndicatorState
     let settings: ReaderSettings
     let onTogglePin: () -> Void
+    let onCloseGroup: () -> Void
+
+    private var pinButtonLabel: String {
+        isPinned ? "Unpin group \(displayName)" : "Pin group \(displayName)"
+    }
+
+    private var closeGroupLabel: String {
+        "Close all files in group \(displayName)"
+    }
 
     var body: some View {
         HStack(spacing: 6) {
+            Button {
+                onTogglePin()
+            } label: {
+                Image(systemName: isPinned ? "pin.fill" : "pin")
+                    .font(.system(size: 10))
+                    .foregroundStyle(isPinned ? .primary : .tertiary)
+                    .rotationEffect(.degrees(30))
+            }
+            .buttonStyle(.plain)
+            .help(pinButtonLabel)
+            .accessibilityLabel(pinButtonLabel)
+
             Text(displayName)
-                .font(.system(size: 11.5, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -600,16 +681,51 @@ private struct ReaderSidebarGroupHeader: View {
                 .accessibilityLabel("\(documentCount) document\(documentCount == 1 ? "" : "s")")
 
             Button {
-                onTogglePin()
+                onCloseGroup()
             } label: {
-                Image(systemName: isPinned ? "pin.fill" : "pin")
-                    .font(.system(size: 10))
-                    .foregroundStyle(isPinned ? .primary : .tertiary)
-                    .rotationEffect(.degrees(30))
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help(isPinned ? "Unpin Group" : "Pin Group")
-            .accessibilityLabel(isPinned ? "Unpin Group" : "Pin Group")
+            .help(closeGroupLabel)
+            .accessibilityLabel(closeGroupLabel)
+            .accessibilityHint("Closes every open file in this group")
+        }
+    }
+}
+
+private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                configuration.isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .background(.quaternary.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    .rotationEffect(configuration.isExpanded ? .degrees(90) : .zero)
+                    .animation(.easeInOut(duration: 0.15), value: configuration.isExpanded)
+
+                configuration.label
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color(nsColor: .labelColor).opacity(0.04))
+            )
+        }
+        .buttonStyle(.plain)
+
+        if configuration.isExpanded {
+            configuration.content
+                .padding(.leading, 12)
         }
     }
 }

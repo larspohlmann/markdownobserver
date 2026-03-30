@@ -163,6 +163,17 @@ struct ReaderSettingsAndModelsTests {
         #expect(reloadedStore.currentSettings.sidebarSortMode == .lastChangedNewestFirst)
     }
 
+    @Test @MainActor func readerSettingsStorePersistsSidebarGroupSortMode() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.sidebar-group-sort.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.updateSidebarGroupSortMode(.nameAscending)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.currentSettings.sidebarGroupSortMode == .nameAscending)
+    }
+
     @Test @MainActor func readerSettingsStorePersistsNotificationsEnabled() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.notifications.tests"
@@ -182,6 +193,7 @@ struct ReaderSettingsAndModelsTests {
         #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
         #expect(store.currentSettings.notificationsEnabled)
         #expect(store.currentSettings.sidebarSortMode == .openOrder)
+        #expect(store.currentSettings.sidebarGroupSortMode == .lastChangedNewestFirst)
         #expect(store.currentSettings.recentWatchedFolders.isEmpty)
         #expect(store.currentSettings.recentManuallyOpenedFiles.isEmpty)
     }
@@ -738,6 +750,7 @@ struct ReaderSettingsAndModelsTests {
         #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
         #expect(store.currentSettings.notificationsEnabled)
         #expect(store.currentSettings.sidebarSortMode == .openOrder)
+        #expect(store.currentSettings.sidebarGroupSortMode == .lastChangedNewestFirst)
         #expect(store.currentSettings.recentWatchedFolders.isEmpty)
         #expect(store.currentSettings.recentManuallyOpenedFiles.isEmpty)
     }
@@ -760,6 +773,7 @@ struct ReaderSettingsAndModelsTests {
         #expect(!store.currentSettings.notificationsEnabled)
         #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
         #expect(store.currentSettings.sidebarSortMode == .nameDescending)
+        #expect(store.currentSettings.sidebarGroupSortMode == .lastChangedNewestFirst)
         #expect(store.currentSettings.recentWatchedFolders.isEmpty)
         #expect(store.currentSettings.recentManuallyOpenedFiles.isEmpty)
     }

@@ -61,7 +61,8 @@ struct ContentView: View {
         let onScrollSyncObservation: (ScrollSyncObservation) -> Void
         let onSourceEdit: (String) -> Void
         let onDroppedFileURLs: ([URL]) -> Void
-        let onDropTargetedChange: (Bool) -> Void
+        let onDropTargetedChange: (DropTargetingUpdate) -> Void
+        let canAcceptDroppedFileURLs: ([URL]) -> Bool
         let onRetryFallback: () -> Void
     }
 
@@ -72,6 +73,7 @@ struct ContentView: View {
 
     @ObservedObject var readerStore: ReaderStore
     let openAdditionalDocument: (URL) -> Void
+    let openAdditionalDocumentsInCurrentWindow: ([URL]) -> Void
     let openDocumentInCurrentWindow: (URL) -> Void
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
@@ -96,6 +98,7 @@ struct ContentView: View {
     let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
     let onRemoveFavoriteWatchedFolder: (UUID) -> Void
+    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
     let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
@@ -103,6 +106,7 @@ struct ContentView: View {
 
     @StateObject private var splitScrollCoordinator = SplitScrollCoordinator()
     @State private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
+    @State private var blockedFolderDropTargetedSurfaces: Set<DocumentSurfaceRole> = []
     @State private var previewMode: PreviewMode = .web
     @State private var previewReloadToken = 0
     @State private var sourceMode: SourceMode = .web
@@ -136,8 +140,8 @@ struct ContentView: View {
                 onSetDocumentViewMode: { mode in
                     readerStore.setDocumentViewMode(mode)
                 },
-                onOpenFile: { fileURL in
-                    openDocumentReplacingCurrentWindow(fileURL)
+                onOpenFiles: { fileURLs in
+                    handlePickedFileURLs(fileURLs)
                 },
                 onRequestFolderWatch: onRequestFolderWatch,
                 onStopFolderWatch: onStopFolderWatch,
@@ -147,6 +151,7 @@ struct ContentView: View {
                 onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
                 onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
                 onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
+                onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
                 onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: onClearRecentWatchedFolders,
@@ -178,7 +183,11 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
-                if isDragTargeted {
+                if isBlockedFolderDropTargeted {
+                    FolderDropBlockedOverlayView()
+                        .padding(10)
+                        .allowsHitTesting(false)
+                } else if isDragTargeted {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(Color.accentColor.opacity(0.65), lineWidth: 2)
                         .padding(10)
@@ -200,20 +209,11 @@ struct ContentView: View {
             .onChange(of: sourceHTMLInputs) { _, _ in
                 handleSourceHTMLInputsChange()
             }
+            .onChange(of: activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
+                clearDropTargetState()
+            }
             .onAppear {
                 handleSurfaceAppear()
-            }
-
-            if activeFolderWatch != nil || readerStore.hasOpenDocument {
-                ReaderStatusBar(
-                    activeFolderWatch: activeFolderWatch,
-                    isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                    watchIndicatorColor: folderWatchHighlightColor,
-                    canStopFolderWatch: canStopFolderWatch,
-                    statusTimestamp: readerStore.statusBarTimestamp,
-                    onStopFolderWatch: onStopFolderWatch,
-                    onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite
-                )
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -345,7 +345,7 @@ struct ContentView: View {
             sourceReloadToken += 1
             sourceMode = .web
         }
-        dragTargetedSurfaces.removeAll()
+        clearDropTargetState()
         splitScrollCoordinator.reset()
     }
 
@@ -354,7 +354,7 @@ struct ContentView: View {
             return
         }
 
-        dragTargetedSurfaces.remove(.preview)
+        clearDropTargetState(for: .preview)
         splitScrollCoordinator.reset()
     }
 
@@ -363,7 +363,7 @@ struct ContentView: View {
             return
         }
 
-        dragTargetedSurfaces.remove(.source)
+        clearDropTargetState(for: .source)
         splitScrollCoordinator.reset()
     }
 
@@ -424,6 +424,15 @@ struct ContentView: View {
     }
 
     private func handleDroppedFileURLs(_ fileURLs: [URL]) {
+        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
+            guard activeFolderWatch == nil else {
+                return
+            }
+
+            onRequestFolderWatch(droppedFolderURL)
+            return
+        }
+
         let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
         guard !markdownURLs.isEmpty else {
             return
@@ -431,27 +440,46 @@ struct ContentView: View {
 
         if readerStore.fileURL == nil {
             openDocumentInCurrentWindow(markdownURLs[0])
-            for fileURL in markdownURLs.dropFirst() {
-                openAdditionalDocument(fileURL)
+            let additionalURLs = Array(markdownURLs.dropFirst())
+            if !additionalURLs.isEmpty {
+                openAdditionalDocumentsInCurrentWindow(additionalURLs)
             }
             return
         }
 
-        for fileURL in markdownURLs {
-            openAdditionalDocument(fileURL)
-        }
+        openAdditionalDocumentsInCurrentWindow(markdownURLs)
     }
 
-    private func openDocumentReplacingCurrentWindow(_ fileURL: URL) {
+    private func handlePickedFileURLs(_ fileURLs: [URL]) {
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard let firstURL = markdownURLs.first else {
+            return
+        }
+
+        guard openDocumentReplacingCurrentWindow(firstURL) else {
+            return
+        }
+
+        let additionalURLs = Array(markdownURLs.dropFirst())
+        guard !additionalURLs.isEmpty else {
+            return
+        }
+
+        openAdditionalDocumentsInCurrentWindow(additionalURLs)
+    }
+
+    @discardableResult
+    private func openDocumentReplacingCurrentWindow(_ fileURL: URL) -> Bool {
         let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(fileURL)
         let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
         if readerStore.hasUnsavedDraftChanges,
            currentURL != normalizedIncomingURL {
             readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
-            return
+            return false
         }
 
         openDocumentInCurrentWindow(fileURL)
+        return true
     }
 
     private var previewAccessibilityValue: String {
@@ -507,6 +535,10 @@ struct ContentView: View {
         !dragTargetedSurfaces.isEmpty
     }
 
+    private var isBlockedFolderDropTargeted: Bool {
+        !blockedFolderDropTargetedSurfaces.isEmpty
+    }
+
     private var minimumSurfaceWidth: CGFloat? {
         readerStore.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
     }
@@ -555,9 +587,10 @@ struct ContentView: View {
                 },
                 onSourceEdit: { _ in },
                 onDroppedFileURLs: handleDroppedFileURLs,
-                onDropTargetedChange: { isTargeted in
-                    updateDropTargetState(for: surface, isTargeted: isTargeted)
+                onDropTargetedChange: { update in
+                    updateDropTargetState(for: surface, update: update)
                 },
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onRetryFallback: {
                     previewReloadToken += 1
                     previewMode = .web
@@ -592,9 +625,10 @@ struct ContentView: View {
                     readerStore.updateSourceDraft(markdown)
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
-                onDropTargetedChange: { isTargeted in
-                    updateDropTargetState(for: surface, isTargeted: isTargeted)
+                onDropTargetedChange: { update in
+                    updateDropTargetState(for: surface, update: update)
                 },
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onRetryFallback: {
                     sourceReloadToken += 1
                     sourceMode = .web
@@ -677,12 +711,34 @@ struct ContentView: View {
         )
     }
 
-    private func updateDropTargetState(for surface: DocumentSurfaceRole, isTargeted: Bool) {
-        if isTargeted {
+    private func updateDropTargetState(for surface: DocumentSurfaceRole, update: DropTargetingUpdate) {
+        if update.isTargeted {
             dragTargetedSurfaces.insert(surface)
         } else {
             dragTargetedSurfaces.remove(surface)
         }
+
+        let isBlockedFolderDrop = update.isTargeted && !update.canDrop && update.containsDirectoryHint
+        if isBlockedFolderDrop {
+            blockedFolderDropTargetedSurfaces.insert(surface)
+        } else {
+            blockedFolderDropTargetedSurfaces.remove(surface)
+        }
+    }
+
+    private func clearDropTargetState(for surface: DocumentSurfaceRole? = nil) {
+        guard let surface else {
+            dragTargetedSurfaces.removeAll()
+            blockedFolderDropTargetedSurfaces.removeAll()
+            return
+        }
+
+        dragTargetedSurfaces.remove(surface)
+        blockedFolderDropTargetedSurfaces.remove(surface)
+    }
+
+    private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || activeFolderWatch == nil
     }
 
     private func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
@@ -742,7 +798,8 @@ private struct DocumentSurfaceHost: View {
                     onScrollSyncObservation: configuration.onScrollSyncObservation,
                     onSourceEdit: configuration.onSourceEdit,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
-                    onDropTargetedChange: configuration.onDropTargetedChange
+                    onDropTargetedChange: configuration.onDropTargetedChange,
+                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs
                 )
             } else {
                 fallbackSurface
@@ -764,6 +821,39 @@ private struct DocumentSurfaceHost: View {
             MarkdownSourceFallbackView(
                 markdown: fallbackMarkdown,
                 onRetryHighlighting: configuration.onRetryFallback
+            )
+        }
+    }
+}
+
+private struct FolderDropBlockedOverlayView: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.black.opacity(0.24))
+
+            VStack(spacing: 6) {
+                Image(systemName: "folder.badge.minus")
+                    .font(.system(size: 22, weight: .semibold))
+
+                Text("Already Watching a Folder")
+                    .font(.headline)
+
+                Text("Stop the current folder watch before dropping another folder.")
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            .foregroundStyle(Color.black)
+            .padding(20)
+            .frame(maxWidth: 460)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(nsColor: .systemYellow))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.orange, lineWidth: 2)
             )
         }
     }
@@ -858,6 +948,7 @@ private final class SplitScrollCoordinator: ObservableObject {
     ContentView(
         readerStore: ReaderStore(),
         openAdditionalDocument: { _ in },
+        openAdditionalDocumentsInCurrentWindow: { _ in },
         openDocumentInCurrentWindow: { _ in },
         activeFolderWatch: nil,
         isFolderWatchInitialScanInProgress: false,
@@ -882,6 +973,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         onClearFavoriteWatchedFolders: {},
         onRenameFavoriteWatchedFolder: { _, _ in },
         onRemoveFavoriteWatchedFolder: { _ in },
+        onReorderFavoriteWatchedFolders: { _ in },
         onStartRecentManuallyOpenedFile: { _ in },
         onStartRecentFolderWatch: { _ in },
         onClearRecentWatchedFolders: {},

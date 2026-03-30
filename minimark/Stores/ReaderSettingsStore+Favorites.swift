@@ -1,12 +1,18 @@
 import Foundation
 
 extension ReaderSettingsStore {
-    func addFavoriteWatchedFolder(name: String, folderURL: URL, options: ReaderFolderWatchOptions) {
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        openDocumentFileURLs: [URL] = []
+    ) {
         updateSettings { settings in
             settings.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
                 name: name,
                 folderURL: folderURL,
                 options: options,
+                openDocumentFileURLs: openDocumentFileURLs,
                 into: settings.favoriteWatchedFolders
             )
         }
@@ -31,6 +37,38 @@ extension ReaderSettingsStore {
         }
     }
 
+    func updateFavoriteWatchedFolderOpenDocuments(
+        id: UUID,
+        folderURL: URL,
+        openDocumentFileURLs: [URL]
+    ) {
+        updateSettings(coalescePersistence: true) { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+            let existing = settings.favoriteWatchedFolders[index]
+            let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+                from: openDocumentFileURLs,
+                relativeTo: folderURL,
+                options: existing.options
+            )
+            guard existing.openDocumentRelativePaths != scopedRelativePaths else {
+                return
+            }
+
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: existing.folderPath,
+                options: existing.options,
+                bookmarkData: existing.bookmarkData,
+                openDocumentRelativePaths: scopedRelativePaths,
+                createdAt: existing.createdAt
+            )
+        }
+    }
+
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
         guard let bookmarkData = entry.bookmarkData else {
             return entry.folderURL
@@ -47,6 +85,15 @@ extension ReaderSettingsStore {
         } catch {
             updateFavoriteWatchedFolderBookmarkData(id: entry.id, bookmarkData: nil)
             return entry.folderURL
+        }
+    }
+
+    func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
+        updateSettings { settings in
+            settings.favoriteWatchedFolders = ReaderFavoriteHistory.reordering(
+                ids: orderedIDs,
+                in: settings.favoriteWatchedFolders
+            )
         }
     }
 
@@ -72,6 +119,7 @@ extension ReaderSettingsStore {
                 folderPath: normalizedResolvedPath,
                 options: existing.options,
                 bookmarkData: refreshedBookmarkData ?? existing.bookmarkData,
+                openDocumentRelativePaths: existing.openDocumentRelativePaths,
                 createdAt: existing.createdAt
             )
         }
@@ -94,6 +142,7 @@ extension ReaderSettingsStore {
                 folderPath: existingEntry.folderPath,
                 options: existingEntry.options,
                 bookmarkData: bookmarkData,
+                openDocumentRelativePaths: existingEntry.openDocumentRelativePaths,
                 createdAt: existingEntry.createdAt
             )
         }

@@ -19,7 +19,8 @@ extension ReaderStore {
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
-            options: session.options
+            options: session.options,
+            openDocumentFileURLs: fileURL.map { [$0] } ?? []
         )
     }
 

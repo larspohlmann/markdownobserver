@@ -14,6 +14,22 @@ extension ReaderWindowRootView {
             return
         }
 
+        openAdditionalDocumentInCurrentWindow(
+            fileURL,
+            folderWatchSession: folderWatchSession,
+            origin: origin,
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+        )
+    }
+
+    func openAdditionalDocumentInCurrentWindow(
+        _ fileURL: URL,
+        folderWatchSession: ReaderFolderWatchSession? = nil,
+        origin: ReaderOpenOrigin = .manual,
+        initialDiffBaselineMarkdown: String? = nil
+    ) {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+
         if folderWatchSession != nil {
             enqueueFolderWatchOpen(
                 folderWatchChangeEvent(
@@ -34,14 +50,20 @@ extension ReaderWindowRootView {
         applyWindowTitlePresentation()
     }
 
+    func openAdditionalDocumentsInCurrentWindow(
+        _ fileURLs: [URL],
+        origin: ReaderOpenOrigin = .manual,
+        preferEmptySelection: Bool = true
+    ) {
+        openSidebarDocumentsBurst(
+            at: fileURLs,
+            origin: origin,
+            preferEmptySelection: preferEmptySelection
+        )
+    }
+
     var isSharedFolderWatchAFavorite: Bool {
-        guard let session = sharedFolderWatchSession else {
-            return false
-        }
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
-        return settingsStore.currentSettings.favoriteWatchedFolders.contains {
-            $0.matches(folderPath: normalizedPath, options: session.options)
-        }
+        favoriteMatchingSharedFolderWatchSession() != nil
     }
 
     func saveSharedFolderWatchAsFavorite(name: String) {
@@ -51,18 +73,13 @@ extension ReaderWindowRootView {
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
-            options: session.options
+            options: session.options,
+            openDocumentFileURLs: currentSidebarOpenDocumentFileURLs()
         )
     }
 
     func removeSharedFolderWatchFromFavorites() {
-        guard let session = sharedFolderWatchSession else {
-            return
-        }
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
-        guard let match = settingsStore.currentSettings.favoriteWatchedFolders.first(where: {
-            $0.matches(folderPath: normalizedPath, options: session.options)
-        }) else {
+        guard let match = favoriteMatchingSharedFolderWatchSession() else {
             return
         }
         settingsStore.removeFavoriteWatchedFolder(id: match.id)
@@ -70,7 +87,52 @@ extension ReaderWindowRootView {
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
-        startWatchingFolder(folderURL: resolvedURL, options: entry.options)
+        startWatchingFolder(
+            folderURL: resolvedURL,
+            options: entry.options,
+            performInitialAutoOpen: false
+        )
+
+        let restoredFileURLs = entry.resolvedOpenDocumentFileURLs(relativeTo: resolvedURL)
+        if let session = sharedFolderWatchSession,
+           !restoredFileURLs.isEmpty {
+            openSidebarDocumentsBurst(
+                at: restoredFileURLs,
+                origin: .folderWatchInitialBatchAutoOpen,
+                folderWatchSession: session,
+                preferEmptySelection: true
+            )
+        }
+
+        syncSharedFavoriteOpenDocumentsIfNeeded()
+    }
+
+    func syncSharedFavoriteOpenDocumentsIfNeeded() {
+        guard let session = sharedFolderWatchSession,
+              let favorite = favoriteMatchingSharedFolderWatchSession() else {
+            return
+        }
+
+        settingsStore.updateFavoriteWatchedFolderOpenDocuments(
+            id: favorite.id,
+            folderURL: session.folderURL,
+            openDocumentFileURLs: currentSidebarOpenDocumentFileURLs()
+        )
+    }
+
+    private func favoriteMatchingSharedFolderWatchSession() -> ReaderFavoriteWatchedFolder? {
+        guard let session = sharedFolderWatchSession else {
+            return nil
+        }
+
+        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+        return settingsStore.currentSettings.favoriteWatchedFolders.first {
+            $0.matches(folderPath: normalizedPath, options: session.options)
+        }
+    }
+
+    func currentSidebarOpenDocumentFileURLs() -> [URL] {
+        sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL }
     }
 
     func clearFavoriteWatchedFolders() {
@@ -101,9 +163,17 @@ extension ReaderWindowRootView {
         return hostWindow.windowNumber == requestedWindowNumber
     }
 
-    func startWatchingFolder(folderURL: URL, options: ReaderFolderWatchOptions) {
+    func startWatchingFolder(
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        performInitialAutoOpen: Bool = true
+    ) {
         do {
-            try sidebarDocumentController.startWatchingFolder(folderURL: folderURL, options: options)
+            try sidebarDocumentController.startWatchingFolder(
+                folderURL: folderURL,
+                options: options,
+                performInitialAutoOpen: performInitialAutoOpen
+            )
         } catch {
             sidebarDocumentController.selectedReaderStore.presentError(error)
         }

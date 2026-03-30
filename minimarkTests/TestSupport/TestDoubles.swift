@@ -119,6 +119,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
                 notificationsEnabled: notificationsEnabled,
                 multiFileDisplayMode: .sidebarLeft,
                 sidebarSortMode: .openOrder,
+                sidebarGroupSortMode: .lastChangedNewestFirst,
                 recentWatchedFolders: [],
                 recentManuallyOpenedFiles: []
             )
@@ -167,12 +168,24 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    func addFavoriteWatchedFolder(name: String, folderURL: URL, options: ReaderFolderWatchOptions) {
+    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
+        var next = subject.value
+        next.sidebarGroupSortMode = mode
+        subject.send(next)
+    }
+
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        openDocumentFileURLs: [URL] = []
+    ) {
         var next = subject.value
         next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
             name: name,
             folderURL: folderURL,
             options: options,
+            openDocumentFileURLs: openDocumentFileURLs,
             into: next.favoriteWatchedFolders
         )
         recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
@@ -196,6 +209,36 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             newName: newName,
             in: next.favoriteWatchedFolders
         )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func updateFavoriteWatchedFolderOpenDocuments(
+        id: UUID,
+        folderURL: URL,
+        openDocumentFileURLs: [URL]
+    ) {
+        var next = subject.value
+        guard let index = next.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        let existing = next.favoriteWatchedFolders[index]
+        let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+            from: openDocumentFileURLs,
+            relativeTo: folderURL,
+            options: existing.options
+        )
+        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+            id: existing.id,
+            name: existing.name,
+            folderPath: existing.folderPath,
+            options: existing.options,
+            bookmarkData: existing.bookmarkData,
+            openDocumentRelativePaths: scopedRelativePaths,
+            createdAt: existing.createdAt
+        )
+
         recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
         subject.send(next)
     }

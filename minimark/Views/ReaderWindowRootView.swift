@@ -51,6 +51,10 @@ struct ReaderWindowRootView: View {
         pendingFolderWatchRequest?.folderURL
     }
 
+    private var openSidebarDocumentPathSnapshot: Set<String> {
+        Set(currentSidebarOpenDocumentFileURLs().map(\.path))
+    }
+
     private var pendingFolderWatchOpenModeBinding: Binding<ReaderFolderWatchOpenMode> {
         Binding(
             get: {
@@ -109,6 +113,25 @@ struct ReaderWindowRootView: View {
                     }
                 )
             }
+            .sheet(item: $sidebarDocumentController.pendingFileSelectionRequest, onDismiss: {
+                sidebarDocumentController.dismissPendingFileSelectionRequest()
+            }) { request in
+                FolderWatchFileSelectionSheetWrapper(
+                    request: request,
+                    onSkip: {
+                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                    },
+                    onConfirm: { selectedFileURLs in
+                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                        openSidebarDocumentsBurst(
+                            at: selectedFileURLs,
+                            origin: .folderWatchInitialBatchAutoOpen,
+                            folderWatchSession: request.session,
+                            preferEmptySelection: false
+                        )
+                    }
+                )
+            }
             .background(
                 WindowAccessor { window in
                     handleWindowAccessorUpdate(window)
@@ -135,6 +158,10 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sharedFolderWatchSession) { _, _ in
                 refreshWindowShellRegistrationAndTitle()
+                syncSharedFavoriteOpenDocumentsIfNeeded()
+            }
+            .onChange(of: openSidebarDocumentPathSnapshot) { _, _ in
+                syncSharedFavoriteOpenDocumentsIfNeeded()
             }
             .onChange(of: sidebarDocumentController.selectedFolderWatchAutoOpenWarning) { _, warning in
                 handleFolderWatchAutoOpenWarningChange(warning)
@@ -266,7 +293,10 @@ struct ReaderWindowRootView: View {
         ContentView(
             readerStore: store,
             openAdditionalDocument: { fileURL in
-                openAdditionalDocument(fileURL)
+                openAdditionalDocumentInCurrentWindow(fileURL)
+            },
+            openAdditionalDocumentsInCurrentWindow: { fileURLs in
+                openAdditionalDocumentsInCurrentWindow(fileURLs)
             },
             openDocumentInCurrentWindow: { fileURL in
                 openDocumentInCurrentWindow(fileURL)
@@ -301,6 +331,9 @@ struct ReaderWindowRootView: View {
             },
             onRemoveFavoriteWatchedFolder: { id in
                 settingsStore.removeFavoriteWatchedFolder(id: id)
+            },
+            onReorderFavoriteWatchedFolders: { orderedIDs in
+                settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
             },
             onStartRecentManuallyOpenedFile: { entry in
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL

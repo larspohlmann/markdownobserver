@@ -24,16 +24,6 @@ private struct PointingHandCursor: ViewModifier {
     }
 }
 
-private func abbreviatePathWithTilde(_ path: String) -> String {
-    let home = NSHomeDirectory()
-    if path == home {
-        return "~"
-    } else if path.hasPrefix(home + "/") {
-        return "~" + path.dropFirst(home.count)
-    }
-    return path
-}
-
 enum ReaderTopBarMetrics {
     static let mainBarHeight: CGFloat = 44
 }
@@ -54,7 +44,7 @@ struct ReaderTopBar: View {
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
-    let onOpenFile: (URL) -> Void
+    let onOpenFiles: ([URL]) -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
     let onSaveFolderWatchAsFavorite: (String) -> Void
@@ -63,6 +53,7 @@ struct ReaderTopBar: View {
     let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
     let onRemoveFavoriteWatchedFolder: (UUID) -> Void
+    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
     let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
@@ -145,7 +136,7 @@ struct ReaderTopBar: View {
                         recentWatchedFolders: recentWatchedFolders,
                         recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                         iconProvider: appIconImage(for:),
-                        onOpenFile: onOpenFile,
+                        onOpenFiles: onOpenFiles,
                         onOpenApp: { app in
                             readerStore.openCurrentFileInApplication(app)
                         },
@@ -218,6 +209,7 @@ struct ReaderTopBar: View {
                 favorites: favoriteWatchedFolders,
                 onRename: onRenameFavoriteWatchedFolder,
                 onDelete: onRemoveFavoriteWatchedFolder,
+                onReorder: onReorderFavoriteWatchedFolders,
                 onDismiss: { isEditingFavorites = false }
             )
         }
@@ -451,6 +443,7 @@ struct ReaderTopBar: View {
                 }
             }
             .font(.system(size: 13))
+            .foregroundStyle(Color(nsColor: .labelColor))
             .padding(.vertical, 8)
             .frame(minWidth: 220, maxWidth: 320)
         }
@@ -629,6 +622,7 @@ struct ReaderTopBar: View {
         let onRevealInFinder: () -> Void
 
         @Environment(\.colorScheme) private var colorScheme
+        @State private var isShowingDetails = false
 
         private var stripGreen: Color {
             colorScheme == .dark
@@ -654,6 +648,28 @@ struct ReaderTopBar: View {
 
         var body: some View {
             HStack(spacing: 8) {
+                Button {
+                    isShowingDetails = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(stripGreen.opacity(0.72))
+                .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
+                    FolderWatchDetailsPopover(
+                        activeFolderWatch: activeFolderWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        onSaveFolderWatchAsFavorite: onSaveFavorite
+                    )
+                }
+                .help(activeFolderWatch.tooltipText)
+                .accessibilityLabel("Folder watch details")
+                .accessibilityValue(activeFolderWatch.accessibilityValue)
+                .accessibilityHint("Shows details about the watched folder")
+
                 Text("WATCHING")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(stripGreen.opacity(0.55))
@@ -1131,31 +1147,75 @@ struct SaveFavoriteSheet: View {
     let onSave: (String) -> Void
     let onCancel: () -> Void
 
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Save as Favorite")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+    @FocusState private var isNameFocused: Bool
 
-            TextField("Name", text: $name)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit {
-                    guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                    onSave(name.trimmingCharacters(in: .whitespaces))
-                }
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespaces)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Save as Favorite")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
             HStack(spacing: 12) {
+                ZStack(alignment: .bottomTrailing) {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.orange)
+
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.yellow)
+                        .offset(x: 3, y: 2)
+                }
+                .frame(width: 28, height: 24)
+
+                TextField("Favorite name", text: $name)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13, weight: .medium))
+                    .focused($isNameFocused)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.primary.opacity(0.04))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Color.accentColor.opacity(isNameFocused ? 0.4 : 0), lineWidth: 1)
+                    )
+                    .onSubmit {
+                        guard !trimmedName.isEmpty else { return }
+                        onSave(trimmedName)
+                    }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+
+            HStack {
+                Spacer()
+
                 Button("Cancel", action: onCancel)
                     .keyboardShortcut(.cancelAction)
 
                 Button("Save") {
-                    onSave(name.trimmingCharacters(in: .whitespaces))
+                    onSave(trimmedName)
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(trimmedName.isEmpty)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .padding(20)
-        .frame(width: 280)
+        .frame(width: 340)
+        .onAppear { isNameFocused = true }
     }
 }
 
@@ -1213,7 +1273,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onOpenFile: (URL) -> Void
+    let onOpenFiles: ([URL]) -> Void
     let onOpenApp: (ReaderExternalApplication) -> Void
     let onRevealInFinder: () -> Void
     let onRequestFolderWatch: (URL) -> Void
@@ -1278,7 +1338,7 @@ private struct OpenInMenuButton: NSViewRepresentable {
         @objc func showMenu(_ sender: NSButton) {
             let menu = NSMenu()
 
-            let openFile = NSMenuItem(title: "Open File...", action: #selector(openFileFromPicker), keyEquivalent: "")
+            let openFile = NSMenuItem(title: "Open File(s)...", action: #selector(openFileFromPicker), keyEquivalent: "")
             openFile.target = self
             menu.addItem(openFile)
 
@@ -1473,11 +1533,11 @@ private struct OpenInMenuButton: NSViewRepresentable {
         }
 
         @objc private func openFileFromPicker() {
-            guard let fileURL = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: false)?.first else {
+            guard let fileURLs = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: true) else {
                 return
             }
 
-            parent.onOpenFile(fileURL)
+            parent.onOpenFiles(fileURLs)
         }
 
         @objc private func openRecentFile(_ sender: NSMenuItem) {
