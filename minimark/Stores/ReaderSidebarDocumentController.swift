@@ -325,6 +325,11 @@ final class ReaderSidebarDocumentController: ObservableObject {
         folderWatchController.dismissFolderWatchAutoOpenWarning()
     }
 
+    func dismissPendingFileSelectionRequest() {
+        folderWatchController.pendingFileSelectionRequest = nil
+        pendingFileSelectionRequest = nil
+    }
+
     func watchedDocumentIDs() -> Set<UUID> {
         Set(documents.compactMap { document in
             folderWatchController.watchApplies(to: document.readerStore.fileURL) ? document.id : nil

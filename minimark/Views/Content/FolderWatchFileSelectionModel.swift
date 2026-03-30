@@ -56,14 +56,16 @@ final class FolderWatchFileSelectionModel: ObservableObject {
     }
 
     func isSelected(_ fileURL: URL) -> Bool {
-        selectedFileURLs.contains(fileURL)
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        return selectedFileURLs.contains(normalizedURL)
     }
 
     func toggleFile(_ fileURL: URL) {
-        if selectedFileURLs.contains(fileURL) {
-            selectedFileURLs.remove(fileURL)
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        if selectedFileURLs.contains(normalizedURL) {
+            selectedFileURLs.remove(normalizedURL)
         } else {
-            selectedFileURLs.insert(fileURL)
+            selectedFileURLs.insert(normalizedURL)
         }
     }
 

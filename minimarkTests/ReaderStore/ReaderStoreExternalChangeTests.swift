@@ -804,7 +804,10 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.folderWatchAutoOpenWarning == nil)
         #expect(fixture.store.pendingFileSelectionRequest != nil)
         #expect(fixture.store.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + additionalFileCount)
-        #expect(fixture.store.pendingFileSelectionRequest?.folderURL == fixture.temporaryDirectoryURL)
+        #expect(
+            fixture.store.pendingFileSelectionRequest.map { ReaderFileRouting.normalizedFileURL($0.folderURL) }
+            == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL)
+        )
     }
 
     @Test @MainActor func openAllMarkdownFilesAutoOpensWhenAtOrBelowThreshold() throws {

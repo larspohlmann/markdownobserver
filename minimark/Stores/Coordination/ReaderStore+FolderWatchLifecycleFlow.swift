@@ -35,6 +35,7 @@ extension ReaderStore {
     private func prepareForFolderWatchStart() {
         stopWatchingFolder()
         setFolderWatchAutoOpenWarning(nil)
+        pendingFileSelectionRequest = nil
         folderWatchAutoOpenPlanner.resetTransientState()
     }
 
@@ -132,6 +133,7 @@ extension ReaderStore {
     private func resetFolderWatchState(notifyIfNeeded: Bool) {
         folderWatcher.stopWatching()
         folderWatchAutoOpenPlanner.resetTransientState()
+        pendingFileSelectionRequest = nil
         folderSecurityScopeToken?.endAccess()
         folderSecurityScopeToken = nil
         setActiveFolderWatchSession(nil)

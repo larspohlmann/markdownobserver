@@ -1,5 +1,24 @@
 import SwiftUI
 
+struct FolderWatchFileSelectionSheetWrapper: View {
+    @StateObject private var model: FolderWatchFileSelectionModel
+    let onSkip: () -> Void
+    let onConfirm: ([URL]) -> Void
+
+    init(request: ReaderFolderWatchFileSelectionRequest, onSkip: @escaping () -> Void, onConfirm: @escaping ([URL]) -> Void) {
+        _model = StateObject(wrappedValue: FolderWatchFileSelectionModel(
+            folderURL: request.folderURL,
+            fileURLs: request.allFileURLs
+        ))
+        self.onSkip = onSkip
+        self.onConfirm = onConfirm
+    }
+
+    var body: some View {
+        FolderWatchFileSelectionSheet(model: model, onSkip: onSkip, onConfirm: onConfirm)
+    }
+}
+
 struct FolderWatchFileSelectionSheet: View {
     @ObservedObject var model: FolderWatchFileSelectionModel
     let onSkip: () -> Void
@@ -212,6 +231,8 @@ private struct FileSelectionTreeNodeRow: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!hasChildren)
+                .accessibilityLabel(hasChildren ? (isExpanded ? "Collapse folder" : "Expand folder") : "Folder has no subitems")
+                .accessibilityValue(hasChildren ? (isExpanded ? "Expanded" : "Collapsed") : "No subitems")
 
                 Image(systemName: "folder.fill")
                     .font(.system(size: 11.5, weight: .medium))
@@ -272,6 +293,8 @@ private struct FileSelectionTreeNodeRow: View {
         }
         .buttonStyle(.plain)
         .help("Toggle all files in this folder")
+        .accessibilityLabel("Toggle all files in \(node.name)")
+        .accessibilityValue(isFullySelected ? "All selected" : isPartiallySelected ? "Partially selected" : "None selected")
     }
 
     @ViewBuilder

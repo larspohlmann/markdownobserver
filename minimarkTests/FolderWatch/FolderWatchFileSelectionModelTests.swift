@@ -5,10 +5,10 @@ import Foundation
 @Suite("FolderWatchFileSelectionModel")
 struct FolderWatchFileSelectionModelTests {
 
-    private func makeTemporaryDirectory() -> URL {
+    private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("file-selection-model-tests-\(UUID().uuidString)", isDirectory: true)
-        try! FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
 
@@ -16,8 +16,8 @@ struct FolderWatchFileSelectionModelTests {
         try? FileManager.default.removeItem(at: url)
     }
 
-    @Test @MainActor func allFilesSelectedByDefault() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func allFilesSelectedByDefault() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let files = (0..<5).map { folderURL.appendingPathComponent("file\($0).md") }
@@ -30,8 +30,8 @@ struct FolderWatchFileSelectionModelTests {
         }
     }
 
-    @Test @MainActor func toggleFileRemovesAndAddsSelection() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func toggleFileRemovesAndAddsSelection() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let files = (0..<3).map { folderURL.appendingPathComponent("file\($0).md") }
@@ -46,8 +46,8 @@ struct FolderWatchFileSelectionModelTests {
         #expect(model.selectedCount == 3)
     }
 
-    @Test @MainActor func clearAllRemovesAllSelections() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func clearAllRemovesAllSelections() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let files = (0..<5).map { folderURL.appendingPathComponent("file\($0).md") }
@@ -60,8 +60,8 @@ struct FolderWatchFileSelectionModelTests {
         }
     }
 
-    @Test @MainActor func selectAllReselectsEverything() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func selectAllReselectsEverything() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let files = (0..<5).map { folderURL.appendingPathComponent("file\($0).md") }
@@ -72,8 +72,8 @@ struct FolderWatchFileSelectionModelTests {
         #expect(model.selectedCount == 5)
     }
 
-    @Test @MainActor func performanceThresholdDetection() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func performanceThresholdDetection() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let threshold = ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
@@ -88,12 +88,12 @@ struct FolderWatchFileSelectionModelTests {
         #expect(!model.exceedsPerformanceThreshold)
     }
 
-    @Test @MainActor func treeGroupsFilesBySubdirectory() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func treeGroupsFilesBySubdirectory() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let subA = folderURL.appendingPathComponent("subA", isDirectory: true)
-        try? FileManager.default.createDirectory(at: subA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subA, withIntermediateDirectories: true)
 
         let rootFile = folderURL.appendingPathComponent("root.md")
         let subFile1 = subA.appendingPathComponent("a1.md")
@@ -115,12 +115,12 @@ struct FolderWatchFileSelectionModelTests {
         #expect(fileNodes[0].name == "root.md")
     }
 
-    @Test @MainActor func toggleFolderSelectsAndDeselectsAllChildren() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func toggleFolderSelectsAndDeselectsAllChildren() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let subA = folderURL.appendingPathComponent("subA", isDirectory: true)
-        try? FileManager.default.createDirectory(at: subA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subA, withIntermediateDirectories: true)
 
         let rootFile = folderURL.appendingPathComponent("root.md")
         let subFile1 = subA.appendingPathComponent("a1.md")
@@ -148,12 +148,12 @@ struct FolderWatchFileSelectionModelTests {
         #expect(model.selectedCount == 3)
     }
 
-    @Test @MainActor func partialSelectionDetection() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func partialSelectionDetection() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let subA = folderURL.appendingPathComponent("subA", isDirectory: true)
-        try? FileManager.default.createDirectory(at: subA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subA, withIntermediateDirectories: true)
 
         let subFile1 = subA.appendingPathComponent("a1.md")
         let subFile2 = subA.appendingPathComponent("a2.md")
@@ -173,8 +173,8 @@ struct FolderWatchFileSelectionModelTests {
         #expect(model.isNodePartiallySelected(folderNode))
     }
 
-    @Test @MainActor func emptyFolderProducesEmptyTree() {
-        let folderURL = makeTemporaryDirectory()
+    @Test @MainActor func emptyFolderProducesEmptyTree() throws {
+        let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
         let model = FolderWatchFileSelectionModel(folderURL: folderURL, fileURLs: [])
