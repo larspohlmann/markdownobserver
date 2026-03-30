@@ -176,8 +176,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     }
                 case .grouped(let groups):
                     ForEach(groups) { group in
-                        let groupDocumentIDs = Set(group.documents.map(\.id))
-
                         DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
                             ForEach(group.documents) { document in
                                 documentRow(for: document, allDocuments: sortedDocuments)
@@ -194,7 +192,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                                     toggleGroupPin(group.id)
                                 },
                                 onCloseGroup: {
-                                    onCloseDocuments(groupDocumentIDs)
+                                    onCloseDocuments(Set(group.documents.map(\.id)))
                                 }
                             )
                         }
@@ -636,6 +634,10 @@ private struct ReaderSidebarGroupHeader: View {
     let onTogglePin: () -> Void
     let onCloseGroup: () -> Void
 
+    private var pinButtonLabel: String {
+        isPinned ? "Unpin Group" : "Pin Group"
+    }
+
     var body: some View {
         HStack(spacing: 6) {
             Button {
@@ -647,8 +649,8 @@ private struct ReaderSidebarGroupHeader: View {
                     .rotationEffect(.degrees(30))
             }
             .buttonStyle(.plain)
-            .help(isPinned ? "Unpin Group" : "Pin Group")
-            .accessibilityLabel(isPinned ? "Unpin Group" : "Pin Group")
+            .help(pinButtonLabel)
+            .accessibilityLabel(pinButtonLabel)
 
             Text(displayName)
                 .font(.system(size: 13, weight: .semibold))
