@@ -133,15 +133,21 @@ struct ReaderCommands: Commands {
     }
 
     private func openMarkdown() {
-        openPickedMarkdown(using: openDocumentAction)
+        openPickedMarkdown(
+            usingPrimaryAction: openDocumentAction,
+            additionalAction: openAdditionalDocumentAction
+        )
     }
 
     private func openMarkdownInCurrentWindow() {
-        openPickedMarkdown(using: openInCurrentWindowAction)
+        openPickedMarkdown(
+            usingPrimaryAction: openInCurrentWindowAction,
+            additionalAction: openAdditionalDocumentAction
+        )
     }
 
     private func openMarkdownInSidebar() {
-        openPickedMarkdown(using: openAdditionalDocumentAction)
+        openPickedMarkdown(usingPrimaryAction: openAdditionalDocumentAction)
     }
 
     private func openMarkdownInNewWindows() {
@@ -220,12 +226,24 @@ struct ReaderCommands: Commands {
         openWindow(value: ReaderWindowSeed(recentWatchedFolder: entry))
     }
 
-    private func openPickedMarkdown(using action: ((URL) -> Void)?) {
-        guard let url = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: false)?.first else {
+    private func openPickedMarkdown(
+        usingPrimaryAction primaryAction: ((URL) -> Void)?,
+        additionalAction: ((URL) -> Void)? = nil
+    ) {
+        guard let urls = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: true) else {
             return
         }
 
-        routePickedMarkdown(url, using: action)
+        routePickedMarkdown(urls[0], using: primaryAction)
+
+        if urls.count == 1 {
+            return
+        }
+
+        let effectiveAdditionalAction = additionalAction ?? primaryAction
+        for url in urls.dropFirst() {
+            routePickedMarkdown(url, using: effectiveAdditionalAction)
+        }
     }
 
     private func routePickedMarkdown(_ url: URL, using action: ((URL) -> Void)?) {

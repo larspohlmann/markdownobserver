@@ -293,7 +293,10 @@ struct ReaderWindowRootView: View {
         ContentView(
             readerStore: store,
             openAdditionalDocument: { fileURL in
-                openAdditionalDocument(fileURL)
+                openAdditionalDocumentInCurrentWindow(fileURL)
+            },
+            openAdditionalDocumentsInCurrentWindow: { fileURLs in
+                openAdditionalDocumentsInCurrentWindow(fileURLs)
             },
             openDocumentInCurrentWindow: { fileURL in
                 openDocumentInCurrentWindow(fileURL)
