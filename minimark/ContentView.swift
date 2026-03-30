@@ -708,7 +708,7 @@ struct ContentView: View {
             dragTargetedSurfaces.remove(surface)
         }
 
-        let isBlockedFolderDrop = update.isTargeted && !update.canDrop && hasDroppedDirectoryURL(update.droppedFileURLs)
+        let isBlockedFolderDrop = update.isTargeted && !update.canDrop && update.containsDirectoryHint
         if isBlockedFolderDrop {
             blockedFolderDropTargetedSurfaces.insert(surface)
         } else {
@@ -727,12 +727,8 @@ struct ContentView: View {
         blockedFolderDropTargetedSurfaces.remove(surface)
     }
 
-    private func hasDroppedDirectoryURL(_ fileURLs: [URL]) -> Bool {
-        ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) != nil
-    }
-
     private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
-        !hasDroppedDirectoryURL(fileURLs) || activeFolderWatch == nil
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || activeFolderWatch == nil
     }
 
     private func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {

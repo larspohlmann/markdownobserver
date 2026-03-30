@@ -21,6 +21,7 @@ struct ScrollSyncObservation: Equatable {
 struct DropTargetingUpdate: Equatable {
     let isTargeted: Bool
     let droppedFileURLs: [URL]
+    let containsDirectoryHint: Bool
     let canDrop: Bool
 }
 
@@ -1160,6 +1161,7 @@ final class DropAwareWKWebView: WKWebView {
     private static let clearedDropTargetingUpdate = DropTargetingUpdate(
         isTargeted: false,
         droppedFileURLs: [],
+        containsDirectoryHint: false,
         canDrop: false
     )
 
@@ -1215,11 +1217,13 @@ final class DropAwareWKWebView: WKWebView {
     private func dragTargetingUpdate(from draggingInfo: NSDraggingInfo) -> DropTargetingUpdate {
         let fileURLs = droppedFileURLs(from: draggingInfo)
         let hasFileURLs = !fileURLs.isEmpty
+        let containsDirectoryHint = ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs)
         let canDrop = hasFileURLs && (dropDelegate?.dropAwareWebViewCanAcceptDrop(fileURLs) ?? true)
 
         return DropTargetingUpdate(
             isTargeted: hasFileURLs,
             droppedFileURLs: fileURLs,
+            containsDirectoryHint: containsDirectoryHint,
             canDrop: canDrop
         )
     }

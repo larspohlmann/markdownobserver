@@ -65,6 +65,15 @@ struct FileRoutingAndWatcherTests {
         #expect(ReaderFileRouting.firstDroppedDirectoryURL(from: [droppedFileURL]) == nil)
     }
 
+    @Test func containsLikelyDirectoryPathUsesURLDirectoryHints() {
+        let tempDirectory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+        let folderHintURL = tempDirectory.appendingPathComponent("watch-folder", isDirectory: true)
+        let fileHintURL = tempDirectory.appendingPathComponent("notes.md", isDirectory: false)
+
+        #expect(ReaderFileRouting.containsLikelyDirectoryPath(in: [fileHintURL, folderHintURL]))
+        #expect(!ReaderFileRouting.containsLikelyDirectoryPath(in: [fileHintURL]))
+    }
+
     @Test @MainActor func fileChangeWatcherDetectsContentChangeWithRestoredMetadata() async throws {
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }

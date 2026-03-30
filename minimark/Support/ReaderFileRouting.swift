@@ -18,10 +18,18 @@ nonisolated enum ReaderFileRouting {
     }
 
     nonisolated static func firstDroppedDirectoryURL(from urls: [URL]) -> URL? {
-        urls
+        if let hintedDirectoryURL = urls.first(where: \.hasDirectoryPath) {
+            return normalizedFileURL(hintedDirectoryURL)
+        }
+
+        return urls
             .lazy
             .map(normalizedFileURL)
             .first(where: isDirectoryURL)
+    }
+
+    nonisolated static func containsLikelyDirectoryPath(in urls: [URL]) -> Bool {
+        urls.contains(where: \.hasDirectoryPath)
     }
     
     nonisolated static func plannedOpenFileURLs(from urls: [URL]) -> [URL] {
