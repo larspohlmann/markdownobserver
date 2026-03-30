@@ -98,6 +98,7 @@ struct ContentView: View {
     let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
     let onRemoveFavoriteWatchedFolder: (UUID) -> Void
+    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
     let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
@@ -150,6 +151,7 @@ struct ContentView: View {
                 onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
                 onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
                 onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
+                onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
                 onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: onClearRecentWatchedFolders,
@@ -971,6 +973,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         onClearFavoriteWatchedFolders: {},
         onRenameFavoriteWatchedFolder: { _, _ in },
         onRemoveFavoriteWatchedFolder: { _ in },
+        onReorderFavoriteWatchedFolders: { _ in },
         onStartRecentManuallyOpenedFile: { _ in },
         onStartRecentFolderWatch: { _ in },
         onClearRecentWatchedFolders: {},

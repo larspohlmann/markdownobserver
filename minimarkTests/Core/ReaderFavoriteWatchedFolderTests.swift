@@ -558,4 +558,129 @@ struct ReaderFavoriteWatchedFolderTests {
 
         #expect(session.excludedSubdirectoryRelativePaths == ["valid"])
     }
+
+    // MARK: - Reorder
+
+    @Test func reorderingPreservesOrderByIDs() {
+        let a = makeFavorite(name: "A", folderPath: "/tmp/a")
+        let b = makeFavorite(name: "B", folderPath: "/tmp/b")
+        let c = makeFavorite(name: "C", folderPath: "/tmp/c")
+
+        let result = ReaderFavoriteHistory.reordering(
+            ids: [c.id, a.id, b.id],
+            in: [a, b, c]
+        )
+
+        #expect(result.map(\.name) == ["C", "A", "B"])
+    }
+
+    @Test func reorderingAppendsEntriesMissingFromIDs() {
+        let a = makeFavorite(name: "A", folderPath: "/tmp/a")
+        let b = makeFavorite(name: "B", folderPath: "/tmp/b")
+        let c = makeFavorite(name: "C", folderPath: "/tmp/c")
+
+        let result = ReaderFavoriteHistory.reordering(
+            ids: [c.id],
+            in: [a, b, c]
+        )
+
+        #expect(result.count == 3)
+        #expect(result[0].name == "C")
+        #expect(Set(result.map(\.id)) == Set([a.id, b.id, c.id]))
+    }
+
+    @Test func reorderingIgnoresUnknownIDs() {
+        let a = makeFavorite(name: "A", folderPath: "/tmp/a")
+        let unknownID = UUID()
+
+        let result = ReaderFavoriteHistory.reordering(
+            ids: [unknownID, a.id],
+            in: [a]
+        )
+
+        #expect(result.count == 1)
+        #expect(result[0].id == a.id)
+    }
+
+    @Test func reorderingWithEmptyIDsReturnsAllEntries() {
+        let a = makeFavorite(name: "A", folderPath: "/tmp/a")
+        let b = makeFavorite(name: "B", folderPath: "/tmp/b")
+
+        let result = ReaderFavoriteHistory.reordering(
+            ids: [],
+            in: [a, b]
+        )
+
+        #expect(result.count == 2)
+    }
+
+    @Test func reorderingWithEmptyEntriesReturnsEmpty() {
+        let result = ReaderFavoriteHistory.reordering(
+            ids: [UUID()],
+            in: []
+        )
+
+        #expect(result.isEmpty)
+    }
+
+    @Test @MainActor func settingsStoreReordersFavorites() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+
+        store.addFavoriteWatchedFolder(name: "A", folderURL: URL(fileURLWithPath: "/tmp/a"), options: .default)
+        store.addFavoriteWatchedFolder(name: "B", folderURL: URL(fileURLWithPath: "/tmp/b"), options: .default)
+        store.addFavoriteWatchedFolder(name: "C", folderURL: URL(fileURLWithPath: "/tmp/c"), options: .default)
+
+        let ids = store.currentSettings.favoriteWatchedFolders.map(\.id)
+        store.reorderFavoriteWatchedFolders(orderedIDs: [ids[2], ids[0], ids[1]])
+
+        let names = store.currentSettings.favoriteWatchedFolders.map(\.name)
+        #expect(names == ["C", "A", "B"])
+    }
+
+    // MARK: - Excluded Subdirectory Relative Paths (Favorite)
+
+    @Test func excludedSubdirectoryRelativePathsForFavorite() {
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Test",
+            folderPath: "/tmp/project",
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .includeSubfolders,
+                excludedSubdirectoryPaths: ["/tmp/project/node_modules", "/tmp/project/.git"]
+            ),
+            bookmarkData: nil,
+            createdAt: .now
+        )
+
+        #expect(entry.excludedSubdirectoryRelativePaths == [".git", "node_modules"])
+    }
+
+    @Test func excludedSubdirectoryRelativePathsEmptyForSelectedFolderOnly() {
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Test",
+            folderPath: "/tmp/project",
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .selectedFolderOnly,
+                excludedSubdirectoryPaths: ["/tmp/project/node_modules"]
+            ),
+            bookmarkData: nil,
+            createdAt: .now
+        )
+
+        #expect(entry.excludedSubdirectoryRelativePaths.isEmpty)
+    }
+
+    // MARK: - Helpers
+
+    private func makeFavorite(name: String, folderPath: String) -> ReaderFavoriteWatchedFolder {
+        ReaderFavoriteWatchedFolder(
+            name: name,
+            folderPath: folderPath,
+            options: .default,
+            bookmarkData: nil,
+            createdAt: .now
+        )
+    }
 }

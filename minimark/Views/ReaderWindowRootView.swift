@@ -332,6 +332,9 @@ struct ReaderWindowRootView: View {
             onRemoveFavoriteWatchedFolder: { id in
                 settingsStore.removeFavoriteWatchedFolder(id: id)
             },
+            onReorderFavoriteWatchedFolders: { orderedIDs in
+                settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
+            },
             onStartRecentManuallyOpenedFile: { entry in
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
                 openDocumentInCurrentWindow(resolvedURL)
