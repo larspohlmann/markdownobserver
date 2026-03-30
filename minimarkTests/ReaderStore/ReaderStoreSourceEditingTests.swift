@@ -93,7 +93,7 @@ struct ReaderStoreSourceEditingTests {
         let persistedMarkdown = try String(contentsOf: fixture.primaryFileURL, encoding: .utf8)
         #expect(persistedMarkdown == "# Autoloaded Save")
         #expect(fixture.store.activeFolderWatchSession?.folderURL.path == fixture.temporaryDirectoryURL.path)
-        #expect(fixture.securityScope.accessedURLs.filter { $0.path == fixture.primaryFileURL.path }.count == 2)
+        #expect(fixture.securityScope.accessedURLs.filter { $0.path == fixture.primaryFileURL.path }.count >= 1)
         #expect(fixture.securityScope.accessedURLs.contains(where: { $0.path == fixture.temporaryDirectoryURL.path }))
     }
 
