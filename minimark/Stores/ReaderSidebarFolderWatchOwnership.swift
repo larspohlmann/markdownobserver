@@ -36,6 +36,10 @@ final class ReaderFolderWatchController {
         didSet { onStateChange?() }
     }
 
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
+        didSet { onStateChange?() }
+    }
+
     init(
         folderWatcher: FolderChangeWatching,
         settingsStore: ReaderSettingsStoring,
@@ -284,6 +288,16 @@ final class ReaderFolderWatchController {
         for session: ReaderFolderWatchSession
     ) {
         guard activeFolderWatchSession == session else {
+            return
+        }
+
+        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount {
+            pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
+                folderURL: session.folderURL,
+                session: session,
+                allFileURLs: markdownURLs
+            )
+            isInitialMarkdownScanInProgress = false
             return
         }
 

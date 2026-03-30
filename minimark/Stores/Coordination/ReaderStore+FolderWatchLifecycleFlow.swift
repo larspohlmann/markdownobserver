@@ -88,8 +88,23 @@ extension ReaderStore {
             return
         }
 
-        let initialPlan = try initialFolderWatchAutoOpenPlan(
-            folderURL: folderURL,
+        let markdownURLs = try folderWatcher.markdownFiles(
+            in: folderURL,
+            includeSubfolders: session.options.scope == .includeSubfolders,
+            excludedSubdirectoryURLs: session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
+        )
+
+        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount {
+            pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
+                folderURL: folderURL,
+                session: session,
+                allFileURLs: markdownURLs
+            )
+            return
+        }
+
+        let initialPlan = initialFolderWatchAutoOpenPlan(
+            markdownURLs: markdownURLs,
             session: session
         )
 
@@ -98,14 +113,9 @@ extension ReaderStore {
     }
 
     private func initialFolderWatchAutoOpenPlan(
-        folderURL: URL,
+        markdownURLs: [URL],
         session: ReaderFolderWatchSession
-    ) throws -> ReaderFolderWatchAutoOpenPlan {
-        let markdownURLs = try folderWatcher.markdownFiles(
-            in: folderURL,
-            includeSubfolders: session.options.scope == .includeSubfolders,
-            excludedSubdirectoryURLs: session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
-        )
+    ) -> ReaderFolderWatchAutoOpenPlan {
         let initialMarkdownEvents = markdownURLs.map {
             ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
         }

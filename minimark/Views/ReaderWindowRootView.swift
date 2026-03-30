@@ -109,6 +109,23 @@ struct ReaderWindowRootView: View {
                     }
                 )
             }
+            .sheet(item: $sidebarDocumentController.pendingFileSelectionRequest, onDismiss: {
+                sidebarDocumentController.pendingFileSelectionRequest = nil
+            }) { request in
+                FolderWatchFileSelectionSheet(
+                    model: FolderWatchFileSelectionModel(
+                        folderURL: request.folderURL,
+                        fileURLs: request.allFileURLs
+                    ),
+                    onSkip: {
+                        sidebarDocumentController.pendingFileSelectionRequest = nil
+                    },
+                    onConfirm: { selectedFileURLs in
+                        sidebarDocumentController.pendingFileSelectionRequest = nil
+                        openSidebarDocumentsBurst(at: selectedFileURLs, preferEmptySelection: false)
+                    }
+                )
+            }
             .background(
                 WindowAccessor { window in
                     handleWindowAccessorUpdate(window)

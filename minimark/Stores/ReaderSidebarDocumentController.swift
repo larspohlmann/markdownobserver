@@ -14,6 +14,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var selectedFileURL: URL?
     @Published private(set) var selectedHasUnacknowledgedExternalChange: Bool
     @Published private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
     @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     @Published private(set) var isFolderWatchInitialScanInProgress: Bool
     @Published private(set) var didFolderWatchInitialScanFail: Bool
@@ -440,6 +441,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     private func synchronizeFolderWatchState() {
         activeFolderWatchSession = folderWatchController.activeFolderWatchSession
         selectedFolderWatchAutoOpenWarning = folderWatchController.folderWatchAutoOpenWarning
+        pendingFileSelectionRequest = folderWatchController.pendingFileSelectionRequest
         isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
         didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
     }

@@ -347,7 +347,7 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(changeCount > 0)
     }
 
-    @Test @MainActor func sidebarControllerDismissesFolderWatchWarningsAcrossDocuments() throws {
+    @Test @MainActor func sidebarControllerShowsFileSelectionWhenOverThreshold() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -369,12 +369,10 @@ struct ReaderSidebarDocumentControllerTests {
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
-        harness.controller.selectDocument(harness.controller.documents[1].id)
 
-        #expect(harness.controller.selectedFolderWatchAutoOpenWarning != nil)
-
-        harness.controller.dismissFolderWatchAutoOpenWarnings()
-
+        // When file count exceeds threshold, a file selection request is published instead of auto-opening.
+        #expect(harness.controller.pendingFileSelectionRequest != nil)
+        #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + 1)
         #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
     }
 
