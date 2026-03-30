@@ -188,12 +188,9 @@ final class ReaderFolderWatchController {
         lastWatchedFolderEventAt = .now
         let livePlan = folderWatchAutoOpenPlanner.livePlan(
             for: eventsExcludingOpenDocuments(markdownFileEvents),
-            activeSession: session,
+            activeSession: nil,
             currentDocumentFileURL: currentDocumentFileURLProvider?()
         )
-        if let warning = livePlan.warning {
-            folderWatchAutoOpenWarning = warning
-        }
         let plannedEvents = livePlan.autoOpenEvents
         dispatchOpenEvents(plannedEvents, session: session, origin: .folderWatchAutoOpen)
     }
