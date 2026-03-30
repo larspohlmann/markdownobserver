@@ -68,7 +68,11 @@ final class ReaderFolderWatchController {
         activeFolderWatchSession != nil
     }
 
-    func startWatching(folderURL: URL, options: ReaderFolderWatchOptions) throws {
+    func startWatching(
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        performInitialAutoOpen: Bool = true
+    ) throws {
         stopWatching()
         folderWatchAutoOpenWarning = nil
         pendingFileSelectionRequest = nil
@@ -104,7 +108,8 @@ final class ReaderFolderWatchController {
             settingsStore.addRecentWatchedFolder(accessibleFolderURL, options: options)
             lastWatchedFolderEventAt = nil
 
-            guard options.openMode == .openAllMarkdownFiles else {
+            guard performInitialAutoOpen,
+                  options.openMode == .openAllMarkdownFiles else {
                 isInitialMarkdownScanInProgress = false
                 didInitialMarkdownScanFail = false
                 return

@@ -287,8 +287,16 @@ final class ReaderSidebarDocumentController: ObservableObject {
         bindSelectedStore()
     }
 
-    func startWatchingFolder(folderURL: URL, options: ReaderFolderWatchOptions) throws {
-        try folderWatchController.startWatching(folderURL: folderURL, options: options)
+    func startWatchingFolder(
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        performInitialAutoOpen: Bool = true
+    ) throws {
+        try folderWatchController.startWatching(
+            folderURL: folderURL,
+            options: options,
+            performInitialAutoOpen: performInitialAutoOpen
+        )
     }
 
     func stopFolderWatch() {

@@ -446,6 +446,7 @@ struct ReaderStoreExternalChangeTests {
         @Test @MainActor func manualOpenWithinWatchedFolderUsesFolderScopeWithoutRetryingChildFileScope() throws {
             let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
             defer { fixture.cleanup() }
+            let normalizedPrimaryFilePath = ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL).path
 
             let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
             let session = ReaderFolderWatchSession(
@@ -455,6 +456,7 @@ struct ReaderStoreExternalChangeTests {
             )
             fixture.settings.addRecentWatchedFolder(fixture.temporaryDirectoryURL, options: options)
             fixture.securityScope.didStartAccessResponsesByPath[fixture.primaryFileURL.path] = [false]
+            fixture.securityScope.didStartAccessResponsesByPath[normalizedPrimaryFilePath] = [false]
 
             fixture.store.openFile(
                 at: fixture.primaryFileURL,

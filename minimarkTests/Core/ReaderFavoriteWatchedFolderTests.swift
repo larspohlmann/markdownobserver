@@ -54,11 +54,58 @@ struct ReaderFavoriteWatchedFolderTests {
             name: "Docs",
             folderURL: folderURL,
             options: .default,
+            openDocumentFileURLs: [folderURL.appendingPathComponent("guide.md")],
             into: []
         )
 
         #expect(result.count == 1)
         #expect(result[0].name == "Docs")
+        #expect(result[0].openDocumentRelativePaths == ["guide.md"])
+    }
+
+    @Test func scopedOpenDocumentRelativePathsFiltersToScopeAndExclusions() {
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let options = ReaderFolderWatchOptions(
+            openMode: .watchChangesOnly,
+            scope: .includeSubfolders,
+            excludedSubdirectoryPaths: ["/tmp/docs/excluded"]
+        )
+
+        let result = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+            from: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("nested/b.md"),
+                folderURL.appendingPathComponent("excluded/c.md"),
+                URL(fileURLWithPath: "/tmp/outside.md"),
+                folderURL.appendingPathComponent("nested/image.png")
+            ],
+            relativeTo: folderURL,
+            options: options
+        )
+
+        #expect(result == ["a.md", "nested/b.md"])
+    }
+
+    @Test func resolvedOpenDocumentFileURLsIgnoresInvalidRelativePaths() {
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: folderURL.path,
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
+            bookmarkData: nil,
+            openDocumentRelativePaths: [
+                "a.md",
+                "nested/../nested/b.md",
+                "../outside.md",
+                "/tmp/escape.md",
+                ""
+            ],
+            createdAt: .now
+        )
+
+        let resolvedPaths = entry.resolvedOpenDocumentFileURLs(relativeTo: folderURL).map(\.path).sorted()
+
+        #expect(resolvedPaths == ["/tmp/docs/a.md", "/tmp/docs/nested/b.md"])
     }
 
     @Test func insertingDuplicateFavoriteDoesNotAdd() {
@@ -158,16 +205,48 @@ struct ReaderFavoriteWatchedFolderTests {
     @Test @MainActor func settingsStoreAddsFavoriteAndPersists() {
         let storage = TestSettingsKeyValueStorage()
         let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
 
         store.addFavoriteWatchedFolder(
             name: "Docs",
-            folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: .default
+            folderURL: folderURL,
+            options: .default,
+            openDocumentFileURLs: [
+                folderURL.appendingPathComponent("guide.md"),
+                URL(fileURLWithPath: "/tmp/elsewhere.md")
+            ]
         )
 
         #expect(store.currentSettings.favoriteWatchedFolders.count == 1)
         #expect(store.currentSettings.favoriteWatchedFolders[0].name == "Docs")
+        #expect(store.currentSettings.favoriteWatchedFolders[0].openDocumentRelativePaths == ["guide.md"])
         #expect(storage.setCallCount > 0)
+    }
+
+    @Test @MainActor func settingsStoreUpdatesFavoriteOpenDocuments() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Docs",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            openDocumentFileURLs: []
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+        store.updateFavoriteWatchedFolderOpenDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            openDocumentFileURLs: [
+                folderURL.appendingPathComponent("alpha.md"),
+                folderURL.appendingPathComponent("nested/beta.md"),
+                URL(fileURLWithPath: "/tmp/outside.md")
+            ]
+        )
+
+        #expect(store.currentSettings.favoriteWatchedFolders[0].openDocumentRelativePaths == ["alpha.md"])
     }
 
     @Test @MainActor func settingsStoreRemovesFavorite() {
@@ -376,7 +455,11 @@ struct ReaderFavoriteWatchedFolderTests {
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: ["/tmp/project/node_modules"]
-            )
+            ),
+            openDocumentFileURLs: [
+                URL(fileURLWithPath: "/tmp/project/README.md"),
+                URL(fileURLWithPath: "/tmp/project/docs/guide.md")
+            ]
         )
 
         let reloadedStore = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
@@ -388,6 +471,7 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(reloaded.options.openMode == .openAllMarkdownFiles)
         #expect(reloaded.options.scope == .includeSubfolders)
         #expect(reloaded.options.excludedSubdirectoryPaths == ["/tmp/project/node_modules"])
+        #expect(reloaded.openDocumentRelativePaths == ["README.md", "docs/guide.md"])
     }
 
     // MARK: - Codable compatibility
@@ -405,6 +489,24 @@ struct ReaderFavoriteWatchedFolderTests {
 
         let settings = try JSONDecoder().decode(ReaderSettings.self, from: Data(json.utf8))
         #expect(settings.favoriteWatchedFolders.isEmpty)
+    }
+
+    @Test func decodingFavoriteWithoutOpenDocumentRelativePathsDefaultsToEmptyArray() throws {
+        let json = """
+        {
+            "id": "FDFBD48E-E0AB-4F82-95EB-391C3DF5CF63",
+            "name": "Docs",
+            "folderPath": "/tmp/docs",
+            "options": {
+                "openMode": "watchChangesOnly",
+                "scope": "selectedFolderOnly"
+            },
+            "createdAt": 0
+        }
+        """
+
+        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+        #expect(favorite.openDocumentRelativePaths.isEmpty)
     }
 
     // MARK: - Session excluded paths
