@@ -17,11 +17,13 @@ enum ReaderSidebarGrouping {
 
     static func group(
         _ documents: [ReaderSidebarDocumentController.Document],
+        sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
         pinnedGroupIDs: Set<String> = []
     ) -> ReaderSidebarGrouping {
         let grouped = Dictionary(grouping: documents) { document -> String in
             directoryURL(for: document)?.path(percentEncoded: false) ?? ""
         }
+        let orderedDirectoryPaths = orderedUniqueDirectoryPaths(from: documents)
 
         let hasUntitled = grouped[""] != nil
         let directoryCount = hasUntitled ? grouped.count - 1 : grouped.count
@@ -32,7 +34,10 @@ enum ReaderSidebarGrouping {
 
         let displayNames = disambiguatedDisplayNames(for: Array(grouped.keys))
 
-        let groups: [Group] = grouped.map { directoryPath, docs in
+        let groups: [Group] = orderedDirectoryPaths.compactMap { directoryPath in
+            guard let docs = grouped[directoryPath] else {
+                return nil
+            }
             let dirURL = docs.first.flatMap { directoryURL(for: $0) }
             let indicator = aggregatedIndicatorState(for: docs)
             let newestDate = newestModificationDate(for: docs)
@@ -52,8 +57,8 @@ enum ReaderSidebarGrouping {
         for group in groups {
             if group.isPinned { pinned.append(group) } else { unpinned.append(group) }
         }
-        pinned = sortedByNewestModificationDate(pinned)
-        unpinned = sortedByNewestModificationDate(unpinned)
+        pinned = sorted(pinned, mode: sortMode)
+        unpinned = sorted(unpinned, mode: sortMode)
 
         return .grouped(pinned + unpinned)
     }
@@ -101,20 +106,28 @@ enum ReaderSidebarGrouping {
         }.max()
     }
 
-    private static func sortedByNewestModificationDate(_ groups: [Group]) -> [Group] {
-        groups.sorted { lhs, rhs in
-            switch (lhs.newestModificationDate, rhs.newestModificationDate) {
-            case let (l?, r?) where l != r:
-                return l > r
-            case (.some, .some):
-                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
-            case (.some, .none):
-                return true
-            case (.none, .some):
-                return false
-            case (.none, .none):
-                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    private static func orderedUniqueDirectoryPaths(
+        from documents: [ReaderSidebarDocumentController.Document]
+    ) -> [String] {
+        var seen: Set<String> = []
+        var ordered: [String] = []
+
+        for document in documents {
+            let path = directoryURL(for: document)?.path(percentEncoded: false) ?? ""
+            if seen.insert(path).inserted {
+                ordered.append(path)
             }
+        }
+
+        return ordered
+    }
+
+    private static func sorted(_ groups: [Group], mode: ReaderSidebarSortMode) -> [Group] {
+        mode.sorted(groups) { group in
+            ReaderSidebarSortDescriptor(
+                displayName: group.displayName,
+                lastChangedAt: group.newestModificationDate
+            )
         }
     }
 

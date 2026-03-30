@@ -100,6 +100,48 @@ struct ReaderSidebarGroupingTests {
         #expect(groups[1].displayName == "older")
     }
 
+    @Test @MainActor func groupsSortByNameAscendingWhenConfigured() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["zeta", "alpha"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let grouping = ReaderSidebarGrouping.group(
+            harness.documents,
+            sortMode: .nameAscending
+        )
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups.map(\.displayName) == ["alpha", "zeta"])
+    }
+
+    @Test @MainActor func groupsSortByOpenOrderUsesFirstEncounteredDirectory() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let betaDoc = try #require(harness.documentsInSubdirectory("beta").first)
+        let alphaDoc = try #require(harness.documentsInSubdirectory("alpha").first)
+        let reorderedDocuments = [betaDoc, alphaDoc]
+
+        let grouping = ReaderSidebarGrouping.group(
+            reorderedDocuments,
+            sortMode: .openOrder
+        )
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        #expect(groups.map(\.displayName) == ["beta", "alpha"])
+    }
+
     @Test @MainActor func groupSortUpdatesWhenModificationDateChanges() throws {
         let harness = try ReaderSidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta"],

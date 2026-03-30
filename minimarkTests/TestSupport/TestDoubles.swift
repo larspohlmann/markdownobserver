@@ -119,6 +119,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
                 notificationsEnabled: notificationsEnabled,
                 multiFileDisplayMode: .sidebarLeft,
                 sidebarSortMode: .openOrder,
+                sidebarGroupSortMode: .lastChangedNewestFirst,
                 recentWatchedFolders: [],
                 recentManuallyOpenedFiles: []
             )
@@ -164,6 +165,12 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
         var next = subject.value
         next.sidebarSortMode = mode
+        subject.send(next)
+    }
+
+    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
+        var next = subject.value
+        next.sidebarGroupSortMode = mode
         subject.send(next)
     }
 

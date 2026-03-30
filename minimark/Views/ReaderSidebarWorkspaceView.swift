@@ -87,12 +87,16 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var currentSidebarSortMode: ReaderSidebarSortMode {
+    private var currentFileSidebarSortMode: ReaderSidebarSortMode {
         settingsStore.currentSettings.sidebarSortMode
     }
 
+    private var currentGroupSidebarSortMode: ReaderSidebarSortMode {
+        settingsStore.currentSettings.sidebarGroupSortMode
+    }
+
     private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
-        currentSidebarSortMode.sorted(controller.documents) { document in
+        currentFileSidebarSortMode.sorted(controller.documents) { document in
             ReaderSidebarSortDescriptor(
                 displayName: document.readerStore.fileDisplayName,
                 lastChangedAt: document.readerStore.fileLastModifiedAt ?? document.readerStore.lastExternalChangeAt ?? document.readerStore.lastRefreshAt
@@ -101,7 +105,11 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private func sidebarGrouping(for documents: [ReaderSidebarDocumentController.Document]) -> ReaderSidebarGrouping {
-        ReaderSidebarGrouping.group(documents, pinnedGroupIDs: pinnedGroupIDs)
+        ReaderSidebarGrouping.group(
+            documents,
+            sortMode: currentGroupSidebarSortMode,
+            pinnedGroupIDs: pinnedGroupIDs
+        )
     }
 
     private func isGroupExpanded(_ groupID: String) -> Binding<Bool> {
@@ -203,7 +211,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
             Spacer(minLength: 0)
 
-            sidebarSortMenu
+            sidebarGroupSortMenu
+
+            sidebarFileSortMenu
 
             sidebarPlacementButton
         }
@@ -271,13 +281,13 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             )
     }
 
-    private var sidebarSortMenu: some View {
+    private var sidebarGroupSortMenu: some View {
         Menu {
             ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
                 Button {
-                    settingsStore.updateSidebarSortMode(mode)
+                    settingsStore.updateSidebarGroupSortMode(mode)
                 } label: {
-                    if mode == currentSidebarSortMode {
+                    if mode == currentGroupSidebarSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
                     } else {
                         Text(mode.displayName)
@@ -286,9 +296,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             }
         } label: {
             HStack(spacing: 3) {
-                Image(systemName: "arrow.up.arrow.down")
+                Image(systemName: "folder")
                     .font(.system(size: 9, weight: .medium))
-                Text(currentSidebarSortMode.footerLabel)
+                Text(currentGroupSidebarSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
@@ -302,9 +312,45 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize(horizontal: true, vertical: false)
-        .help("Sort sidebar by \(currentSidebarSortMode.displayName)")
-        .accessibilityLabel("Sidebar sorting")
-        .accessibilityValue(currentSidebarSortMode.displayName)
+        .help("Sort groups by \(currentGroupSidebarSortMode.displayName)")
+        .accessibilityLabel("Sidebar group sorting")
+        .accessibilityValue(currentGroupSidebarSortMode.displayName)
+    }
+
+    private var sidebarFileSortMenu: some View {
+        Menu {
+            ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
+                Button {
+                    settingsStore.updateSidebarSortMode(mode)
+                } label: {
+                    if mode == currentFileSidebarSortMode {
+                        Label(mode.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(mode.displayName)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "doc")
+                    .font(.system(size: 9, weight: .medium))
+                Text(currentFileSidebarSortMode.footerLabel)
+                    .font(.system(size: 10, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(Capsule())
+            .contentShape(Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Sort files by \(currentFileSidebarSortMode.displayName)")
+        .accessibilityLabel("Sidebar file sorting")
+        .accessibilityValue(currentFileSidebarSortMode.displayName)
     }
 
     private var sidebarPlacementButton: some View {
