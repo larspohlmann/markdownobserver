@@ -71,6 +71,7 @@ final class ReaderFolderWatchController {
     func startWatching(folderURL: URL, options: ReaderFolderWatchOptions) throws {
         stopWatching()
         folderWatchAutoOpenWarning = nil
+        pendingFileSelectionRequest = nil
         folderWatchAutoOpenPlanner.resetTransientState()
         didInitialMarkdownScanFail = false
 
@@ -150,6 +151,7 @@ final class ReaderFolderWatchController {
         activeFolderWatchSession = nil
         lastWatchedFolderEventAt = nil
         folderWatchAutoOpenWarning = nil
+        pendingFileSelectionRequest = nil
         isInitialMarkdownScanInProgress = false
         didInitialMarkdownScanFail = false
     }
@@ -300,6 +302,8 @@ final class ReaderFolderWatchController {
             isInitialMarkdownScanInProgress = false
             return
         }
+
+        pendingFileSelectionRequest = nil
 
         let initialMarkdownEvents = markdownURLs.map {
             ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)

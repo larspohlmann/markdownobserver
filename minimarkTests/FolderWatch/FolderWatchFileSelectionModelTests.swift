@@ -8,7 +8,7 @@ struct FolderWatchFileSelectionModelTests {
     private func makeTemporaryDirectory() -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("file-selection-model-tests-\(UUID().uuidString)", isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        try! FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
 

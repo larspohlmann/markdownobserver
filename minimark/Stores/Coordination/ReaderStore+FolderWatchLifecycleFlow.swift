@@ -96,12 +96,14 @@ extension ReaderStore {
 
         if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount {
             pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
-                folderURL: folderURL,
+                folderURL: session.folderURL,
                 session: session,
                 allFileURLs: markdownURLs
             )
             return
         }
+
+        pendingFileSelectionRequest = nil
 
         let initialPlan = initialFolderWatchAutoOpenPlan(
             markdownURLs: markdownURLs,

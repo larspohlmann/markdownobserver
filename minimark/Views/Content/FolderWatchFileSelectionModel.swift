@@ -39,10 +39,12 @@ final class FolderWatchFileSelectionModel: ObservableObject {
     }
 
     init(folderURL: URL, fileURLs: [URL]) {
-        self.folderURL = folderURL
-        self.allFileURLs = fileURLs
-        self.selectedFileURLs = Set(fileURLs)
-        self.rootNodes = Self.buildTree(folderURL: folderURL, fileURLs: fileURLs)
+        let normalizedFolder = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFiles = fileURLs.map { ReaderFileRouting.normalizedFileURL($0) }
+        self.folderURL = normalizedFolder
+        self.allFileURLs = normalizedFiles
+        self.selectedFileURLs = Set(normalizedFiles)
+        self.rootNodes = Self.buildTree(folderURL: normalizedFolder, fileURLs: normalizedFiles)
     }
 
     func selectAll() {
@@ -110,7 +112,6 @@ final class FolderWatchFileSelectionModel: ObservableObject {
 
         for fileURL in fileURLs {
             let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-            let filePath = normalizedFileURL.path
             let directoryPath = normalizedFileURL.deletingLastPathComponent().path
 
             directoriesByPath[directoryPath, default: IntermediateDirectory()].files.append(normalizedFileURL)

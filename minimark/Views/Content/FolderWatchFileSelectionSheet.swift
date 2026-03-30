@@ -306,6 +306,7 @@ private struct FileSelectionTreeNodeRow: View {
             }
             .toggleStyle(.checkbox)
             .labelsHidden()
+            .accessibilityLabel(Text(node.name))
         }
         .padding(.leading, CGFloat(level) * 16)
         .padding(.horizontal, 10)
