@@ -635,7 +635,11 @@ private struct ReaderSidebarGroupHeader: View {
     let onCloseGroup: () -> Void
 
     private var pinButtonLabel: String {
-        isPinned ? "Unpin Group" : "Pin Group"
+        isPinned ? "Unpin group \(displayName)" : "Pin group \(displayName)"
+    }
+
+    private var closeGroupLabel: String {
+        "Close all files in group \(displayName)"
     }
 
     var body: some View {
@@ -683,8 +687,9 @@ private struct ReaderSidebarGroupHeader: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Close Group")
-            .accessibilityLabel("Close Group")
+            .help(closeGroupLabel)
+            .accessibilityLabel(closeGroupLabel)
+            .accessibilityHint("Closes every open file in this group")
         }
     }
 }
