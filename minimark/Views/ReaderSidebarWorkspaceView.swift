@@ -190,6 +190,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                                 settings: settingsStore.currentSettings,
                                 onTogglePin: {
                                     toggleGroupPin(group.id)
+                                },
+                                onCloseGroup: {
+                                    onCloseDocuments(Set(group.documents.map(\.id)))
                                 }
                             )
                         }
@@ -629,9 +632,30 @@ private struct ReaderSidebarGroupHeader: View {
     let indicatorState: ReaderDocumentIndicatorState
     let settings: ReaderSettings
     let onTogglePin: () -> Void
+    let onCloseGroup: () -> Void
+
+    private var pinButtonLabel: String {
+        isPinned ? "Unpin group \(displayName)" : "Pin group \(displayName)"
+    }
+
+    private var closeGroupLabel: String {
+        "Close all files in group \(displayName)"
+    }
 
     var body: some View {
         HStack(spacing: 6) {
+            Button {
+                onTogglePin()
+            } label: {
+                Image(systemName: isPinned ? "pin.fill" : "pin")
+                    .font(.system(size: 10))
+                    .foregroundStyle(isPinned ? .primary : .tertiary)
+                    .rotationEffect(.degrees(30))
+            }
+            .buttonStyle(.plain)
+            .help(pinButtonLabel)
+            .accessibilityLabel(pinButtonLabel)
+
             Text(displayName)
                 .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
@@ -656,16 +680,16 @@ private struct ReaderSidebarGroupHeader: View {
                 .accessibilityLabel("\(documentCount) document\(documentCount == 1 ? "" : "s")")
 
             Button {
-                onTogglePin()
+                onCloseGroup()
             } label: {
-                Image(systemName: isPinned ? "pin.fill" : "pin")
-                    .font(.system(size: 10))
-                    .foregroundStyle(isPinned ? .primary : .tertiary)
-                    .rotationEffect(.degrees(30))
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help(isPinned ? "Unpin Group" : "Pin Group")
-            .accessibilityLabel(isPinned ? "Unpin Group" : "Pin Group")
+            .help(closeGroupLabel)
+            .accessibilityLabel(closeGroupLabel)
+            .accessibilityHint("Closes every open file in this group")
         }
     }
 }
