@@ -119,7 +119,12 @@ struct ReaderWindowRootView: View {
                     },
                     onConfirm: { selectedFileURLs in
                         sidebarDocumentController.dismissPendingFileSelectionRequest()
-                        openSidebarDocumentsBurst(at: selectedFileURLs, preferEmptySelection: false)
+                        openSidebarDocumentsBurst(
+                            at: selectedFileURLs,
+                            origin: .folderWatchInitialBatchAutoOpen,
+                            folderWatchSession: request.session,
+                            preferEmptySelection: false
+                        )
                     }
                 )
             }
