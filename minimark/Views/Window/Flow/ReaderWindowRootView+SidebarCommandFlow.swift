@@ -28,10 +28,12 @@ extension ReaderWindowRootView {
         origin: ReaderOpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+
         if folderWatchSession != nil {
             enqueueFolderWatchOpen(
                 folderWatchChangeEvent(
-                    for: fileURL,
+                    for: normalizedFileURL,
                     initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
                 ),
                 folderWatchSession: folderWatchSession,
@@ -41,7 +43,7 @@ extension ReaderWindowRootView {
         }
 
         sidebarDocumentController.openAdditionalDocument(
-            at: fileURL,
+            at: normalizedFileURL,
             origin: origin,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )

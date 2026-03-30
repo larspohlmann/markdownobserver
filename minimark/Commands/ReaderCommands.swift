@@ -230,11 +230,12 @@ struct ReaderCommands: Commands {
         usingPrimaryAction primaryAction: ((URL) -> Void)?,
         additionalAction: ((URL) -> Void)? = nil
     ) {
-        guard let urls = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: true) else {
+        guard let urls = MarkdownOpenPanel.pickFiles(allowsMultipleSelection: true),
+              let first = urls.first else {
             return
         }
 
-        routePickedMarkdown(urls[0], using: primaryAction)
+        routePickedMarkdown(first, using: primaryAction)
 
         if urls.count == 1 {
             return
