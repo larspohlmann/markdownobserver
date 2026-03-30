@@ -105,9 +105,19 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private func sidebarGrouping(for documents: [ReaderSidebarDocumentController.Document]) -> ReaderSidebarGrouping {
-        ReaderSidebarGrouping.group(
+        let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
+
+        if currentGroupSidebarSortMode == .openOrder {
+            let allowedDocumentIDs = Set(documents.map(\.id))
+            directoryOrderSourceDocuments = controller.documents.filter { allowedDocumentIDs.contains($0.id) }
+        } else {
+            directoryOrderSourceDocuments = documents
+        }
+
+        return ReaderSidebarGrouping.group(
             documents,
             sortMode: currentGroupSidebarSortMode,
+            directoryOrderSourceDocuments: directoryOrderSourceDocuments,
             pinnedGroupIDs: pinnedGroupIDs
         )
     }

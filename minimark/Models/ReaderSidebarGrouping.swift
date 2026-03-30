@@ -18,12 +18,15 @@ enum ReaderSidebarGrouping {
     static func group(
         _ documents: [ReaderSidebarDocumentController.Document],
         sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
+        directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]? = nil,
         pinnedGroupIDs: Set<String> = []
     ) -> ReaderSidebarGrouping {
         let grouped = Dictionary(grouping: documents) { document -> String in
             directoryURL(for: document)?.path(percentEncoded: false) ?? ""
         }
-        let orderedDirectoryPaths = orderedUniqueDirectoryPaths(from: documents)
+        let orderedDirectoryPaths = orderedUniqueDirectoryPaths(
+            from: directoryOrderSourceDocuments ?? documents
+        )
 
         let hasUntitled = grouped[""] != nil
         let directoryCount = hasUntitled ? grouped.count - 1 : grouped.count
@@ -123,11 +126,72 @@ enum ReaderSidebarGrouping {
     }
 
     private static func sorted(_ groups: [Group], mode: ReaderSidebarSortMode) -> [Group] {
-        mode.sorted(groups) { group in
-            ReaderSidebarSortDescriptor(
-                displayName: group.displayName,
-                lastChangedAt: group.newestModificationDate
-            )
+        groups.enumerated()
+            .sorted { lhs, rhs in
+                let left = lhs.element
+                let right = rhs.element
+
+                switch mode {
+                case .openOrder:
+                    return lhs.offset < rhs.offset
+                case .nameAscending:
+                    let comparison = left.displayName.localizedCaseInsensitiveCompare(right.displayName)
+                    if comparison != .orderedSame {
+                        return comparison == .orderedAscending
+                    }
+                    return lhs.offset < rhs.offset
+                case .nameDescending:
+                    let comparison = left.displayName.localizedCaseInsensitiveCompare(right.displayName)
+                    if comparison != .orderedSame {
+                        return comparison == .orderedDescending
+                    }
+                    return lhs.offset < rhs.offset
+                case .lastChangedNewestFirst:
+                    if let isOrderedByDate = isOrderedByDate(
+                        lhs: left.newestModificationDate,
+                        rhs: right.newestModificationDate,
+                        newestFirst: true
+                    ) {
+                        return isOrderedByDate
+                    }
+
+                    let comparison = left.displayName.localizedCaseInsensitiveCompare(right.displayName)
+                    if comparison != .orderedSame {
+                        return comparison == .orderedAscending
+                    }
+                    return lhs.offset < rhs.offset
+                case .lastChangedOldestFirst:
+                    if let isOrderedByDate = isOrderedByDate(
+                        lhs: left.newestModificationDate,
+                        rhs: right.newestModificationDate,
+                        newestFirst: false
+                    ) {
+                        return isOrderedByDate
+                    }
+
+                    let comparison = left.displayName.localizedCaseInsensitiveCompare(right.displayName)
+                    if comparison != .orderedSame {
+                        return comparison == .orderedAscending
+                    }
+                    return lhs.offset < rhs.offset
+                }
+            }
+            .map(\.element)
+    }
+
+    private static func isOrderedByDate(lhs: Date?, rhs: Date?, newestFirst: Bool) -> Bool? {
+        switch (lhs, rhs) {
+        case let (leftDate?, rightDate?):
+            guard leftDate != rightDate else {
+                return nil
+            }
+            return newestFirst ? (leftDate > rightDate) : (leftDate < rightDate)
+        case (.some, nil):
+            return true
+        case (nil, .some):
+            return false
+        case (nil, nil):
+            return nil
         }
     }
 
