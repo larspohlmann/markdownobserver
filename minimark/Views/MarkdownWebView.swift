@@ -18,6 +18,12 @@ struct ScrollSyncObservation: Equatable {
         let isProgrammatic: Bool
 }
 
+struct DropTargetingUpdate: Equatable {
+    let isTargeted: Bool
+    let droppedFileURLs: [URL]
+    let canDrop: Bool
+}
+
 struct MarkdownWebView: NSViewRepresentable {
         private static let scrollSyncMessageName = "minimarkScrollSync"
     private static let sourceEditMessageName = "minimarkSourceEdit"
@@ -126,7 +132,8 @@ struct MarkdownWebView: NSViewRepresentable {
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
     var onSourceEdit: (String) -> Void = { _ in }
     var onDroppedFileURLs: ([URL]) -> Void = { _ in }
-    var onDropTargetedChange: (Bool) -> Void = { _ in }
+        var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
+        var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -154,6 +161,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.attach(webView, containerView: containerView)
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
+        context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
         webView.dropDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
@@ -175,6 +183,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.onSourceEdit = onSourceEdit
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
+        context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
         context.coordinator.reloadAnchorProgress = reloadAnchorProgress
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
         context.coordinator.handleChangedRegionNavigationIfNeeded(changedRegionNavigationRequest, in: webView)
@@ -258,7 +267,8 @@ struct MarkdownWebView: NSViewRepresentable {
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
         var onSourceEdit: (String) -> Void = { _ in }
         var onDroppedFileURLs: ([URL]) -> Void = { _ in }
-        var onDropTargetedChange: (Bool) -> Void = { _ in }
+        var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
+        var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
         var supportsInPlaceContentUpdates = false
         var reloadAnchorProgress: Double?
 
@@ -408,8 +418,12 @@ struct MarkdownWebView: NSViewRepresentable {
             return true
         }
 
-        func dropAwareWebViewDidChangeTargeting(_ isTargeted: Bool) {
-            onDropTargetedChange(isTargeted)
+        func dropAwareWebViewDidChangeTargeting(_ update: DropTargetingUpdate) {
+            onDropTargetedChange(update)
+        }
+
+        func dropAwareWebViewCanAcceptDrop(_ fileURLs: [URL]) -> Bool {
+            canAcceptDroppedFileURLs(fileURLs)
         }
 
         func dropAwareWebViewDidReceiveDrop(_ fileURLs: [URL]) {
@@ -1086,7 +1100,8 @@ struct MarkdownWebView: NSViewRepresentable {
 }
 
 protocol DropAwareWKWebViewDelegate: AnyObject {
-    func dropAwareWebViewDidChangeTargeting(_ isTargeted: Bool)
+    func dropAwareWebViewDidChangeTargeting(_ update: DropTargetingUpdate)
+    func dropAwareWebViewCanAcceptDrop(_ fileURLs: [URL]) -> Bool
     func dropAwareWebViewDidReceiveDrop(_ fileURLs: [URL])
 }
 
@@ -1142,6 +1157,12 @@ final class MarkdownWebContainerView: NSView {
 final class DropAwareWKWebView: WKWebView {
     weak var dropDelegate: DropAwareWKWebViewDelegate?
 
+    private static let clearedDropTargetingUpdate = DropTargetingUpdate(
+        isTargeted: false,
+        droppedFileURLs: [],
+        canDrop: false
+    )
+
     override init(frame: CGRect, configuration: WKWebViewConfiguration) {
         super.init(frame: frame, configuration: configuration)
         registerForDraggedTypes([.fileURL])
@@ -1153,33 +1174,54 @@ final class DropAwareWKWebView: WKWebView {
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        let hasFileURLs = !droppedFileURLs(from: sender).isEmpty
-        dropDelegate?.dropAwareWebViewDidChangeTargeting(hasFileURLs)
-        return hasFileURLs ? .copy : []
+        let update = notifyDropTargetingUpdate(from: sender)
+        return update.canDrop ? .copy : []
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        let hasFileURLs = !droppedFileURLs(from: sender).isEmpty
-        dropDelegate?.dropAwareWebViewDidChangeTargeting(hasFileURLs)
-        return hasFileURLs ? .copy : []
+        let update = notifyDropTargetingUpdate(from: sender)
+        return update.canDrop ? .copy : []
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
-        dropDelegate?.dropAwareWebViewDidChangeTargeting(false)
+        notifyDropTargetingCleared()
     }
 
     override func draggingEnded(_ sender: NSDraggingInfo) {
-        dropDelegate?.dropAwareWebViewDidChangeTargeting(false)
+        notifyDropTargetingCleared()
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        let droppedURLs = droppedFileURLs(from: sender)
-        dropDelegate?.dropAwareWebViewDidChangeTargeting(false)
-        guard !droppedURLs.isEmpty else {
+        let update = dragTargetingUpdate(from: sender)
+        notifyDropTargetingCleared()
+        guard update.canDrop else {
             return false
         }
-        dropDelegate?.dropAwareWebViewDidReceiveDrop(droppedURLs)
+
+        dropDelegate?.dropAwareWebViewDidReceiveDrop(update.droppedFileURLs)
         return true
+    }
+
+    private func notifyDropTargetingUpdate(from draggingInfo: NSDraggingInfo) -> DropTargetingUpdate {
+        let update = dragTargetingUpdate(from: draggingInfo)
+        dropDelegate?.dropAwareWebViewDidChangeTargeting(update)
+        return update
+    }
+
+    private func notifyDropTargetingCleared() {
+        dropDelegate?.dropAwareWebViewDidChangeTargeting(Self.clearedDropTargetingUpdate)
+    }
+
+    private func dragTargetingUpdate(from draggingInfo: NSDraggingInfo) -> DropTargetingUpdate {
+        let fileURLs = droppedFileURLs(from: draggingInfo)
+        let hasFileURLs = !fileURLs.isEmpty
+        let canDrop = hasFileURLs && (dropDelegate?.dropAwareWebViewCanAcceptDrop(fileURLs) ?? true)
+
+        return DropTargetingUpdate(
+            isTargeted: hasFileURLs,
+            droppedFileURLs: fileURLs,
+            canDrop: canDrop
+        )
     }
 
     private func droppedFileURLs(from draggingInfo: NSDraggingInfo) -> [URL] {
