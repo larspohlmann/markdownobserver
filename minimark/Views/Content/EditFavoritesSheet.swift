@@ -27,6 +27,24 @@ struct EditFavoritesSheet: View {
             localOrder = favorites
             seedDraftNames()
         }
+        .onChange(of: favorites) { oldFavorites, newFavorites in
+            let favoritesById = Dictionary(
+                newFavorites.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            var updatedOrder: [ReaderFavoriteWatchedFolder] = []
+            var seenIDs = Set<UUID>()
+            for entry in localOrder {
+                if let updated = favoritesById[entry.id] {
+                    updatedOrder.append(updated)
+                    seenIDs.insert(entry.id)
+                }
+            }
+            for entry in newFavorites where !seenIDs.contains(entry.id) {
+                updatedOrder.append(entry)
+            }
+            localOrder = updatedOrder
+        }
     }
 
     // MARK: - Header
@@ -128,6 +146,9 @@ struct EditFavoritesSheet: View {
         let trimmed = draft.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, trimmed != entry.name else { return }
         onRename(entry.id, trimmed)
+        if let index = localOrder.firstIndex(where: { $0.id == entry.id }) {
+            localOrder[index].name = trimmed
+        }
     }
 
     private func commitAllPendingRenames() {
@@ -311,6 +332,8 @@ private struct FavoriteRow: View {
         }
         .buttonStyle(.plain)
         .opacity(isHovering ? 1 : 0)
+        .allowsHitTesting(isHovering)
+        .accessibilityHidden(!isHovering)
         .animation(.easeInOut(duration: 0.15), value: isHovering)
         .padding(.top, 4)
         .help("Remove favorite")

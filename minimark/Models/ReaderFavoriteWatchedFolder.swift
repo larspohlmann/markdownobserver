@@ -333,7 +333,7 @@ nonisolated enum ReaderFavoriteHistory {
         ids orderedIDs: [UUID],
         in existingEntries: [ReaderFavoriteWatchedFolder]
     ) -> [ReaderFavoriteWatchedFolder] {
-        let lookup = Dictionary(uniqueKeysWithValues: existingEntries.map { ($0.id, $0) })
+        let lookup = Dictionary(existingEntries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var result = orderedIDs.compactMap { lookup[$0] }
         let resultIDs = Set(result.map(\.id))
         for entry in existingEntries where !resultIDs.contains(entry.id) {
