@@ -6,6 +6,10 @@ A native macOS Markdown reader focused on fast preview, practical workspace work
 
 **Website:** [lars-pohlmann.de/markdownobserver](https://lars-pohlmann.de/markdownobserver/)
 
+![MarkdownObserver](screenshots/screenshot_1.png)
+
+[More screenshots](SCREENSHOTS.md)
+
 ## Install
 
 - App Store: https://apps.apple.com/app/id6760550501

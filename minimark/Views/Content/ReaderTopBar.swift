@@ -303,15 +303,6 @@ struct ReaderTopBar: View {
                 .popover(isPresented: $isMenuPresented, arrowEdge: .bottom) {
                     watchMenuPopover
                 }
-                .onAppear {
-                    if ProcessInfo.processInfo.environment[
-                        ReaderUITestLaunchConfiguration.screenshotShowWatchMenuEnvironmentKey
-                    ] == "true" {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
-                            isMenuPresented = true
-                        }
-                    }
-                }
             }
             .foregroundStyle(isActive ? AnyShapeStyle(activeButtonColor) : AnyShapeStyle(.primary))
             .background {
@@ -389,6 +380,7 @@ struct ReaderTopBar: View {
                         isMenuPresented = false
                         onEditFavoriteWatchedFolders()
                     }
+                    .accessibilityIdentifier("edit-favorites-button")
                     .buttonStyle(.plain)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)

@@ -798,6 +798,7 @@ struct FolderWatchLargeTreeWarningCard: View {
                     } label: {
                         Label("Choose subdirectories to deactivate", systemImage: "line.3.horizontal.decrease.circle")
                     }
+                    .accessibilityIdentifier("folder-watch-choose-subdirectories-button")
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }

@@ -178,12 +178,14 @@ struct FolderWatchFileSelectionSheet: View {
                 Button("Skip") {
                     onSkip()
                 }
+                .accessibilityIdentifier("file-selection-skip-button")
                 .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
                 Button(openButtonTitle) {
                     onConfirm(Array(model.selectedFileURLs))
                 }
+                .accessibilityIdentifier("file-selection-open-button")
                 .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
                 .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)

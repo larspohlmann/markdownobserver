@@ -367,10 +367,6 @@ struct ReaderWindowRootView: View {
             switch action {
             case .none:
                 hasAppliedUITestLaunchConfiguration = true
-            case .simulateScreenshotShowcase(let contentURL):
-                applyScreenshotWindowSize()
-                startUITestScreenshotShowcaseFlow(contentURL: contentURL)
-                hasAppliedUITestLaunchConfiguration = true
             case .simulateGroupedSidebar:
                 startUITestGroupedSidebarFlow()
                 hasAppliedUITestLaunchConfiguration = true
@@ -378,6 +374,7 @@ struct ReaderWindowRootView: View {
                 startUITestAutoOpenWatchFlow()
                 hasAppliedUITestLaunchConfiguration = true
             case .presentWatchFolderSheet(let watchFolderURL):
+                applyScreenshotWindowSize()
                 var options = ReaderFolderWatchOptions.default
                 if ProcessInfo.processInfo.environment[
                     ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
@@ -420,31 +417,6 @@ struct ReaderWindowRootView: View {
             )
             window.setFrame(frame, display: true, animate: false)
         }
-    }
-
-    private func startUITestScreenshotShowcaseFlow(contentURL: URL) {
-        ReaderWindowUITestFlowSupport.startScreenshotShowcaseFlow(
-            contentURL: contentURL,
-            openDocumentsBurst: { fileURLs in
-                sidebarDocumentController.openDocumentsBurst(
-                    at: fileURLs,
-                    origin: .manual
-                )
-            },
-            focusDocument: { fileURL in
-                sidebarDocumentController.focusDocument(at: fileURL)
-            },
-            setDocumentViewMode: { mode in
-                if let activeStore = sidebarDocumentController.selectedDocument?.readerStore {
-                    activeStore.setDocumentViewMode(mode)
-                }
-            },
-            presentWatchFolderSheet: { watchURL, scope in
-                var options = ReaderFolderWatchOptions.default
-                options.scope = scope
-                presentFolderWatchOptions(for: watchURL, options: options)
-            }
-        )
     }
 
     private func startUITestGroupedSidebarFlow() {
