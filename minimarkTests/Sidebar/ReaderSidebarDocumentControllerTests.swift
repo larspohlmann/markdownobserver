@@ -575,6 +575,64 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents.map(\.id) == [remainingDocumentID])
     }
 
+    @Test @MainActor func sidebarControllerIncludeSubfoldersAutoOpenOpensFilesAsynchronously() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let subfolderURL = harness.temporaryDirectoryURL.appendingPathComponent("subfolder", isDirectory: true)
+        try FileManager.default.createDirectory(at: subfolderURL, withIntermediateDirectories: true)
+        let subfolderFileURL = subfolderURL.appendingPathComponent("nested.md")
+        try "# Nested".write(to: subfolderFileURL, atomically: true, encoding: .utf8)
+
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = [
+            harness.primaryFileURL,
+            harness.secondaryFileURL,
+            subfolderFileURL
+        ]
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
+        )
+
+        // The includeSubfolders path runs the scan asynchronously.
+        #expect(harness.controller.isFolderWatchInitialScanInProgress)
+
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            !harness.controller.isFolderWatchInitialScanInProgress
+        })
+
+        #expect(harness.controller.documents.count == 3)
+        let openFileURLPaths = Set(harness.controller.documents.compactMap { $0.readerStore.fileURL?.path })
+        #expect(openFileURLPaths.contains(harness.primaryFileURL.path))
+        #expect(openFileURLPaths.contains(harness.secondaryFileURL.path))
+        #expect(openFileURLPaths.contains(subfolderFileURL.path))
+        #expect(!harness.controller.didFolderWatchInitialScanFail)
+    }
+
+    @Test @MainActor func sidebarControllerFileSelectionBurstReusesInitialEmptyDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
+            startedAt: .now
+        )
+
+        // Simulate the file selection dialog confirm flow: open files with preferEmptySelection true.
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        // The initial empty document should be reused for the first file.
+        #expect(harness.controller.documents.count == 2)
+        #expect(harness.controller.documents.allSatisfy { $0.readerStore.fileURL != nil })
+    }
+
     @Test @MainActor func sidebarControllerCloseDocumentsRemovesSelectedSubset() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
