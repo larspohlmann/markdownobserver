@@ -273,6 +273,10 @@ final class ReaderStore: ObservableObject {
         hasUnacknowledgedExternalChange = true
     }
 
+    func clearExternalChangeIndicator() {
+        hasUnacknowledgedExternalChange = false
+    }
+
     func clearOpenDocument() {
         cancelPendingDraftPreviewRender()
         fileWatcher.stopWatching()

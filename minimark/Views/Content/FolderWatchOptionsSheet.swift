@@ -506,6 +506,41 @@ struct FolderWatchOptionsSheet: View {
         .onChange(of: scope) { _, _ in
             scheduleDirectoryScanRefresh()
         }
+        .onChange(of: directoryScanModel.summary?.subdirectoryCount) { _, newCount in
+            guard let newCount, newCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
+                  ProcessInfo.processInfo.environment[
+                      ReaderUITestLaunchConfiguration.screenshotOpenExclusionEnvironmentKey
+                  ] == "true" else { return }
+
+            // Pre-set excluded/expanded paths from env vars.
+            // Env vars contain relative names (e.g. "DerivedData,node_modules").
+            // Convert to absolute paths by matching against scan results.
+            let allPaths = directoryScanModel.summary.map { _ in
+                directoryScanModel.allSubdirectoryPaths
+            } ?? []
+
+            if let excludedEnv = ProcessInfo.processInfo.environment[
+                ReaderUITestLaunchConfiguration.screenshotExcludedPathsEnvironmentKey
+            ], !excludedEnv.isEmpty {
+                let excludeNames = Set(excludedEnv.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+                excludedSubdirectoryPaths = allPaths.filter { path in
+                    let name = URL(fileURLWithPath: path).lastPathComponent
+                    return excludeNames.contains(name)
+                }
+            }
+
+            if let expandedEnv = ProcessInfo.processInfo.environment[
+                ReaderUITestLaunchConfiguration.screenshotExpandedPathsEnvironmentKey
+            ], !expandedEnv.isEmpty {
+                let expandNames = Set(expandedEnv.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+                expandedDirectoryPaths = Set(allPaths.filter { path in
+                    let name = URL(fileURLWithPath: path).lastPathComponent
+                    return expandNames.contains(name)
+                })
+            }
+
+            isLargeTreeDialogPresented = true
+        }
         .sheet(isPresented: $isLargeTreeDialogPresented) {
             LargeFolderExclusionDialog(
                 threshold: ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
@@ -772,6 +807,7 @@ struct FolderWatchLargeTreeWarningCard: View {
                     } label: {
                         Label("Choose subdirectories to deactivate", systemImage: "line.3.horizontal.decrease.circle")
                     }
+                    .accessibilityIdentifier("folder-watch-choose-subdirectories-button")
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }

@@ -1658,6 +1658,16 @@
       renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
       renderChangedRegionGutter(root, gutter, payload.changedRegions || []);
       applyScrollProgress(scrollAnchorProgress);
+
+      // Auto-expand the first edited gutter pill (screenshot automation)
+      var autoExpandMeta = document.querySelector('meta[name="minimark-auto-expand-first-edit"]');
+      if (autoExpandMeta && autoExpandMeta.getAttribute("content") === "true") {
+        var editedButton = gutter.querySelector(".reader-gutter-row-edited");
+        if (editedButton) {
+          editedButton.click();
+          autoExpandMeta.setAttribute("content", "done");
+        }
+      }
     });
   }
 

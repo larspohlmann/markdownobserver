@@ -7,6 +7,12 @@ struct ReaderUITestLaunchConfiguration {
     static let simulateAutoOpenWatchFlowArgument = "-minimark-simulate-auto-open-watch-flow"
     static let simulateGroupedSidebarArgument = "-minimark-simulate-grouped-sidebar"
     static let watchFolderPathEnvironmentKey = "MINIMARK_UI_TEST_WATCH_FOLDER_PATH"
+    static let screenshotExpandFirstEditEnvironmentKey = "MINIMARK_SCREENSHOT_EXPAND_FIRST_EDIT"
+    static let screenshotWatchScopeEnvironmentKey = "MINIMARK_SCREENSHOT_WATCH_SCOPE"
+    static let screenshotOpenExclusionEnvironmentKey = "MINIMARK_SCREENSHOT_OPEN_EXCLUSION"
+    static let screenshotExcludedPathsEnvironmentKey = "MINIMARK_SCREENSHOT_EXCLUDED_PATHS"
+    static let screenshotExpandedPathsEnvironmentKey = "MINIMARK_SCREENSHOT_EXPANDED_PATHS"
+    static let screenshotWindowSizeEnvironmentKey = "MINIMARK_SCREENSHOT_WINDOW_SIZE"
 
     let isUITestModeEnabled: Bool
     let shouldPresentWatchFolderSheet: Bool

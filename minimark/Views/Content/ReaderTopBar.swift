@@ -380,6 +380,7 @@ struct ReaderTopBar: View {
                         isMenuPresented = false
                         onEditFavoriteWatchedFolders()
                     }
+                    .accessibilityIdentifier("edit-favorites-button")
                     .buttonStyle(.plain)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
