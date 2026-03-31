@@ -18,7 +18,6 @@ extension ReaderStore {
             bindFolderWatchSessionIfNeeded(folderWatchSession)
             let readURL = effectiveAccessibleFileURL(for: normalizedURL, reason: "open")
             currentOpenOrigin = origin
-            logSaveInfo("opened document for reading: \(saveLogContext(for: normalizedURL))")
 
             let loaded = try loadMarkdownFile(at: readURL)
 

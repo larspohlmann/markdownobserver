@@ -127,7 +127,7 @@ struct ReaderWindowRootView: View {
                             at: selectedFileURLs,
                             origin: .folderWatchInitialBatchAutoOpen,
                             folderWatchSession: request.session,
-                            preferEmptySelection: false
+                            preferEmptySelection: true
                         )
                     }
                 )
