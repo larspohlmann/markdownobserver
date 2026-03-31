@@ -1515,6 +1515,25 @@
     }
     var markerAnchorIndex = hasDeletedPlaceholders ? buildSourceLineAnchorIndex(root) : anchorIndex;
     var markers = normalizeChangedRegionsToMarkerRows(markerAnchorIndex, regions, root.scrollHeight, root);
+
+    // Reconcile expanded comparison panels BEFORE final position measurement.
+    // Panels inserted into the content push elements below them down, so gutter
+    // positions must account for them.
+    reconcileInlineComparisonPanels(markers, root);
+
+    var hasExpandedPanels = false;
+    for (var ep = 0; ep < markers.length; ep += 1) {
+      if (markers[ep].supportsToggle && expandedComparisonRows[markers[ep].key]) {
+        hasExpandedPanels = true;
+        break;
+      }
+    }
+
+    if (hasExpandedPanels) {
+      var panelAnchorIndex = buildSourceLineAnchorIndex(root);
+      markers = normalizeChangedRegionsToMarkerRows(panelAnchorIndex, regions, root.scrollHeight, root);
+    }
+
     var laneCount = assignMarkerLanes(markers);
     applyChangedRegionLaneCount(root, laneCount);
     latestChangedRegionRenderState.markers = markers;
@@ -1537,8 +1556,6 @@
       var rowElement = makeGutterRowElement(row);
       gutter.appendChild(rowElement);
     }
-
-    reconcileInlineComparisonPanels(markers, root);
   }
 
   function clearUnsavedDraftHighlights(root) {
