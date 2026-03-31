@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-03-31
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Chore
+
 ## [1.0.4] - 2026-03-26
 
 ### Changed
