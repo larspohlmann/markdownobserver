@@ -336,11 +336,13 @@ private struct FolderWatchAutoOpenWarningSheet: View {
                 Button("Keep Current Files") {
                     onKeepCurrentFiles()
                 }
+                .accessibilityIdentifier("auto-open-keep-current-button")
                 .keyboardShortcut(.cancelAction)
 
                 Button("Select More Files") {
                     onSelectMoreFiles()
                 }
+                .accessibilityIdentifier("auto-open-select-more-button")
                 .keyboardShortcut(.defaultAction)
             }
         }

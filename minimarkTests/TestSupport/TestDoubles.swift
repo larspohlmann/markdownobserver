@@ -102,6 +102,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.value
     }
 
+    private(set) var recordedFavoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = []
     private(set) var recordedRecentWatchedFolders: [ReaderRecentWatchedFolder] = []
     private(set) var recordedRecentManuallyOpenedFiles: [ReaderRecentOpenedFile] = []
 
@@ -118,6 +119,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
                 notificationsEnabled: notificationsEnabled,
                 multiFileDisplayMode: .sidebarLeft,
                 sidebarSortMode: .openOrder,
+                sidebarGroupSortMode: .lastChangedNewestFirst,
                 recentWatchedFolders: [],
                 recentManuallyOpenedFiles: []
             )
@@ -163,6 +165,92 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
         var next = subject.value
         next.sidebarSortMode = mode
+        subject.send(next)
+    }
+
+    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
+        var next = subject.value
+        next.sidebarGroupSortMode = mode
+        subject.send(next)
+    }
+
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        openDocumentFileURLs: [URL] = []
+    ) {
+        var next = subject.value
+        next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
+            name: name,
+            folderURL: folderURL,
+            options: options,
+            openDocumentFileURLs: openDocumentFileURLs,
+            into: next.favoriteWatchedFolders
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func removeFavoriteWatchedFolder(id: UUID) {
+        var next = subject.value
+        next.favoriteWatchedFolders = ReaderFavoriteHistory.removingFavorite(
+            id: id,
+            from: next.favoriteWatchedFolders
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func renameFavoriteWatchedFolder(id: UUID, newName: String) {
+        var next = subject.value
+        next.favoriteWatchedFolders = ReaderFavoriteHistory.renamingFavorite(
+            id: id,
+            newName: newName,
+            in: next.favoriteWatchedFolders
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func updateFavoriteWatchedFolderOpenDocuments(
+        id: UUID,
+        folderURL: URL,
+        openDocumentFileURLs: [URL]
+    ) {
+        var next = subject.value
+        guard let index = next.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        let existing = next.favoriteWatchedFolders[index]
+        let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+            from: openDocumentFileURLs,
+            relativeTo: folderURL,
+            options: existing.options
+        )
+        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+            id: existing.id,
+            name: existing.name,
+            folderPath: existing.folderPath,
+            options: existing.options,
+            bookmarkData: existing.bookmarkData,
+            openDocumentRelativePaths: scopedRelativePaths,
+            createdAt: existing.createdAt
+        )
+
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
+        entry.folderURL
+    }
+
+    func clearFavoriteWatchedFolders() {
+        var next = subject.value
+        next.favoriteWatchedFolders = []
+        recordedFavoriteWatchedFolders = []
         subject.send(next)
     }
 
@@ -213,6 +301,32 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         next.recentManuallyOpenedFiles = []
         recordedRecentManuallyOpenedFiles = []
         subject.send(next)
+    }
+
+    private(set) var recordedTrustedImageFolders: [ReaderTrustedImageFolder] = []
+
+    func addTrustedImageFolder(_ folderURL: URL) {
+        var next = subject.value
+        next.trustedImageFolders = ReaderTrustedImageFolderHistory.insertingUnique(
+            folderURL,
+            into: next.trustedImageFolders
+        )
+        recordedTrustedImageFolders = next.trustedImageFolders
+        subject.send(next)
+    }
+
+    func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let filePath = normalizedFileURL.path
+
+        for entry in subject.value.trustedImageFolders {
+            let folderPath = entry.folderPath.hasSuffix("/") ? entry.folderPath : entry.folderPath + "/"
+            if filePath.hasPrefix(folderPath) {
+                return entry.folderURL
+            }
+        }
+
+        return nil
     }
 }
 

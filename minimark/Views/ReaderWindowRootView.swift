@@ -8,7 +8,7 @@ struct ReaderWindowRootView: View {
     }
 
     let seed: ReaderWindowSeed?
-    let settingsStore: ReaderSettingsStore
+    @ObservedObject var settingsStore: ReaderSettingsStore
     let multiFileDisplayMode: ReaderMultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
@@ -49,6 +49,10 @@ struct ReaderWindowRootView: View {
 
     private var pendingFolderWatchURL: URL? {
         pendingFolderWatchRequest?.folderURL
+    }
+
+    private var openSidebarDocumentPathSnapshot: Set<String> {
+        Set(currentSidebarOpenDocumentFileURLs().map(\.path))
     }
 
     private var pendingFolderWatchOpenModeBinding: Binding<ReaderFolderWatchOpenMode> {
@@ -109,6 +113,25 @@ struct ReaderWindowRootView: View {
                     }
                 )
             }
+            .sheet(item: $sidebarDocumentController.pendingFileSelectionRequest, onDismiss: {
+                sidebarDocumentController.dismissPendingFileSelectionRequest()
+            }) { request in
+                FolderWatchFileSelectionSheetWrapper(
+                    request: request,
+                    onSkip: {
+                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                    },
+                    onConfirm: { selectedFileURLs in
+                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                        openSidebarDocumentsBurst(
+                            at: selectedFileURLs,
+                            origin: .folderWatchInitialBatchAutoOpen,
+                            folderWatchSession: request.session,
+                            preferEmptySelection: true
+                        )
+                    }
+                )
+            }
             .background(
                 WindowAccessor { window in
                     handleWindowAccessorUpdate(window)
@@ -135,6 +158,10 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sharedFolderWatchSession) { _, _ in
                 refreshWindowShellRegistrationAndTitle()
+                syncSharedFavoriteOpenDocumentsIfNeeded()
+            }
+            .onChange(of: openSidebarDocumentPathSnapshot) { _, _ in
+                syncSharedFavoriteOpenDocumentsIfNeeded()
             }
             .onChange(of: sidebarDocumentController.selectedFolderWatchAutoOpenWarning) { _, warning in
                 handleFolderWatchAutoOpenWarningChange(warning)
@@ -266,7 +293,10 @@ struct ReaderWindowRootView: View {
         ContentView(
             readerStore: store,
             openAdditionalDocument: { fileURL in
-                openAdditionalDocument(fileURL)
+                openAdditionalDocumentInCurrentWindow(fileURL)
+            },
+            openAdditionalDocumentsInCurrentWindow: { fileURLs in
+                openAdditionalDocumentsInCurrentWindow(fileURLs)
             },
             openDocumentInCurrentWindow: { fileURL in
                 openDocumentInCurrentWindow(fileURL)
@@ -280,12 +310,31 @@ struct ReaderWindowRootView: View {
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
             pendingFolderWatchScope: pendingFolderWatchScopeBinding,
             pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPathsBinding,
+            isCurrentWatchAFavorite: isSharedFolderWatchAFavorite,
+            favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
             recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
             recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
             onRequestFolderWatch: prepareFolderWatchOptions,
             onConfirmFolderWatch: confirmFolderWatch,
             onCancelFolderWatch: cancelFolderWatch,
             onStopFolderWatch: stopFolderWatch,
+            onSaveFolderWatchAsFavorite: { name in
+                saveSharedFolderWatchAsFavorite(name: name)
+            },
+            onRemoveCurrentWatchFromFavorites: {
+                removeSharedFolderWatchFromFavorites()
+            },
+            onStartFavoriteWatch: startFavoriteWatch,
+            onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
+            onRenameFavoriteWatchedFolder: { id, newName in
+                settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
+            },
+            onRemoveFavoriteWatchedFolder: { id in
+                settingsStore.removeFavoriteWatchedFolder(id: id)
+            },
+            onReorderFavoriteWatchedFolders: { orderedIDs in
+                settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
+            },
             onStartRecentManuallyOpenedFile: { entry in
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
                 openDocumentInCurrentWindow(resolvedURL)
@@ -318,11 +367,21 @@ struct ReaderWindowRootView: View {
             switch action {
             case .none:
                 hasAppliedUITestLaunchConfiguration = true
+            case .simulateGroupedSidebar:
+                startUITestGroupedSidebarFlow()
+                hasAppliedUITestLaunchConfiguration = true
             case .simulateAutoOpenWatchFlow:
                 startUITestAutoOpenWatchFlow()
                 hasAppliedUITestLaunchConfiguration = true
             case .presentWatchFolderSheet(let watchFolderURL):
-                prepareFolderWatchOptions(for: watchFolderURL)
+                applyScreenshotWindowSize()
+                var options = ReaderFolderWatchOptions.default
+                if ProcessInfo.processInfo.environment[
+                    ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
+                ] == "includeSubfolders" {
+                    options.scope = .includeSubfolders
+                }
+                presentFolderWatchOptions(for: watchFolderURL, options: options)
                 hasAppliedUITestLaunchConfiguration = true
             case .startWatchingFolder(let watchFolderURL):
                 startWatchingFolder(folderURL: watchFolderURL, options: .default)
@@ -339,6 +398,34 @@ struct ReaderWindowRootView: View {
             configuration: ReaderUITestLaunchConfiguration.current,
             hostWindowAvailable: hostWindow != nil
         )
+    }
+
+    private func applyScreenshotWindowSize() {
+        guard let sizeStr = ProcessInfo.processInfo.environment[
+            ReaderUITestLaunchConfiguration.screenshotWindowSizeEnvironmentKey
+        ], !sizeStr.isEmpty else { return }
+
+        let parts = sizeStr.split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return }
+
+        if let window = hostWindow {
+            let frame = NSRect(
+                x: window.frame.origin.x,
+                y: window.frame.origin.y,
+                width: parts[0],
+                height: parts[1]
+            )
+            window.setFrame(frame, display: true, animate: false)
+        }
+    }
+
+    private func startUITestGroupedSidebarFlow() {
+        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { fileURLs in
+            sidebarDocumentController.openDocumentsBurst(
+                at: fileURLs,
+                origin: .manual
+            )
+        }
     }
 
     private func startUITestAutoOpenWatchFlow() {

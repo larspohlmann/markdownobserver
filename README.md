@@ -6,6 +6,10 @@ A native macOS Markdown reader focused on fast preview, practical workspace work
 
 **Website:** [lars-pohlmann.de/markdownobserver](https://lars-pohlmann.de/markdownobserver/)
 
+![MarkdownObserver](screenshots/screenshot_1.png)
+
+[More screenshots](SCREENSHOTS.md)
+
 ## Install
 
 - App Store: https://apps.apple.com/app/id6760550501
@@ -13,22 +17,27 @@ A native macOS Markdown reader focused on fast preview, practical workspace work
 
 ## Features
 
-- Open and preview Markdown files in a native macOS app.
-- Syntax highlighting and rendered output support.
-- Multi-file workspace and sidebar document workflows.
-- Folder watch support with fallback polling behavior for robustness.
-- Settings for appearance and reading behavior.
+- Open and preview Markdown files in a native macOS app with syntax highlighting and rendered output.
+- Show breadcrumb context and watch details in the top bar.
+- Organize workspace files by subfolder with collapsible, pinnable sidebar groups.
+- Sort sidebar groups and files independently to match your workflow.
+- Save folder watches as favorites, then rename, reorder, edit, and reopen them quickly.
+- Handle large watched folders with a file selection dialog when many files are available.
+- Open multiple files at once and use window-local drag-and-drop routing.
+- Track live document changes with gutter indicators and comparison highlighting.
 
 ## Requirements
 
 - macOS
 - Xcode (latest stable recommended)
+- Command line developer tools installed (`xcode-select --install`)
 
 ## Quick Start (Source Build)
 
 ```bash
 git clone https://github.com/larspohlmann/markdownobserver.git
 cd markdownobserver
+xcodebuild -resolvePackageDependencies -project minimark.xcodeproj -scheme minimark
 xcodebuild -project minimark.xcodeproj -scheme minimark -configuration Debug -destination 'platform=macOS' build
 ```
 

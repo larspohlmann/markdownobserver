@@ -660,6 +660,100 @@ struct FolderWatchCoordinationTests {
         #expect(focusedURLs == [ReaderFileRouting.normalizedFileURL(requestedURL)])
     }
 
+    @Test @MainActor func openAdditionalDocumentInCurrentWindowBypassesGlobalRegistryFocus() throws {
+        ReaderWindowRegistry.shared.resetForTesting()
+        defer { ReaderWindowRegistry.shared.resetForTesting() }
+
+        let temporaryDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("minimark-window-local-open-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectoryURL) }
+
+        let markdownURL = temporaryDirectoryURL.appendingPathComponent("alpha.md")
+        try "# Alpha".write(to: markdownURL, atomically: true, encoding: .utf8)
+
+        let foreignWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        var focusedURLs: [URL] = []
+        ReaderWindowRegistry.shared.registerWindow(
+            foreignWindow,
+            focusDocument: { fileURL in
+                focusedURLs.append(fileURL)
+                return true
+            },
+            watchedFolderURLProvider: { nil }
+        )
+
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.window-local-open.\(UUID().uuidString)"
+        )
+        let view = ReaderWindowRootView(
+            seed: nil,
+            settingsStore: settingsStore,
+            multiFileDisplayMode: .sidebarLeft
+        )
+
+        view.openAdditionalDocumentInCurrentWindow(markdownURL)
+
+        #expect(focusedURLs.isEmpty)
+        #expect(view.sidebarDocumentController.selectedReaderStore.fileURL?.path == markdownURL.path)
+    }
+
+    @Test @MainActor func openAdditionalDocumentsInCurrentWindowKeepsBatchLocal() throws {
+        ReaderWindowRegistry.shared.resetForTesting()
+        defer { ReaderWindowRegistry.shared.resetForTesting() }
+
+        let temporaryDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("minimark-window-local-batch-open-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectoryURL) }
+
+        let alphaURL = temporaryDirectoryURL.appendingPathComponent("alpha.md")
+        let zetaURL = temporaryDirectoryURL.appendingPathComponent("zeta.md")
+        try "# Alpha".write(to: alphaURL, atomically: true, encoding: .utf8)
+        try "# Zeta".write(to: zetaURL, atomically: true, encoding: .utf8)
+
+        let foreignWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        var focusedURLs: [URL] = []
+        ReaderWindowRegistry.shared.registerWindow(
+            foreignWindow,
+            focusDocument: { fileURL in
+                focusedURLs.append(fileURL)
+                return true
+            },
+            watchedFolderURLProvider: { nil }
+        )
+
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.window-local-batch-open.\(UUID().uuidString)"
+        )
+        let view = ReaderWindowRootView(
+            seed: nil,
+            settingsStore: settingsStore,
+            multiFileDisplayMode: .sidebarLeft
+        )
+
+        view.openAdditionalDocumentsInCurrentWindow([zetaURL, alphaURL])
+
+        #expect(focusedURLs.isEmpty)
+        #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL?.path }) == Set([
+            alphaURL.path,
+            zetaURL.path
+        ]))
+        #expect(view.sidebarDocumentController.selectedReaderStore.fileURL?.path == zetaURL.path)
+    }
+
     @Test @MainActor func readerWindowCoordinatorResolvesTitleFromSelectedDocumentState() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
@@ -711,6 +805,47 @@ struct FolderWatchCoordinationTests {
             flushBatch?.initialDiffBaselineMarkdownByURL[ReaderFileRouting.normalizedFileURL(queuedURL)] == "# Before"
         )
         #expect(flushBatch?.openOrigin == .folderWatchAutoOpen)
+    }
+
+    @Test @MainActor func folderWatchControllerDoesNotSetWarningForLiveEventsExceedingLimit() async throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/watched-\(UUID().uuidString)", isDirectory: true)
+        let watcher = TestFolderWatcher()
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.live-no-warning.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        controller.openEventsHandler = { events, _, _ in
+            openedEvents.append(contentsOf: events)
+        }
+
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .selectedFolderOnly
+            )
+        )
+
+        let liveEvents = (0..<(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
+            ReaderFolderWatchChangeEvent(
+                fileURL: folderURL.appendingPathComponent(String(format: "live-%02d.md", index)),
+                kind: .added
+            )
+        }
+        watcher.emitChangedMarkdownEvents(liveEvents)
+
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(controller.folderWatchAutoOpenWarning == nil)
+        #expect(openedEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
     }
 
     @Test @MainActor func focusNotificationTargetFallsBackToWatchedFolderWindow() {

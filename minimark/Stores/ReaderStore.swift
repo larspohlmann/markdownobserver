@@ -31,6 +31,8 @@ final class ReaderStore: ObservableObject {
     @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     @Published private(set) var lastWatchedFolderEventAt: Date?
     @Published private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    @Published private(set) var needsImageDirectoryAccess = false
 
     var windowTitle: String {
         fileDisplayName.isEmpty ? "MarkdownObserver" : "\(fileDisplayName) - MarkdownObserver"
@@ -62,6 +64,7 @@ final class ReaderStore: ObservableObject {
     // are implementation details of the store's coordination layer and must not be
     // accessed directly from outside the Stores/ group.
     var securityScopeToken: SecurityScopedAccessToken?
+    var documentDirectoryScopeToken: SecurityScopedAccessToken?
     var folderSecurityScopeToken: SecurityScopedAccessToken?
     var currentAccessibleFileURL: URL?
     var currentAccessibleFileURLSource: String?
@@ -270,11 +273,17 @@ final class ReaderStore: ObservableObject {
         hasUnacknowledgedExternalChange = true
     }
 
+    func clearExternalChangeIndicator() {
+        hasUnacknowledgedExternalChange = false
+    }
+
     func clearOpenDocument() {
         cancelPendingDraftPreviewRender()
         fileWatcher.stopWatching()
         securityScopeToken?.endAccess()
         securityScopeToken = nil
+        documentDirectoryScopeToken?.endAccess()
+        documentDirectoryScopeToken = nil
         currentAccessibleFileURL = nil
         currentAccessibleFileURLSource = nil
         currentOpenOrigin = .manual
@@ -300,6 +309,7 @@ final class ReaderStore: ObservableObject {
         isCurrentFileMissing = false
         isSourceEditing = false
         hasUnsavedDraftChanges = false
+        needsImageDirectoryAccess = false
 
         settler.clearSettling()
     }
@@ -573,8 +583,18 @@ final class ReaderStore: ObservableObject {
         let settings = settingsStore.currentSettings
         let theme = ReaderTheme.theme(for: settings.readerTheme)
 
-        let rendered = try renderer.render(
+        let docDir = fileURL?.deletingLastPathComponent()
+        activateTrustedImageFolderAccessIfNeeded(for: docDir)
+
+        let imageResult = MarkdownImageResolver.resolve(
             markdown: sourceMarkdown,
+            documentDirectoryURL: docDir
+        )
+
+        needsImageDirectoryAccess = imageResult.needsDirectoryAccess
+
+        let rendered = try renderer.render(
+            markdown: imageResult.markdown,
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions,
             readerTheme: theme,
@@ -735,4 +755,14 @@ final class ReaderStore: ObservableObject {
     static func isSupportedMarkdownFileURL(_ url: URL) -> Bool {
         ReaderFileRouting.isSupportedMarkdownFileURL(url)
     }
+
+    // MARK: - Test Helpers
+
+    #if DEBUG
+    func testSetFileURL(_ url: URL?) { fileURL = url }
+    func testSetFileDisplayName(_ name: String) { fileDisplayName = name }
+    func testSetFileLastModifiedAt(_ date: Date?) { fileLastModifiedAt = date }
+    func testSetHasUnacknowledgedExternalChange(_ value: Bool) { hasUnacknowledgedExternalChange = value }
+    func testSetIsCurrentFileMissing(_ value: Bool) { isCurrentFileMissing = value }
+    #endif
 }

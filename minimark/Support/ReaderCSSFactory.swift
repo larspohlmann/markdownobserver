@@ -1,6 +1,15 @@
 import Foundation
 
 struct ReaderCSSFactory {
+    static var screenshotAutoExpandMetaTag: String {
+        let shouldExpand = ProcessInfo.processInfo.environment[
+            ReaderUITestLaunchConfiguration.screenshotExpandFirstEditEnvironmentKey
+        ] == "true"
+        return shouldExpand
+            ? "<meta name=\"minimark-auto-expand-first-edit\" content=\"true\" />"
+            : ""
+    }
+
     private static var bundledJSCache: [String: String] = [:]
 
     private static func loadBundledJS(named name: String) -> String {
@@ -46,11 +55,12 @@ struct ReaderCSSFactory {
         }
 
         .reader-layout {
-          --reader-gutter-base-width: 36px;
+          --reader-gutter-base-width: 32px;
           --reader-gutter-lane-width: 18px;
           --reader-gutter-lane-count: 1;
           --reader-gutter-width: calc(var(--reader-gutter-base-width) + (var(--reader-gutter-lane-count) - 1) * var(--reader-gutter-lane-width));
           --reader-gutter-gap: 6px;
+          --reader-gutter-icon-size: 18px;
           position: relative;
           box-sizing: border-box;
           width: 100%;
@@ -78,8 +88,7 @@ struct ReaderCSSFactory {
         }
 
         .reader-gutter-row {
-          --reader-gutter-toggle-size: 14px;
-          --reader-gutter-toggle-top: 0px;
+          --reader-gutter-icon-top: 0px;
           position: absolute;
           left: 0;
           width: 100%;
@@ -88,7 +97,6 @@ struct ReaderCSSFactory {
           margin: 0;
           background: transparent;
           cursor: pointer;
-          border-radius: 4px;
         }
 
         .reader-gutter-row-static {
@@ -98,72 +106,110 @@ struct ReaderCSSFactory {
         .reader-gutter-row:focus-visible {
           outline: 2px solid var(--reader-link);
           outline-offset: -1px;
+          border-radius: 6px;
         }
 
-        .reader-gutter-row-active .reader-gutter-bar {
-          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--reader-link) 45%, transparent);
+        .reader-gutter-pill {
+          position: absolute;
+          left: 3px;
+          right: 3px;
+          top: 1px;
+          bottom: 1px;
+          border-radius: 6px;
+          min-height: 8px;
+          transition: opacity 0.15s ease;
+          opacity: 0.85;
         }
 
-        .reader-gutter-bar {
+        .reader-gutter-row:hover .reader-gutter-pill {
+          opacity: 1;
+        }
+
+        .reader-gutter-pill-accent {
           position: absolute;
           left: 0;
           top: 0;
-          width: 100%;
-          border-radius: 0;
-          min-height: 10px;
-          height: 100%;
+          bottom: 0;
+          width: 3px;
+          border-radius: 6px 0 0 6px;
         }
 
-        .reader-gutter-row-added .reader-gutter-bar {
+        .reader-gutter-row-added .reader-gutter-pill {
+          background: color-mix(in srgb, var(--reader-changed-added) 14%, transparent);
+        }
+        .reader-gutter-row-added .reader-gutter-pill-accent {
           background: var(--reader-changed-added);
         }
 
-        .reader-gutter-row-edited .reader-gutter-bar {
+        .reader-gutter-row-edited .reader-gutter-pill {
+          background: color-mix(in srgb, var(--reader-changed-edited) 14%, transparent);
+        }
+        .reader-gutter-row-edited .reader-gutter-pill-accent {
           background: var(--reader-changed-edited);
         }
 
-        .reader-gutter-row-deleted .reader-gutter-bar {
+        .reader-gutter-row-deleted .reader-gutter-pill {
+          background: color-mix(in srgb, var(--reader-changed-deleted) 14%, transparent);
+        }
+        .reader-gutter-row-deleted .reader-gutter-pill-accent {
           background: var(--reader-changed-deleted);
         }
 
-        .reader-gutter-row-deleted .reader-gutter-toggle {
-          border-color: transparent;
-          background: transparent;
-          box-shadow: none;
-          text-shadow: none;
+        .reader-gutter-row-active .reader-gutter-pill {
+          opacity: 1;
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--reader-link) 45%, transparent);
         }
 
-        .reader-gutter-row-deleted.reader-gutter-row-active .reader-gutter-toggle {
-          border-color: transparent;
-          background: transparent;
-          box-shadow: none;
-        }
-
-        .reader-gutter-toggle {
+        .reader-gutter-icon {
           position: absolute;
           left: 50%;
-          top: var(--reader-gutter-toggle-top);
-          width: var(--reader-gutter-toggle-size);
-          height: var(--reader-gutter-toggle-size);
+          top: var(--reader-gutter-icon-top);
+          width: var(--reader-gutter-icon-size);
+          height: var(--reader-gutter-icon-size);
           transform: translateX(-50%);
-          border-radius: 4px;
-          background: transparent;
-          border: 1px solid var(--reader-bg);
-          color: var(--reader-bg);
-          font-family: "SF Mono", Menlo, ui-monospace, monospace;
-          font-size: 11px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 13px;
           font-weight: 700;
-          line-height: var(--reader-gutter-toggle-size);
+          line-height: var(--reader-gutter-icon-size);
           text-align: center;
-          box-shadow: 0 0 0 1px color-mix(in srgb, var(--reader-fg) 18%, transparent);
-          text-shadow: 0 0 1px var(--reader-bg);
+          pointer-events: none;
         }
 
-        .reader-gutter-row-active .reader-gutter-toggle {
-          color: var(--reader-bg);
-          border-color: var(--reader-bg);
-          background: transparent;
-          box-shadow: 0 0 0 1px color-mix(in srgb, var(--reader-link) 35%, var(--reader-fg));
+        .reader-gutter-row-added .reader-gutter-icon {
+          color: var(--reader-changed-added);
+        }
+        .reader-gutter-row-edited .reader-gutter-icon {
+          color: var(--reader-changed-edited);
+        }
+        .reader-gutter-row-deleted .reader-gutter-icon {
+          color: var(--reader-changed-deleted);
+        }
+
+        /* Content background highlights for changed blocks */
+        .reader-content-highlight-added {
+          background: color-mix(in srgb, var(--reader-changed-added) 8%, transparent);
+          border-radius: 4px;
+        }
+        .reader-content-highlight-edited {
+          background: color-mix(in srgb, var(--reader-changed-edited) 8%, transparent);
+          border-radius: 4px;
+        }
+        .reader-content-highlight-deleted {
+          background: color-mix(in srgb, var(--reader-changed-deleted) 8%, transparent);
+          border-radius: 4px;
+        }
+
+        /* Deleted content placeholder */
+        .reader-deleted-placeholder {
+          margin: 4px 0;
+          padding: 6px 10px;
+          border-radius: 6px;
+          background: color-mix(in srgb, var(--reader-changed-deleted) 10%, transparent);
+          border: 1px dashed color-mix(in srgb, var(--reader-changed-deleted) 30%, transparent);
+          color: var(--reader-changed-deleted);
+          font-size: 12px;
+          font-weight: 500;
+          font-style: italic;
         }
 
         .reader-inline-compare {
@@ -510,6 +556,7 @@ struct ReaderCSSFactory {
           <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
           <meta name="minimark-runtime-payload-base64" content="\(payloadBase64)" />
           <meta name="minimark-runtime-css-base64" content="\(cssBase64)" />
+          \(Self.screenshotAutoExpandMetaTag)
           <style id="minimark-runtime-style">
           \(css)
           </style>

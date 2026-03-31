@@ -1,9 +1,10 @@
 import SwiftUI
 
 private enum ReaderSidebarWorkspaceMetrics {
-    static let sidebarMinimumWidth: CGFloat = 220
-    static let sidebarIdealWidth: CGFloat = 250
+    static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 160 : 220
+    static let sidebarIdealWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 160 : 250
     static let detailMinimumWidth: CGFloat = 420
+    static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
 }
 
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
@@ -20,6 +21,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
     @State private var selectedDocumentIDs: Set<UUID> = []
+    @State private var collapsedGroupIDs: Set<String> = []
+    @State private var pinnedGroupIDs: Set<String> = []
 
     var body: some View {
         Group {
@@ -55,6 +58,11 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 selectedDocumentIDs = filteredSelection
             }
         }
+        .onChange(of: activeDirectoryPaths) { _, paths in
+            let activeGroupIDs = Set(paths)
+            collapsedGroupIDs.formIntersection(activeGroupIDs)
+            pinnedGroupIDs.formIntersection(activeGroupIDs)
+        }
     }
 
     private func updateSelection(_ selection: Set<UUID>) {
@@ -79,16 +87,65 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var currentSidebarSortMode: ReaderSidebarSortMode {
+    private var currentFileSidebarSortMode: ReaderSidebarSortMode {
         settingsStore.currentSettings.sidebarSortMode
     }
 
+    private var currentGroupSidebarSortMode: ReaderSidebarSortMode {
+        settingsStore.currentSettings.sidebarGroupSortMode
+    }
+
     private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
-        currentSidebarSortMode.sorted(controller.documents) { document in
+        currentFileSidebarSortMode.sorted(controller.documents) { document in
             ReaderSidebarSortDescriptor(
                 displayName: document.readerStore.fileDisplayName,
                 lastChangedAt: document.readerStore.fileLastModifiedAt ?? document.readerStore.lastExternalChangeAt ?? document.readerStore.lastRefreshAt
             )
+        }
+    }
+
+    private func sidebarGrouping(for documents: [ReaderSidebarDocumentController.Document]) -> ReaderSidebarGrouping {
+        let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
+
+        if currentGroupSidebarSortMode == .openOrder {
+            let allowedDocumentIDs = Set(documents.map(\.id))
+            directoryOrderSourceDocuments = controller.documents.filter { allowedDocumentIDs.contains($0.id) }
+        } else {
+            directoryOrderSourceDocuments = documents
+        }
+
+        return ReaderSidebarGrouping.group(
+            documents,
+            sortMode: currentGroupSidebarSortMode,
+            directoryOrderSourceDocuments: directoryOrderSourceDocuments,
+            pinnedGroupIDs: pinnedGroupIDs
+        )
+    }
+
+    private func isGroupExpanded(_ groupID: String) -> Binding<Bool> {
+        Binding(
+            get: { !collapsedGroupIDs.contains(groupID) },
+            set: { isExpanded in
+                if isExpanded {
+                    collapsedGroupIDs.remove(groupID)
+                } else {
+                    collapsedGroupIDs.insert(groupID)
+                }
+            }
+        )
+    }
+
+    private func toggleGroupPin(_ groupID: String) {
+        if pinnedGroupIDs.contains(groupID) {
+            pinnedGroupIDs.remove(groupID)
+        } else {
+            pinnedGroupIDs.insert(groupID)
+        }
+    }
+
+    private var activeDirectoryPaths: [String] {
+        controller.documents.map { document in
+            document.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) ?? ""
         }
     }
 
@@ -97,67 +154,134 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private var sidebarColumn: some View {
-        VStack(spacing: 0) {
+        let sortedDocuments = displayedDocuments
+        let grouping = sidebarGrouping(for: sortedDocuments)
+
+        return VStack(spacing: 0) {
+            sidebarToolbar
+
+            Divider()
+
             List(
-                displayedDocuments,
                 selection: Binding(
                     get: { selectedDocumentIDs },
                     set: { updateSelection($0) }
                 )
-            ) { document in
-                ReaderSidebarDocumentRow(
-                    documentID: document.id,
-                    documents: displayedDocuments,
-                    readerStore: document.readerStore,
-                    watchedDocumentIDs: watchedDocumentIDs,
-                    selectedDocumentIDs: selectedDocumentIDs,
-                    canClose: true,
-                    onOpenInDefaultApp: {
-                        onOpenInDefaultApp($0)
-                    },
-                    onOpenInApplication: { application, documentIDs in
-                        onOpenInApplication(application, documentIDs)
-                    },
-                    onRevealInFinder: {
-                        onRevealInFinder($0)
-                    },
-                    onStopWatchingFolders: {
-                        onStopWatchingFolders($0)
-                    },
-                    onClose: {
-                        onCloseDocuments($0)
-                    },
-                    onCloseOthers: {
-                        onCloseOtherDocuments($0)
-                    },
-                    onCloseAll: {
-                        onCloseAllDocuments()
+            ) {
+                switch grouping {
+                case .flat(let documents):
+                    ForEach(documents) { document in
+                        documentRow(for: document, allDocuments: sortedDocuments)
+                            .tag(document.id)
                     }
-                )
-                .tag(document.id)
+                case .grouped(let groups):
+                    ForEach(groups) { group in
+                        DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
+                            ForEach(group.documents) { document in
+                                documentRow(for: document, allDocuments: sortedDocuments)
+                                    .tag(document.id)
+                            }
+                        } label: {
+                            ReaderSidebarGroupHeader(
+                                displayName: group.displayName,
+                                documentCount: group.documents.count,
+                                isPinned: group.isPinned,
+                                indicatorState: group.indicatorState,
+                                settings: settingsStore.currentSettings,
+                                onTogglePin: {
+                                    toggleGroupPin(group.id)
+                                },
+                                onCloseGroup: {
+                                    onCloseDocuments(Set(group.documents.map(\.id)))
+                                }
+                            )
+                        }
+                        .disclosureGroupStyle(SidebarGroupDisclosureStyle())
+                    }
+                }
             }
             .listStyle(.sidebar)
 
-            Divider()
-
-            HStack(spacing: 8) {
-                if sidebarPlacement == .left {
-                    sidebarSortMenu
-                    Spacer(minLength: 0)
-                    sidebarPlacementButton
-                } else {
-                    sidebarPlacementButton
-                    Spacer(minLength: 0)
-                    sidebarSortMenu
-                }
+            if let session = controller.activeFolderWatchSession {
+                Divider()
+                sidebarWatchingFooter(session: session)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
         }
         .frame(
             minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
             idealWidth: ReaderSidebarWorkspaceMetrics.sidebarIdealWidth,
             maxHeight: .infinity
+        )
+    }
+
+    private var sidebarToolbar: some View {
+        HStack(spacing: 6) {
+            Text("Files")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+
+            Spacer(minLength: 0)
+
+            sidebarGroupSortMenu
+
+            sidebarFileSortMenu
+
+            sidebarPlacementButton
+        }
+        .padding(.horizontal, 12)
+        .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
+    }
+
+    private func sidebarWatchingFooter(session: ReaderFolderWatchSession) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color.green)
+                .frame(width: 6, height: 6)
+
+            Text(session.detailSummaryTitle)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
+    private func documentRow(
+        for document: ReaderSidebarDocumentController.Document,
+        allDocuments: [ReaderSidebarDocumentController.Document]
+    ) -> some View {
+        ReaderSidebarDocumentRow(
+            documentID: document.id,
+            documents: allDocuments,
+            readerStore: document.readerStore,
+            watchedDocumentIDs: watchedDocumentIDs,
+            selectedDocumentIDs: selectedDocumentIDs,
+            canClose: true,
+            onOpenInDefaultApp: {
+                onOpenInDefaultApp($0)
+            },
+            onOpenInApplication: { application, documentIDs in
+                onOpenInApplication(application, documentIDs)
+            },
+            onRevealInFinder: {
+                onRevealInFinder($0)
+            },
+            onStopWatchingFolders: {
+                onStopWatchingFolders($0)
+            },
+            onClose: {
+                onCloseDocuments($0)
+            },
+            onCloseOthers: {
+                onCloseOtherDocuments($0)
+            },
+            onCloseAll: {
+                onCloseAllDocuments()
+            }
         )
     }
 
@@ -170,13 +294,13 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             )
     }
 
-    private var sidebarSortMenu: some View {
+    private var sidebarGroupSortMenu: some View {
         Menu {
             ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
                 Button {
-                    settingsStore.updateSidebarSortMode(mode)
+                    settingsStore.updateSidebarGroupSortMode(mode)
                 } label: {
-                    if mode == currentSidebarSortMode {
+                    if mode == currentGroupSidebarSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
                     } else {
                         Text(mode.displayName)
@@ -184,30 +308,71 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(currentSidebarSortMode.footerLabel)
+            HStack(spacing: 3) {
+                Image(systemName: "folder")
+                    .font(.system(size: 9, weight: .medium))
+                Text(currentGroupSidebarSortMode.footerLabel)
+                    .font(.system(size: 10, weight: .medium))
                 Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
             }
-            .fixedSize(horizontal: true, vertical: false)
-                .contentShape(Rectangle())
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(Capsule())
+            .contentShape(Capsule())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize(horizontal: true, vertical: false)
-        .help("Sort sidebar by \(currentSidebarSortMode.displayName)")
-        .accessibilityLabel("Sidebar sorting")
-        .accessibilityValue(currentSidebarSortMode.displayName)
+        .help("Sort groups by \(currentGroupSidebarSortMode.displayName)")
+        .accessibilityLabel("Sidebar group sorting")
+        .accessibilityValue(currentGroupSidebarSortMode.displayName)
+    }
+
+    private var sidebarFileSortMenu: some View {
+        Menu {
+            ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
+                Button {
+                    settingsStore.updateSidebarSortMode(mode)
+                } label: {
+                    if mode == currentFileSidebarSortMode {
+                        Label(mode.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(mode.displayName)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "doc")
+                    .font(.system(size: 9, weight: .medium))
+                Text(currentFileSidebarSortMode.footerLabel)
+                    .font(.system(size: 10, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(Capsule())
+            .contentShape(Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: true, vertical: false)
+        .help("Sort files by \(currentFileSidebarSortMode.displayName)")
+        .accessibilityLabel("Sidebar file sorting")
+        .accessibilityValue(currentFileSidebarSortMode.displayName)
     }
 
     private var sidebarPlacementButton: some View {
         Button(action: onToggleSidebarPlacement) {
-            HStack(spacing: 6) {
-                Image(systemName: toggleButtonImageName)
-                Image(systemName: toggleButtonArrowImageName)
-            }
-            .frame(maxWidth: .infinity, alignment: toggleButtonAlignment)
-            .contentShape(Rectangle())
-            .help(toggleButtonTitle)
+            Image(systemName: toggleButtonImageName)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(toggleButtonTitle)
@@ -232,28 +397,12 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var toggleButtonArrowImageName: String {
-        switch sidebarPlacement {
-        case .left:
-            return "arrow.right"
-        case .right:
-            return "arrow.left"
-        }
-    }
-
-    private var toggleButtonAlignment: Alignment {
-        switch sidebarPlacement {
-        case .left:
-            return .trailing
-        case .right:
-            return .leading
-        }
-    }
 
 }
 
 private struct ReaderSidebarDocumentRow: View {
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isHovered = false
 
     let documentID: UUID
     let documents: [ReaderSidebarDocumentController.Document]
@@ -334,14 +483,7 @@ private struct ReaderSidebarDocumentRow: View {
     }
 
     private var changedIndicatorColor: Color {
-        switch indicatorState {
-        case .deletedExternalChange:
-            return Color(hex: readerStore.currentSettings.syntaxTheme.changeDeletedHex) ?? .accentColor
-        case .externalChange:
-            return Color.folderWatchHighlight(for: readerStore.currentSettings, colorScheme: colorScheme)
-        case .none:
-            return .clear
-        }
+        indicatorState.color(for: readerStore.currentSettings, colorScheme: colorScheme)
     }
 
     private var indicatorState: ReaderDocumentIndicatorState {
@@ -353,14 +495,6 @@ private struct ReaderSidebarDocumentRow: View {
 
     private var isSelected: Bool {
         selectedDocumentIDs.contains(documentID)
-    }
-
-    private var directoryTextColor: Color {
-        if isSelected {
-            return .primary
-        }
-
-        return colorScheme == .light ? Color.primary.opacity(0.78) : .secondary
     }
 
     private var lastChangedTextColor: Color {
@@ -375,19 +509,13 @@ private struct ReaderSidebarDocumentRow: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                Text(directoryText)
-                    .font(.system(size: 11, weight: .regular, design: .rounded))
-                    .foregroundStyle(directoryTextColor)
+                    .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
 
                 TimelineView(.periodic(from: .now, by: 20)) { context in
                     Text(lastChangedText(relativeTo: context.date))
-                        .font(.system(size: 10, weight: .regular, design: .rounded))
+                        .font(.system(size: 10, weight: .regular))
                         .foregroundStyle(lastChangedTextColor)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -399,7 +527,7 @@ private struct ReaderSidebarDocumentRow: View {
             if indicatorState.showsIndicator {
                 Circle()
                     .fill(changedIndicatorColor)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 7, height: 7)
                     .accessibilityHidden(true)
             }
 
@@ -408,13 +536,21 @@ private struct ReaderSidebarDocumentRow: View {
                     onClose([documentID])
                 } label: {
                     Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .opacity(isHovered || isSelected ? 1 : 0)
+                .allowsHitTesting(isHovered || isSelected)
+                .accessibilityHidden(!(isHovered || isSelected))
                 .help("Close")
             }
         }
         .padding(.vertical, 2)
+        .accessibilityIdentifier("sidebar-document-\(title)")
+        .onHover { hovering in
+            isHovered = hovering
+        }
         .contextMenu {
             if hasAnyOpenFile {
                 Button(openInDefaultAppLabel) {
@@ -472,10 +608,6 @@ private struct ReaderSidebarDocumentRow: View {
         return readerStore.fileDisplayName
     }
 
-    private var directoryText: String {
-        readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) ?? "No file open"
-    }
-
     private func lastChangedText(relativeTo now: Date) -> String {
         if readerStore.isCurrentFileMissing {
             return "File deleted externally"
@@ -485,10 +617,115 @@ private struct ReaderSidebarDocumentRow: View {
             return "No change timestamp"
         }
 
-        let relativeText = ReaderStatusFormatting.relativeText(
+        return ReaderStatusFormatting.relativeText(
             for: fileLastModifiedAt,
             relativeTo: now
         )
-        return "Last modified \(relativeText)"
+    }
+}
+
+private struct ReaderSidebarGroupHeader: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let displayName: String
+    let documentCount: Int
+    let isPinned: Bool
+    let indicatorState: ReaderDocumentIndicatorState
+    let settings: ReaderSettings
+    let onTogglePin: () -> Void
+    let onCloseGroup: () -> Void
+
+    private var pinButtonLabel: String {
+        isPinned ? "Unpin group \(displayName)" : "Pin group \(displayName)"
+    }
+
+    private var closeGroupLabel: String {
+        "Close all files in group \(displayName)"
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button {
+                onTogglePin()
+            } label: {
+                Image(systemName: isPinned ? "pin.fill" : "pin")
+                    .font(.system(size: 10))
+                    .foregroundStyle(isPinned ? .primary : .tertiary)
+                    .rotationEffect(.degrees(30))
+            }
+            .buttonStyle(.plain)
+            .help(pinButtonLabel)
+            .accessibilityLabel(pinButtonLabel)
+
+            Text(displayName)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            if indicatorState.showsIndicator {
+                Circle()
+                    .fill(indicatorState.color(for: settings, colorScheme: colorScheme))
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+            }
+
+            Spacer(minLength: 4)
+
+            Text("\(documentCount)")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(.quaternary.opacity(0.5))
+                .clipShape(Capsule())
+                .accessibilityLabel("\(documentCount) document\(documentCount == 1 ? "" : "s")")
+
+            Button {
+                onCloseGroup()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(closeGroupLabel)
+            .accessibilityLabel(closeGroupLabel)
+            .accessibilityHint("Closes every open file in this group")
+        }
+    }
+}
+
+private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                configuration.isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .background(.quaternary.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    .rotationEffect(configuration.isExpanded ? .degrees(90) : .zero)
+                    .animation(.easeInOut(duration: 0.15), value: configuration.isExpanded)
+
+                configuration.label
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color(nsColor: .labelColor).opacity(0.04))
+            )
+        }
+        .buttonStyle(.plain)
+
+        if configuration.isExpanded {
+            configuration.content
+                .padding(.leading, 12)
+        }
     }
 }

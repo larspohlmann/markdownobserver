@@ -18,6 +18,17 @@ enum ReaderDocumentIndicatorState: Equatable, Sendable {
     var showsIndicator: Bool {
         self != .none
     }
+
+    func color(for settings: ReaderSettings, colorScheme: ColorScheme) -> Color {
+        switch self {
+        case .deletedExternalChange:
+            return Color(hex: settings.syntaxTheme.changeDeletedHex) ?? .accentColor
+        case .externalChange:
+            return Color.folderWatchHighlight(for: settings, colorScheme: colorScheme)
+        case .none:
+            return .clear
+        }
+    }
 }
 
 struct ReaderWindowTitleFormatter {

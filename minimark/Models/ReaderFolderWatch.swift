@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum ReaderFolderWatchAutoOpenPolicy {
     static let maximumInitialAutoOpenFileCount = 12
     static let maximumLiveAutoOpenFileCount = 12
+    static let performanceWarningFileCount = 50
 }
 
 nonisolated enum ReaderFolderWatchPerformancePolicy {
@@ -176,6 +177,20 @@ nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Senda
         return rows
     }
 
+    nonisolated var excludedSubdirectoryRelativePaths: [String] {
+        guard options.scope == .includeSubfolders else {
+            return []
+        }
+
+        let folderPath = folderURL.path.hasSuffix("/") ? folderURL.path : folderURL.path + "/"
+        return options.excludedSubdirectoryPaths.compactMap { absolutePath in
+            guard absolutePath.hasPrefix(folderPath) else {
+                return nil
+            }
+            return String(absolutePath.dropFirst(folderPath.count))
+        }.sorted()
+    }
+
     nonisolated var tooltipText: String {
         var lines = [
             "Watching folder",
@@ -211,5 +226,19 @@ nonisolated struct ReaderFolderWatchAutoOpenWarning: Equatable, Identifiable, Se
 
     nonisolated var totalFileCount: Int {
         autoOpenedFileCount + remainingFileCount
+    }
+}
+
+@MainActor
+final class ReaderFolderWatchFileSelectionRequest: Identifiable {
+    let id = UUID()
+    let folderURL: URL
+    let session: ReaderFolderWatchSession
+    let allFileURLs: [URL]
+
+    init(folderURL: URL, session: ReaderFolderWatchSession, allFileURLs: [URL]) {
+        self.folderURL = folderURL
+        self.session = session
+        self.allFileURLs = allFileURLs
     }
 }

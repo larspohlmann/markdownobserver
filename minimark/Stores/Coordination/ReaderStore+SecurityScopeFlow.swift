@@ -8,9 +8,6 @@ extension ReaderStore {
             currentAccessibleFileURL = url
             currentAccessibleFileURLSource = "fileScope"
         }
-        logSaveInfo(
-            "file scope updated: reason=\(reason) url=\(redactedPathText(for: url)) started=\(securityScopeToken?.didStartAccess == true)"
-        )
     }
 
     func bindFolderWatchSessionIfNeeded(_ session: ReaderFolderWatchSession?) {
@@ -34,9 +31,6 @@ extension ReaderStore {
         let accessURL = resolvedWatchedFolderAccessURL(for: activeFolderWatchSession)
         folderSecurityScopeToken?.endAccess()
         folderSecurityScopeToken = securityScope.beginAccess(to: accessURL)
-        logSaveInfo(
-            "folder scope updated: reason=\(reason) watchedFolder=\(redactedPathText(for: activeFolderWatchSession.folderURL)) accessURL=\(redactedPathText(for: accessURL)) started=\(folderSecurityScopeToken?.didStartAccess == true) appliesToFile=\(redactedPathText(for: fileURL))"
-        )
     }
 
     func effectiveAccessibleFileURL(for url: URL, reason: String) -> URL {
@@ -48,27 +42,18 @@ extension ReaderStore {
            Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
             currentAccessibleFileURL = securityScopeToken.url
             currentAccessibleFileURLSource = "fileScope"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: securityScopeToken.url)) source=fileScope"
-            )
             return securityScopeToken.url
         }
 
         if let currentAccessibleFileURL,
            currentAccessibleFileURLSource == "fileScope",
            Self.normalizedFileURL(currentAccessibleFileURL) == normalizedURL {
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: currentAccessibleFileURL)) source=cachedFileScope"
-            )
             return currentAccessibleFileURL
         }
 
         if let folderScopedFileURL = folderScopedAccessibleFileURL(for: normalizedURL) {
             currentAccessibleFileURL = folderScopedFileURL
             currentAccessibleFileURLSource = "folderScopeChildURL"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: folderScopedFileURL)) source=folderScopeChildURL"
-            )
             return folderScopedFileURL
         }
 
@@ -79,15 +64,9 @@ extension ReaderStore {
            Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
             currentAccessibleFileURL = securityScopeToken.url
             currentAccessibleFileURLSource = "fileScope"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: securityScopeToken.url)) source=fileScopeDerived"
-            )
             return securityScopeToken.url
         }
 
-        logSaveInfo(
-            "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: normalizedURL)) source=plainURL"
-        )
         return normalizedURL
     }
 
@@ -246,5 +225,54 @@ extension ReaderStore {
             options: session.options,
             startedAt: session.startedAt
         )
+    }
+
+    // MARK: - Trusted Image Folder Access
+
+    func activateTrustedImageFolderAccessIfNeeded(for directoryURL: URL?) {
+        guard let directoryURL else { return }
+
+        // Skip if folder watch already grants access to this directory
+        if let activeFolderWatchSession,
+           watchedFolderSession(activeFolderWatchSession, appliesTo: directoryURL.appendingPathComponent("dummy")),
+           folderSecurityScopeToken?.didStartAccess == true {
+            return
+        }
+
+        // Skip if already active for the right directory (directory is within token's scope)
+        if let documentDirectoryScopeToken,
+           documentDirectoryScopeToken.didStartAccess,
+           Self.normalizedFileURL(directoryURL)
+               .path.hasPrefix(Self.normalizedFileURL(URL(fileURLWithPath: documentDirectoryScopeToken.url.path)).path) {
+            return
+        }
+
+        guard let resolvedURL = settingsStore.resolvedTrustedImageFolderURL(
+            containing: directoryURL.appendingPathComponent("dummy")
+        ) else {
+            return
+        }
+
+        documentDirectoryScopeToken?.endAccess()
+        documentDirectoryScopeToken = securityScope.beginAccess(to: resolvedURL)
+        logSaveInfo(
+            "trusted image folder scope activated: directory=\(redactedPathText(for: directoryURL)) started=\(documentDirectoryScopeToken?.didStartAccess == true)"
+        )
+    }
+
+    func grantImageDirectoryAccess(folderURL: URL) {
+        settingsStore.addTrustedImageFolder(folderURL)
+
+        documentDirectoryScopeToken?.endAccess()
+        documentDirectoryScopeToken = securityScope.beginAccess(to: folderURL)
+        logSaveInfo(
+            "image directory access granted: folder=\(redactedPathText(for: folderURL)) started=\(documentDirectoryScopeToken?.didStartAccess == true)"
+        )
+
+        do {
+            try renderCurrentMarkdownImmediately()
+        } catch {
+            logSaveError("re-render after granting image access failed: \(error.localizedDescription)")
+        }
     }
 }

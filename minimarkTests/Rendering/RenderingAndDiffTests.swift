@@ -349,7 +349,7 @@ struct RenderingAndDiffTests {
 
         #expect(css.contains("width: 100%;"))
         #expect(css.contains("margin: 0;"))
-        #expect(css.contains("--reader-gutter-base-width: 36px;"))
+        #expect(css.contains("--reader-gutter-base-width: 32px;"))
         #expect(!css.contains("width: min(100%, 980px);"))
         #expect(!css.contains("margin: 0 auto;"))
     }
@@ -381,7 +381,7 @@ struct RenderingAndDiffTests {
         #expect(html.contains("layout.style.setProperty(\"--reader-gutter-lane-count\", String(Math.max(1, laneCount)));"))
         #expect(html.contains("rowElement.style.left = String(row.laneOffset || 0) + \"px\";"))
         #expect(html.contains("rowElement.style.zIndex = String(changedRegionMarkerPaintRank(row.kind) + 1);"))
-        #expect(html.contains("var markerRowWidth = 24;"))
+        #expect(html.contains("var markerRowWidth = 32;"))
         #expect(html.contains("marker.rowWidth = markerRowWidth;"))
         #expect(html.contains("marker.laneOffset = 0;"))
         #expect(!html.contains("marker.rowWidth = 34;"))
