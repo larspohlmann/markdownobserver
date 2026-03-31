@@ -646,17 +646,26 @@ private struct FolderWatchMetricPill: View {
 struct FolderWatchPrimaryActionButtonStyle: ButtonStyle {
     let tint: Color
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
 
     private var textStyle: AnyShapeStyle {
-        isEnabled ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.46))
+        if isEnabled {
+            return AnyShapeStyle(.white)
+        }
+        return colorScheme == .dark
+            ? AnyShapeStyle(.white.opacity(0.46))
+            : AnyShapeStyle(.secondary)
     }
 
     private var fillColor: Color {
-        isEnabled ? tint : Color.secondary.opacity(0.16)
+        if isEnabled { return tint }
+        return colorScheme == .dark
+            ? Color.secondary.opacity(0.16)
+            : Color.secondary.opacity(0.12)
     }
 
     private var borderColor: Color {
-        isEnabled ? Color.white.opacity(0.15) : Color.white.opacity(0.05)
+        isEnabled ? Color.white.opacity(0.15) : Color.primary.opacity(0.06)
     }
 
     func makeBody(configuration: Configuration) -> some View {
