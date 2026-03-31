@@ -5,12 +5,42 @@ All notable changes to this project are documented in this file.
 ## [1.1.0] - 2026-03-31
 
 ### Added
+- Added folder watch favorites with subfolder detail in info popover.
+- Added sidebar subfolder grouping with collapsible sections and pinning.
+- Added independent group and file sorting controls in sidebar.
+- Added file selection dialog when watched folder contains many files.
+- Added local image support via contextual folder access grant and data URI resolution.
+- Added multi-file open and window-local drop routing.
+- Added folder drop watch flow with blocked overlay for drag-and-drop directory watching.
+- Added close action for sidebar groups.
+- Added preserve-open-files behavior for favorites, skipping the initial prompt on reopen.
+- Added product website with deploy workflow.
 
 ### Changed
+- Redesigned top bar with layered layout, breadcrumb path, and watch strip.
+- Redesigned sidebar grouping with toolbar, compact rows, and frosted headers.
+- Redesigned sidebar filegroup headers for better visual hierarchy.
+- Redesigned gutter change indicators with tinted pill design.
+- Redesigned folder watch dialog for clarity and compactness.
+- Redesigned exclusion dialog with progress ring and toggle switches.
+- Redesigned Edit Favorites and Save Favorite dialogs.
+- Removed content status bar and moved watch details to top strip.
+- Migrated project to Xcode 16 synchronized groups.
 
 ### Fixed
+- Fixed gutter positions not updating when expanded comparison panel shifts content.
+- Fixed unreadable disabled button text in Watch Folder dialogs in light mode.
+- Fixed leftover Untitled document when file selection dialog opens files.
+- Fixed favorite dropdown text inheriting watching tint color.
+- Fixed file selection dialog triggering on live auto-open.
+- Fixed toolbar button text wrapping on narrow windows.
+- Fixed safe unwrap for empty file picker and normalized URLs in window-local open.
 
 ### Chore
+- Removed verbose security scope debug logging from folder watch flow.
+- Optimized drag-drop directory checks on hot path.
+- Refreshed feature list and build guidance documentation.
+- Automated App Store screenshot capture pipeline.
 
 ## [1.0.4] - 2026-03-26
 
