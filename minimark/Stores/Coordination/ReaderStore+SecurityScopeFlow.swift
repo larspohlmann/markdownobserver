@@ -8,9 +8,6 @@ extension ReaderStore {
             currentAccessibleFileURL = url
             currentAccessibleFileURLSource = "fileScope"
         }
-        logSaveInfo(
-            "file scope updated: reason=\(reason) url=\(redactedPathText(for: url)) started=\(securityScopeToken?.didStartAccess == true)"
-        )
     }
 
     func bindFolderWatchSessionIfNeeded(_ session: ReaderFolderWatchSession?) {
@@ -34,9 +31,6 @@ extension ReaderStore {
         let accessURL = resolvedWatchedFolderAccessURL(for: activeFolderWatchSession)
         folderSecurityScopeToken?.endAccess()
         folderSecurityScopeToken = securityScope.beginAccess(to: accessURL)
-        logSaveInfo(
-            "folder scope updated: reason=\(reason) watchedFolder=\(redactedPathText(for: activeFolderWatchSession.folderURL)) accessURL=\(redactedPathText(for: accessURL)) started=\(folderSecurityScopeToken?.didStartAccess == true) appliesToFile=\(redactedPathText(for: fileURL))"
-        )
     }
 
     func effectiveAccessibleFileURL(for url: URL, reason: String) -> URL {
@@ -48,27 +42,18 @@ extension ReaderStore {
            Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
             currentAccessibleFileURL = securityScopeToken.url
             currentAccessibleFileURLSource = "fileScope"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: securityScopeToken.url)) source=fileScope"
-            )
             return securityScopeToken.url
         }
 
         if let currentAccessibleFileURL,
            currentAccessibleFileURLSource == "fileScope",
            Self.normalizedFileURL(currentAccessibleFileURL) == normalizedURL {
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: currentAccessibleFileURL)) source=cachedFileScope"
-            )
             return currentAccessibleFileURL
         }
 
         if let folderScopedFileURL = folderScopedAccessibleFileURL(for: normalizedURL) {
             currentAccessibleFileURL = folderScopedFileURL
             currentAccessibleFileURLSource = "folderScopeChildURL"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: folderScopedFileURL)) source=folderScopeChildURL"
-            )
             return folderScopedFileURL
         }
 
@@ -79,15 +64,9 @@ extension ReaderStore {
            Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
             currentAccessibleFileURL = securityScopeToken.url
             currentAccessibleFileURLSource = "fileScope"
-            logSaveInfo(
-                "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: securityScopeToken.url)) source=fileScopeDerived"
-            )
             return securityScopeToken.url
         }
 
-        logSaveInfo(
-            "effective file access: reason=\(reason) file=\(redactedPathText(for: normalizedURL)) accessURL=\(redactedPathText(for: normalizedURL)) source=plainURL"
-        )
         return normalizedURL
     }
 
