@@ -690,6 +690,73 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(entry.excludedSubdirectoryRelativePaths.isEmpty)
     }
 
+    // MARK: - Known documents
+
+    @Test @MainActor func favoriteWithKnownPathsSurvivesRoundTrip() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/project", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Project",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            openDocumentFileURLs: [folderURL.appendingPathComponent("README.md")]
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+        store.updateFavoriteWatchedFolderKnownDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            knownDocumentFileURLs: [
+                folderURL.appendingPathComponent("README.md"),
+                folderURL.appendingPathComponent("CHANGELOG.md"),
+                folderURL.appendingPathComponent("notes.md")
+            ]
+        )
+
+        let reloaded = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let entry = reloaded.currentSettings.favoriteWatchedFolders[0]
+        #expect(entry.allKnownRelativePaths == ["CHANGELOG.md", "README.md", "notes.md"])
+    }
+
+    @Test @MainActor func updatingOpenDocumentsGrowsKnownPaths() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Docs",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            openDocumentFileURLs: []
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+
+        store.updateFavoriteWatchedFolderKnownDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            knownDocumentFileURLs: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("b.md")
+            ]
+        )
+
+        store.updateFavoriteWatchedFolderOpenDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            openDocumentFileURLs: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("c.md")
+            ]
+        )
+
+        let entry = store.currentSettings.favoriteWatchedFolders[0]
+        #expect(entry.openDocumentRelativePaths == ["a.md", "c.md"])
+        #expect(entry.allKnownRelativePaths == ["a.md", "b.md", "c.md"])
+    }
+
     // MARK: - Helpers
 
     private func makeFavorite(name: String, folderPath: String) -> ReaderFavoriteWatchedFolder {
