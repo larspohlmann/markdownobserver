@@ -613,6 +613,10 @@ private struct ReaderSidebarDocumentRow: View {
             return "File deleted externally"
         }
 
+        if readerStore.isDeferredDocument {
+            return "Not yet loaded"
+        }
+
         guard let fileLastModifiedAt = readerStore.fileLastModifiedAt else {
             return "No change timestamp"
         }

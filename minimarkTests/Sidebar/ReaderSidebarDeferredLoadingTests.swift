@@ -144,4 +144,86 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(!deferredDocument.readerStore.sourceMarkdown.isEmpty)
         #expect(!deferredDocument.readerStore.renderedHTMLDocument.isEmpty)
     }
+
+    @Test @MainActor func openingAlreadyDeferredDocumentDoesNotDuplicate() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        let countBefore = harness.controller.documents.count
+
+        harness.controller.openAdditionalDocument(
+            at: harness.secondaryFileURL,
+            origin: .manual
+        )
+
+        #expect(harness.controller.documents.count == countBefore)
+    }
+
+    @Test @MainActor func openDocumentInSelectedSlotOnDeferredDocumentReplacesCleanly() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        let thirdFileURL = harness.temporaryDirectoryURL.appendingPathComponent("gamma.md")
+        try "# Gamma".write(to: thirdFileURL, atomically: true, encoding: .utf8)
+
+        harness.controller.openDocumentInSelectedSlot(at: thirdFileURL, origin: .manual)
+
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "gamma.md")
+        #expect(!harness.controller.selectedReaderStore.isDeferredDocument)
+        #expect(!harness.controller.selectedReaderStore.sourceMarkdown.isEmpty)
+    }
+
+    @Test @MainActor func liveFolderWatchEventForDeferredDocumentDoesNotDuplicate() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        let countBefore = harness.controller.documents.count
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.secondaryFileURL],
+            origin: .folderWatchAutoOpen,
+            folderWatchSession: session
+        )
+
+        #expect(harness.controller.documents.count == countBefore)
+    }
 }
