@@ -370,15 +370,18 @@ struct ReaderCSSFactory {
           padding: 0.1em 0.3em;
         }
 
-        .markdown-body table {
-          display: block;
-          width: max-content;
-          min-width: 100%;
-          max-width: 100%;
+        .markdown-body .table-scroll-wrapper {
           overflow-x: auto;
+          max-width: 100%;
+          margin: 0.9em 0 1.1em;
+        }
+
+        .markdown-body table {
+          display: table;
+          width: 100%;
+          table-layout: auto;
           border-collapse: collapse;
           border-spacing: 0;
-          margin: 0.9em 0 1.1em;
           border: 1px solid var(--reader-border);
           background: var(--reader-bg);
         }
@@ -388,6 +391,8 @@ struct ReaderCSSFactory {
           padding: 0.45em 0.65em;
           border: 1px solid var(--reader-border);
           vertical-align: top;
+          overflow-wrap: break-word;
+          word-break: normal;
         }
 
         .markdown-body thead th {

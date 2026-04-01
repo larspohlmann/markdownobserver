@@ -1637,6 +1637,19 @@
     window.scrollTo(0, target);
   }
 
+  function wrapTables(root) {
+    var tables = root.querySelectorAll("table");
+    for (var i = 0; i < tables.length; i++) {
+      var table = tables[i];
+      if (table.parentNode && !table.parentNode.classList.contains("table-scroll-wrapper")) {
+        var wrapper = document.createElement("div");
+        wrapper.className = "table-scroll-wrapper";
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      }
+    }
+  }
+
   function renderMarkdown(scrollAnchorProgress) {
     var root = document.getElementById("reader-root");
     var gutter = document.getElementById("reader-change-gutter");
@@ -1653,6 +1666,7 @@
     var rawHTML = md.render(payload.markdown || "");
     var safeHTML = sanitizeRenderedHTML(rawHTML);
     root.innerHTML = safeHTML;
+    wrapTables(root);
     runHighlighting();
     typesetMath(root, function () {
       renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
