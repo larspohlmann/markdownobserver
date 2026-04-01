@@ -82,6 +82,11 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         selectedDocumentID = documentID
+
+        if selectedReaderStore.isDeferredDocument {
+            selectedReaderStore.materializeDeferredDocument()
+        }
+
         bindSelectedStore()
     }
 
@@ -121,6 +126,16 @@ final class ReaderSidebarDocumentController: ObservableObject {
     ) {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         if let existingDocument = document(for: normalizedFileURL) {
+            if existingDocument.readerStore.isDeferredDocument {
+                existingDocument.readerStore.materializeDeferredDocument(
+                    origin: origin,
+                    folderWatchSession: resolvedFolderWatchSession(
+                        for: normalizedFileURL,
+                        requestedSession: folderWatchSession
+                    ),
+                    initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                )
+            }
             selectDocument(existingDocument.id)
             return
         }
@@ -147,12 +162,19 @@ final class ReaderSidebarDocumentController: ObservableObject {
             requestedSession: folderWatchSession
         )
 
-        targetDocument.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+        if origin == .folderWatchInitialBatchAutoOpen {
+            targetDocument.readerStore.deferFile(
+                at: normalizedFileURL,
+                folderWatchSession: effectiveFolderWatchSession
+            )
+        } else {
+            targetDocument.readerStore.openFile(
+                at: normalizedFileURL,
+                origin: origin,
+                folderWatchSession: effectiveFolderWatchSession,
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
+        }
 
         guard targetDocument.readerStore.fileURL != nil else {
             bindSelectedStore()
@@ -188,6 +210,10 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdownByURL[fileURL],
                 preferEmptySelection: preferEmptySelection && index == 0
             )
+        }
+
+        if selectedReaderStore.isDeferredDocument {
+            selectedReaderStore.materializeDeferredDocument()
         }
     }
 
@@ -426,7 +452,9 @@ final class ReaderSidebarDocumentController: ObservableObject {
             self?.selectedReaderStore.fileURL
         }
         folderWatchController.openDocumentFileURLsProvider = { [weak self] in
-            self?.documents.compactMap { $0.readerStore.fileURL } ?? []
+            self?.documents.compactMap { document in
+                document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
+            } ?? []
         }
         folderWatchController.openEventsHandler = { [weak self] events, session, origin in
             self?.openDocumentsBurst(

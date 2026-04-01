@@ -193,6 +193,10 @@ final class ReaderStore: ObservableObject {
         fileURL != nil
     }
 
+    var isDeferredDocument: Bool {
+        documentLoadState == .deferred
+    }
+
     var canStartSourceEditing: Bool {
         hasOpenDocument && !isCurrentFileMissing && !isSourceEditing
     }
@@ -275,6 +279,25 @@ final class ReaderStore: ObservableObject {
 
     func clearExternalChangeIndicator() {
         hasUnacknowledgedExternalChange = false
+    }
+
+    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
+        let normalizedURL = Self.normalizedFileURL(url)
+        fileURL = normalizedURL
+        fileDisplayName = normalizedURL.lastPathComponent
+        documentLoadState = .deferred
+        currentOpenOrigin = origin
+        lastError = nil
+        isCurrentFileMissing = false
+        fileLastModifiedAt = (try? FileManager.default.attributesOfItem(atPath: normalizedURL.path))?[.modificationDate] as? Date
+        if let folderWatchSession {
+            activeFolderWatchSession = folderWatchSession
+        }
+    }
+
+    func clearDeferredLoadState() {
+        guard documentLoadState == .deferred else { return }
+        documentLoadState = .ready
     }
 
     func clearOpenDocument() {
