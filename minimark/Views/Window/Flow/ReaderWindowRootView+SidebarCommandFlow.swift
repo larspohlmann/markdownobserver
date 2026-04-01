@@ -70,12 +70,28 @@ extension ReaderWindowRootView {
         guard let session = sharedFolderWatchSession else {
             return
         }
+        let workspaceState = ReaderFavoriteWorkspaceState.from(
+            settings: settingsStore.currentSettings,
+            pinnedGroupIDs: sidebarPinnedGroupIDs,
+            collapsedGroupIDs: sidebarCollapsedGroupIDs,
+            sidebarWidth: sidebarWidth
+        )
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
             options: session.options,
-            openDocumentFileURLs: currentSidebarOpenDocumentFileURLs()
+            openDocumentFileURLs: currentSidebarOpenDocumentFileURLs(),
+            workspaceState: workspaceState
         )
+
+        // Track this as the active favorite
+        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+        if let created = settingsStore.currentSettings.favoriteWatchedFolders.first(where: {
+            $0.matches(folderPath: normalizedPath, options: session.options)
+        }) {
+            activeFavoriteID = created.id
+            activeFavoriteWorkspaceState = created.workspaceState
+        }
     }
 
     func removeSharedFolderWatchFromFavorites() {
@@ -83,9 +99,18 @@ extension ReaderWindowRootView {
             return
         }
         settingsStore.removeFavoriteWatchedFolder(id: match.id)
+        activeFavoriteID = nil
+        activeFavoriteWorkspaceState = nil
     }
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
+        // Set active favorite and restore workspace state
+        activeFavoriteID = entry.id
+        activeFavoriteWorkspaceState = entry.workspaceState
+        sidebarPinnedGroupIDs = entry.workspaceState.pinnedGroupIDs
+        sidebarCollapsedGroupIDs = entry.workspaceState.collapsedGroupIDs
+        sidebarWidth = entry.workspaceState.sidebarWidth
+
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
         startWatchingFolder(
             folderURL: resolvedURL,
@@ -199,6 +224,25 @@ extension ReaderWindowRootView {
         options: ReaderFolderWatchOptions,
         performInitialAutoOpen: Bool = true
     ) {
+        // Clear active favorite - if this is a favorite watch, startFavoriteWatch sets these BEFORE calling this method
+        if activeFavoriteID != nil {
+            // Only clear if this is NOT being called from startFavoriteWatch
+            // (startFavoriteWatch sets activeFavoriteID before calling startWatchingFolder)
+            // We can detect this by checking if the folder matches the active favorite
+            let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+            let matchesActiveFavorite = settingsStore.currentSettings.favoriteWatchedFolders.contains {
+                $0.id == activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
+            }
+            if !matchesActiveFavorite {
+                persistFinalWorkspaceStateIfNeeded()
+                activeFavoriteID = nil
+                activeFavoriteWorkspaceState = nil
+                sidebarPinnedGroupIDs = []
+                sidebarCollapsedGroupIDs = []
+                sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+            }
+        }
+
         do {
             try sidebarDocumentController.startWatchingFolder(
                 folderURL: folderURL,
@@ -260,6 +304,19 @@ extension ReaderWindowRootView {
     }
 
     func toggleSidebarPlacement() {
-        settingsStore.updateMultiFileDisplayMode(multiFileDisplayMode.toggledSidebarPlacementMode)
+        if let current = activeFavoriteWorkspaceState?.sidebarPosition {
+            activeFavoriteWorkspaceState?.sidebarPosition = current.toggledSidebarPlacementMode
+            activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
+        } else {
+            settingsStore.updateMultiFileDisplayMode(multiFileDisplayMode.toggledSidebarPlacementMode)
+        }
+    }
+
+    func persistFinalWorkspaceStateIfNeeded() {
+        guard let favoriteID = activeFavoriteID, var state = activeFavoriteWorkspaceState else {
+            return
+        }
+        state.sidebarWidth = sidebarWidth
+        settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
     }
 }

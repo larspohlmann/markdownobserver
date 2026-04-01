@@ -22,6 +22,11 @@ struct ReaderWindowRootView: View {
     @State private var uiTestWatchFlowTask: Task<Void, Never>?
     @State private var hasAppliedUITestLaunchConfiguration = false
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
+    @State var sidebarPinnedGroupIDs: Set<String> = []
+    @State var sidebarCollapsedGroupIDs: Set<String> = []
+    @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+    @State var activeFavoriteID: UUID?
+    @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
     @StateObject var windowCoordinator: ReaderWindowCoordinator
     @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
 
@@ -44,7 +49,8 @@ struct ReaderWindowRootView: View {
     }
 
     private var sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement {
-        multiFileDisplayMode.sidebarPlacement
+        let effectiveMode = activeFavoriteWorkspaceState?.sidebarPosition ?? multiFileDisplayMode
+        return effectiveMode.sidebarPlacement
     }
 
     private var pendingFolderWatchURL: URL? {
@@ -76,6 +82,38 @@ struct ReaderWindowRootView: View {
             set: { newValue in
                 updatePendingFolderWatchRequest { request in
                     request.options.scope = newValue
+                }
+            }
+        )
+    }
+
+    private var fileSortModeBinding: Binding<ReaderSidebarSortMode> {
+        Binding(
+            get: {
+                activeFavoriteWorkspaceState?.fileSortMode
+                    ?? settingsStore.currentSettings.sidebarSortMode
+            },
+            set: { newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.fileSortMode = newValue
+                } else {
+                    settingsStore.updateSidebarSortMode(newValue)
+                }
+            }
+        )
+    }
+
+    private var groupSortModeBinding: Binding<ReaderSidebarSortMode> {
+        Binding(
+            get: {
+                activeFavoriteWorkspaceState?.groupSortMode
+                    ?? settingsStore.currentSettings.sidebarGroupSortMode
+            },
+            set: { newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.groupSortMode = newValue
+                } else {
+                    settingsStore.updateSidebarGroupSortMode(newValue)
                 }
             }
         )
@@ -172,6 +210,24 @@ struct ReaderWindowRootView: View {
             .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
                 handleFolderWatchOptionsPresentationChange(isPresented)
             }
+            .onChange(of: sidebarPinnedGroupIDs) { _, newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.pinnedGroupIDs = newValue
+                    activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
+                }
+            }
+            .onChange(of: sidebarCollapsedGroupIDs) { _, newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.collapsedGroupIDs = newValue
+                    activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
+                }
+            }
+            .onChange(of: activeFavoriteWorkspaceState) { _, newState in
+                guard let favoriteID = activeFavoriteID, let state = newState else {
+                    return
+                }
+                settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
                 handleWindowDidBecomeKey(notification)
             }
@@ -259,6 +315,11 @@ struct ReaderWindowRootView: View {
             controller: sidebarDocumentController,
             settingsStore: settingsStore,
             sidebarPlacement: sidebarPlacement,
+            collapsedGroupIDs: $sidebarCollapsedGroupIDs,
+            pinnedGroupIDs: $sidebarPinnedGroupIDs,
+            fileSortMode: fileSortModeBinding,
+            groupSortMode: groupSortModeBinding,
+            sidebarWidth: $sidebarWidth,
             detail: { store in
                 contentView(for: store)
             },

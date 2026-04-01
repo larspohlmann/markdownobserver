@@ -1,16 +1,29 @@
 import SwiftUI
 
-private enum ReaderSidebarWorkspaceMetrics {
+enum ReaderSidebarWorkspaceMetrics {
     static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 160 : 220
     static let sidebarIdealWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 160 : 250
     static let detailMinimumWidth: CGFloat = 420
     static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
 }
 
+private struct SidebarWidthPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
+    }
+}
+
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
     @ObservedObject var controller: ReaderSidebarDocumentController
     @ObservedObject var settingsStore: ReaderSettingsStore
     let sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement
+    @Binding var collapsedGroupIDs: Set<String>
+    @Binding var pinnedGroupIDs: Set<String>
+    @Binding var fileSortMode: ReaderSidebarSortMode
+    @Binding var groupSortMode: ReaderSidebarSortMode
+    @Binding var sidebarWidth: CGFloat
     let detail: (ReaderStore) -> Detail
     let onToggleSidebarPlacement: () -> Void
     let onOpenInDefaultApp: (Set<UUID>) -> Void
@@ -21,8 +34,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
     @State private var selectedDocumentIDs: Set<UUID> = []
-    @State private var collapsedGroupIDs: Set<String> = []
-    @State private var pinnedGroupIDs: Set<String> = []
 
     var body: some View {
         Group {
@@ -88,11 +99,11 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private var currentFileSidebarSortMode: ReaderSidebarSortMode {
-        settingsStore.currentSettings.sidebarSortMode
+        fileSortMode
     }
 
     private var currentGroupSidebarSortMode: ReaderSidebarSortMode {
-        settingsStore.currentSettings.sidebarGroupSortMode
+        groupSortMode
     }
 
     private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
@@ -209,9 +220,22 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .frame(
             minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
-            idealWidth: ReaderSidebarWorkspaceMetrics.sidebarIdealWidth,
+            idealWidth: sidebarWidth,
             maxHeight: .infinity
         )
+        .background(
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: SidebarWidthPreferenceKey.self,
+                    value: geometry.size.width
+                )
+            }
+        )
+        .onPreferenceChange(SidebarWidthPreferenceKey.self) { width in
+            if width > 0 {
+                sidebarWidth = width
+            }
+        }
     }
 
     private var sidebarToolbar: some View {
@@ -298,7 +322,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         Menu {
             ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
                 Button {
-                    settingsStore.updateSidebarGroupSortMode(mode)
+                    groupSortMode = mode
                 } label: {
                     if mode == currentGroupSidebarSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
@@ -334,7 +358,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         Menu {
             ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
                 Button {
-                    settingsStore.updateSidebarSortMode(mode)
+                    fileSortMode = mode
                 } label: {
                     if mode == currentFileSidebarSortMode {
                         Label(mode.displayName, systemImage: "checkmark")

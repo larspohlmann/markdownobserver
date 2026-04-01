@@ -16,11 +16,18 @@ extension ReaderStore {
             return
         }
 
+        let workspaceState = ReaderFavoriteWorkspaceState.from(
+            settings: settingsStore.currentSettings,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
             options: session.options,
-            openDocumentFileURLs: fileURL.map { [$0] } ?? []
+            openDocumentFileURLs: fileURL.map { [$0] } ?? [],
+            workspaceState: workspaceState
         )
     }
 

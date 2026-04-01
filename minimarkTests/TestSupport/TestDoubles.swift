@@ -178,7 +178,13 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         name: String,
         folderURL: URL,
         options: ReaderFolderWatchOptions,
-        openDocumentFileURLs: [URL] = []
+        openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
     ) {
         var next = subject.value
         next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
@@ -186,6 +192,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             folderURL: folderURL,
             options: options,
             openDocumentFileURLs: openDocumentFileURLs,
+            workspaceState: workspaceState,
             into: next.favoriteWatchedFolders
         )
         recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
@@ -240,6 +247,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             bookmarkData: existing.bookmarkData,
             openDocumentRelativePaths: scopedRelativePaths,
             allKnownRelativePaths: updatedKnownPaths,
+            workspaceState: existing.workspaceState,
             createdAt: existing.createdAt
         )
 
@@ -274,6 +282,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             bookmarkData: existing.bookmarkData,
             openDocumentRelativePaths: existing.openDocumentRelativePaths,
             allKnownRelativePaths: updatedKnownPaths,
+            workspaceState: existing.workspaceState,
             createdAt: existing.createdAt
         )
 
@@ -283,6 +292,27 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
         entry.folderURL
+    }
+
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+        var next = subject.value
+        guard let index = next.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        let existing = next.favoriteWatchedFolders[index]
+        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+            id: existing.id,
+            name: existing.name,
+            folderPath: existing.folderPath,
+            options: existing.options,
+            bookmarkData: existing.bookmarkData,
+            openDocumentRelativePaths: existing.openDocumentRelativePaths,
+            allKnownRelativePaths: existing.allKnownRelativePaths,
+            workspaceState: workspaceState,
+            createdAt: existing.createdAt
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
     }
 
     func clearFavoriteWatchedFolders() {
