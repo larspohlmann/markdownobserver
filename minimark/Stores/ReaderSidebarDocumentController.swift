@@ -86,12 +86,18 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         selectedDocumentID = documentID
+        let store = selectedReaderStore
 
-        if selectedReaderStore.isDeferredDocument {
-            selectedReaderStore.materializeDeferredDocument()
+        if store.isDeferredDocument {
+            store.transitionToLoading()
+            bindSelectedStore()
+            Task { @MainActor in
+                await Task.yield()
+                store.materializeDeferredDocument()
+            }
+        } else {
+            bindSelectedStore()
         }
-
-        bindSelectedStore()
     }
 
     func openDocumentInSelectedSlot(

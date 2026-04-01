@@ -114,7 +114,7 @@ struct ReaderSidebarDeferredLoadingTests {
         }
     }
 
-    @Test @MainActor func selectingDeferredDocumentMaterializesIt() throws {
+    @Test @MainActor func selectingDeferredDocumentMaterializesIt() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -139,6 +139,9 @@ struct ReaderSidebarDeferredLoadingTests {
 
         // Select it
         harness.controller.selectDocument(deferredDocument.id)
+
+        // Wait for async materialization
+        for _ in 0..<5 { await Task.yield() }
 
         // Now it should be fully loaded
         #expect(!deferredDocument.readerStore.isDeferredDocument)
@@ -353,6 +356,42 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(store.documentLoadState == .ready || store.documentLoadState == .settlingAutoOpen)
         #expect(!store.sourceMarkdown.isEmpty)
         #expect(!store.renderedHTMLDocument.isEmpty)
+    }
+
+    @Test @MainActor func selectingDeferredDocumentSetsLoadingStateImmediately() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        let deferredDocument = harness.controller.documents.first {
+            $0.id != harness.controller.selectedDocumentID
+        }!
+        #expect(deferredDocument.readerStore.documentLoadState == .deferred)
+
+        harness.controller.selectDocument(deferredDocument.id)
+
+        // Immediately after selectDocument: state should be .loading, not yet fully loaded
+        #expect(deferredDocument.readerStore.documentLoadState == .loading)
+        #expect(deferredDocument.readerStore.sourceMarkdown.isEmpty)
+
+        // After yielding: the Task completes and the document is fully loaded
+        // The inner Task yields once before materializing, so we need multiple yields
+        for _ in 0..<5 { await Task.yield() }
+        #expect(deferredDocument.readerStore.documentLoadState == .ready || deferredDocument.readerStore.documentLoadState == .settlingAutoOpen)
+        #expect(!deferredDocument.readerStore.sourceMarkdown.isEmpty)
+        #expect(!deferredDocument.readerStore.renderedHTMLDocument.isEmpty)
     }
 
     @Test @MainActor func transitionToLoadingSetsLoadingState() throws {
