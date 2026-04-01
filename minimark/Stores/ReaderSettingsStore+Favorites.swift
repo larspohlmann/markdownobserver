@@ -64,6 +64,7 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: scopedRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
                 createdAt: existing.createdAt
             )
         }
@@ -120,6 +121,7 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: refreshedBookmarkData ?? existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
                 createdAt: existing.createdAt
             )
         }
@@ -143,6 +145,7 @@ extension ReaderSettingsStore {
                 options: existingEntry.options,
                 bookmarkData: bookmarkData,
                 openDocumentRelativePaths: existingEntry.openDocumentRelativePaths,
+                allKnownRelativePaths: existingEntry.allKnownRelativePaths,
                 createdAt: existingEntry.createdAt
             )
         }

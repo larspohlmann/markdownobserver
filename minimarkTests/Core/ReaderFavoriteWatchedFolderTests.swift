@@ -491,6 +491,24 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(settings.favoriteWatchedFolders.isEmpty)
     }
 
+    @Test func decodingFavoriteWithoutAllKnownRelativePathsDefaultsToEmpty() throws {
+        let json = """
+        {
+            "id": "FDFBD48E-E0AB-4F82-95EB-391C3DF5CF63",
+            "name": "Docs",
+            "folderPath": "/tmp/docs",
+            "options": {
+                "openMode": "openAllMarkdownFiles",
+                "scope": "selectedFolderOnly"
+            },
+            "createdAt": 0
+        }
+        """
+
+        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+        #expect(favorite.allKnownRelativePaths.isEmpty)
+    }
+
     @Test func decodingFavoriteWithoutOpenDocumentRelativePathsDefaultsToEmptyArray() throws {
         let json = """
         {
