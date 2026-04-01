@@ -821,6 +821,32 @@ struct ReaderSettingsAndModelsTests {
         )
     }
 
+    @Test func diffBaselineLookbackTimeIntervalValues() {
+        #expect(DiffBaselineLookback.tenSeconds.timeInterval == 10)
+        #expect(DiffBaselineLookback.thirtySeconds.timeInterval == 30)
+        #expect(DiffBaselineLookback.oneMinute.timeInterval == 60)
+        #expect(DiffBaselineLookback.twoMinutes.timeInterval == 120)
+        #expect(DiffBaselineLookback.fiveMinutes.timeInterval == 300)
+        #expect(DiffBaselineLookback.tenMinutes.timeInterval == 600)
+    }
+
+    @Test func diffBaselineLookbackDisplayNames() {
+        #expect(DiffBaselineLookback.tenSeconds.displayName == "10 seconds")
+        #expect(DiffBaselineLookback.thirtySeconds.displayName == "30 seconds")
+        #expect(DiffBaselineLookback.oneMinute.displayName == "1 minute")
+        #expect(DiffBaselineLookback.twoMinutes.displayName == "2 minutes")
+        #expect(DiffBaselineLookback.fiveMinutes.displayName == "5 minutes")
+        #expect(DiffBaselineLookback.tenMinutes.displayName == "10 minutes")
+    }
+
+    @Test func diffBaselineLookbackCodableRoundTrip() throws {
+        for lookback in DiffBaselineLookback.allCases {
+            let data = try JSONEncoder().encode(lookback)
+            let decoded = try JSONDecoder().decode(DiffBaselineLookback.self, from: data)
+            #expect(decoded == lookback)
+        }
+    }
+
     @Test func readerSettingsGuidanceFormatsMarkdownAssociationPermissionErrorWithoutStatusCode() {
         let error = MarkdownAssociationError.launchServicesFailed([
             .init(
