@@ -27,7 +27,7 @@ struct FolderSnapshotDifferTests {
         #expect(snapshot.count == 1)
         #expect(snapshot[normalizedFileURL] != nil)
         #expect(snapshot[normalizedFileURL]?.markdown == nil)
-        #expect(snapshot[normalizedFileURL]?.fileSize ?? 0 > 0)
+        #expect((snapshot[normalizedFileURL]?.fileSize ?? 0) > 0)
     }
 
     @Test func withContentPopulatesMarkdownFromFileURL() throws {
