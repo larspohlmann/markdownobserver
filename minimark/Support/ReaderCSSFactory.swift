@@ -445,12 +445,33 @@ struct ReaderCSSFactory {
         }
 
         .markdown-body .task-list-item-checkbox {
+          -webkit-appearance: none;
+          appearance: none;
           margin: 0.25em 0.55em 0 0;
-          inline-size: 1em;
-          block-size: 1em;
+          inline-size: 1.15em;
+          block-size: 1.15em;
           vertical-align: top;
-          accent-color: var(--reader-link);
+          border: 1.5px solid var(--reader-border);
+          border-radius: 4px;
+          background: transparent;
           pointer-events: none;
+        }
+
+        .markdown-body .task-list-item-checkbox:checked {
+          background-color: var(--reader-link);
+          border-color: var(--reader-link);
+          background-image: url(\"data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 6.5L5 9L9.5 3.5' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");
+          background-size: 0.7em 0.7em;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+
+        .markdown-body .task-list-item:has(.task-list-item-checkbox:checked) {
+          opacity: 0.55;
+        }
+
+        .markdown-body .task-list-item:has(.task-list-item-checkbox:checked) .task-list-item-checkbox {
+          opacity: 1;
         }
 
         .markdown-body .task-list-item code {
