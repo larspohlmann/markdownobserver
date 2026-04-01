@@ -287,6 +287,7 @@ final class ReaderStore: ObservableObject {
         fileDisplayName = normalizedURL.lastPathComponent
         documentLoadState = .deferred
         currentOpenOrigin = .folderWatchAutoOpen
+        fileLastModifiedAt = (try? FileManager.default.attributesOfItem(atPath: normalizedURL.path))?[.modificationDate] as? Date
         if let folderWatchSession {
             activeFolderWatchSession = folderWatchSession
         }

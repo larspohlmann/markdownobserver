@@ -22,6 +22,7 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(store.documentLoadState == .deferred)
         #expect(store.sourceMarkdown.isEmpty)
         #expect(store.renderedHTMLDocument.isEmpty)
+        #expect(store.fileLastModifiedAt != nil)
     }
 
     @Test @MainActor func materializeDeferredDocumentLoadsContentAndStartsWatcher() throws {
