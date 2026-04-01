@@ -757,6 +757,44 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(entry.allKnownRelativePaths == ["a.md", "b.md", "c.md"])
     }
 
+    @Test @MainActor func closingFileKeepsItInKnownSetAcrossSyncCycles() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Docs",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            openDocumentFileURLs: []
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+
+        // Simulate initial scan setting known paths
+        store.updateFavoriteWatchedFolderKnownDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            knownDocumentFileURLs: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("b.md"),
+                folderURL.appendingPathComponent("c.md")
+            ]
+        )
+
+        // User has a.md and b.md open, then closes b.md
+        store.updateFavoriteWatchedFolderOpenDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            openDocumentFileURLs: [folderURL.appendingPathComponent("a.md")]
+        )
+
+        let entry = store.currentSettings.favoriteWatchedFolders[0]
+        #expect(entry.openDocumentRelativePaths == ["a.md"])
+        // b.md and c.md still known even though not open
+        #expect(entry.allKnownRelativePaths == ["a.md", "b.md", "c.md"])
+    }
+
     // MARK: - New file discovery
 
     @Test func newFilesAreThoseNotInKnownSet() {
