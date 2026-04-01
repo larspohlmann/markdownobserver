@@ -126,6 +126,19 @@ final class ReaderSidebarDocumentController: ObservableObject {
     ) {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         if let existingDocument = document(for: normalizedFileURL) {
+            if existingDocument.readerStore.isDeferredDocument {
+                let effectiveSession = resolvedFolderWatchSession(
+                    for: normalizedFileURL,
+                    requestedSession: folderWatchSession
+                )
+                existingDocument.readerStore.clearDeferredLoadState()
+                existingDocument.readerStore.openFile(
+                    at: normalizedFileURL,
+                    origin: origin,
+                    folderWatchSession: effectiveSession,
+                    initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                )
+            }
             selectDocument(existingDocument.id)
             return
         }
@@ -152,7 +165,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             requestedSession: folderWatchSession
         )
 
-        if origin.isFolderWatchAutoOpen {
+        if origin == .folderWatchInitialBatchAutoOpen {
             targetDocument.readerStore.deferFile(
                 at: normalizedFileURL,
                 folderWatchSession: effectiveFolderWatchSession
