@@ -447,10 +447,10 @@ struct ReaderCSSFactory {
         .markdown-body .task-list-item-checkbox {
           -webkit-appearance: none;
           appearance: none;
-          margin: 0.25em 0.55em 0 0;
-          inline-size: 1.15em;
-          block-size: 1.15em;
-          vertical-align: top;
+          margin: 0 0.55em 0 0;
+          inline-size: 1.3em;
+          block-size: 1.3em;
+          vertical-align: -0.17em;
           border: 1.5px solid var(--reader-border);
           border-radius: 4px;
           background: transparent;
