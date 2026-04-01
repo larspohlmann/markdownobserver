@@ -334,6 +334,12 @@ nonisolated enum ReaderFavoriteHistory {
         folderURL: URL,
         options: ReaderFolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        ),
         into existingEntries: [ReaderFavoriteWatchedFolder]
     ) -> [ReaderFavoriteWatchedFolder] {
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
@@ -349,7 +355,8 @@ nonisolated enum ReaderFavoriteHistory {
             name: name,
             folderURL: folderURL,
             options: options,
-            openDocumentFileURLs: openDocumentFileURLs
+            openDocumentFileURLs: openDocumentFileURLs,
+            workspaceState: workspaceState
         )
         return existingEntries + [newEntry]
     }

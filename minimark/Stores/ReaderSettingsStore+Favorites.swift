@@ -5,7 +5,13 @@ extension ReaderSettingsStore {
         name: String,
         folderURL: URL,
         options: ReaderFolderWatchOptions,
-        openDocumentFileURLs: [URL] = []
+        openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
     ) {
         updateSettings { settings in
             settings.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
@@ -13,6 +19,7 @@ extension ReaderSettingsStore {
                 folderURL: folderURL,
                 options: options,
                 openDocumentFileURLs: openDocumentFileURLs,
+                workspaceState: workspaceState,
                 into: settings.favoriteWatchedFolders
             )
         }

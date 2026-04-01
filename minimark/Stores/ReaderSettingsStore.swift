@@ -474,7 +474,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         name: String,
         folderURL: URL,
         options: ReaderFolderWatchOptions,
-        openDocumentFileURLs: [URL]
+        openDocumentFileURLs: [URL],
+        workspaceState: ReaderFavoriteWorkspaceState
     )
     func removeFavoriteWatchedFolder(id: UUID)
     func renameFavoriteWatchedFolder(id: UUID, newName: String)

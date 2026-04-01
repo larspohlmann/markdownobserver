@@ -178,7 +178,13 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         name: String,
         folderURL: URL,
         options: ReaderFolderWatchOptions,
-        openDocumentFileURLs: [URL] = []
+        openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
     ) {
         var next = subject.value
         next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
@@ -186,6 +192,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             folderURL: folderURL,
             options: options,
             openDocumentFileURLs: openDocumentFileURLs,
+            workspaceState: workspaceState,
             into: next.favoriteWatchedFolders
         )
         recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
