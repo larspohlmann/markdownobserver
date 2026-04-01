@@ -857,6 +857,72 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(!shouldDiscover)
     }
 
+    // MARK: - Workspace state migration
+
+    @Test func decodingFavoriteWithoutWorkspaceStateProducesValidDefaults() throws {
+        let json = """
+        {
+            "id": "FDFBD48E-E0AB-4F82-95EB-391C3DF5CF63",
+            "name": "Legacy Favorite",
+            "folderPath": "/tmp/legacy",
+            "options": {
+                "openMode": "openAllMarkdownFiles",
+                "scope": "selectedFolderOnly"
+            },
+            "openDocumentRelativePaths": ["readme.md"],
+            "allKnownRelativePaths": ["readme.md", "notes.md"],
+            "createdAt": 0
+        }
+        """
+
+        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+
+        #expect(favorite.name == "Legacy Favorite")
+        #expect(favorite.openDocumentRelativePaths == ["readme.md"])
+
+        let expectedDefault = ReaderFavoriteWorkspaceState.from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
+        #expect(favorite.workspaceState == expectedDefault)
+        #expect(favorite.workspaceState.pinnedGroupIDs.isEmpty)
+        #expect(favorite.workspaceState.collapsedGroupIDs.isEmpty)
+        #expect(favorite.workspaceState.sidebarWidth == ReaderFavoriteWorkspaceState.defaultSidebarWidth)
+    }
+
+    @Test func encodingAndDecodingPreservesWorkspaceState() throws {
+        let customState = ReaderFavoriteWorkspaceState(
+            fileSortMode: .nameAscending,
+            groupSortMode: .lastChangedNewestFirst,
+            sidebarPosition: .sidebarRight,
+            sidebarWidth: 320,
+            pinnedGroupIDs: ["group-1", "group-2"],
+            collapsedGroupIDs: ["group-3"]
+        )
+
+        let original = ReaderFavoriteWatchedFolder(
+            name: "Workspace Test",
+            folderPath: "/tmp/workspace",
+            options: .default,
+            bookmarkData: nil,
+            workspaceState: customState,
+            createdAt: .now
+        )
+
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: data)
+
+        #expect(decoded.workspaceState == customState)
+        #expect(decoded.workspaceState.fileSortMode == .nameAscending)
+        #expect(decoded.workspaceState.groupSortMode == .lastChangedNewestFirst)
+        #expect(decoded.workspaceState.sidebarPosition == .sidebarRight)
+        #expect(decoded.workspaceState.sidebarWidth == 320)
+        #expect(decoded.workspaceState.pinnedGroupIDs == ["group-1", "group-2"])
+        #expect(decoded.workspaceState.collapsedGroupIDs == ["group-3"])
+    }
+
     // MARK: - Helpers
 
     private func makeFavorite(name: String, folderPath: String) -> ReaderFavoriteWatchedFolder {

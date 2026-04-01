@@ -240,6 +240,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             bookmarkData: existing.bookmarkData,
             openDocumentRelativePaths: scopedRelativePaths,
             allKnownRelativePaths: updatedKnownPaths,
+            workspaceState: existing.workspaceState,
             createdAt: existing.createdAt
         )
 
@@ -274,6 +275,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             bookmarkData: existing.bookmarkData,
             openDocumentRelativePaths: existing.openDocumentRelativePaths,
             allKnownRelativePaths: updatedKnownPaths,
+            workspaceState: existing.workspaceState,
             createdAt: existing.createdAt
         )
 

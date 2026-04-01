@@ -69,6 +69,7 @@ extension ReaderSettingsStore {
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: scopedRelativePaths,
                 allKnownRelativePaths: updatedKnownPaths,
+                workspaceState: existing.workspaceState,
                 createdAt: existing.createdAt
             )
         }
@@ -105,6 +106,7 @@ extension ReaderSettingsStore {
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
                 allKnownRelativePaths: updatedKnownPaths,
+                workspaceState: existing.workspaceState,
                 createdAt: existing.createdAt
             )
         }
@@ -162,6 +164,7 @@ extension ReaderSettingsStore {
                 bookmarkData: refreshedBookmarkData ?? existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
                 allKnownRelativePaths: existing.allKnownRelativePaths,
+                workspaceState: existing.workspaceState,
                 createdAt: existing.createdAt
             )
         }
@@ -186,6 +189,7 @@ extension ReaderSettingsStore {
                 bookmarkData: bookmarkData,
                 openDocumentRelativePaths: existingEntry.openDocumentRelativePaths,
                 allKnownRelativePaths: existingEntry.allKnownRelativePaths,
+                workspaceState: existingEntry.workspaceState,
                 createdAt: existingEntry.createdAt
             )
         }
