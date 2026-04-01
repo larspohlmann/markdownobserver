@@ -325,6 +325,10 @@ final class ReaderSidebarDocumentController: ObservableObject {
         )
     }
 
+    func scanCurrentMarkdownFiles(completion: @escaping @MainActor ([URL]) -> Void) {
+        folderWatchController.scanCurrentMarkdownFiles(completion: completion)
+    }
+
     func stopFolderWatch() {
         folderWatchController.stopWatching()
     }

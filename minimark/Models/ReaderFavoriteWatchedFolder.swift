@@ -7,6 +7,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
     let options: ReaderFolderWatchOptions
     let bookmarkData: Data?
     let openDocumentRelativePaths: [String]
+    let allKnownRelativePaths: [String]
     let createdAt: Date
 
     nonisolated var folderURL: URL {
@@ -29,6 +30,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         case options
         case bookmarkData
         case openDocumentRelativePaths
+        case allKnownRelativePaths
         case createdAt
     }
 
@@ -38,6 +40,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         folderURL: URL,
         options: ReaderFolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
+        allKnownRelativePaths: [String] = [],
         createdAt: Date = .now
     ) {
         self.id = id
@@ -55,6 +58,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             relativeTo: normalizedURL,
             options: options
         )
+        self.allKnownRelativePaths = allKnownRelativePaths
         self.createdAt = createdAt
     }
 
@@ -65,6 +69,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         options: ReaderFolderWatchOptions,
         bookmarkData: Data?,
         openDocumentRelativePaths: [String] = [],
+        allKnownRelativePaths: [String] = [],
         createdAt: Date
     ) {
         self.id = id
@@ -80,6 +85,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             relativeTo: normalizedFolderURL,
             options: options
         )
+        self.allKnownRelativePaths = allKnownRelativePaths
         self.createdAt = createdAt
     }
 
@@ -104,6 +110,8 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             options: options
         )
 
+        allKnownRelativePaths = try container.decodeIfPresent([String].self, forKey: .allKnownRelativePaths) ?? []
+
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
     }
 
@@ -115,7 +123,23 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         try container.encode(options, forKey: .options)
         try container.encodeIfPresent(bookmarkData, forKey: .bookmarkData)
         try container.encode(openDocumentRelativePaths, forKey: .openDocumentRelativePaths)
+        try container.encode(allKnownRelativePaths, forKey: .allKnownRelativePaths)
         try container.encode(createdAt, forKey: .createdAt)
+    }
+
+    func newFileURLs(fromScanned scannedURLs: [URL], relativeTo folderURL: URL) -> [URL] {
+        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let folderPath = normalizedFolderURL.path
+        let folderPathWithSlash = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
+        let knownSet = Set(allKnownRelativePaths)
+
+        return scannedURLs.filter { url in
+            let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+            let filePath = normalizedURL.path
+            guard filePath.hasPrefix(folderPathWithSlash) else { return false }
+            let relativePath = String(filePath.dropFirst(folderPathWithSlash.count))
+            return !relativePath.isEmpty && !knownSet.contains(relativePath)
+        }
     }
 
     func resolvedOpenDocumentFileURLs(
@@ -324,6 +348,7 @@ nonisolated enum ReaderFavoriteHistory {
                 options: entry.options,
                 bookmarkData: entry.bookmarkData,
                 openDocumentRelativePaths: entry.openDocumentRelativePaths,
+                allKnownRelativePaths: entry.allKnownRelativePaths,
                 createdAt: entry.createdAt
             )
         }

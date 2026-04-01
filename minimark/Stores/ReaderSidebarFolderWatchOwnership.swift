@@ -185,6 +185,37 @@ final class ReaderFolderWatchController {
         }
     }
 
+    func scanCurrentMarkdownFiles(completion: @escaping @MainActor ([URL]) -> Void) {
+        guard let session = activeFolderWatchSession else {
+            completion([])
+            return
+        }
+
+        let folderURL = session.folderURL
+        let includeSubfolders = session.options.scope == .includeSubfolders
+        let excludedURLs = session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
+        let folderWatcher = self.folderWatcher
+
+        if includeSubfolders {
+            Task.detached(priority: .utility) {
+                let urls = (try? folderWatcher.markdownFiles(
+                    in: folderURL,
+                    includeSubfolders: true,
+                    excludedSubdirectoryURLs: excludedURLs
+                )) ?? []
+
+                await completion(urls)
+            }
+        } else {
+            let urls = (try? folderWatcher.markdownFiles(
+                in: folderURL,
+                includeSubfolders: false,
+                excludedSubdirectoryURLs: excludedURLs
+            )) ?? []
+            completion(urls)
+        }
+    }
+
     private func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
         guard let session = activeFolderWatchSession else {
             return

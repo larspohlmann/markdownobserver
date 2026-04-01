@@ -229,6 +229,9 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             relativeTo: folderURL,
             options: existing.options
         )
+        let updatedKnownPaths = Array(
+            Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+        ).sorted()
         next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
             id: existing.id,
             name: existing.name,
@@ -236,6 +239,41 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             options: existing.options,
             bookmarkData: existing.bookmarkData,
             openDocumentRelativePaths: scopedRelativePaths,
+            allKnownRelativePaths: updatedKnownPaths,
+            createdAt: existing.createdAt
+        )
+
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
+
+    func updateFavoriteWatchedFolderKnownDocuments(
+        id: UUID,
+        folderURL: URL,
+        knownDocumentFileURLs: [URL]
+    ) {
+        var next = subject.value
+        guard let index = next.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        let existing = next.favoriteWatchedFolders[index]
+        let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+            from: knownDocumentFileURLs,
+            relativeTo: folderURL,
+            options: existing.options
+        )
+        let updatedKnownPaths = Array(
+            Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+        ).sorted()
+        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+            id: existing.id,
+            name: existing.name,
+            folderPath: existing.folderPath,
+            options: existing.options,
+            bookmarkData: existing.bookmarkData,
+            openDocumentRelativePaths: existing.openDocumentRelativePaths,
+            allKnownRelativePaths: updatedKnownPaths,
             createdAt: existing.createdAt
         )
 

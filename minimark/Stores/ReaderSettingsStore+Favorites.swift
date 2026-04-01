@@ -57,6 +57,10 @@ extension ReaderSettingsStore {
                 return
             }
 
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+            ).sorted()
+
             settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
                 id: existing.id,
                 name: existing.name,
@@ -64,6 +68,43 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: scopedRelativePaths,
+                allKnownRelativePaths: updatedKnownPaths,
+                createdAt: existing.createdAt
+            )
+        }
+    }
+
+    func updateFavoriteWatchedFolderKnownDocuments(
+        id: UUID,
+        folderURL: URL,
+        knownDocumentFileURLs: [URL]
+    ) {
+        updateSettings(coalescePersistence: true) { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+            let existing = settings.favoriteWatchedFolders[index]
+            let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+                from: knownDocumentFileURLs,
+                relativeTo: folderURL,
+                options: existing.options
+            )
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+            ).sorted()
+            guard existing.allKnownRelativePaths != updatedKnownPaths else {
+                return
+            }
+
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: existing.folderPath,
+                options: existing.options,
+                bookmarkData: existing.bookmarkData,
+                openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: updatedKnownPaths,
                 createdAt: existing.createdAt
             )
         }
@@ -120,6 +161,7 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: refreshedBookmarkData ?? existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
                 createdAt: existing.createdAt
             )
         }
@@ -143,6 +185,7 @@ extension ReaderSettingsStore {
                 options: existingEntry.options,
                 bookmarkData: bookmarkData,
                 openDocumentRelativePaths: existingEntry.openDocumentRelativePaths,
+                allKnownRelativePaths: existingEntry.allKnownRelativePaths,
                 createdAt: existingEntry.createdAt
             )
         }
