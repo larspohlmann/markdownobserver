@@ -8,7 +8,6 @@ import Testing
 
 @Suite
 struct CheckboxCSSTests {
-    private let factory = ReaderCSSFactory()
     private let css = ReaderCSSFactory().makeCSS(
         theme: .default,
         syntaxTheme: .default,
