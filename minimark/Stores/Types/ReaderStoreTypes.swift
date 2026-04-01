@@ -30,6 +30,7 @@ enum ReaderDocumentViewMode: String, CaseIterable, Sendable {
 
 enum ReaderDocumentLoadState: Equatable, Sendable {
     case ready
+    case loading
     case deferred
     case settlingAutoOpen
 }

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct DocumentLoadingOverlay: View {
     let theme: ReaderTheme
+    let headline: String
+    let subtitle: String?
 
     var body: some View {
         ZStack {
@@ -11,14 +13,17 @@ struct DocumentLoadingOverlay: View {
             VStack(spacing: 12) {
                 ProgressView()
                     .controlSize(.large)
-                    .tint(Color(hex: theme.foregroundHex) ?? .primary)
+                    .colorScheme(theme.kind.isDark ? .dark : .light)
 
-                Text("Waiting for file contents…")
+                Text(headline)
                     .font(.headline)
                     .foregroundStyle(Color(hex: theme.foregroundHex) ?? .primary)
-                Text("The new watched document will appear as soon as writing finishes.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color(hex: theme.secondaryForegroundHex) ?? .secondary)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(Color(hex: theme.secondaryForegroundHex) ?? .secondary)
+                }
             }
             .padding(24)
         }

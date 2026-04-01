@@ -101,11 +101,14 @@ extension ReaderStore {
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        guard isDeferredDocument, let url = fileURL else {
+        guard documentLoadState == .deferred || documentLoadState == .loading,
+              let url = fileURL else {
             return
         }
 
-        clearDeferredLoadState()
+        if documentLoadState == .deferred {
+            transitionToLoading()
+        }
 
         openFile(
             at: url,
@@ -113,6 +116,9 @@ extension ReaderStore {
             folderWatchSession: folderWatchSession ?? activeFolderWatchSession,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
+
+        // Safety: if openFile failed internally, clear the loading state
+        clearLoadingState()
 
         if initialDiffBaselineMarkdown != nil {
             noteObservedExternalChange()

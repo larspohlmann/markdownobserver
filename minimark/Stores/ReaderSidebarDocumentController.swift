@@ -86,12 +86,16 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         selectedDocumentID = documentID
+        let store = selectedReaderStore
 
-        if selectedReaderStore.isDeferredDocument {
-            selectedReaderStore.materializeDeferredDocument()
+        if store.isDeferredDocument {
+            scheduleLoadWithOverlay(on: store) {
+                store.materializeDeferredDocument()
+            }
+            bindSelectedStore()
+        } else {
+            bindSelectedStore()
         }
-
-        bindSelectedStore()
     }
 
     func openDocumentInSelectedSlot(
@@ -111,12 +115,14 @@ final class ReaderSidebarDocumentController: ObservableObject {
             for: normalizedFileURL,
             requestedSession: folderWatchSession
         )
-        document.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+        scheduleLoadWithOverlay(on: document.readerStore) {
+            document.readerStore.openFile(
+                at: normalizedFileURL,
+                origin: origin,
+                folderWatchSession: effectiveFolderWatchSession,
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
+        }
         selectedDocumentID = document.id
         bindSelectedStore()
     }
@@ -131,16 +137,22 @@ final class ReaderSidebarDocumentController: ObservableObject {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         if let existingDocument = document(for: normalizedFileURL) {
             if existingDocument.readerStore.isDeferredDocument {
-                existingDocument.readerStore.materializeDeferredDocument(
-                    origin: origin,
-                    folderWatchSession: resolvedFolderWatchSession(
-                        for: normalizedFileURL,
-                        requestedSession: folderWatchSession
-                    ),
-                    initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                let store = existingDocument.readerStore
+                let effectiveSession = resolvedFolderWatchSession(
+                    for: normalizedFileURL,
+                    requestedSession: folderWatchSession
                 )
+                scheduleLoadWithOverlay(on: store) {
+                    store.materializeDeferredDocument(
+                        origin: origin,
+                        folderWatchSession: effectiveSession,
+                        initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                    )
+                }
+                selectDocument(existingDocument.id)
+            } else {
+                selectDocument(existingDocument.id)
             }
-            selectDocument(existingDocument.id)
             return
         }
 
@@ -217,7 +229,10 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         if selectedReaderStore.isDeferredDocument {
-            selectedReaderStore.materializeDeferredDocument()
+            let store = selectedReaderStore
+            scheduleLoadWithOverlay(on: store) {
+                store.materializeDeferredDocument()
+            }
         }
     }
 
@@ -387,6 +402,15 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
             return ReaderFileRouting.normalizedFileURL(fileURL) == normalizedFileURL
         })
+    }
+
+    private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
+        store.transitionToLoading()
+        Task { @MainActor in
+            await Task.yield()
+            load()
+            store.holdLoadingOverlayBriefly()
+        }
     }
 
     private func bindSelectedStore() {
