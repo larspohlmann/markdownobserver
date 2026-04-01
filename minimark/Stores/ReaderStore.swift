@@ -305,6 +305,11 @@ final class ReaderStore: ObservableObject {
         documentLoadState = .ready
     }
 
+    func transitionToLoading() {
+        guard documentLoadState == .deferred || documentLoadState == .ready else { return }
+        documentLoadState = .loading
+    }
+
     func clearOpenDocument() {
         cancelPendingDraftPreviewRender()
         fileWatcher.stopWatching()
