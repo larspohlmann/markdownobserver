@@ -234,7 +234,7 @@ struct ReaderSidebarDeferredLoadingTests {
 
     // MARK: - Regression: external changes to deferred documents
 
-    @Test @MainActor func liveChangeEventFullyLoadsDeferredDocument() throws {
+    @Test @MainActor func liveChangeEventFullyLoadsDeferredDocument() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -250,6 +250,7 @@ struct ReaderSidebarDeferredLoadingTests {
             folderWatchSession: session,
             preferEmptySelection: true
         )
+        await Task.yield()
 
         // Find the deferred (non-selected) document
         let deferredDocument = harness.controller.documents.first {
@@ -264,6 +265,7 @@ struct ReaderSidebarDeferredLoadingTests {
             folderWatchSession: session,
             initialDiffBaselineMarkdown: "# Old content"
         )
+        for _ in 0..<5 { await Task.yield() }
 
         // The deferred document should now be fully loaded
         #expect(!deferredDocument.readerStore.isDeferredDocument)
@@ -271,7 +273,7 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(!deferredDocument.readerStore.renderedHTMLDocument.isEmpty)
     }
 
-    @Test @MainActor func liveChangeEventShowsIndicatorForDeferredDocument() throws {
+    @Test @MainActor func liveChangeEventShowsIndicatorForDeferredDocument() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -287,6 +289,7 @@ struct ReaderSidebarDeferredLoadingTests {
             folderWatchSession: session,
             preferEmptySelection: true
         )
+        await Task.yield()
 
         let deferredDocument = harness.controller.documents.first {
             $0.readerStore.isDeferredDocument
@@ -299,12 +302,13 @@ struct ReaderSidebarDeferredLoadingTests {
             folderWatchSession: session,
             initialDiffBaselineMarkdown: "# Old content"
         )
+        for _ in 0..<5 { await Task.yield() }
 
         // The yellow change indicator should be visible
         #expect(deferredDocument.readerStore.hasUnacknowledgedExternalChange)
     }
 
-    @Test @MainActor func liveAddEventDoesNotShowIndicatorForDeferredDocument() throws {
+    @Test @MainActor func liveAddEventDoesNotShowIndicatorForDeferredDocument() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -320,6 +324,7 @@ struct ReaderSidebarDeferredLoadingTests {
             folderWatchSession: session,
             preferEmptySelection: true
         )
+        await Task.yield()
 
         let deferredDocument = harness.controller.documents.first {
             $0.readerStore.isDeferredDocument
@@ -332,6 +337,7 @@ struct ReaderSidebarDeferredLoadingTests {
             folderWatchSession: session,
             initialDiffBaselineMarkdown: nil
         )
+        for _ in 0..<5 { await Task.yield() }
 
         // No yellow indicator — this wasn't a modification
         #expect(!deferredDocument.readerStore.hasUnacknowledgedExternalChange)

@@ -143,16 +143,24 @@ final class ReaderSidebarDocumentController: ObservableObject {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         if let existingDocument = document(for: normalizedFileURL) {
             if existingDocument.readerStore.isDeferredDocument {
-                existingDocument.readerStore.materializeDeferredDocument(
-                    origin: origin,
-                    folderWatchSession: resolvedFolderWatchSession(
-                        for: normalizedFileURL,
-                        requestedSession: folderWatchSession
-                    ),
-                    initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                let store = existingDocument.readerStore
+                let effectiveSession = resolvedFolderWatchSession(
+                    for: normalizedFileURL,
+                    requestedSession: folderWatchSession
                 )
+                store.transitionToLoading()
+                selectDocument(existingDocument.id)
+                Task { @MainActor in
+                    await Task.yield()
+                    store.materializeDeferredDocument(
+                        origin: origin,
+                        folderWatchSession: effectiveSession,
+                        initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                    )
+                }
+            } else {
+                selectDocument(existingDocument.id)
             }
-            selectDocument(existingDocument.id)
             return
         }
 
@@ -229,7 +237,12 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         if selectedReaderStore.isDeferredDocument {
-            selectedReaderStore.materializeDeferredDocument()
+            let store = selectedReaderStore
+            store.transitionToLoading()
+            Task { @MainActor in
+                await Task.yield()
+                store.materializeDeferredDocument()
+            }
         }
     }
 
