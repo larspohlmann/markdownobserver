@@ -316,19 +316,18 @@ final class ReaderStore: ObservableObject {
         // After file I/O completes the settler sets .ready immediately,
         // but the WKWebView still needs time to render.  Re-enter .loading
         // briefly so the overlay stays visible while the web view catches up.
-        guard documentLoadState == .ready || documentLoadState == .settlingAutoOpen else { return }
-        let savedState = documentLoadState
+        guard documentLoadState == .ready else { return }
         transitionToLoading()
 
+        // Generation counter: rapid successive calls retire earlier timers
+        // so only the most recent hold restores the state.
         loadingOverlayHoldGeneration &+= 1
         let generation = loadingOverlayHoldGeneration
 
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
             guard let self, self.loadingOverlayHoldGeneration == generation else { return }
-            if self.documentLoadState == .loading {
-                self.documentLoadState = savedState
-            }
+            self.clearLoadingState()
         }
     }
 

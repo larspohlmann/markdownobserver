@@ -89,13 +89,10 @@ final class ReaderSidebarDocumentController: ObservableObject {
         let store = selectedReaderStore
 
         if store.isDeferredDocument {
-            store.transitionToLoading()
-            bindSelectedStore()
-            Task { @MainActor in
-                await Task.yield()
+            scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
-                store.holdLoadingOverlayBriefly()
             }
+            bindSelectedStore()
         } else {
             bindSelectedStore()
         }
@@ -118,20 +115,16 @@ final class ReaderSidebarDocumentController: ObservableObject {
             for: normalizedFileURL,
             requestedSession: folderWatchSession
         )
-        document.readerStore.transitionToLoading()
-        selectedDocumentID = document.id
-        bindSelectedStore()
-
-        Task { @MainActor in
-            await Task.yield()
+        scheduleLoadWithOverlay(on: document.readerStore) {
             document.readerStore.openFile(
                 at: normalizedFileURL,
                 origin: origin,
                 folderWatchSession: effectiveFolderWatchSession,
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
             )
-            document.readerStore.holdLoadingOverlayBriefly()
         }
+        selectedDocumentID = document.id
+        bindSelectedStore()
     }
 
     func openAdditionalDocument(
@@ -149,17 +142,14 @@ final class ReaderSidebarDocumentController: ObservableObject {
                     for: normalizedFileURL,
                     requestedSession: folderWatchSession
                 )
-                store.transitionToLoading()
-                selectDocument(existingDocument.id)
-                Task { @MainActor in
-                    await Task.yield()
+                scheduleLoadWithOverlay(on: store) {
                     store.materializeDeferredDocument(
                         origin: origin,
                         folderWatchSession: effectiveSession,
                         initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
                     )
-                    store.holdLoadingOverlayBriefly()
                 }
+                selectDocument(existingDocument.id)
             } else {
                 selectDocument(existingDocument.id)
             }
@@ -240,11 +230,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
         if selectedReaderStore.isDeferredDocument {
             let store = selectedReaderStore
-            store.transitionToLoading()
-            Task { @MainActor in
-                await Task.yield()
+            scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
-                store.holdLoadingOverlayBriefly()
             }
         }
     }
@@ -415,6 +402,15 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
             return ReaderFileRouting.normalizedFileURL(fileURL) == normalizedFileURL
         })
+    }
+
+    private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
+        store.transitionToLoading()
+        Task { @MainActor in
+            await Task.yield()
+            load()
+            store.holdLoadingOverlayBriefly()
+        }
     }
 
     private func bindSelectedStore() {

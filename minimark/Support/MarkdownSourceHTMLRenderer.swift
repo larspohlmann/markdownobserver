@@ -296,11 +296,6 @@ enum MarkdownSourceHTMLRenderer {
     }
 
     private static func isDarkTheme(_ theme: ReaderTheme) -> Bool {
-        switch theme.kind {
-        case .blackOnWhite, .darkGreyOnLightGrey:
-            return false
-        case .whiteOnBlack, .lightGreyOnDarkGrey:
-            return true
-        }
+        theme.kind.isDark
     }
 }

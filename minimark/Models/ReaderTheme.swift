@@ -30,6 +30,15 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    var isDark: Bool {
+        switch self {
+        case .blackOnWhite, .darkGreyOnLightGrey:
+            return false
+        case .whiteOnBlack, .lightGreyOnDarkGrey:
+            return true
+        }
+    }
+
     var displayName: String {
         switch self {
         case .blackOnWhite:

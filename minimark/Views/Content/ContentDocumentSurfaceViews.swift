@@ -13,7 +13,7 @@ struct DocumentLoadingOverlay: View {
             VStack(spacing: 12) {
                 ProgressView()
                     .controlSize(.large)
-                    .colorScheme(theme.kind == .whiteOnBlack || theme.kind == .lightGreyOnDarkGrey ? .dark : .light)
+                    .colorScheme(theme.kind.isDark ? .dark : .light)
 
                 Text(headline)
                     .font(.headline)

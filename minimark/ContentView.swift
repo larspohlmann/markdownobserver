@@ -537,7 +537,7 @@ struct ContentView: View {
         switch readerStore.documentLoadState {
         case .settlingAutoOpen:
             return "Waiting for file contents\u{2026}"
-        default:
+        case .ready, .loading, .deferred:
             return "Loading document\u{2026}"
         }
     }
@@ -546,7 +546,7 @@ struct ContentView: View {
         switch readerStore.documentLoadState {
         case .settlingAutoOpen:
             return "The new watched document will appear as soon as writing finishes."
-        default:
+        case .ready, .loading, .deferred:
             return nil
         }
     }
