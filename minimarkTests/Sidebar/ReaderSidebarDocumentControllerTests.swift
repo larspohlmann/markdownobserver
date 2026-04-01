@@ -161,7 +161,7 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.folderWatchControllerWatcher.stopCallCount >= 1)
     }
 
-    @Test @MainActor func sidebarControllerManualOpenWithinActiveWatchAdoptsSharedWatchSession() throws {
+    @Test @MainActor func sidebarControllerManualOpenWithinActiveWatchAdoptsSharedWatchSession() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -174,6 +174,7 @@ struct ReaderSidebarDocumentControllerTests {
             at: harness.primaryFileURL,
             origin: .manual
         )
+        for _ in 0..<5 { await Task.yield() }
 
         #expect(harness.controller.selectedReaderStore.fileURL?.path == harness.primaryFileURL.path)
         #expect(harness.controller.selectedReaderStore.activeFolderWatchSession?.folderURL.path == harness.temporaryDirectoryURL.path)

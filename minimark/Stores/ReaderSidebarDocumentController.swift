@@ -117,14 +117,20 @@ final class ReaderSidebarDocumentController: ObservableObject {
             for: normalizedFileURL,
             requestedSession: folderWatchSession
         )
-        document.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+        document.readerStore.transitionToLoading()
         selectedDocumentID = document.id
         bindSelectedStore()
+
+        Task { @MainActor in
+            await Task.yield()
+            document.readerStore.openFile(
+                at: normalizedFileURL,
+                origin: origin,
+                folderWatchSession: effectiveFolderWatchSession,
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
+            document.readerStore.clearLoadingState()
+        }
     }
 
     func openAdditionalDocument(

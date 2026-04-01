@@ -176,7 +176,7 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(harness.controller.documents.count == countBefore)
     }
 
-    @Test @MainActor func openDocumentInSelectedSlotOnDeferredDocumentReplacesCleanly() throws {
+    @Test @MainActor func openDocumentInSelectedSlotOnDeferredDocumentReplacesCleanly() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -197,6 +197,7 @@ struct ReaderSidebarDeferredLoadingTests {
         try "# Gamma".write(to: thirdFileURL, atomically: true, encoding: .utf8)
 
         harness.controller.openDocumentInSelectedSlot(at: thirdFileURL, origin: .manual)
+        for _ in 0..<5 { await Task.yield() }
 
         #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "gamma.md")
         #expect(!harness.controller.selectedReaderStore.isDeferredDocument)
@@ -411,5 +412,25 @@ struct ReaderSidebarDeferredLoadingTests {
         store.transitionToLoading()
 
         #expect(store.documentLoadState == .loading)
+    }
+
+    @Test @MainActor func openDocumentInSelectedSlotSetsLoadingState() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let store = harness.controller.selectedReaderStore
+
+        harness.controller.openDocumentInSelectedSlot(
+            at: harness.primaryFileURL,
+            origin: .manual
+        )
+
+        // Immediately: state should be .loading
+        #expect(store.documentLoadState == .loading)
+
+        // After yields: fully loaded
+        for _ in 0..<5 { await Task.yield() }
+        #expect(store.documentLoadState == .ready || store.documentLoadState == .settlingAutoOpen)
+        #expect(!store.sourceMarkdown.isEmpty)
     }
 }
