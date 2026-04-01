@@ -275,7 +275,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     .frame(width: 6, height: 6)
 
                 if let fileCount = controller.scannedFileCount, fileCount > 0 {
-                    Text("\(fileCount) files")
+                    Text("\(fileCount) \(fileCount == 1 ? "file" : "files")")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
