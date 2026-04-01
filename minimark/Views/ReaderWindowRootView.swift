@@ -24,7 +24,7 @@ struct ReaderWindowRootView: View {
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
     @State var sidebarPinnedGroupIDs: Set<String> = []
     @State var sidebarCollapsedGroupIDs: Set<String> = []
-    @State var sidebarWidth: CGFloat = 250
+    @State var sidebarWidth: CGFloat = ReaderFavoriteWorkspaceState.defaultSidebarWidth
     @State var activeFavoriteID: UUID?
     @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
     @StateObject var windowCoordinator: ReaderWindowCoordinator

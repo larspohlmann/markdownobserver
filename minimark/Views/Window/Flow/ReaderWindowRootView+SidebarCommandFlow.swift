@@ -303,8 +303,7 @@ extension ReaderWindowRootView {
     }
 
     func toggleSidebarPlacement() {
-        if activeFavoriteWorkspaceState != nil {
-            let current = activeFavoriteWorkspaceState!.sidebarPosition
+        if let current = activeFavoriteWorkspaceState?.sidebarPosition {
             activeFavoriteWorkspaceState?.sidebarPosition = current.toggledSidebarPlacementMode
         } else {
             settingsStore.updateMultiFileDisplayMode(multiFileDisplayMode.toggledSidebarPlacementMode)
