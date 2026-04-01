@@ -127,6 +127,21 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         try container.encode(createdAt, forKey: .createdAt)
     }
 
+    func newFileURLs(fromScanned scannedURLs: [URL], relativeTo folderURL: URL) -> [URL] {
+        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let folderPath = normalizedFolderURL.path
+        let folderPathWithSlash = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
+        let knownSet = Set(allKnownRelativePaths)
+
+        return scannedURLs.filter { url in
+            let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+            let filePath = normalizedURL.path
+            guard filePath.hasPrefix(folderPathWithSlash) else { return false }
+            let relativePath = String(filePath.dropFirst(folderPathWithSlash.count))
+            return !relativePath.isEmpty && !knownSet.contains(relativePath)
+        }
+    }
+
     func resolvedOpenDocumentFileURLs(
         relativeTo folderURL: URL,
         options overrideOptions: ReaderFolderWatchOptions? = nil

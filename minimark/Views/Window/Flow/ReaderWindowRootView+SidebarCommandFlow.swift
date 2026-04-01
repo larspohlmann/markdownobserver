@@ -105,6 +105,37 @@ extension ReaderWindowRootView {
         }
 
         syncSharedFavoriteOpenDocumentsIfNeeded()
+
+        if entry.options.openMode == .openAllMarkdownFiles {
+            discoverNewFilesForFavorite(entry, resolvedFolderURL: resolvedURL)
+        }
+    }
+
+    private func discoverNewFilesForFavorite(
+        _ entry: ReaderFavoriteWatchedFolder,
+        resolvedFolderURL: URL
+    ) {
+        sidebarDocumentController.scanCurrentMarkdownFiles { scannedURLs in
+            guard let session = sharedFolderWatchSession else {
+                return
+            }
+
+            let newFileURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: resolvedFolderURL)
+            if !newFileURLs.isEmpty {
+                openSidebarDocumentsBurst(
+                    at: newFileURLs,
+                    origin: .folderWatchInitialBatchAutoOpen,
+                    folderWatchSession: session,
+                    preferEmptySelection: false
+                )
+            }
+
+            settingsStore.updateFavoriteWatchedFolderKnownDocuments(
+                id: entry.id,
+                folderURL: resolvedFolderURL,
+                knownDocumentFileURLs: scannedURLs
+            )
+        }
     }
 
     func syncSharedFavoriteOpenDocumentsIfNeeded() {

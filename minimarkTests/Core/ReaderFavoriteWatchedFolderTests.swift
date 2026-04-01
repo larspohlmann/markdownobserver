@@ -757,6 +757,68 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(entry.allKnownRelativePaths == ["a.md", "b.md", "c.md"])
     }
 
+    // MARK: - New file discovery
+
+    @Test func newFilesAreThoseNotInKnownSet() {
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: folderURL.path,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: ["a.md", "b.md"],
+            allKnownRelativePaths: ["a.md", "b.md", "c.md"],
+            createdAt: .now
+        )
+
+        let scannedURLs = [
+            folderURL.appendingPathComponent("a.md"),
+            folderURL.appendingPathComponent("b.md"),
+            folderURL.appendingPathComponent("c.md"),
+            folderURL.appendingPathComponent("d.md"),
+            folderURL.appendingPathComponent("e.md")
+        ]
+
+        let newURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: folderURL)
+        #expect(newURLs.map(\.lastPathComponent).sorted() == ["d.md", "e.md"])
+    }
+
+    @Test func emptyKnownSetTreatsAllScannedFilesAsNew() {
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: folderURL.path,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: [],
+            allKnownRelativePaths: [],
+            createdAt: .now
+        )
+
+        let scannedURLs = [
+            folderURL.appendingPathComponent("a.md"),
+            folderURL.appendingPathComponent("b.md")
+        ]
+
+        let newURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: folderURL)
+        #expect(newURLs.count == 2)
+    }
+
+    @Test func watchChangesOnlyFavoriteDoesNotDiscoverNewFiles() {
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: "/tmp/docs",
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: [],
+            allKnownRelativePaths: [],
+            createdAt: .now
+        )
+
+        let shouldDiscover = entry.options.openMode == .openAllMarkdownFiles
+        #expect(!shouldDiscover)
+    }
+
     // MARK: - Helpers
 
     private func makeFavorite(name: String, folderPath: String) -> ReaderFavoriteWatchedFolder {
