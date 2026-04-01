@@ -281,12 +281,12 @@ final class ReaderStore: ObservableObject {
         hasUnacknowledgedExternalChange = false
     }
 
-    func deferFile(at url: URL, folderWatchSession: ReaderFolderWatchSession?) {
+    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
         let normalizedURL = Self.normalizedFileURL(url)
         fileURL = normalizedURL
         fileDisplayName = normalizedURL.lastPathComponent
         documentLoadState = .deferred
-        currentOpenOrigin = .folderWatchAutoOpen
+        currentOpenOrigin = origin
         fileLastModifiedAt = (try? FileManager.default.attributesOfItem(atPath: normalizedURL.path))?[.modificationDate] as? Date
         if let folderWatchSession {
             activeFolderWatchSession = folderWatchSession

@@ -127,20 +127,14 @@ final class ReaderSidebarDocumentController: ObservableObject {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         if let existingDocument = document(for: normalizedFileURL) {
             if existingDocument.readerStore.isDeferredDocument {
-                let effectiveSession = resolvedFolderWatchSession(
-                    for: normalizedFileURL,
-                    requestedSession: folderWatchSession
-                )
-                existingDocument.readerStore.clearDeferredLoadState()
-                existingDocument.readerStore.openFile(
-                    at: normalizedFileURL,
+                existingDocument.readerStore.materializeDeferredDocument(
                     origin: origin,
-                    folderWatchSession: effectiveSession,
+                    folderWatchSession: resolvedFolderWatchSession(
+                        for: normalizedFileURL,
+                        requestedSession: folderWatchSession
+                    ),
                     initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
                 )
-                if initialDiffBaselineMarkdown != nil {
-                    existingDocument.readerStore.noteObservedExternalChange()
-                }
             }
             selectDocument(existingDocument.id)
             return

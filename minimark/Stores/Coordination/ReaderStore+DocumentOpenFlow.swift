@@ -96,7 +96,11 @@ extension ReaderStore {
         )
     }
 
-    func materializeDeferredDocument() {
+    func materializeDeferredDocument(
+        origin: ReaderOpenOrigin? = nil,
+        folderWatchSession: ReaderFolderWatchSession? = nil,
+        initialDiffBaselineMarkdown: String? = nil
+    ) {
         guard isDeferredDocument, let url = fileURL else {
             return
         }
@@ -105,9 +109,14 @@ extension ReaderStore {
 
         openFile(
             at: url,
-            origin: currentOpenOrigin,
-            folderWatchSession: activeFolderWatchSession
+            origin: origin ?? currentOpenOrigin,
+            folderWatchSession: folderWatchSession ?? activeFolderWatchSession,
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
+
+        if initialDiffBaselineMarkdown != nil {
+            noteObservedExternalChange()
+        }
     }
 
     func handleIncomingOpenURL(_ url: URL) {
