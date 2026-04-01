@@ -2,6 +2,8 @@ import Foundation
 
 @MainActor
 final class ReaderFolderWatchController {
+    private static let scanProgressLingerDuration: Duration = .milliseconds(500)
+
     private let folderWatcher: FolderChangeWatching
     private let settingsStore: ReaderSettingsStoring
     private let securityScope: SecurityScopedResourceAccessing
@@ -129,7 +131,7 @@ final class ReaderFolderWatchController {
                 if let lastProgress {
                     self?.scannedFileCount = lastProgress.total
                 }
-                try? await Task.sleep(for: .milliseconds(500))
+                try? await Task.sleep(for: Self.scanProgressLingerDuration)
                 guard !Task.isCancelled else { return }
                 self?.contentScanProgress = nil
             }

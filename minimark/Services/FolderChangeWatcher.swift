@@ -385,6 +385,9 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         var completed = 0
+        var lastYieldedCompleted = 0
+        let yieldInterval = max(1, total / 100)
+
         for url in urls {
             guard startupSequence == self.startupSequence else {
                 scanProgressContinuation?.finish()
@@ -392,15 +395,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
                 return
             }
 
-            guard let existing = lastSnapshot[url], existing.markdown == nil else {
-                completed += 1
-                scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
-                continue
+            if let existing = lastSnapshot[url], existing.markdown == nil {
+                lastSnapshot[url] = existing.withContent(from: url)
             }
-
-            lastSnapshot[url] = existing.withContent(from: url)
             completed += 1
-            scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
+
+            let isLast = completed == total
+            if isLast || (completed - lastYieldedCompleted) >= yieldInterval {
+                scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
+                lastYieldedCompleted = completed
+            }
         }
 
         scanProgressContinuation?.finish()

@@ -1,7 +1,7 @@
 import Foundation
 
 protocol FolderSnapshotDiffing: Sendable {
-    func buildSnapshot(
+    func buildMetadataSnapshot(
         folderURL: URL,
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
@@ -19,12 +19,6 @@ protocol FolderSnapshotDiffing: Sendable {
         previous: [URL: FolderFileSnapshot]
     ) -> [ReaderFolderWatchChangeEvent]
 
-    func buildMetadataSnapshot(
-        folderURL: URL,
-        includeSubfolders: Bool,
-        excludedSubdirectoryURLs: [URL]
-    ) throws -> [URL: FolderFileSnapshot]
-
     func markdownFiles(
         in folderURL: URL,
         includeSubfolders: Bool,
@@ -33,28 +27,6 @@ protocol FolderSnapshotDiffing: Sendable {
 }
 
 struct FolderSnapshotDiffer: FolderSnapshotDiffing {
-    func buildSnapshot(
-        folderURL: URL,
-        includeSubfolders: Bool,
-        excludedSubdirectoryURLs: [URL]
-    ) throws -> [URL: FolderFileSnapshot] {
-        var snapshot: [URL: FolderFileSnapshot] = [:]
-        let markdownURLs = try enumerateMarkdownFiles(
-            folderURL: folderURL,
-            includeSubfolders: includeSubfolders,
-            exclusionMatcher: FolderWatchExclusionMatcher(
-                rootFolderURL: folderURL,
-                excludedSubdirectoryURLs: excludedSubdirectoryURLs
-            )
-        )
-
-        for url in markdownURLs {
-            snapshot[url] = FolderFileSnapshot(url: url)
-        }
-
-        return snapshot
-    }
-
     func buildMetadataSnapshot(
         folderURL: URL,
         includeSubfolders: Bool,
