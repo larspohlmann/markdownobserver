@@ -37,3 +37,4 @@ CLAUDE.md
 plans/
 
 .playwright-mcp/
+.worktrees/
