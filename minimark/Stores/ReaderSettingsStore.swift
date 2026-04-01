@@ -375,6 +375,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var recentWatchedFolders: [ReaderRecentWatchedFolder]
     var recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     var trustedImageFolders: [ReaderTrustedImageFolder]
+    var diffBaselineLookback: DiffBaselineLookback
 
     init(
         appAppearance: AppAppearance,
@@ -389,7 +390,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         favoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = [],
         recentWatchedFolders: [ReaderRecentWatchedFolder],
         recentManuallyOpenedFiles: [ReaderRecentOpenedFile],
-        trustedImageFolders: [ReaderTrustedImageFolder] = []
+        trustedImageFolders: [ReaderTrustedImageFolder] = [],
+        diffBaselineLookback: DiffBaselineLookback = .twoMinutes
     ) {
         self.appAppearance = appAppearance
         self.readerTheme = readerTheme
@@ -404,6 +406,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         self.recentWatchedFolders = recentWatchedFolders
         self.recentManuallyOpenedFiles = recentManuallyOpenedFiles
         self.trustedImageFolders = trustedImageFolders
+        self.diffBaselineLookback = diffBaselineLookback
     }
 
     enum CodingKeys: String, CodingKey {
@@ -420,6 +423,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         case recentWatchedFolders
         case recentManuallyOpenedFiles
         case trustedImageFolders
+        case diffBaselineLookback
     }
 
     static let `default` = ReaderSettings(
@@ -435,7 +439,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         favoriteWatchedFolders: [],
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
-        trustedImageFolders: []
+        trustedImageFolders: [],
+        diffBaselineLookback: .twoMinutes
     )
 
     init(from decoder: Decoder) throws {
@@ -453,6 +458,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         recentWatchedFolders = try container.decodeIfPresent([ReaderRecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
         recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
         trustedImageFolders = try container.decodeIfPresent([ReaderTrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
+        diffBaselineLookback = try container.decodeIfPresent(DiffBaselineLookback.self, forKey: .diffBaselineLookback) ?? .twoMinutes
 
         // Migrate legacy favorites: replace hardcoded-default workspace state with decoded global settings
         let legacyDefaultState = ReaderFavoriteWorkspaceState.from(
@@ -496,6 +502,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
     func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode)
+    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback)
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
@@ -640,6 +647,12 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
         updateSettings(coalescePersistence: true) { settings in
             settings.sidebarGroupSortMode = mode
+        }
+    }
+
+    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) {
+        updateSettings(coalescePersistence: true) { settings in
+            settings.diffBaselineLookback = lookback
         }
     }
 

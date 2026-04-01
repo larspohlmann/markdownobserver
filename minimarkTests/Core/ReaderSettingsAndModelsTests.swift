@@ -847,6 +847,26 @@ struct ReaderSettingsAndModelsTests {
         }
     }
 
+    @Test func readerSettingsDecodesDefaultLookbackWhenKeyMissing() throws {
+        var settingsDict = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(ReaderSettings.default)
+        ) as! [String: Any]
+        settingsDict.removeValue(forKey: "diffBaselineLookback")
+        let data = try JSONSerialization.data(withJSONObject: settingsDict)
+
+        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+        #expect(decoded.diffBaselineLookback == .twoMinutes)
+    }
+
+    @Test func readerSettingsCodableRoundTripPreservesDiffBaselineLookback() throws {
+        var settings = ReaderSettings.default
+        settings.diffBaselineLookback = .fiveMinutes
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+        #expect(decoded.diffBaselineLookback == .fiveMinutes)
+    }
+
     @Test func readerSettingsGuidanceFormatsMarkdownAssociationPermissionErrorWithoutStatusCode() {
         let error = MarkdownAssociationError.launchServicesFailed([
             .init(
