@@ -423,6 +423,11 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
     var markdownFilesError: Error?
     var markdownFilesDelay: TimeInterval = 0
 
+    var scanProgressStreamToReturn: AsyncStream<FolderChangeWatcher.ScanProgress> = AsyncStream { $0.finish() }
+    var scanProgressStream: AsyncStream<FolderChangeWatcher.ScanProgress> {
+        scanProgressStreamToReturn
+    }
+
     func startWatching(
         folderURL: URL,
         includeSubfolders: Bool,

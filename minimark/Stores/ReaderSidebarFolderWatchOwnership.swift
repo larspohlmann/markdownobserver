@@ -10,6 +10,7 @@ final class ReaderFolderWatchController {
 
     private var folderSecurityScopeToken: SecurityScopedAccessToken?
     private var initialMarkdownScanTask: Task<Void, Never>?
+    private var scanProgressTask: Task<Void, Never>?
 
     var currentDocumentFileURLProvider: (() -> URL?)?
     var openDocumentFileURLsProvider: (() -> [URL])?
@@ -33,6 +34,10 @@ final class ReaderFolderWatchController {
     }
 
     private(set) var didInitialMarkdownScanFail = false {
+        didSet { onStateChange?() }
+    }
+
+    private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress? {
         didSet { onStateChange?() }
     }
 
@@ -108,6 +113,14 @@ final class ReaderFolderWatchController {
             settingsStore.addRecentWatchedFolder(accessibleFolderURL, options: options)
             lastWatchedFolderEventAt = nil
 
+            scanProgressTask?.cancel()
+            scanProgressTask = Task { [weak self] in
+                for await progress in folderWatcher.scanProgressStream {
+                    guard !Task.isCancelled else { return }
+                    self?.contentScanProgress = progress
+                }
+            }
+
             guard performInitialAutoOpen,
                   options.openMode == .openAllMarkdownFiles else {
                 isInitialMarkdownScanInProgress = false
@@ -134,6 +147,8 @@ final class ReaderFolderWatchController {
                 applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
             }
         } catch {
+            scanProgressTask?.cancel()
+            scanProgressTask = nil
             folderWatcher.stopWatching()
             folderSecurityScopeToken?.endAccess()
             folderSecurityScopeToken = nil
@@ -142,6 +157,7 @@ final class ReaderFolderWatchController {
             folderWatchAutoOpenWarning = nil
             isInitialMarkdownScanInProgress = false
             didInitialMarkdownScanFail = false
+            contentScanProgress = nil
             throw error
         }
     }
@@ -149,6 +165,8 @@ final class ReaderFolderWatchController {
     func stopWatching() {
         initialMarkdownScanTask?.cancel()
         initialMarkdownScanTask = nil
+        scanProgressTask?.cancel()
+        scanProgressTask = nil
         folderWatcher.stopWatching()
         folderWatchAutoOpenPlanner.resetTransientState()
         folderSecurityScopeToken?.endAccess()
@@ -159,6 +177,7 @@ final class ReaderFolderWatchController {
         pendingFileSelectionRequest = nil
         isInitialMarkdownScanInProgress = false
         didInitialMarkdownScanFail = false
+        contentScanProgress = nil
     }
 
     func dismissFolderWatchAutoOpenWarning() {

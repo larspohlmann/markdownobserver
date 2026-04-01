@@ -19,6 +19,8 @@ struct ReaderFolderWatchChangeEvent: Equatable, Hashable, Codable, Sendable {
 }
 
 protocol FolderChangeWatching: AnyObject, Sendable {
+    var scanProgressStream: AsyncStream<FolderChangeWatcher.ScanProgress> { get }
+
     func startWatching(
         folderURL: URL,
         includeSubfolders: Bool,
