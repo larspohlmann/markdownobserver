@@ -488,6 +488,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         folderURL: URL,
         knownDocumentFileURLs: [URL]
     )
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState)
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)

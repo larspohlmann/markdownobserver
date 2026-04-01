@@ -140,6 +140,29 @@ extension ReaderSettingsStore {
         }
     }
 
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+        updateSettings(coalescePersistence: true) { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+            let existing = settings.favoriteWatchedFolders[index]
+            guard existing.workspaceState != workspaceState else {
+                return
+            }
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: existing.folderPath,
+                options: existing.options,
+                bookmarkData: existing.bookmarkData,
+                openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
+                workspaceState: workspaceState,
+                createdAt: existing.createdAt
+            )
+        }
+    }
+
     func clearFavoriteWatchedFolders() {
         updateSettings { settings in
             settings.favoriteWatchedFolders = []
