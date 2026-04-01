@@ -65,4 +65,83 @@ struct ReaderSidebarDeferredLoadingTests {
 
         #expect(store.lastError != nil || store.fileURL?.path == missingURL.path)
     }
+
+    @Test @MainActor func burstOpenWithFolderWatchOriginCreatesDeferredDocuments() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        #expect(harness.controller.documents.count == 2)
+        // The non-selected document should be deferred
+        let nonSelectedDocuments = harness.controller.documents.filter {
+            $0.id != harness.controller.selectedDocumentID
+        }
+        for document in nonSelectedDocuments {
+            #expect(document.readerStore.isDeferredDocument)
+            #expect(document.readerStore.sourceMarkdown.isEmpty)
+        }
+        // The selected document should have been materialized
+        #expect(!harness.controller.selectedReaderStore.isDeferredDocument)
+    }
+
+    @Test @MainActor func burstOpenWithManualOriginLoadsAllDocumentsFully() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .manual
+        )
+
+        #expect(harness.controller.documents.count == 2)
+        for document in harness.controller.documents {
+            #expect(!document.readerStore.isDeferredDocument)
+            #expect(document.readerStore.fileURL != nil)
+            #expect(!document.readerStore.sourceMarkdown.isEmpty)
+        }
+    }
+
+    @Test @MainActor func selectingDeferredDocumentMaterializesIt() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        // Find the non-selected deferred document
+        let deferredDocument = harness.controller.documents.first {
+            $0.id != harness.controller.selectedDocumentID
+        }!
+        #expect(deferredDocument.readerStore.isDeferredDocument)
+
+        // Select it
+        harness.controller.selectDocument(deferredDocument.id)
+
+        // Now it should be fully loaded
+        #expect(!deferredDocument.readerStore.isDeferredDocument)
+        #expect(!deferredDocument.readerStore.sourceMarkdown.isEmpty)
+        #expect(!deferredDocument.readerStore.renderedHTMLDocument.isEmpty)
+    }
 }
