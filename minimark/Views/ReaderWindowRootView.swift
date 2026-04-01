@@ -22,6 +22,9 @@ struct ReaderWindowRootView: View {
     @State private var uiTestWatchFlowTask: Task<Void, Never>?
     @State private var hasAppliedUITestLaunchConfiguration = false
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
+    @State private var sidebarPinnedGroupIDs: Set<String> = []
+    @State private var sidebarCollapsedGroupIDs: Set<String> = []
+    @State private var sidebarWidth: CGFloat = 250
     @StateObject var windowCoordinator: ReaderWindowCoordinator
     @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
 
@@ -78,6 +81,20 @@ struct ReaderWindowRootView: View {
                     request.options.scope = newValue
                 }
             }
+        )
+    }
+
+    private var fileSortModeBinding: Binding<ReaderSidebarSortMode> {
+        Binding(
+            get: { settingsStore.currentSettings.sidebarSortMode },
+            set: { settingsStore.updateSidebarSortMode($0) }
+        )
+    }
+
+    private var groupSortModeBinding: Binding<ReaderSidebarSortMode> {
+        Binding(
+            get: { settingsStore.currentSettings.sidebarGroupSortMode },
+            set: { settingsStore.updateSidebarGroupSortMode($0) }
         )
     }
 
@@ -259,6 +276,11 @@ struct ReaderWindowRootView: View {
             controller: sidebarDocumentController,
             settingsStore: settingsStore,
             sidebarPlacement: sidebarPlacement,
+            collapsedGroupIDs: $sidebarCollapsedGroupIDs,
+            pinnedGroupIDs: $sidebarPinnedGroupIDs,
+            fileSortMode: fileSortModeBinding,
+            groupSortMode: groupSortModeBinding,
+            sidebarWidth: $sidebarWidth,
             detail: { store in
                 contentView(for: store)
             },
