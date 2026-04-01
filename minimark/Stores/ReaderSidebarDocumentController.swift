@@ -455,7 +455,9 @@ final class ReaderSidebarDocumentController: ObservableObject {
             self?.selectedReaderStore.fileURL
         }
         folderWatchController.openDocumentFileURLsProvider = { [weak self] in
-            self?.documents.compactMap { $0.readerStore.fileURL } ?? []
+            self?.documents.compactMap { document in
+                document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
+            } ?? []
         }
         folderWatchController.openEventsHandler = { [weak self] events, session, origin in
             self?.openDocumentsBurst(
