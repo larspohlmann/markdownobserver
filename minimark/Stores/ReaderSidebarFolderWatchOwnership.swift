@@ -71,7 +71,9 @@ final class ReaderFolderWatchController {
             settingsStore: settingsStore,
             securityScope: SecurityScopedResourceAccess(),
             systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+            )
         )
     }
 

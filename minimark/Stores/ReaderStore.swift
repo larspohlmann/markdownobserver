@@ -126,16 +126,19 @@ final class ReaderStore: ObservableObject {
 
     convenience init() {
         let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settingsStore = ReaderSettingsStore()
         self.init(
             renderer: MarkdownRenderingService(),
             differ: ChangedRegionDiffer(),
             fileWatcher: FileChangeWatcher(),
             folderWatcher: FolderChangeWatcher(),
-            settingsStore: ReaderSettingsStore(),
+            settingsStore: settingsStore,
             securityScope: SecurityScopedResourceAccess(),
             fileActions: ReaderFileActionService(),
             systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+            ),
             settler: settler
         )
         configureSettler(settler)
@@ -152,7 +155,9 @@ final class ReaderStore: ObservableObject {
             securityScope: SecurityScopedResourceAccess(),
             fileActions: ReaderFileActionService(),
             systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+            ),
             settler: settler
         )
         configureSettler(settler)
