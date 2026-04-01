@@ -227,4 +227,109 @@ struct ReaderSidebarDeferredLoadingTests {
 
         #expect(harness.controller.documents.count == countBefore)
     }
+
+    // MARK: - Regression: external changes to deferred documents
+
+    @Test @MainActor func liveChangeEventFullyLoadsDeferredDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        // Find the deferred (non-selected) document
+        let deferredDocument = harness.controller.documents.first {
+            $0.readerStore.isDeferredDocument
+        }!
+        #expect(deferredDocument.readerStore.sourceMarkdown.isEmpty)
+
+        // Simulate a live folder-watch change event for the deferred file
+        harness.controller.openAdditionalDocument(
+            at: deferredDocument.readerStore.fileURL!,
+            origin: .folderWatchAutoOpen,
+            folderWatchSession: session,
+            initialDiffBaselineMarkdown: "# Old content"
+        )
+
+        // The deferred document should now be fully loaded
+        #expect(!deferredDocument.readerStore.isDeferredDocument)
+        #expect(!deferredDocument.readerStore.sourceMarkdown.isEmpty)
+        #expect(!deferredDocument.readerStore.renderedHTMLDocument.isEmpty)
+    }
+
+    @Test @MainActor func liveChangeEventShowsIndicatorForDeferredDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        let deferredDocument = harness.controller.documents.first {
+            $0.readerStore.isDeferredDocument
+        }!
+
+        // Simulate a live change with a diff baseline (file was modified)
+        harness.controller.openAdditionalDocument(
+            at: deferredDocument.readerStore.fileURL!,
+            origin: .folderWatchAutoOpen,
+            folderWatchSession: session,
+            initialDiffBaselineMarkdown: "# Old content"
+        )
+
+        // The yellow change indicator should be visible
+        #expect(deferredDocument.readerStore.hasUnacknowledgedExternalChange)
+    }
+
+    @Test @MainActor func liveAddEventDoesNotShowIndicatorForDeferredDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        harness.controller.openDocumentsBurst(
+            at: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true
+        )
+
+        let deferredDocument = harness.controller.documents.first {
+            $0.readerStore.isDeferredDocument
+        }!
+
+        // Simulate a live event without a diff baseline (new file, not a modification)
+        harness.controller.openAdditionalDocument(
+            at: deferredDocument.readerStore.fileURL!,
+            origin: .folderWatchAutoOpen,
+            folderWatchSession: session,
+            initialDiffBaselineMarkdown: nil
+        )
+
+        // No yellow indicator — this wasn't a modification
+        #expect(!deferredDocument.readerStore.hasUnacknowledgedExternalChange)
+    }
 }
