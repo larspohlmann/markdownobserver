@@ -393,10 +393,10 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(deferredDocument.readerStore.documentLoadState == .loading)
         #expect(deferredDocument.readerStore.sourceMarkdown.isEmpty)
 
-        // After yielding: the Task completes and the document is fully loaded
-        // The inner Task yields once before materializing, so we need multiple yields
+        // After yielding: the Task completes and the document content is loaded.
+        // State may still be .loading due to holdLoadingOverlayBriefly() keeping the
+        // overlay visible for the WKWebView to render.
         for _ in 0..<5 { await Task.yield() }
-        #expect(deferredDocument.readerStore.documentLoadState == .ready || deferredDocument.readerStore.documentLoadState == .settlingAutoOpen)
         #expect(!deferredDocument.readerStore.sourceMarkdown.isEmpty)
         #expect(!deferredDocument.readerStore.renderedHTMLDocument.isEmpty)
     }
@@ -434,9 +434,9 @@ struct ReaderSidebarDeferredLoadingTests {
         // Immediately: state should be .loading
         #expect(store.documentLoadState == .loading)
 
-        // After yields: fully loaded
+        // After yields: content is loaded. State may still be .loading due to
+        // holdLoadingOverlayBriefly() keeping the overlay visible briefly.
         for _ in 0..<5 { await Task.yield() }
-        #expect(store.documentLoadState == .ready || store.documentLoadState == .settlingAutoOpen)
         #expect(!store.sourceMarkdown.isEmpty)
     }
 }

@@ -310,6 +310,28 @@ final class ReaderStore: ObservableObject {
         documentLoadState = .ready
     }
 
+    private var loadingOverlayHoldGeneration: UInt = 0
+
+    func holdLoadingOverlayBriefly() {
+        // After file I/O completes the settler sets .ready immediately,
+        // but the WKWebView still needs time to render.  Re-enter .loading
+        // briefly so the overlay stays visible while the web view catches up.
+        guard documentLoadState == .ready || documentLoadState == .settlingAutoOpen else { return }
+        let savedState = documentLoadState
+        transitionToLoading()
+
+        loadingOverlayHoldGeneration &+= 1
+        let generation = loadingOverlayHoldGeneration
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self, self.loadingOverlayHoldGeneration == generation else { return }
+            if self.documentLoadState == .loading {
+                self.documentLoadState = savedState
+            }
+        }
+    }
+
     func clearOpenDocument() {
         cancelPendingDraftPreviewRender()
         fileWatcher.stopWatching()

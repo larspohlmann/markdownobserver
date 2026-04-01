@@ -94,6 +94,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             Task { @MainActor in
                 await Task.yield()
                 store.materializeDeferredDocument()
+                store.holdLoadingOverlayBriefly()
             }
         } else {
             bindSelectedStore()
@@ -129,7 +130,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 folderWatchSession: effectiveFolderWatchSession,
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
             )
-            document.readerStore.clearLoadingState()
+            document.readerStore.holdLoadingOverlayBriefly()
         }
     }
 
@@ -157,6 +158,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
                         folderWatchSession: effectiveSession,
                         initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
                     )
+                    store.holdLoadingOverlayBriefly()
                 }
             } else {
                 selectDocument(existingDocument.id)
@@ -242,6 +244,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             Task { @MainActor in
                 await Task.yield()
                 store.materializeDeferredDocument()
+                store.holdLoadingOverlayBriefly()
             }
         }
     }
