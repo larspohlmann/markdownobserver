@@ -889,13 +889,7 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
     let sourceSurface: SourceSurface
 
     var body: some View {
-        if showsLoadingOverlay {
-            DocumentLoadingOverlay(
-                theme: currentReaderTheme,
-                headline: loadingOverlayHeadline,
-                subtitle: loadingOverlaySubtitle
-            )
-        } else {
+        ZStack {
             switch documentViewMode {
             case .preview:
                 previewSurface
@@ -906,6 +900,14 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
                 }
             case .source:
                 sourceSurface
+            }
+
+            if showsLoadingOverlay {
+                DocumentLoadingOverlay(
+                    theme: currentReaderTheme,
+                    headline: loadingOverlayHeadline,
+                    subtitle: loadingOverlaySubtitle
+                )
             }
         }
     }
