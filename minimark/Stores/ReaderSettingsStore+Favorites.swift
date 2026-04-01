@@ -89,8 +89,11 @@ extension ReaderSettingsStore {
                 from: knownDocumentFileURLs,
                 relativeTo: folderURL,
                 options: existing.options
+            )
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
             ).sorted()
-            guard existing.allKnownRelativePaths != scopedRelativePaths else {
+            guard existing.allKnownRelativePaths != updatedKnownPaths else {
                 return
             }
 
@@ -101,7 +104,7 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
-                allKnownRelativePaths: scopedRelativePaths,
+                allKnownRelativePaths: updatedKnownPaths,
                 createdAt: existing.createdAt
             )
         }

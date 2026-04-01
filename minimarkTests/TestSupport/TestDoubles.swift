@@ -262,6 +262,9 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             from: knownDocumentFileURLs,
             relativeTo: folderURL,
             options: existing.options
+        )
+        let updatedKnownPaths = Array(
+            Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
         ).sorted()
         next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
             id: existing.id,
@@ -270,7 +273,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             options: existing.options,
             bookmarkData: existing.bookmarkData,
             openDocumentRelativePaths: existing.openDocumentRelativePaths,
-            allKnownRelativePaths: scopedRelativePaths,
+            allKnownRelativePaths: updatedKnownPaths,
             createdAt: existing.createdAt
         )
 
