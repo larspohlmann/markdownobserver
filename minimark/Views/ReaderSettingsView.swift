@@ -81,6 +81,21 @@ struct ReaderSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Change Highlighting") {
+                Picker("Diff lookback", selection: Binding(
+                    get: { settings.diffBaselineLookback },
+                    set: { settingsStore.updateDiffBaselineLookback($0) }
+                )) {
+                    ForEach(DiffBaselineLookback.allCases) { lookback in
+                        Text(lookback.displayName).tag(lookback)
+                    }
+                }
+
+                Text("How far back MarkdownObserver looks for the previous version of a file when highlighting changes. Longer values show more accumulated changes, which works better with AI tools that make many incremental edits.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Notifications") {
                 Toggle("System notifications", isOn: Binding(
                     get: { settings.notificationsEnabled },

@@ -383,6 +383,12 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
+    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) {
+        var next = subject.value
+        next.diffBaselineLookback = lookback
+        subject.send(next)
+    }
+
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         let filePath = normalizedFileURL.path
