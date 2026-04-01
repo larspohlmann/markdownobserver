@@ -138,6 +138,9 @@ final class ReaderSidebarDocumentController: ObservableObject {
                     folderWatchSession: effectiveSession,
                     initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
                 )
+                if initialDiffBaselineMarkdown != nil {
+                    existingDocument.readerStore.noteObservedExternalChange()
+                }
             }
             selectDocument(existingDocument.id)
             return
