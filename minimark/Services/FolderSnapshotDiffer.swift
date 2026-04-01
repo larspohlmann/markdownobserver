@@ -19,6 +19,12 @@ protocol FolderSnapshotDiffing: Sendable {
         previous: [URL: FolderFileSnapshot]
     ) -> [ReaderFolderWatchChangeEvent]
 
+    func buildMetadataSnapshot(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL]
+    ) throws -> [URL: FolderFileSnapshot]
+
     func markdownFiles(
         in folderURL: URL,
         includeSubfolders: Bool,
@@ -44,6 +50,28 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
 
         for url in markdownURLs {
             snapshot[url] = FolderFileSnapshot(url: url)
+        }
+
+        return snapshot
+    }
+
+    func buildMetadataSnapshot(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL]
+    ) throws -> [URL: FolderFileSnapshot] {
+        let markdownURLs = try enumerateMarkdownFiles(
+            folderURL: folderURL,
+            includeSubfolders: includeSubfolders,
+            exclusionMatcher: FolderWatchExclusionMatcher(
+                rootFolderURL: folderURL,
+                excludedSubdirectoryURLs: excludedSubdirectoryURLs
+            )
+        )
+
+        var snapshot: [URL: FolderFileSnapshot] = [:]
+        for url in markdownURLs {
+            snapshot[url] = FolderFileSnapshot(metadata: FolderFileMetadata(url: url))
         }
 
         return snapshot
@@ -275,6 +303,30 @@ struct FolderFileSnapshot: Equatable {
         modificationDate = metadata.modificationDate
         resourceIdentity = metadata.resourceIdentity
         markdown = metadata.exists ? (try? String(contentsOf: url, encoding: .utf8)) : nil
+    }
+
+    init(metadata: FolderFileMetadata) {
+        fileSize = metadata.fileSize
+        modificationDate = metadata.modificationDate
+        resourceIdentity = metadata.resourceIdentity
+        markdown = nil
+    }
+
+    private init(fileSize: UInt64, modificationDate: Date, resourceIdentity: String, markdown: String?) {
+        self.fileSize = fileSize
+        self.modificationDate = modificationDate
+        self.resourceIdentity = resourceIdentity
+        self.markdown = markdown
+    }
+
+    func withContent(from url: URL) -> FolderFileSnapshot {
+        let content = (try? String(contentsOf: url, encoding: .utf8))
+        return FolderFileSnapshot(
+            fileSize: fileSize,
+            modificationDate: modificationDate,
+            resourceIdentity: resourceIdentity,
+            markdown: content
+        )
     }
 
     func matches(metadata: FolderFileMetadata) -> Bool {
