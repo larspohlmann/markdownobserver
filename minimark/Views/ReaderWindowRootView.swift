@@ -24,7 +24,7 @@ struct ReaderWindowRootView: View {
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
     @State var sidebarPinnedGroupIDs: Set<String> = []
     @State var sidebarCollapsedGroupIDs: Set<String> = []
-    @State var sidebarWidth: CGFloat = ReaderFavoriteWorkspaceState.defaultSidebarWidth
+    @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     @State var activeFavoriteID: UUID?
     @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
     @StateObject var windowCoordinator: ReaderWindowCoordinator
@@ -213,16 +213,13 @@ struct ReaderWindowRootView: View {
             .onChange(of: sidebarPinnedGroupIDs) { _, newValue in
                 if activeFavoriteWorkspaceState != nil {
                     activeFavoriteWorkspaceState?.pinnedGroupIDs = newValue
+                    activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
                 }
             }
             .onChange(of: sidebarCollapsedGroupIDs) { _, newValue in
                 if activeFavoriteWorkspaceState != nil {
                     activeFavoriteWorkspaceState?.collapsedGroupIDs = newValue
-                }
-            }
-            .onChange(of: sidebarWidth) { _, newValue in
-                if activeFavoriteWorkspaceState != nil, newValue > 0 {
-                    activeFavoriteWorkspaceState?.sidebarWidth = newValue
+                    activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
                 }
             }
             .onChange(of: activeFavoriteWorkspaceState) { _, newState in

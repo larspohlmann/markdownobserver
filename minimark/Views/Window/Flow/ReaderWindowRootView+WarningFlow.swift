@@ -18,11 +18,12 @@ extension ReaderWindowRootView {
 
     func stopFolderWatch() {
         dismissFolderWatchAutoOpenWarning()
+        persistFinalWorkspaceStateIfNeeded()
         activeFavoriteID = nil
         activeFavoriteWorkspaceState = nil
         sidebarPinnedGroupIDs = []
         sidebarCollapsedGroupIDs = []
-        sidebarWidth = ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
         sidebarDocumentController.stopFolderWatch()
         refreshWindowPresentation()
         cancelFolderWatch()

@@ -449,10 +449,36 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         multiFileDisplayMode = try container.decode(ReaderMultiFileDisplayMode.self, forKey: .multiFileDisplayMode)
         sidebarSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarSortMode) ?? .openOrder
         sidebarGroupSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarGroupSortMode) ?? .lastChangedNewestFirst
-        favoriteWatchedFolders = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
+        let decodedFavorites = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
         recentWatchedFolders = try container.decodeIfPresent([ReaderRecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
         recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
         trustedImageFolders = try container.decodeIfPresent([ReaderTrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
+
+        // Migrate legacy favorites: replace hardcoded-default workspace state with decoded global settings
+        let legacyDefaultState = ReaderFavoriteWorkspaceState.from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
+        let globalWorkspaceState = ReaderFavoriteWorkspaceState(
+            fileSortMode: sidebarSortMode,
+            groupSortMode: sidebarGroupSortMode,
+            sidebarPosition: multiFileDisplayMode,
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: []
+        )
+        if legacyDefaultState != globalWorkspaceState {
+            favoriteWatchedFolders = decodedFavorites.map { favorite in
+                guard favorite.workspaceState == legacyDefaultState else { return favorite }
+                var patched = favorite
+                patched.workspaceState = globalWorkspaceState
+                return patched
+            }
+        } else {
+            favoriteWatchedFolders = decodedFavorites
+        }
     }
 }
 

@@ -234,11 +234,12 @@ extension ReaderWindowRootView {
                 $0.id == activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
             }
             if !matchesActiveFavorite {
+                persistFinalWorkspaceStateIfNeeded()
                 activeFavoriteID = nil
                 activeFavoriteWorkspaceState = nil
                 sidebarPinnedGroupIDs = []
                 sidebarCollapsedGroupIDs = []
-                sidebarWidth = ReaderFavoriteWorkspaceState.defaultSidebarWidth
+                sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
             }
         }
 
@@ -305,8 +306,17 @@ extension ReaderWindowRootView {
     func toggleSidebarPlacement() {
         if let current = activeFavoriteWorkspaceState?.sidebarPosition {
             activeFavoriteWorkspaceState?.sidebarPosition = current.toggledSidebarPlacementMode
+            activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
         } else {
             settingsStore.updateMultiFileDisplayMode(multiFileDisplayMode.toggledSidebarPlacementMode)
         }
+    }
+
+    func persistFinalWorkspaceStateIfNeeded() {
+        guard let favoriteID = activeFavoriteID, var state = activeFavoriteWorkspaceState else {
+            return
+        }
+        state.sidebarWidth = sidebarWidth
+        settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
     }
 }

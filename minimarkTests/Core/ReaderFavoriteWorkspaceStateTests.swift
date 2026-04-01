@@ -138,4 +138,34 @@ struct ReaderFavoriteWorkspaceStateTests {
         #expect(persisted.workspaceState.sidebarWidth == 300)
         #expect(persisted.name == "RoundTrip") // other fields unchanged
     }
+
+    @Test func legacyMigrationUsesDecodedGlobalSettings() throws {
+        // Simulate settings with customized globals and a legacy favorite (no workspaceState key)
+        var settings = ReaderSettings.default
+        settings.sidebarSortMode = .nameAscending
+        settings.sidebarGroupSortMode = .nameDescending
+        settings.multiFileDisplayMode = .sidebarRight
+
+        let favorite = ReaderFavoriteWatchedFolder(
+            name: "Legacy",
+            folderPath: "/tmp/legacy",
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .selectedFolderOnly,
+                excludedSubdirectoryPaths: []
+            ),
+            bookmarkData: nil,
+            createdAt: .now
+        )
+        settings.favoriteWatchedFolders = [favorite]
+
+        // Encode, then decode — simulates upgrade path where favorite has default workspace state
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+
+        let migrated = decoded.favoriteWatchedFolders.first!
+        #expect(migrated.workspaceState.fileSortMode == .nameAscending)
+        #expect(migrated.workspaceState.groupSortMode == .nameDescending)
+        #expect(migrated.workspaceState.sidebarPosition == .sidebarRight)
+    }
 }
