@@ -496,6 +496,8 @@ struct ContentView: View {
         DocumentSurfaceLayoutView(
             documentViewMode: readerStore.documentViewMode,
             showsLoadingOverlay: shouldShowDocumentLoadingOverlay,
+            loadingOverlayHeadline: loadingOverlayHeadline,
+            loadingOverlaySubtitle: loadingOverlaySubtitle,
             currentReaderTheme: currentReaderTheme,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
@@ -528,7 +530,25 @@ struct ContentView: View {
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
-        readerStore.documentLoadState == .settlingAutoOpen
+        readerStore.documentLoadState == .loading || readerStore.documentLoadState == .settlingAutoOpen
+    }
+
+    private var loadingOverlayHeadline: String {
+        switch readerStore.documentLoadState {
+        case .settlingAutoOpen:
+            return "Waiting for file contents\u{2026}"
+        default:
+            return "Loading document\u{2026}"
+        }
+    }
+
+    private var loadingOverlaySubtitle: String? {
+        switch readerStore.documentLoadState {
+        case .settlingAutoOpen:
+            return "The new watched document will appear as soon as writing finishes."
+        default:
+            return nil
+        }
     }
 
     private var isDragTargeted: Bool {
@@ -862,13 +882,19 @@ private struct FolderDropBlockedOverlayView: View {
 private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
     let documentViewMode: ReaderDocumentViewMode
     let showsLoadingOverlay: Bool
+    let loadingOverlayHeadline: String
+    let loadingOverlaySubtitle: String?
     let currentReaderTheme: ReaderTheme
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
 
     var body: some View {
         if showsLoadingOverlay {
-            DocumentLoadingOverlay(theme: currentReaderTheme)
+            DocumentLoadingOverlay(
+                theme: currentReaderTheme,
+                headline: loadingOverlayHeadline,
+                subtitle: loadingOverlaySubtitle
+            )
         } else {
             switch documentViewMode {
             case .preview:
