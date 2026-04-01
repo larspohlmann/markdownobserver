@@ -69,7 +69,7 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.selectedReaderStore.fileURL?.path == harness.primaryFileURL.path)
     }
 
-    @Test @MainActor func sidebarControllerDoesNotKeepBlankDocumentWhenWatchedOpenFails() throws {
+    @Test @MainActor func sidebarControllerDefersWatchedOpenForMissingFile() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -88,11 +88,14 @@ struct ReaderSidebarDocumentControllerTests {
             preferEmptySelection: false
         )
 
-        #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.fileURL == nil)
+        // With deferred loading, folder-watch opens create a deferred tab even for missing files.
+        // The missing file is only detected when the tab is materialized (selected).
+        #expect(harness.controller.documents.count == 2)
+        #expect(harness.controller.selectedReaderStore.fileURL?.path == missingFileURL.path)
+        #expect(harness.controller.selectedReaderStore.isDeferredDocument)
     }
 
-    @Test @MainActor func sidebarControllerFailedWatchedOpenKeepsActiveFolderWatchSession() throws {
+    @Test @MainActor func sidebarControllerDeferredWatchedOpenKeepsActiveFolderWatchSession() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -100,7 +103,7 @@ struct ReaderSidebarDocumentControllerTests {
             folderURL: harness.temporaryDirectoryURL,
             options: .default
         )
-        let stopCallCountBeforeFailedOpen = harness.folderWatchControllerWatcher.stopCallCount
+        let stopCallCountBeforeDeferredOpen = harness.folderWatchControllerWatcher.stopCallCount
 
         let missingFileURL = harness.temporaryDirectoryURL
             .appendingPathComponent("nested", isDirectory: true)
@@ -113,11 +116,14 @@ struct ReaderSidebarDocumentControllerTests {
             preferEmptySelection: false
         )
 
-        #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.fileURL == nil)
+        // With deferred loading, the document is created as a deferred tab.
+        #expect(harness.controller.documents.count == 2)
+        #expect(harness.controller.selectedReaderStore.fileURL?.path == missingFileURL.path)
+        #expect(harness.controller.selectedReaderStore.isDeferredDocument)
+        // Folder watch session remains active and was not stopped.
         #expect(harness.controller.canStopFolderWatch)
         #expect(harness.controller.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
-        #expect(harness.folderWatchControllerWatcher.stopCallCount == stopCallCountBeforeFailedOpen)
+        #expect(harness.folderWatchControllerWatcher.stopCallCount == stopCallCountBeforeDeferredOpen)
     }
 
     @Test @MainActor func sidebarControllerSurfacesInitialScanFailureState() async throws {
