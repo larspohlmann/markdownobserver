@@ -71,6 +71,12 @@ struct FolderChangeWatcherFailure: Equatable, Sendable {
 }
 
 final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
+    struct ScanProgress: Equatable, Sendable {
+        let completed: Int
+        let total: Int
+        var isFinished: Bool { completed == total }
+    }
+
     private static let adaptiveSafetyPollingIdleCyclesPerStep = 3
     private static let adaptiveSafetyPollingMaximumMultiplier = 4
     private static let adaptiveSafetyPollingMaximumUnsignaledSkips = 2
@@ -111,6 +117,8 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var lastReportedFailureByStage: [FolderChangeWatcherFailure.Stage: String] = [:]
     private var startupSequence: UInt64 = 0
     private var didCompleteStartup = false
+    private var scanProgressContinuation: AsyncStream<ScanProgress>.Continuation?
+    private var _scanProgressStream: AsyncStream<ScanProgress>?
 
     convenience init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
@@ -190,6 +198,10 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             unsignaledVerificationSkipCycles = 0
             hasPendingFileSystemSignal = true
 
+            let (stream, continuation) = AsyncStream.makeStream(of: ScanProgress.self)
+            _scanProgressStream = stream
+            scanProgressContinuation = continuation
+
             return nextSequence
         }
 
@@ -228,6 +240,9 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.unsignaledVerificationSkipCycles = 0
             self.hasPendingFileSystemSignal = false
             self.didCompleteStartup = false
+            self.scanProgressContinuation?.finish()
+            self.scanProgressContinuation = nil
+            self._scanProgressStream = nil
             self.startupSequence &+= 1
         }
 
@@ -250,7 +265,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
         let snapshot: [URL: FolderFileSnapshot]
         do {
-            snapshot = try snapshotDiffer.buildSnapshot(
+            snapshot = try snapshotDiffer.buildMetadataSnapshot(
                 folderURL: folderURL,
                 includeSubfolders: includeSubfolders,
                 excludedSubdirectoryURLs: excludedSubdirectoryURLs
@@ -277,6 +292,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         didCompleteStartup = true
         reconfigureTimerIfNeeded()
         scheduleVerification()
+        populateContentPhase(startupSequence: startupSequence)
     }
 
     func markdownFiles(
@@ -337,6 +353,54 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         return queue.sync { didCompleteStartup }
+    }
+
+    var scanProgressStream: AsyncStream<ScanProgress> {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            return _scanProgressStream ?? emptyFinishedStream()
+        }
+        return queue.sync { _scanProgressStream ?? emptyFinishedStream() }
+    }
+
+    private func emptyFinishedStream() -> AsyncStream<ScanProgress> {
+        AsyncStream { continuation in
+            continuation.yield(ScanProgress(completed: 0, total: 0))
+            continuation.finish()
+        }
+    }
+
+    private func populateContentPhase(startupSequence: UInt64) {
+        let urls = Array(lastSnapshot.keys)
+        let total = urls.count
+
+        if total == 0 {
+            scanProgressContinuation?.yield(ScanProgress(completed: 0, total: 0))
+            scanProgressContinuation?.finish()
+            scanProgressContinuation = nil
+            return
+        }
+
+        var completed = 0
+        for url in urls {
+            guard startupSequence == self.startupSequence else {
+                scanProgressContinuation?.finish()
+                scanProgressContinuation = nil
+                return
+            }
+
+            guard let existing = lastSnapshot[url], existing.markdown == nil else {
+                completed += 1
+                scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
+                continue
+            }
+
+            lastSnapshot[url] = existing.withContent(from: url)
+            completed += 1
+            scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
+        }
+
+        scanProgressContinuation?.finish()
+        scanProgressContinuation = nil
     }
 
     private func scheduleVerification() {
