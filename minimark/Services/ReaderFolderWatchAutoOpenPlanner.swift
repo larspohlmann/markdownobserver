@@ -19,6 +19,7 @@ protocol ReaderFolderWatchAutoOpenPlanning: AnyObject {
     ) -> ReaderFolderWatchAutoOpenPlan
 
     func resetTransientState()
+    func updateMinimumDiffBaselineAge(_ age: TimeInterval)
 }
 
 private struct AutoOpenDiffBaselineRecord {
@@ -27,7 +28,7 @@ private struct AutoOpenDiffBaselineRecord {
 }
 
 final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning {
-    private let minimumDiffBaselineAge: TimeInterval
+    private var minimumDiffBaselineAge: TimeInterval
     private let nowProvider: () -> Date
     private let maximumHistoryDepth = 32
     private var baselineHistoryByFileURL: [URL: [AutoOpenDiffBaselineRecord]] = [:]
@@ -121,6 +122,10 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
 
     func resetTransientState() {
         baselineHistoryByFileURL = [:]
+    }
+
+    func updateMinimumDiffBaselineAge(_ age: TimeInterval) {
+        minimumDiffBaselineAge = max(0, age)
     }
 
     private func eligibleEvents(

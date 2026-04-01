@@ -37,6 +37,9 @@ extension ReaderStore {
         setFolderWatchAutoOpenWarning(nil)
         pendingFileSelectionRequest = nil
         folderWatchAutoOpenPlanner.resetTransientState()
+        folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(
+            settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        )
     }
 
     private func activateFolderWatch(

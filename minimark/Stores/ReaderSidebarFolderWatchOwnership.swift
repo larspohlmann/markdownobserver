@@ -90,6 +90,9 @@ final class ReaderFolderWatchController {
         folderWatchAutoOpenWarning = nil
         pendingFileSelectionRequest = nil
         folderWatchAutoOpenPlanner.resetTransientState()
+        folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(
+            settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        )
         didInitialMarkdownScanFail = false
 
         let accessibleFolderURL = folderURL
