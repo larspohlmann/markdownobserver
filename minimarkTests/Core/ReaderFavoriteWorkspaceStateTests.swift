@@ -56,4 +56,86 @@ struct ReaderFavoriteWorkspaceStateTests {
         #expect(state.collapsedGroupIDs == ["collapsed1", "collapsed2"])
         #expect(state.sidebarWidth == 350)
     }
+
+    @Test func favoriteWithWorkspaceStateRoundTripsViaReaderSettings() throws {
+        let workspaceState = ReaderFavoriteWorkspaceState(
+            fileSortMode: .lastChangedOldestFirst,
+            groupSortMode: .nameDescending,
+            sidebarPosition: .sidebarRight,
+            sidebarWidth: 275,
+            pinnedGroupIDs: ["dir1", "dir2"],
+            collapsedGroupIDs: ["dir3"]
+        )
+
+        let favorite = ReaderFavoriteWatchedFolder(
+            name: "Integration Test",
+            folderPath: "/tmp/integration",
+            options: ReaderFolderWatchOptions(
+                openMode: .openAllMarkdownFiles,
+                scope: .includeSubfolders,
+                excludedSubdirectoryPaths: []
+            ),
+            bookmarkData: nil,
+            openDocumentRelativePaths: ["a.md", "b.md"],
+            allKnownRelativePaths: ["a.md", "b.md", "c.md"],
+            workspaceState: workspaceState,
+            createdAt: .now
+        )
+
+        var settings = ReaderSettings.default
+        settings.favoriteWatchedFolders = [favorite]
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+
+        let restoredFavorite = decoded.favoriteWatchedFolders.first!
+        #expect(restoredFavorite.workspaceState == workspaceState)
+        #expect(restoredFavorite.workspaceState.fileSortMode == .lastChangedOldestFirst)
+        #expect(restoredFavorite.workspaceState.pinnedGroupIDs == ["dir1", "dir2"])
+        #expect(restoredFavorite.workspaceState.sidebarWidth == 275)
+    }
+
+    @Test @MainActor func workspaceStateUpdatePersistsAndRoundTrips() {
+        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let folderURL = URL(fileURLWithPath: "/tmp/roundtrip")
+        let options = ReaderFolderWatchOptions(
+            openMode: .watchChangesOnly,
+            scope: .selectedFolderOnly,
+            excludedSubdirectoryPaths: []
+        )
+
+        store.addFavoriteWatchedFolder(
+            name: "RoundTrip",
+            folderURL: folderURL,
+            options: options,
+            workspaceState: .from(
+                settings: .default,
+                pinnedGroupIDs: [],
+                collapsedGroupIDs: [],
+                sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            )
+        )
+
+        let favoriteID = store.currentSettings.favoriteWatchedFolders.first!.id
+
+        // Initial workspace state should have defaults
+        let initial = store.currentSettings.favoriteWatchedFolders.first!.workspaceState
+        #expect(initial.pinnedGroupIDs.isEmpty)
+        #expect(initial.collapsedGroupIDs.isEmpty)
+
+        // Update workspace state
+        var updated = initial
+        updated.fileSortMode = .nameAscending
+        updated.pinnedGroupIDs = ["group1"]
+        updated.sidebarWidth = 300
+
+        store.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: updated)
+
+        // Verify persisted
+        let persisted = store.currentSettings.favoriteWatchedFolders.first!
+        #expect(persisted.workspaceState.fileSortMode == .nameAscending)
+        #expect(persisted.workspaceState.pinnedGroupIDs == ["group1"])
+        #expect(persisted.workspaceState.sidebarWidth == 300)
+        #expect(persisted.name == "RoundTrip") // other fields unchanged
+    }
 }
