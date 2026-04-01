@@ -364,7 +364,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
     private func emptyFinishedStream() -> AsyncStream<ScanProgress> {
         AsyncStream { continuation in
-            continuation.yield(ScanProgress(completed: 0, total: 0))
             continuation.finish()
         }
     }
