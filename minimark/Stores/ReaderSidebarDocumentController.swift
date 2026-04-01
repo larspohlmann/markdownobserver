@@ -19,6 +19,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var isFolderWatchInitialScanInProgress: Bool
     @Published private(set) var didFolderWatchInitialScanFail: Bool
     @Published private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
+    @Published private(set) var scannedFileCount: Int?
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
@@ -49,6 +50,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         isFolderWatchInitialScanInProgress = false
         didFolderWatchInitialScanFail = false
         contentScanProgress = nil
+        scannedFileCount = nil
         synchronizeDocumentChangeObservers()
         configureFolderWatchController()
         bindSelectedStore()
@@ -492,5 +494,6 @@ final class ReaderSidebarDocumentController: ObservableObject {
         isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
         didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
         contentScanProgress = folderWatchController.contentScanProgress
+        scannedFileCount = folderWatchController.scannedFileCount
     }
 }

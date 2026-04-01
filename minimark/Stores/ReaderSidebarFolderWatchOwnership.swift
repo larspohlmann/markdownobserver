@@ -41,6 +41,10 @@ final class ReaderFolderWatchController {
         didSet { onStateChange?() }
     }
 
+    private(set) var scannedFileCount: Int? {
+        didSet { onStateChange?() }
+    }
+
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
         didSet { onStateChange?() }
     }
@@ -115,10 +119,19 @@ final class ReaderFolderWatchController {
 
             scanProgressTask?.cancel()
             scanProgressTask = Task { [weak self] in
+                var lastProgress: FolderChangeWatcher.ScanProgress?
                 for await progress in folderWatcher.scanProgressStream {
                     guard !Task.isCancelled else { return }
                     self?.contentScanProgress = progress
+                    lastProgress = progress
                 }
+                guard !Task.isCancelled else { return }
+                if let lastProgress {
+                    self?.scannedFileCount = lastProgress.total
+                }
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                self?.contentScanProgress = nil
             }
 
             guard performInitialAutoOpen,
@@ -178,6 +191,7 @@ final class ReaderFolderWatchController {
         isInitialMarkdownScanInProgress = false
         didInitialMarkdownScanFail = false
         contentScanProgress = nil
+        scannedFileCount = nil
     }
 
     func dismissFolderWatchAutoOpenWarning() {
