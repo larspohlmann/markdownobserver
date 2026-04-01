@@ -96,6 +96,20 @@ extension ReaderStore {
         )
     }
 
+    func materializeDeferredDocument() {
+        guard isDeferredDocument, let url = fileURL else {
+            return
+        }
+
+        clearDeferredLoadState()
+
+        openFile(
+            at: url,
+            origin: currentOpenOrigin,
+            folderWatchSession: activeFolderWatchSession
+        )
+    }
+
     func handleIncomingOpenURL(_ url: URL) {
         handleIncomingOpenURL(url, origin: .manual)
     }
