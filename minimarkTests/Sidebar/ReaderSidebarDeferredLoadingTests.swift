@@ -333,6 +333,28 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(!deferredDocument.readerStore.hasUnacknowledgedExternalChange)
     }
 
+    @Test @MainActor func materializeDeferredDocumentWorksFromLoadingState() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let store = harness.controller.documents[0].readerStore
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
+        store.transitionToLoading()
+        #expect(store.documentLoadState == .loading)
+
+        store.materializeDeferredDocument()
+
+        #expect(store.documentLoadState == .ready || store.documentLoadState == .settlingAutoOpen)
+        #expect(!store.sourceMarkdown.isEmpty)
+        #expect(!store.renderedHTMLDocument.isEmpty)
+    }
+
     @Test @MainActor func transitionToLoadingSetsLoadingState() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
