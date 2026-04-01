@@ -292,6 +292,9 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         didCompleteStartup = true
         reconfigureTimerIfNeeded()
         scheduleVerification()
+        // populateContentPhase runs synchronously on `queue`, so the
+        // verifyChanges work item scheduled above cannot execute until
+        // content population is complete.
         populateContentPhase(startupSequence: startupSequence)
     }
 
