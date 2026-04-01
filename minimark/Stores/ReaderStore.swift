@@ -300,11 +300,6 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    func clearDeferredLoadState() {
-        guard documentLoadState == .deferred else { return }
-        documentLoadState = .ready
-    }
-
     func transitionToLoading() {
         guard documentLoadState == .deferred || documentLoadState == .ready else { return }
         documentLoadState = .loading
