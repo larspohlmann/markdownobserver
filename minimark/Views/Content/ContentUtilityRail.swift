@@ -39,6 +39,7 @@ struct ContentUtilityRail: View {
         static let separatorHorizontalPadding: CGFloat = 8
         static let railCornerRadius: CGFloat = 12
         static let railInset: CGFloat = 8
+        static let railTrailingInset: CGFloat = 18
         static let separatorWidth: CGFloat = 20
     }
 
@@ -96,7 +97,8 @@ struct ContentUtilityRail: View {
                 isHovering = hovering
             }
         }
-        .padding(Metrics.railInset)
+        .padding(.top, Metrics.railInset)
+        .padding(.trailing, Metrics.railTrailingInset)
         .sheet(isPresented: $isEditingFavorites) {
             EditFavoritesSheet(
                 favorites: favoriteWatchedFolders,
