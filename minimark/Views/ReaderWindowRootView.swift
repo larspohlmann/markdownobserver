@@ -25,6 +25,7 @@ struct ReaderWindowRootView: View {
     @State var sidebarPinnedGroupIDs: Set<String> = []
     @State var sidebarCollapsedGroupIDs: Set<String> = []
     @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+    @State private var lastAppliedSidebarDelta: CGFloat = 0
     @State var activeFavoriteID: UUID?
     @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
     @StateObject var windowCoordinator: ReaderWindowCoordinator
@@ -187,6 +188,38 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
                 applyWindowTitlePresentation()
+            }
+            .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
+                let isSidebarVisible = newCount > 1
+                let wasVisible = oldCount > 1
+
+                guard isSidebarVisible != wasVisible, let window = hostWindow else {
+                    return
+                }
+
+                let delta = isSidebarVisible
+                    ? sidebarWidth
+                    : -lastAppliedSidebarDelta
+
+                guard let screenFrame = window.screen?.visibleFrame else {
+                    return
+                }
+
+                let oldWidth = window.frame.width
+                let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
+                    windowFrame: window.frame,
+                    screenVisibleFrame: screenFrame,
+                    sidebarDelta: delta
+                )
+
+                window.setFrame(newFrame, display: true, animate: true)
+
+                if isSidebarVisible {
+                    lastAppliedSidebarDelta = newFrame.width - oldWidth
+                } else {
+                    lastAppliedSidebarDelta = 0
+                    sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+                }
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
                 applyWindowTitlePresentation()
