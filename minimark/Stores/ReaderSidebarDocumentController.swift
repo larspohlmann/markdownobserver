@@ -516,6 +516,9 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 preferEmptySelection: true
             )
         }
+        folderWatchController.selectNewestDocumentHandler = { [weak self] in
+            self?.selectDocumentWithNewestModificationDate()
+        }
         folderWatchController.onStateChange = { [weak self] in
             self?.synchronizeFolderWatchState()
         }

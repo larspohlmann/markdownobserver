@@ -17,6 +17,7 @@ final class ReaderFolderWatchController {
     var currentDocumentFileURLProvider: (() -> URL?)?
     var openDocumentFileURLsProvider: (() -> [URL])?
     var openEventsHandler: (([ReaderFolderWatchChangeEvent], ReaderFolderWatchSession, ReaderOpenOrigin) -> Void)?
+    var selectNewestDocumentHandler: (() -> Void)?
     var onStateChange: (() -> Void)?
 
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession? {
