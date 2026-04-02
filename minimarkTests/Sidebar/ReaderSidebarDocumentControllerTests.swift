@@ -673,4 +673,43 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents[0].id == expectedRemainingDocumentID)
         #expect(harness.controller.selectedDocumentID == expectedRemainingDocumentID)
     }
+
+    @Test @MainActor func sidebarControllerAutoOpens12NewestAndDefersRestForMediumFolder() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let fileCount = 20
+        var fileURLs: [URL] = []
+        for index in 0..<fileCount {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "note-%02d.md", index))
+            try "# Note \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
+            let modDate = Date(timeIntervalSince1970: Double(1_000_000 + index * 1000))
+            try FileManager.default.setAttributes([.modificationDate: modDate], ofItemAtPath: fileURL.path)
+            fileURLs.append(fileURL)
+        }
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        )
+
+        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.documents.count == fileCount)
+
+        let loadedDocs = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }
+
+        #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+
+        // The 12 loaded docs should be the 12 newest by modification date (note-08 through note-19)
+        let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        for index in (fileCount - 12)..<fileCount {
+            #expect(loadedFileNames.contains(String(format: "note-%02d.md", index)))
+        }
+
+        // Newest file (note-19) should be selected
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "note-19.md")
+    }
 }
