@@ -367,7 +367,7 @@ final class ReaderFolderWatchController {
             return
         }
 
-        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount {
+        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount {
             pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
                 folderURL: session.folderURL,
                 session: session,
@@ -379,21 +379,50 @@ final class ReaderFolderWatchController {
 
         pendingFileSelectionRequest = nil
 
-        let initialMarkdownEvents = markdownURLs.map {
-            ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+        let currentDocumentFileURL = currentDocumentFileURLProvider?()
+        let eligibleURLs = markdownURLs.filter { url in
+            let normalized = ReaderFileRouting.normalizedFileURL(url)
+            if let currentDocumentFileURL,
+               normalized == ReaderFileRouting.normalizedFileURL(currentDocumentFileURL) {
+                return false
+            }
+            return true
         }
-        let initialPlan = folderWatchAutoOpenPlanner.initialPlan(
-            for: initialMarkdownEvents,
-            activeSession: session,
-            currentDocumentFileURL: currentDocumentFileURLProvider?()
-        )
+
+        let sortedByModDate = urlsSortedByModificationDateDescending(eligibleURLs)
+        let maxLoad = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        let loadURLs = Array(sortedByModDate.prefix(maxLoad))
+        let deferURLs = Array(sortedByModDate.dropFirst(maxLoad))
 
         didInitialMarkdownScanFail = false
-        folderWatchAutoOpenWarning = initialPlan.warning
-        let initialOpenOrigin: ReaderOpenOrigin = initialPlan.autoOpenEvents.count > 1
-            ? .folderWatchInitialBatchAutoOpen
-            : .folderWatchAutoOpen
-        dispatchOpenEvents(initialPlan.autoOpenEvents, session: session, origin: initialOpenOrigin)
+        folderWatchAutoOpenWarning = nil
+
+        if !deferURLs.isEmpty {
+            let deferEvents = deferURLs.map {
+                ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+            }
+            dispatchOpenEvents(deferEvents, session: session, origin: .folderWatchInitialBatchAutoOpen)
+        }
+
+        if !loadURLs.isEmpty {
+            let loadEvents = loadURLs.map {
+                ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+            }
+            dispatchOpenEvents(loadEvents, session: session, origin: .folderWatchAutoOpen)
+        }
+
+        selectNewestDocumentHandler?()
         isInitialMarkdownScanInProgress = false
+    }
+
+    private func urlsSortedByModificationDateDescending(_ urls: [URL]) -> [URL] {
+        urls.map { url -> (url: URL, modDate: Date) in
+            let modDate = (try? FileManager.default.attributesOfItem(
+                atPath: url.path
+            ))?[.modificationDate] as? Date ?? .distantPast
+            return (url, modDate)
+        }
+        .sorted { $0.modDate > $1.modDate }
+        .map(\.url)
     }
 }
