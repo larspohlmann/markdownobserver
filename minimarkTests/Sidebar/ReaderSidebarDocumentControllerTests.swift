@@ -634,6 +634,31 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents.allSatisfy { $0.readerStore.fileURL != nil })
     }
 
+    @Test @MainActor func selectDocumentWithNewestModificationDateSelectsCorrectDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let olderFileURL = harness.temporaryDirectoryURL.appendingPathComponent("older.md")
+        let newerFileURL = harness.temporaryDirectoryURL.appendingPathComponent("newer.md")
+        try "# Older".write(to: olderFileURL, atomically: true, encoding: .utf8)
+        try "# Newer".write(to: newerFileURL, atomically: true, encoding: .utf8)
+
+        let olderDate = Date(timeIntervalSince1970: 1_000_000)
+        let newerDate = Date(timeIntervalSince1970: 2_000_000)
+        try FileManager.default.setAttributes([.modificationDate: olderDate], ofItemAtPath: olderFileURL.path)
+        try FileManager.default.setAttributes([.modificationDate: newerDate], ofItemAtPath: newerFileURL.path)
+
+        harness.controller.openDocumentsBurst(
+            at: [olderFileURL, newerFileURL],
+            origin: .manual
+        )
+
+        harness.controller.selectDocumentWithNewestModificationDate()
+
+        let selectedStore = harness.controller.selectedReaderStore
+        #expect(selectedStore.fileURL?.lastPathComponent == "newer.md")
+    }
+
     @Test @MainActor func sidebarControllerCloseDocumentsRemovesSelectedSubset() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }

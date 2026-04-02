@@ -246,6 +246,17 @@ final class ReaderSidebarDocumentController: ObservableObject {
         return true
     }
 
+    func selectDocumentWithNewestModificationDate() {
+        let newest = documents
+            .filter { $0.readerStore.fileURL != nil }
+            .max(by: {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) < ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            })
+        if let newest {
+            selectDocument(newest.id)
+        }
+    }
+
     func closeDocument(_ documentID: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == documentID }) else {
             return
