@@ -42,6 +42,14 @@ struct ContentUtilityRail: View {
         static let separatorWidth: CGFloat = 20
     }
 
+    private var railBackground: Color {
+        if colorScheme == .dark {
+            return Color(white: 0.12, opacity: isHovering ? 0.92 : 0.55)
+        } else {
+            return Color(white: 1.0, opacity: isHovering ? 0.95 : 0.55)
+        }
+    }
+
     private var hasFile: Bool {
         readerStore.fileURL != nil
     }
@@ -75,8 +83,7 @@ struct ContentUtilityRail: View {
         .frame(width: Metrics.railWidth)
         .background {
             RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .opacity(isHovering ? 1.0 : 0.6)
+                .fill(railBackground)
         }
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
