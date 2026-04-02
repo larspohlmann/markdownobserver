@@ -25,6 +25,7 @@ struct ReaderWindowRootView: View {
     @State var sidebarPinnedGroupIDs: Set<String> = []
     @State var sidebarCollapsedGroupIDs: Set<String> = []
     @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+    @State private var lastAppliedSidebarDelta: CGFloat = 0
     @State var activeFavoriteID: UUID?
     @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
     @StateObject var windowCoordinator: ReaderWindowCoordinator
@@ -198,12 +199,13 @@ struct ReaderWindowRootView: View {
 
                 let delta = isSidebarVisible
                     ? sidebarWidth
-                    : -sidebarWidth
+                    : -lastAppliedSidebarDelta
 
                 guard let screenFrame = window.screen?.visibleFrame else {
                     return
                 }
 
+                let oldWidth = window.frame.width
                 let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
                     windowFrame: window.frame,
                     screenVisibleFrame: screenFrame,
@@ -212,7 +214,10 @@ struct ReaderWindowRootView: View {
 
                 window.setFrame(newFrame, display: true, animate: true)
 
-                if !isSidebarVisible {
+                if isSidebarVisible {
+                    lastAppliedSidebarDelta = newFrame.width - oldWidth
+                } else {
+                    lastAppliedSidebarDelta = 0
                     sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
                 }
             }
