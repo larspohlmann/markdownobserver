@@ -492,20 +492,29 @@ struct ContentView: View {
 
     private var contentUtilityRail: some View {
         ContentUtilityRail(
-            readerStore: readerStore,
+            hasFile: readerStore.fileURL != nil,
             documentViewMode: readerStore.documentViewMode,
-            showSourceEditingControls: showSourceEditingControls,
+            showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
+            canStartSourceEditing: readerStore.canStartSourceEditing,
             canNavigateChangedRegions: canNavigateChangedRegions,
             canStopFolderWatch: canStopFolderWatch,
+            apps: readerStore.openInApplications,
             favoriteWatchedFolders: favoriteWatchedFolders,
             recentWatchedFolders: recentWatchedFolders,
             recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+            iconProvider: appIconImage(for:),
             onNavigateChangedRegion: requestChangedRegionNavigation,
             onSetDocumentViewMode: { mode in
                 readerStore.setDocumentViewMode(mode)
             },
             onOpenFiles: { fileURLs in
                 handlePickedFileURLs(fileURLs)
+            },
+            onOpenApp: { app in
+                readerStore.openCurrentFileInApplication(app)
+            },
+            onRevealInFinder: {
+                readerStore.revealCurrentFileInFinder()
             },
             onRequestFolderWatch: onRequestFolderWatch,
             onStopFolderWatch: onStopFolderWatch,

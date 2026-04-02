@@ -2,17 +2,22 @@ import AppKit
 import SwiftUI
 
 struct ContentUtilityRail: View {
-    @ObservedObject var readerStore: ReaderStore
+    let hasFile: Bool
     let documentViewMode: ReaderDocumentViewMode
-    let showSourceEditingControls: Bool
+    let showEditButton: Bool
+    let canStartSourceEditing: Bool
     let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
+    let apps: [ReaderExternalApplication]
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
+    let iconProvider: (ReaderExternalApplication) -> NSImage?
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onOpenFiles: ([URL]) -> Void
+    let onOpenApp: (ReaderExternalApplication) -> Void
+    let onRevealInFinder: () -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
     let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
@@ -36,7 +41,6 @@ struct ContentUtilityRail: View {
         static let buttonCornerRadius: CGFloat = 8
         static let iconSize: CGFloat = 12
         static let groupSpacing: CGFloat = 8
-        static let separatorHorizontalPadding: CGFloat = 8
         static let railCornerRadius: CGFloat = 12
         static let railInset: CGFloat = 8
         static let railTrailingInset: CGFloat = 18
@@ -51,23 +55,11 @@ struct ContentUtilityRail: View {
         }
     }
 
-    private var hasFile: Bool {
-        readerStore.fileURL != nil
-    }
-
-    private var showChangeNavigation: Bool {
-        canNavigateChangedRegions
-    }
-
-    private var showEditButton: Bool {
-        showSourceEditingControls && !readerStore.isSourceEditing
-    }
-
     var body: some View {
         VStack(spacing: Metrics.groupSpacing) {
             viewModeGroup
 
-            if showChangeNavigation {
+            if canNavigateChangedRegions {
                 groupSeparator
                 changeNavigationGroup
             }
@@ -131,15 +123,10 @@ struct ContentUtilityRail: View {
             Image(systemName: mode.systemImageName)
                 .font(.system(size: Metrics.iconSize, weight: isSelected ? .bold : .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .background(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.12) : Color.clear)
+                .railButtonBackground(
+                    fill: isSelected ? Color.primary.opacity(0.12) : Color.clear,
+                    border: isSelected ? Color.primary.opacity(0.18) : Color.clear
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .strokeBorder(isSelected ? Color.primary.opacity(0.18) : Color.clear, lineWidth: 1)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!hasFile || isSelected)
@@ -178,15 +165,10 @@ struct ContentUtilityRail: View {
             Image(systemName: symbolName)
                 .font(.system(size: Metrics.iconSize, weight: .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .background(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .fill(Color.primary.opacity(0.06))
+                .railButtonBackground(
+                    fill: Color.primary.opacity(0.06),
+                    border: Color.primary.opacity(0.10)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primary)
@@ -204,19 +186,14 @@ struct ContentUtilityRail: View {
             Image(systemName: "pencil")
                 .font(.system(size: Metrics.iconSize, weight: .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .background(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .fill(Color.primary.opacity(readerStore.canStartSourceEditing ? 0.06 : 0.03))
+                .railButtonBackground(
+                    fill: Color.primary.opacity(canStartSourceEditing ? 0.06 : 0.03),
+                    border: Color.primary.opacity(canStartSourceEditing ? 0.10 : 0.05)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(readerStore.canStartSourceEditing ? 0.10 : 0.05), lineWidth: 1)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(!readerStore.canStartSourceEditing)
-        .foregroundStyle(readerStore.canStartSourceEditing ? .primary : .tertiary)
+        .disabled(!canStartSourceEditing)
+        .foregroundStyle(canStartSourceEditing ? .primary : .tertiary)
         .help("Edit Source")
         .accessibilityLabel("Edit source")
     }
@@ -227,18 +204,14 @@ struct ContentUtilityRail: View {
         OpenInMenuButton(
             hasFile: hasFile,
             hasActiveFolderWatch: canStopFolderWatch,
-            apps: readerStore.openInApplications,
+            apps: apps,
             favoriteWatchedFolders: favoriteWatchedFolders,
             recentWatchedFolders: recentWatchedFolders,
             recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-            iconProvider: appIconImage(for:),
+            iconProvider: iconProvider,
             onOpenFiles: onOpenFiles,
-            onOpenApp: { app in
-                readerStore.openCurrentFileInApplication(app)
-            },
-            onRevealInFinder: {
-                readerStore.revealCurrentFileInFinder()
-            },
+            onOpenApp: onOpenApp,
+            onRevealInFinder: onRevealInFinder,
             onRequestFolderWatch: onRequestFolderWatch,
             onStopFolderWatch: onStopFolderWatch,
             onStartFavoriteWatch: onStartFavoriteWatch,
@@ -262,5 +235,31 @@ struct ContentUtilityRail: View {
             .fill(Color.primary.opacity(0.10))
             .frame(width: Metrics.separatorWidth, height: 1)
             .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Rail Button Background
+
+private struct RailButtonBackgroundModifier: ViewModifier {
+    let fill: Color
+    let border: Color
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(fill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(border, lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private extension View {
+    func railButtonBackground(fill: Color, border: Color) -> some View {
+        modifier(RailButtonBackgroundModifier(fill: fill, border: border))
     }
 }
