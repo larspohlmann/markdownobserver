@@ -19,11 +19,11 @@ enum ReaderDocumentViewMode: String, CaseIterable, Sendable {
     var systemImageName: String {
         switch self {
         case .preview:
-            return "eye"
+            return "doc.richtext"
         case .split:
             return "rectangle.split.2x1"
         case .source:
-            return "chevron.left.forwardslash.chevron.right"
+            return "text.alignleft"
         }
     }
 

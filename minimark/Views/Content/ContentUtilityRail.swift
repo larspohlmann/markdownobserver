@@ -42,12 +42,6 @@ struct ContentUtilityRail: View {
         static let separatorWidth: CGFloat = 20
     }
 
-    private var activePurple: Color {
-        colorScheme == .dark
-            ? Color(red: 0.59, green: 0.49, blue: 1.0)
-            : Color(red: 0.34, green: 0.24, blue: 0.71)
-    }
-
     private var hasFile: Bool {
         readerStore.fileURL != nil
     }
@@ -126,21 +120,21 @@ struct ContentUtilityRail: View {
             onSetDocumentViewMode(mode)
         } label: {
             Image(systemName: mode.systemImageName)
-                .font(.system(size: Metrics.iconSize, weight: .semibold))
+                .font(.system(size: Metrics.iconSize, weight: isSelected ? .bold : .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
                 .background(
                     RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .fill(isSelected ? activePurple.opacity(0.18) : Color.clear)
+                        .fill(isSelected ? Color.primary.opacity(0.12) : Color.clear)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .strokeBorder(isSelected ? activePurple.opacity(0.28) : Color.clear, lineWidth: 1)
+                        .strokeBorder(isSelected ? Color.primary.opacity(0.18) : Color.clear, lineWidth: 1)
                 )
                 .contentShape(RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!hasFile || isSelected)
-        .foregroundStyle(isSelected ? AnyShapeStyle(activePurple) : (hasFile ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary)))
+        .foregroundStyle(isSelected ? .primary : (hasFile ? .secondary : .tertiary))
         .help(mode.displayName)
         .accessibilityLabel(mode.displayName)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
