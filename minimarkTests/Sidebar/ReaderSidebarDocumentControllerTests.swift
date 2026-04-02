@@ -713,6 +713,59 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "note-19.md")
     }
 
+    @Test @MainActor func materializeNewestDeferredDocumentsLoads12NewestAndSelectsNewest() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        let fileCount = 20
+        var fileURLs: [URL] = []
+        for index in 0..<fileCount {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "fav-%02d.md", index))
+            try "# Fav \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
+            let modDate = Date(timeIntervalSince1970: Double(1_000_000 + index * 1000))
+            try FileManager.default.setAttributes([.modificationDate: modDate], ofItemAtPath: fileURL.path)
+            fileURLs.append(fileURL)
+        }
+
+        // Simulate favorite restore: all files deferred
+        harness.controller.openDocumentsBurst(
+            at: fileURLs,
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true,
+            materializeSelectedOnCompletion: false
+        )
+
+        // All should be deferred
+        #expect(harness.controller.documents.count == fileCount)
+        #expect(harness.controller.documents.allSatisfy { $0.readerStore.isDeferredDocument })
+
+        // Now materialize the 12 newest
+        harness.controller.materializeNewestDeferredDocuments()
+
+        let loadedDocs = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }
+
+        #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+
+        // The 12 loaded should be the 12 newest (fav-08 through fav-19)
+        let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        for index in (fileCount - 12)..<fileCount {
+            #expect(loadedFileNames.contains(String(format: "fav-%02d.md", index)))
+        }
+
+        // Newest file should be selected
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "fav-19.md")
+        #expect(!harness.controller.selectedReaderStore.isDeferredDocument)
+    }
+
     @Test @MainActor func sidebarControllerLoadsAllFilesAndSelectsNewestForSmallFolder() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }

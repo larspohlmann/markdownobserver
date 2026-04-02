@@ -125,8 +125,10 @@ extension ReaderWindowRootView {
                 at: restoredFileURLs,
                 origin: .folderWatchInitialBatchAutoOpen,
                 folderWatchSession: session,
-                preferEmptySelection: true
+                preferEmptySelection: true,
+                materializeSelectedOnCompletion: false
             )
+            sidebarDocumentController.materializeNewestDeferredDocuments()
         }
 
         syncSharedFavoriteOpenDocumentsIfNeeded()

@@ -258,6 +258,22 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
     }
 
+    func materializeNewestDeferredDocuments(
+        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+    ) {
+        let deferredDocs = documents
+            .filter { $0.readerStore.isDeferredDocument }
+            .sorted {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) > ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            }
+
+        for document in deferredDocs.prefix(count) {
+            document.readerStore.materializeDeferredDocument()
+        }
+
+        selectDocumentWithNewestModificationDate()
+    }
+
     func closeDocument(_ documentID: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == documentID }) else {
             return
