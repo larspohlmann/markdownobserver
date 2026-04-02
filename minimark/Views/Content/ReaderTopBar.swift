@@ -788,6 +788,7 @@ struct ReaderTopBar: View {
 
 }
 
+@MainActor
 func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
     let iconPath: String
     if let bundleIdentifier = app.bundleIdentifier,

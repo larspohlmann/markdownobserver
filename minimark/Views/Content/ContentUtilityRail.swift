@@ -112,6 +112,7 @@ struct ContentUtilityRail: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Document view mode")
+        .accessibilityHint("Switch between preview, split, and source views of the document.")
     }
 
     private func viewModeButton(mode: ReaderDocumentViewMode) -> some View {
@@ -123,7 +124,7 @@ struct ContentUtilityRail: View {
             Image(systemName: mode.systemImageName)
                 .font(.system(size: Metrics.iconSize, weight: isSelected ? .bold : .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .railButtonBackground(
+                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
                     fill: isSelected ? Color.primary.opacity(0.12) : Color.clear,
                     border: isSelected ? Color.primary.opacity(0.18) : Color.clear
                 )
@@ -165,7 +166,7 @@ struct ContentUtilityRail: View {
             Image(systemName: symbolName)
                 .font(.system(size: Metrics.iconSize, weight: .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .railButtonBackground(
+                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
                     fill: Color.primary.opacity(0.06),
                     border: Color.primary.opacity(0.10)
                 )
@@ -186,7 +187,7 @@ struct ContentUtilityRail: View {
             Image(systemName: "pencil")
                 .font(.system(size: Metrics.iconSize, weight: .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .railButtonBackground(
+                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
                     fill: Color.primary.opacity(canStartSourceEditing ? 0.06 : 0.03),
                     border: Color.primary.opacity(canStartSourceEditing ? 0.10 : 0.05)
                 )
@@ -243,23 +244,24 @@ struct ContentUtilityRail: View {
 private struct RailButtonBackgroundModifier: ViewModifier {
     let fill: Color
     let border: Color
+    let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
         content
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(fill)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(border, lineWidth: 1)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
 private extension View {
-    func railButtonBackground(fill: Color, border: Color) -> some View {
-        modifier(RailButtonBackgroundModifier(fill: fill, border: border))
+    func railButtonBackground(cornerRadius: CGFloat, fill: Color, border: Color) -> some View {
+        modifier(RailButtonBackgroundModifier(fill: fill, border: border, cornerRadius: cornerRadius))
     }
 }
