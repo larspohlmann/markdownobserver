@@ -188,6 +188,30 @@ struct ReaderWindowRootView: View {
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
                 applyWindowTitlePresentation()
             }
+            .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
+                let isSidebarVisible = newCount > 1
+                let wasVisible = oldCount > 1
+
+                guard isSidebarVisible != wasVisible, let window = hostWindow else {
+                    return
+                }
+
+                let delta = isSidebarVisible
+                    ? sidebarWidth
+                    : -sidebarWidth
+
+                guard let screenFrame = window.screen?.visibleFrame else {
+                    return
+                }
+
+                let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
+                    windowFrame: window.frame,
+                    screenVisibleFrame: screenFrame,
+                    sidebarDelta: delta
+                )
+
+                window.setFrame(newFrame, display: true, animate: true)
+            }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
                 applyWindowTitlePresentation()
             }
