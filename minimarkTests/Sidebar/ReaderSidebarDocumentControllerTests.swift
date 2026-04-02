@@ -703,9 +703,8 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
 
-        // The 12 loaded docs should be the 12 newest by modification date (note-08 through note-19)
         let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.fileURL?.lastPathComponent })
-        for index in (fileCount - 12)..<fileCount {
+        for index in (fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
             #expect(loadedFileNames.contains(String(format: "note-%02d.md", index)))
         }
 
@@ -755,9 +754,8 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
 
-        // The 12 loaded should be the 12 newest (fav-08 through fav-19)
         let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.fileURL?.lastPathComponent })
-        for index in (fileCount - 12)..<fileCount {
+        for index in (fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
             #expect(loadedFileNames.contains(String(format: "fav-%02d.md", index)))
         }
 
