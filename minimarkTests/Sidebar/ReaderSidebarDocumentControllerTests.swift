@@ -712,4 +712,39 @@ struct ReaderSidebarDocumentControllerTests {
         // Newest file (note-19) should be selected
         #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "note-19.md")
     }
+
+    @Test @MainActor func sidebarControllerLoadsAllFilesAndSelectsNewestForSmallFolder() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let fileCount = 5
+        var fileURLs: [URL] = []
+        for index in 0..<fileCount {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "doc-%02d.md", index))
+            try "# Doc \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
+            let modDate = Date(timeIntervalSince1970: Double(1_000_000 + index * 1000))
+            try FileManager.default.setAttributes([.modificationDate: modDate], ofItemAtPath: fileURL.path)
+            fileURLs.append(fileURL)
+        }
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        )
+
+        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.documents.count == fileCount)
+
+        // All files should be fully loaded (none deferred)
+        let deferredDocs = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }
+        #expect(deferredDocs.isEmpty)
+
+        for document in harness.controller.documents {
+            #expect(!document.readerStore.sourceMarkdown.isEmpty)
+        }
+
+        // Newest file (doc-04) should be selected
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "doc-04.md")
+    }
 }
