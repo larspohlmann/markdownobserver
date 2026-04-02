@@ -211,7 +211,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
         origin: ReaderOpenOrigin,
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool = true
+        preferEmptySelection: Bool = true,
+        materializeSelectedOnCompletion: Bool = true
     ) {
         let plannedURLs = ReaderFileRouting.plannedOpenFileURLs(from: fileURLs)
         guard !plannedURLs.isEmpty else {
@@ -228,7 +229,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             )
         }
 
-        if selectedReaderStore.isDeferredDocument {
+        if materializeSelectedOnCompletion, selectedReaderStore.isDeferredDocument {
             let store = selectedReaderStore
             scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
@@ -513,7 +514,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
                         return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
                     }
                 ),
-                preferEmptySelection: true
+                preferEmptySelection: true,
+                materializeSelectedOnCompletion: origin != .folderWatchInitialBatchAutoOpen
             )
         }
         folderWatchController.selectNewestDocumentHandler = { [weak self] in
