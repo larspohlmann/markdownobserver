@@ -51,6 +51,32 @@ enum ReaderWindowDefaults {
         return NSScreen.screens.first?.visibleFrame
     }
 
+    static func sidebarResizedFrame(
+        windowFrame: CGRect,
+        screenVisibleFrame: CGRect,
+        sidebarDelta: CGFloat
+    ) -> CGRect {
+        let targetWidth = max(windowFrame.width + sidebarDelta, minimumUsableWidth)
+        let clampedWidth = min(targetWidth, screenVisibleFrame.width)
+
+        var newOriginX = windowFrame.origin.x
+
+        // If expanding rightward would go off-screen, shift left
+        if newOriginX + clampedWidth > screenVisibleFrame.maxX {
+            newOriginX = screenVisibleFrame.maxX - clampedWidth
+        }
+
+        // Don't go past the left edge
+        newOriginX = max(newOriginX, screenVisibleFrame.origin.x)
+
+        return CGRect(
+            x: newOriginX,
+            y: windowFrame.origin.y,
+            width: clampedWidth,
+            height: windowFrame.height
+        )
+    }
+
     private static func fittedSize(maxWidth: CGFloat, maxHeight: CGFloat) -> CGSize {
         let scale = min(1, maxWidth / baseWidth, maxHeight / baseHeight)
         return CGSize(
