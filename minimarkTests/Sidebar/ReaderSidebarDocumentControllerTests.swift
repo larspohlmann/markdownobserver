@@ -391,14 +391,8 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
-            origin: .manual
-        )
-        harness.controller.selectDocument(harness.controller.documents[0].id)
-
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
-        let fileURLs = (0...autoOpenLimit).map { index in
+        let performanceLimit = ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
+        let fileURLs = (0..<performanceLimit + 1).map { index in
             let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
             try? "# File \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
             return fileURL
@@ -410,9 +404,8 @@ struct ReaderSidebarDocumentControllerTests {
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
-        // When file count exceeds threshold, a file selection request is published instead of auto-opening.
         #expect(harness.controller.pendingFileSelectionRequest != nil)
-        #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + 1)
+        #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == performanceLimit + 1)
         #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
     }
 
