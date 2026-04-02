@@ -61,12 +61,10 @@ enum ReaderWindowDefaults {
 
         var newOriginX = windowFrame.origin.x
 
-        // If expanding rightward would go off-screen, shift left
         if newOriginX + clampedWidth > screenVisibleFrame.maxX {
             newOriginX = screenVisibleFrame.maxX - clampedWidth
         }
 
-        // Don't go past the left edge
         newOriginX = max(newOriginX, screenVisibleFrame.origin.x)
 
         return CGRect(

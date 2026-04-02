@@ -192,28 +192,39 @@ struct ReaderWindowRootView: View {
                 let isSidebarVisible = newCount > 1
                 let wasVisible = oldCount > 1
 
-                guard isSidebarVisible != wasVisible, let window = hostWindow else {
+                guard isSidebarVisible != wasVisible else {
                     return
                 }
 
-                let delta = isSidebarVisible
-                    ? sidebarWidth
-                    : -sidebarWidth
+                let capturedSidebarWidth = sidebarWidth
 
-                guard let screenFrame = window.screen?.visibleFrame else {
-                    return
-                }
+                Task { @MainActor in
+                    let currentCount = sidebarDocumentController.documents.count
+                    let isStillVisible = currentCount > 1
 
-                let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
-                    windowFrame: window.frame,
-                    screenVisibleFrame: screenFrame,
-                    sidebarDelta: delta
-                )
+                    guard isStillVisible == isSidebarVisible, let window = hostWindow else {
+                        return
+                    }
 
-                window.setFrame(newFrame, display: true, animate: true)
+                    let delta = isStillVisible
+                        ? capturedSidebarWidth
+                        : -capturedSidebarWidth
 
-                if !isSidebarVisible {
-                    sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+                    guard let screenFrame = window.screen?.visibleFrame else {
+                        return
+                    }
+
+                    let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
+                        windowFrame: window.frame,
+                        screenVisibleFrame: screenFrame,
+                        sidebarDelta: delta
+                    )
+
+                    window.setFrame(newFrame, display: true, animate: true)
+
+                    if !isStillVisible {
+                        sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+                    }
                 }
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
