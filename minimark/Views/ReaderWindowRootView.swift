@@ -246,13 +246,17 @@ struct ReaderWindowRootView: View {
             .onChange(of: sidebarPinnedGroupIDs) { _, newValue in
                 if activeFavoriteWorkspaceState != nil {
                     activeFavoriteWorkspaceState?.pinnedGroupIDs = newValue
-                    activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
                 }
             }
             .onChange(of: sidebarCollapsedGroupIDs) { _, newValue in
                 if activeFavoriteWorkspaceState != nil {
                     activeFavoriteWorkspaceState?.collapsedGroupIDs = newValue
-                    activeFavoriteWorkspaceState?.sidebarWidth = sidebarWidth
+                }
+            }
+            .onChange(of: sidebarWidth) { _, newWidth in
+                if activeFavoriteWorkspaceState != nil,
+                   sidebarDocumentController.documents.count > 1 {
+                    activeFavoriteWorkspaceState?.sidebarWidth = newWidth
                 }
             }
             .onChange(of: activeFavoriteWorkspaceState) { _, newState in
