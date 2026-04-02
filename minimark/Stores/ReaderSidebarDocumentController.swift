@@ -211,7 +211,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
         origin: ReaderOpenOrigin,
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool = true
+        preferEmptySelection: Bool = true,
+        materializeSelectedOnCompletion: Bool = true
     ) {
         let plannedURLs = ReaderFileRouting.plannedOpenFileURLs(from: fileURLs)
         guard !plannedURLs.isEmpty else {
@@ -228,7 +229,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             )
         }
 
-        if selectedReaderStore.isDeferredDocument {
+        if materializeSelectedOnCompletion, selectedReaderStore.isDeferredDocument {
             let store = selectedReaderStore
             scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
@@ -244,6 +245,33 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
         selectDocument(existingDocument.id)
         return true
+    }
+
+    func selectDocumentWithNewestModificationDate() {
+        let newest = documents
+            .filter { $0.readerStore.fileURL != nil }
+            .max(by: {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) < ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            })
+        if let newest {
+            selectDocument(newest.id)
+        }
+    }
+
+    func materializeNewestDeferredDocuments(
+        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+    ) {
+        let deferredDocs = documents
+            .filter { $0.readerStore.isDeferredDocument }
+            .sorted {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) > ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            }
+
+        for document in deferredDocs.prefix(count) {
+            document.readerStore.materializeDeferredDocument()
+        }
+
+        selectDocumentWithNewestModificationDate()
     }
 
     func closeDocument(_ documentID: UUID) {
@@ -502,8 +530,12 @@ final class ReaderSidebarDocumentController: ObservableObject {
                         return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
                     }
                 ),
-                preferEmptySelection: true
+                preferEmptySelection: true,
+                materializeSelectedOnCompletion: origin != .folderWatchInitialBatchAutoOpen
             )
+        }
+        folderWatchController.selectNewestDocumentHandler = { [weak self] in
+            self?.selectDocumentWithNewestModificationDate()
         }
         folderWatchController.onStateChange = { [weak self] in
             self?.synchronizeFolderWatchState()

@@ -391,14 +391,8 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
-            origin: .manual
-        )
-        harness.controller.selectDocument(harness.controller.documents[0].id)
-
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
-        let fileURLs = (0...autoOpenLimit).map { index in
+        let performanceLimit = ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
+        let fileURLs = (0..<performanceLimit + 1).map { index in
             let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
             try? "# File \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
             return fileURL
@@ -410,9 +404,8 @@ struct ReaderSidebarDocumentControllerTests {
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
-        // When file count exceeds threshold, a file selection request is published instead of auto-opening.
         #expect(harness.controller.pendingFileSelectionRequest != nil)
-        #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + 1)
+        #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == performanceLimit + 1)
         #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
     }
 
@@ -634,6 +627,31 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents.allSatisfy { $0.readerStore.fileURL != nil })
     }
 
+    @Test @MainActor func selectDocumentWithNewestModificationDateSelectsCorrectDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let olderFileURL = harness.temporaryDirectoryURL.appendingPathComponent("older.md")
+        let newerFileURL = harness.temporaryDirectoryURL.appendingPathComponent("newer.md")
+        try "# Older".write(to: olderFileURL, atomically: true, encoding: .utf8)
+        try "# Newer".write(to: newerFileURL, atomically: true, encoding: .utf8)
+
+        let olderDate = Date(timeIntervalSince1970: 1_000_000)
+        let newerDate = Date(timeIntervalSince1970: 2_000_000)
+        try FileManager.default.setAttributes([.modificationDate: olderDate], ofItemAtPath: olderFileURL.path)
+        try FileManager.default.setAttributes([.modificationDate: newerDate], ofItemAtPath: newerFileURL.path)
+
+        harness.controller.openDocumentsBurst(
+            at: [olderFileURL, newerFileURL],
+            origin: .manual
+        )
+
+        harness.controller.selectDocumentWithNewestModificationDate()
+
+        let selectedStore = harness.controller.selectedReaderStore
+        #expect(selectedStore.fileURL?.lastPathComponent == "newer.md")
+    }
+
     @Test @MainActor func sidebarControllerCloseDocumentsRemovesSelectedSubset() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
@@ -654,5 +672,130 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.documents[0].id == expectedRemainingDocumentID)
         #expect(harness.controller.selectedDocumentID == expectedRemainingDocumentID)
+    }
+
+    @Test @MainActor func sidebarControllerAutoOpens12NewestAndDefersRestForMediumFolder() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let fileCount = 20
+        var fileURLs: [URL] = []
+        for index in 0..<fileCount {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "note-%02d.md", index))
+            try "# Note \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
+            let modDate = Date(timeIntervalSince1970: Double(1_000_000 + index * 1000))
+            try FileManager.default.setAttributes([.modificationDate: modDate], ofItemAtPath: fileURL.path)
+            fileURLs.append(fileURL)
+        }
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        )
+
+        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.documents.count == fileCount)
+
+        let loadedDocs = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }
+
+        #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+
+        let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        for index in (fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
+            #expect(loadedFileNames.contains(String(format: "note-%02d.md", index)))
+        }
+
+        // Newest file (note-19) should be selected
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "note-19.md")
+    }
+
+    @Test @MainActor func materializeNewestDeferredDocumentsLoads12NewestAndSelectsNewest() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        let fileCount = 20
+        var fileURLs: [URL] = []
+        for index in 0..<fileCount {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "fav-%02d.md", index))
+            try "# Fav \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
+            let modDate = Date(timeIntervalSince1970: Double(1_000_000 + index * 1000))
+            try FileManager.default.setAttributes([.modificationDate: modDate], ofItemAtPath: fileURL.path)
+            fileURLs.append(fileURL)
+        }
+
+        // Simulate favorite restore: all files deferred
+        harness.controller.openDocumentsBurst(
+            at: fileURLs,
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            preferEmptySelection: true,
+            materializeSelectedOnCompletion: false
+        )
+
+        // All should be deferred
+        #expect(harness.controller.documents.count == fileCount)
+        #expect(harness.controller.documents.allSatisfy { $0.readerStore.isDeferredDocument })
+
+        // Now materialize the 12 newest
+        harness.controller.materializeNewestDeferredDocuments()
+
+        let loadedDocs = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }
+
+        #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+
+        let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        for index in (fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
+            #expect(loadedFileNames.contains(String(format: "fav-%02d.md", index)))
+        }
+
+        // Newest file should be selected
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "fav-19.md")
+        #expect(!harness.controller.selectedReaderStore.isDeferredDocument)
+    }
+
+    @Test @MainActor func sidebarControllerLoadsAllFilesAndSelectsNewestForSmallFolder() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let fileCount = 5
+        var fileURLs: [URL] = []
+        for index in 0..<fileCount {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "doc-%02d.md", index))
+            try "# Doc \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
+            let modDate = Date(timeIntervalSince1970: Double(1_000_000 + index * 1000))
+            try FileManager.default.setAttributes([.modificationDate: modDate], ofItemAtPath: fileURL.path)
+            fileURLs.append(fileURL)
+        }
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        )
+
+        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.documents.count == fileCount)
+
+        // All files should be fully loaded (none deferred)
+        let deferredDocs = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }
+        #expect(deferredDocs.isEmpty)
+
+        for document in harness.controller.documents {
+            #expect(!document.readerStore.sourceMarkdown.isEmpty)
+        }
+
+        // Newest file (doc-04) should be selected
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "doc-04.md")
     }
 }

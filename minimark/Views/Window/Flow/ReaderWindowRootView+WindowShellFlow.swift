@@ -67,7 +67,8 @@ extension ReaderWindowRootView {
         origin: ReaderOpenOrigin = .manual,
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool
+        preferEmptySelection: Bool,
+        materializeSelectedOnCompletion: Bool = true
     ) {
         guard !fileURLs.isEmpty else {
             return
@@ -78,7 +79,8 @@ extension ReaderWindowRootView {
             origin: origin,
             folderWatchSession: folderWatchSession,
             initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdownByURL,
-            preferEmptySelection: preferEmptySelection
+            preferEmptySelection: preferEmptySelection,
+            materializeSelectedOnCompletion: materializeSelectedOnCompletion
         )
         refreshWindowPresentation()
     }
