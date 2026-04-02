@@ -98,17 +98,17 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test func readerWindowDefaultsClampToVisibleHeightWhilePreservingAspectRatio() {
-        let visibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let visibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 1000)
         let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
-        let expectedHeight = visibleFrame.height * ReaderWindowDefaults.fittedHeightUsage
-        let expectedWidth = expectedHeight / ReaderWindowDefaults.goldenRatio
+        let maxHeight = visibleFrame.height * ReaderWindowDefaults.fittedHeightUsage
+        let scale = maxHeight / ReaderWindowDefaults.baseHeight
 
-        #expect(size.width == expectedWidth)
-        #expect(size.height == expectedHeight)
+        #expect(size.width == ReaderWindowDefaults.baseWidth * scale)
+        #expect(size.height == ReaderWindowDefaults.baseHeight * scale)
     }
 
     @Test func readerWindowDefaultsKeepMinimumUsableWidthWhenScreenIsCloseToFittingIt() {
-        let minimumUsableHeight = ReaderWindowDefaults.minimumUsableWidth * ReaderWindowDefaults.goldenRatio
+        let minimumUsableHeight = ReaderWindowDefaults.minimumUsableWidth * ReaderWindowDefaults.letterAspectRatio
         let visibleFrame = CGRect(
             x: 0,
             y: 0,
@@ -123,7 +123,7 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test func readerWindowDefaultsPreferFittedSizeWhenMinimumUsableWidthWouldStillBeTooTall() {
-        let visibleFrame = CGRect(x: 0, y: 0, width: 1280, height: 820)
+        let visibleFrame = CGRect(x: 0, y: 0, width: 1280, height: 780)
         let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
 
         #expect(size.width < ReaderWindowDefaults.minimumUsableWidth)
