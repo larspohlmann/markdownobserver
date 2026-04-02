@@ -211,6 +211,10 @@ struct ReaderWindowRootView: View {
                 )
 
                 window.setFrame(newFrame, display: true, animate: true)
+
+                if !isSidebarVisible {
+                    sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+                }
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
                 applyWindowTitlePresentation()
