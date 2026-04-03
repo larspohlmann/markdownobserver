@@ -30,9 +30,7 @@ struct WatchPill: View {
     }
 
     private var greenTint: Color {
-        colorScheme == .dark
-            ? Color(red: 0.05, green: 0.12, blue: 0.07, opacity: 0.75)
-            : stripGreen.opacity(0.10)
+        stripGreen.opacity(colorScheme == .dark ? 0.08 : 0.10)
     }
 
     private var pillBorder: Color {
@@ -75,6 +73,7 @@ struct WatchPill: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.85 : 0.55))
                 .tracking(0.4)
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.6 : 0), radius: 1, y: 0.5)
 
             Button {
                 onRevealInFinder()
@@ -83,6 +82,7 @@ struct WatchPill: View {
                     Text(tildeAbbreviatedPath)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 1.0 : 0.85))
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.6 : 0), radius: 1, y: 0.5)
                         .lineLimit(1)
                         .truncationMode(.middle)
 
@@ -90,6 +90,7 @@ struct WatchPill: View {
                         Text("[\(filteredCount) filtered]")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.70 : 0.45))
+                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.6 : 0), radius: 1, y: 0.5)
                     }
                 }
             }
