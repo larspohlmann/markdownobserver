@@ -15,6 +15,63 @@ private struct SidebarWidthPreferenceKey: PreferenceKey {
     }
 }
 
+/// Sets the NSSplitView divider position once when the sidebar first appears.
+/// HSplitView ignores `idealWidth` for restored widths — this bridges to AppKit
+/// to apply the correct position programmatically.
+private struct SidebarDividerPositionSetter: NSViewRepresentable {
+    let targetWidth: CGFloat
+    let placement: ReaderMultiFileDisplayMode.SidebarPlacement
+
+    func makeNSView(context: Context) -> SidebarPositionHelperView {
+        let view = SidebarPositionHelperView()
+        view.isHidden = true
+        view.targetWidth = targetWidth
+        view.placement = placement
+        return view
+    }
+
+    func updateNSView(_ nsView: SidebarPositionHelperView, context: Context) {}
+}
+
+final class SidebarPositionHelperView: NSView {
+    var targetWidth: CGFloat = 0
+    var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
+    private var didApplyPosition = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil, !didApplyPosition else { return }
+        didApplyPosition = true
+        applyPosition()
+    }
+
+    private func applyPosition() {
+        guard let splitView = ancestorSplitView(),
+              splitView.arrangedSubviews.count > 1 else {
+            return
+        }
+        let position: CGFloat
+        if placement == .left {
+            position = targetWidth
+        } else {
+            position = splitView.bounds.width - targetWidth - splitView.dividerThickness
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        splitView.setPosition(position, ofDividerAt: 0)
+        CATransaction.commit()
+    }
+
+    func ancestorSplitView() -> NSSplitView? {
+        var current = superview
+        while let view = current {
+            if let split = view as? NSSplitView { return split }
+            current = view.superview
+        }
+        return nil
+    }
+}
+
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
     @ObservedObject var controller: ReaderSidebarDocumentController
     @ObservedObject var settingsStore: ReaderSettingsStore
@@ -231,6 +288,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 )
             }
         )
+        .background(SidebarDividerPositionSetter(targetWidth: sidebarWidth, placement: sidebarPlacement))
         .onPreferenceChange(SidebarWidthPreferenceKey.self) { width in
             if width > 0 {
                 sidebarWidth = width
