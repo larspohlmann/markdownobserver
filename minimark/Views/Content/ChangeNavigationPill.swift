@@ -3,6 +3,7 @@ import SwiftUI
 struct ChangeNavigationPill: View {
     let currentIndex: Int
     let totalCount: Int
+    let contentHasLightBackground: Bool
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     @State private var isHovering = false

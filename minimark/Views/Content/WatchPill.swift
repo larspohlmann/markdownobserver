@@ -10,6 +10,8 @@ struct WatchPill: View {
     let onRemoveFavorite: () -> Void
     let onRevealInFinder: () -> Void
 
+    let contentHasLightBackground: Bool
+
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
     @State private var isShowingDetails = false
@@ -24,13 +26,13 @@ struct WatchPill: View {
     }
 
     private var stripGreen: Color {
-        colorScheme == .dark
+        !contentHasLightBackground
             ? Color(red: 0.30, green: 0.81, blue: 0.49)
             : Color(red: 0.13, green: 0.54, blue: 0.33)
     }
 
     private var greenTint: Color {
-        stripGreen.opacity(colorScheme == .dark ? 0.08 : 0.10)
+        stripGreen.opacity(!contentHasLightBackground ? 0.08 : 0.10)
     }
 
     private var pillBorder: Color {
@@ -56,7 +58,7 @@ struct WatchPill: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.90 : 0.72))
+            .foregroundStyle(stripGreen.opacity(!contentHasLightBackground ? 0.90 : 0.72))
             .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
                 FolderWatchDetailsPopover(
                     activeFolderWatch: activeFolderWatch,
@@ -71,9 +73,9 @@ struct WatchPill: View {
 
             Text("WATCHING")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.85 : 0.55))
+                .foregroundStyle(stripGreen.opacity(!contentHasLightBackground ? 0.85 : 0.55))
                 .tracking(0.4)
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
+                .shadow(color: .black.opacity(!contentHasLightBackground ? 0.9 : 0), radius: 2, y: 0)
 
             Button {
                 onRevealInFinder()
@@ -81,16 +83,16 @@ struct WatchPill: View {
                 HStack(spacing: 5) {
                     Text(tildeAbbreviatedPath)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 1.0 : 0.85))
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
+                        .foregroundStyle(stripGreen.opacity(!contentHasLightBackground ? 1.0 : 0.85))
+                        .shadow(color: .black.opacity(!contentHasLightBackground ? 0.9 : 0), radius: 2, y: 0)
                         .lineLimit(1)
                         .truncationMode(.middle)
 
                     if filteredCount > 0 {
                         Text("[\(filteredCount) filtered]")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.70 : 0.45))
-                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
+                            .foregroundStyle(stripGreen.opacity(!contentHasLightBackground ? 0.70 : 0.45))
+                            .shadow(color: .black.opacity(!contentHasLightBackground ? 0.9 : 0), radius: 2, y: 0)
                     }
                 }
             }

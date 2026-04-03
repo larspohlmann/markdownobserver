@@ -157,34 +157,7 @@ struct ContentView: View {
                     }
                 }
 
-                documentSurfaceLayout
-                    .overlay(alignment: .topTrailing) {
-                        contentUtilityRail
-                    }
-                    .overlay(alignment: .topLeading) {
-                        if canNavigateChangedRegions {
-                            ChangeNavigationPill(
-                                currentIndex: currentChangedRegionIndex,
-                                totalCount: readerStore.changedRegions.count,
-                                onNavigate: requestChangedRegionNavigation
-                            )
-                        }
-                    }
-                    .overlay(alignment: .top) {
-                        if let activeWatch = activeFolderWatch {
-                            WatchPill(
-                                activeFolderWatch: activeWatch,
-                                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                                canStop: canStopFolderWatch,
-                                onStop: onStopFolderWatch,
-                                onSaveFavorite: onSaveFolderWatchAsFavorite,
-                                onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
-                                onRevealInFinder: {
-                                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                                }
-                            )
-                        }
-                    }
+                documentSurfaceWithOverlays
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
@@ -512,9 +485,44 @@ struct ContentView: View {
         )
     }
 
+    @ViewBuilder
+    private var documentSurfaceWithOverlays: some View {
+        documentSurfaceLayout
+            .overlay(alignment: .topTrailing) {
+                contentUtilityRail
+            }
+            .overlay(alignment: .topLeading) {
+                if canNavigateChangedRegions {
+                    ChangeNavigationPill(
+                        currentIndex: currentChangedRegionIndex,
+                        totalCount: readerStore.changedRegions.count,
+                        contentHasLightBackground: currentReaderTheme.hasLightBackground,
+                        onNavigate: requestChangedRegionNavigation
+                    )
+                }
+            }
+            .overlay(alignment: .top) {
+                if let activeWatch = activeFolderWatch {
+                    WatchPill(
+                        activeFolderWatch: activeWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        canStop: canStopFolderWatch,
+                        onStop: onStopFolderWatch,
+                        onSaveFavorite: onSaveFolderWatchAsFavorite,
+                        onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
+                        onRevealInFinder: {
+                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                        },
+                        contentHasLightBackground: currentReaderTheme.hasLightBackground
+                    )
+                }
+            }
+    }
+
     private var contentUtilityRail: some View {
         ContentUtilityRail(
             hasFile: readerStore.fileURL != nil,
+            contentHasLightBackground: currentReaderTheme.hasLightBackground,
             documentViewMode: readerStore.documentViewMode,
             showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
             canStartSourceEditing: readerStore.canStartSourceEditing,
