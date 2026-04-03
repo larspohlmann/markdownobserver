@@ -131,7 +131,6 @@ final class ReaderStore: ObservableObject {
                     self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
                     self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
                 }
-                self.rerenderWithCurrentSettings()
             }
     }
 
@@ -647,9 +646,26 @@ final class ReaderStore: ObservableObject {
         lastRefreshAt = Date()
     }
 
-    private func renderCurrentMarkdown() throws {
+    func renderWithAppearance(
+        theme: ReaderThemeKind,
+        baseFontSize: Double,
+        syntaxTheme: SyntaxThemeKind
+    ) throws {
+        cancelPendingDraftPreviewRender()
+        try renderCurrentMarkdown(theme: theme, baseFontSize: baseFontSize, syntaxTheme: syntaxTheme)
+        lastRefreshAt = Date()
+    }
+
+    private func renderCurrentMarkdown(
+        theme themeKind: ReaderThemeKind? = nil,
+        baseFontSize: Double? = nil,
+        syntaxTheme: SyntaxThemeKind? = nil
+    ) throws {
         let settings = settingsStore.currentSettings
-        let theme = settings.readerTheme.themeDefinition
+        let effectiveThemeKind = themeKind ?? settings.readerTheme
+        let effectiveFontSize = baseFontSize ?? settings.baseFontSize
+        let effectiveSyntaxTheme = syntaxTheme ?? settings.syntaxTheme
+        let theme = effectiveThemeKind.themeDefinition
 
         let docDir = fileURL?.deletingLastPathComponent()
         activateTrustedImageFolderAccessIfNeeded(for: docDir)
@@ -666,8 +682,8 @@ final class ReaderStore: ObservableObject {
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions,
             theme: theme,
-            syntaxTheme: settings.syntaxTheme,
-            baseFontSize: settings.baseFontSize
+            syntaxTheme: effectiveSyntaxTheme,
+            baseFontSize: effectiveFontSize
         )
 
         renderedHTMLDocument = rendered.htmlDocument
