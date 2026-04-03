@@ -30,7 +30,9 @@ struct WatchPill: View {
     }
 
     private var greenTint: Color {
-        stripGreen.opacity(colorScheme == .dark ? 0.08 : 0.10)
+        colorScheme == .dark
+            ? Color(red: 0.05, green: 0.12, blue: 0.07, opacity: 0.75)
+            : stripGreen.opacity(0.10)
     }
 
     private var pillBorder: Color {
