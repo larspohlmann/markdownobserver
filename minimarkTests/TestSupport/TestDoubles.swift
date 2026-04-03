@@ -48,13 +48,15 @@ func waitUntil(
 
 final class TestChangedRegionDiffer: ChangedRegionDiffering {
     private let changedRegionsForModifiedContent: [ChangedRegion]
+    var computeChangedRegionsCalls: [(oldMarkdown: String, newMarkdown: String)] = []
 
     init(changedRegionsForModifiedContent: [ChangedRegion] = []) {
         self.changedRegionsForModifiedContent = changedRegionsForModifiedContent
     }
 
     func computeChangedRegions(oldMarkdown: String, newMarkdown: String) -> [ChangedRegion] {
-        oldMarkdown == newMarkdown ? [] : changedRegionsForModifiedContent
+        computeChangedRegionsCalls.append((oldMarkdown: oldMarkdown, newMarkdown: newMarkdown))
+        return oldMarkdown == newMarkdown ? [] : changedRegionsForModifiedContent
     }
 
     func blocks(for markdown: String) -> [MarkdownBlock] {
@@ -108,7 +110,11 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
     private let subject: CurrentValueSubject<ReaderSettings, Never>
 
-    init(autoRefreshOnExternalChange: Bool, notificationsEnabled: Bool = true) {
+    init(
+        autoRefreshOnExternalChange: Bool,
+        notificationsEnabled: Bool = true,
+        diffBaselineLookback: DiffBaselineLookback = .twoMinutes
+    ) {
         subject = CurrentValueSubject(
             ReaderSettings(
                 appAppearance: .system,
@@ -121,7 +127,8 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
                 sidebarSortMode: .openOrder,
                 sidebarGroupSortMode: .lastChangedNewestFirst,
                 recentWatchedFolders: [],
-                recentManuallyOpenedFiles: []
+                recentManuallyOpenedFiles: [],
+                diffBaselineLookback: diffBaselineLookback
             )
         )
     }
@@ -739,7 +746,7 @@ struct ReaderStoreTestFixture {
     let notifier = TestReaderSystemNotifier()
 
     private let renderer = TestMarkdownRenderer()
-    private let differ: TestChangedRegionDiffer
+    let differ: TestChangedRegionDiffer
     let watcher = TestFileWatcher()
     let folderWatcher = TestFolderWatcher()
     let settings: TestReaderSettingsStore
@@ -751,6 +758,7 @@ struct ReaderStoreTestFixture {
         notificationsEnabled: Bool = true,
         changedRegionsForModifiedContent: [ChangedRegion] = [],
         autoOpenSettlingInterval: TimeInterval = 1.0,
+        diffBaselineLookback: DiffBaselineLookback = .twoMinutes,
         requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
     ) throws {
         let directory = FileManager.default.temporaryDirectory
@@ -767,7 +775,8 @@ struct ReaderStoreTestFixture {
         differ = TestChangedRegionDiffer(changedRegionsForModifiedContent: changedRegionsForModifiedContent)
         settings = TestReaderSettingsStore(
             autoRefreshOnExternalChange: autoRefreshOnExternalChange,
-            notificationsEnabled: notificationsEnabled
+            notificationsEnabled: notificationsEnabled,
+            diffBaselineLookback: diffBaselineLookback
         )
         let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
         store = ReaderStore(
