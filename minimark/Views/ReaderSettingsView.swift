@@ -35,6 +35,8 @@ struct ReaderSettingsView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 58, alignment: .trailing)
                 }
+
+                lockedWindowsHint
             }
 
             Section("Theme") {
@@ -71,6 +73,8 @@ struct ReaderSettingsView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
+
+                lockedWindowsHint
             }
 
             Section("Window Layout") {
@@ -151,6 +155,19 @@ struct ReaderSettingsView: View {
         }
         .onReceive(settingsStore.settingsPublisher) { latest in
             settings = latest
+        }
+    }
+
+    @ViewBuilder
+    private var lockedWindowsHint: some View {
+        if WindowAppearanceController.lockedWindowCount > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9))
+                Text("Appearance is locked for some windows. Changes won't apply to them.")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
         }
     }
 
