@@ -19,6 +19,13 @@ final class WindowAppearanceControllerTests: XCTestCase {
         super.tearDown()
     }
 
+    /// Drains the main dispatch queue so `.receive(on: DispatchQueue.main)` deliveries arrive.
+    private func drainMainQueue() {
+        let drained = expectation(description: "main queue drained")
+        DispatchQueue.main.async { drained.fulfill() }
+        wait(for: [drained], timeout: 1.0)
+    }
+
     // MARK: - Initial state
 
     func testInitialStateIsUnlockedWithGlobalSettings() {
@@ -36,6 +43,7 @@ final class WindowAppearanceControllerTests: XCTestCase {
         let controller = WindowAppearanceController(settingsStore: settingsStore)
 
         settingsStore.updateTheme(.newspaper)
+        drainMainQueue()
 
         XCTAssertEqual(controller.effectiveTheme, .newspaper)
     }
@@ -44,6 +52,7 @@ final class WindowAppearanceControllerTests: XCTestCase {
         let controller = WindowAppearanceController(settingsStore: settingsStore)
 
         settingsStore.updateBaseFontSize(24)
+        drainMainQueue()
 
         XCTAssertEqual(controller.effectiveFontSize, 24)
     }
@@ -52,6 +61,7 @@ final class WindowAppearanceControllerTests: XCTestCase {
         let controller = WindowAppearanceController(settingsStore: settingsStore)
 
         settingsStore.updateSyntaxTheme(.dracula)
+        drainMainQueue()
 
         XCTAssertEqual(controller.effectiveSyntaxTheme, .dracula)
     }
@@ -63,6 +73,7 @@ final class WindowAppearanceControllerTests: XCTestCase {
         settingsStore.updateTheme(.newspaper)
         settingsStore.updateBaseFontSize(20)
         settingsStore.updateSyntaxTheme(.nord)
+        drainMainQueue()
 
         controller.lock()
 
@@ -79,6 +90,7 @@ final class WindowAppearanceControllerTests: XCTestCase {
         settingsStore.updateTheme(.greenTerminal)
         settingsStore.updateBaseFontSize(48)
         settingsStore.updateSyntaxTheme(.github)
+        drainMainQueue()
 
         XCTAssertEqual(controller.effectiveTheme, .blackOnWhite)
         XCTAssertEqual(controller.effectiveFontSize, 15)
@@ -121,6 +133,7 @@ final class WindowAppearanceControllerTests: XCTestCase {
         controller.restore(from: stored)
 
         settingsStore.updateTheme(.focus)
+        drainMainQueue()
 
         XCTAssertEqual(controller.effectiveTheme, .commodore64)
     }
@@ -138,6 +151,8 @@ final class WindowAppearanceControllerTests: XCTestCase {
         settingsStore.updateTheme(.newspaper)
         settingsStore.updateBaseFontSize(20)
         settingsStore.updateSyntaxTheme(.nord)
+        drainMainQueue()
+
         controller.lock()
 
         let snapshot = controller.lockedAppearance

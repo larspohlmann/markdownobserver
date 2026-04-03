@@ -27,6 +27,7 @@ final class WindowAppearanceController: ObservableObject {
 
         cancellable = settingsStore.settingsPublisher
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
                 guard let self, !self.isLocked else { return }
                 self.effectiveTheme = settings.readerTheme
