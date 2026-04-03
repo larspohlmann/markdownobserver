@@ -17,6 +17,8 @@ struct WatchPill: View {
         static let pillHeight: CGFloat = 30
         static let pillCornerRadius: CGFloat = 15
         static let pillInset: CGFloat = 8
+        static let pillLeadingInset: CGFloat = 60
+        static let pillTrailingInset: CGFloat = 70
         static let horizontalPadding: CGFloat = 14
         static let buttonHeight: CGFloat = 22
         static let controlHeight: CGFloat = 28
@@ -145,6 +147,8 @@ struct WatchPill: View {
             }
         }
         .padding(.top, Metrics.pillInset)
+        .padding(.leading, Metrics.pillLeadingInset)
+        .padding(.trailing, Metrics.pillTrailingInset)
         .accessibilityElement(children: .contain)
     }
 }
