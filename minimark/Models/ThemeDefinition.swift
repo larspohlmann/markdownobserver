@@ -25,6 +25,8 @@ extension ReaderThemeKind {
                 syntaxCSS: nil,
                 syntaxPreviewPalette: nil
             )
+        case .amberTerminal:
+            return AmberTerminalTheme.definition
         }
     }
 }

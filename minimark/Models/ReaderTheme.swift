@@ -5,6 +5,7 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
     case whiteOnBlack
     case darkGreyOnLightGrey
     case lightGreyOnDarkGrey
+    case amberTerminal
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -34,7 +35,7 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
         switch self {
         case .blackOnWhite, .darkGreyOnLightGrey:
             return false
-        case .whiteOnBlack, .lightGreyOnDarkGrey:
+        case .whiteOnBlack, .lightGreyOnDarkGrey, .amberTerminal:
             return true
         }
     }
@@ -49,6 +50,8 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
             return "Light gray background / Dark gray text"
         case .lightGreyOnDarkGrey:
             return "Dark gray background / Light gray text"
+        case .amberTerminal:
+            return "Amber Terminal"
         }
     }
 }
@@ -129,6 +132,21 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#3FB950",
                 changeEditedHex: "#D29922",
                 changeDeletedHex: "#F85149",
+                hasLightBackground: false
+            )
+        case .amberTerminal:
+            return ReaderTheme(
+                kind: .amberTerminal,
+                backgroundHex: "#1A1200",
+                foregroundHex: "#FFB000",
+                secondaryForegroundHex: "#CC8800",
+                codeBackgroundHex: "#1F1600",
+                borderHex: "#3D2E00",
+                linkHex: "#FFCC00",
+                changedBlockHex: "#2A2000",
+                changeAddedHex: "#7A9A40",
+                changeEditedHex: "#CC8800",
+                changeDeletedHex: "#6A4A2A",
                 hasLightBackground: false
             )
         }

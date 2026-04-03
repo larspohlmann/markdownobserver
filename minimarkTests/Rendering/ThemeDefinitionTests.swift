@@ -36,4 +36,48 @@ final class ThemeDefinitionTests: XCTestCase {
             XCTAssertFalse(definition.providesSyntaxHighlighting, "Simple theme \(kind) should not provide syntax highlighting")
         }
     }
+
+    // MARK: - Amber Terminal Theme
+
+    func testAmberTerminalHasCorrectDisplayName() {
+        let kind = ReaderThemeKind.amberTerminal
+        XCTAssertEqual(kind.displayName, "Amber Terminal")
+        XCTAssertTrue(kind.isDark)
+    }
+
+    func testAmberTerminalDefinitionProvidesCustomCSS() {
+        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        XCTAssertNotNil(definition.customCSS)
+        XCTAssertTrue(definition.providesSyntaxHighlighting)
+        XCTAssertNotNil(definition.syntaxCSS)
+        XCTAssertNotNil(definition.syntaxPreviewPalette)
+        XCTAssertNil(definition.customJavaScript)
+    }
+
+    func testAmberTerminalColorsAreAmberPalette() {
+        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        XCTAssertFalse(definition.colors.hasLightBackground)
+        XCTAssertEqual(definition.colors.backgroundHex, "#1A1200")
+        XCTAssertEqual(definition.colors.foregroundHex, "#FFB000")
+    }
+
+    func testAmberTerminalCSSContainsCRTEffects() {
+        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        let css = definition.customCSS!
+        XCTAssertTrue(css.contains("repeating-linear-gradient"), "Should have scanlines")
+        XCTAssertTrue(css.contains("radial-gradient"), "Should have vignette")
+        XCTAssertTrue(css.contains("text-shadow"), "Should have text glow")
+        XCTAssertTrue(css.contains("monospace"), "Should override font to monospace")
+    }
+
+    func testAmberTerminalSyntaxCSSCoversAllTokenTypes() {
+        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        let css = definition.syntaxCSS!
+        XCTAssertTrue(css.contains(".hljs-comment"))
+        XCTAssertTrue(css.contains(".hljs-keyword"))
+        XCTAssertTrue(css.contains(".hljs-string"))
+        XCTAssertTrue(css.contains(".hljs-number"))
+        XCTAssertTrue(css.contains(".hljs-title"))
+        XCTAssertTrue(css.contains(".hljs-built_in"))
+    }
 }
