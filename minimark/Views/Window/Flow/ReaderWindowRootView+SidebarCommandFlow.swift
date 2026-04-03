@@ -315,10 +315,9 @@ extension ReaderWindowRootView {
     }
 
     func persistFinalWorkspaceStateIfNeeded() {
-        guard let favoriteID = activeFavoriteID, var state = activeFavoriteWorkspaceState else {
+        guard let favoriteID = activeFavoriteID, let state = activeFavoriteWorkspaceState else {
             return
         }
-        state.sidebarWidth = sidebarWidth
         settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
     }
 }
