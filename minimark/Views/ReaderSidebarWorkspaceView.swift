@@ -15,9 +15,9 @@ private struct SidebarWidthPreferenceKey: PreferenceKey {
     }
 }
 
-/// Sets the NSSplitView divider position once when the sidebar first appears.
-/// HSplitView ignores `idealWidth` for restored widths — this bridges to AppKit
-/// to apply the correct position programmatically.
+/// Bridges to AppKit to set the NSSplitView divider position and holding priorities.
+/// HSplitView ignores `idealWidth` for restored widths, so this applies the correct
+/// position programmatically on first appearance and whenever width or placement changes.
 private struct SidebarDividerPositionSetter: NSViewRepresentable {
     let targetWidth: CGFloat
     let placement: ReaderMultiFileDisplayMode.SidebarPlacement
