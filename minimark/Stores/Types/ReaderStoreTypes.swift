@@ -16,6 +16,17 @@ enum ReaderDocumentViewMode: String, CaseIterable, Sendable {
         }
     }
 
+    var systemImageName: String {
+        switch self {
+        case .preview:
+            return "doc.richtext"
+        case .split:
+            return "rectangle.split.2x1"
+        case .source:
+            return "text.alignleft"
+        }
+    }
+
     var next: ReaderDocumentViewMode {
         switch self {
         case .preview:

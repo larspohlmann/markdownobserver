@@ -30,35 +30,24 @@ enum ReaderTopBarMetrics {
 
 struct ReaderTopBar: View {
     @ObservedObject var readerStore: ReaderStore
-    let documentViewMode: ReaderDocumentViewMode
-    let showSourceEditingControls: Bool
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
     let didFolderWatchInitialScanFail: Bool
     let folderWatchHighlightColor: Color
-    let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
     let isCurrentWatchAFavorite: Bool
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
-    let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
-    let onOpenFiles: ([URL]) -> Void
     let onRequestFolderWatch: (URL) -> Void
     let onStopFolderWatch: () -> Void
     let onSaveFolderWatchAsFavorite: (String) -> Void
     let onRemoveCurrentWatchFromFavorites: () -> Void
     let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
     let onRemoveFavoriteWatchedFolder: (UUID) -> Void
     let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
-    let onStartSourceEditing: () -> Void
     let onSaveSourceDraft: () -> Void
     let onDiscardSourceDraft: () -> Void
 
@@ -76,7 +65,6 @@ struct ReaderTopBar: View {
         static let editingBannerButtonIconSize: CGFloat = 8
         static let editingBannerButtonHeight: CGFloat = 16
         static let editingBannerCornerRadius: CGFloat = 8
-        static let trailingControlSpacing: CGFloat = 5
         static let watchStripHorizontalPadding: CGFloat = 14
         static let watchStripButtonHeight: CGFloat = 22
     }
@@ -106,59 +94,6 @@ struct ReaderTopBar: View {
                     onRevealInFinder: { readerStore.revealCurrentFileInFinder() }
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-                HStack(spacing: Metrics.trailingControlSpacing) {
-                    if canNavigateChangedRegions {
-                        ChangeNavigationControls(
-                            canNavigate: canNavigateChangedRegions,
-                            onNavigateChangedRegion: onNavigateChangedRegion
-                        )
-                    }
-
-                    if showSourceEditingControls && !readerStore.isSourceEditing {
-                        SourceEditingControls(
-                            canStartEditing: readerStore.canStartSourceEditing,
-                            onStartEditing: onStartSourceEditing
-                        )
-                    }
-
-                    DocumentViewModeSwitch(
-                        hasFile: readerStore.fileURL != nil,
-                        documentViewMode: documentViewMode,
-                        onSetDocumentViewMode: onSetDocumentViewMode
-                    )
-
-                    OpenInMenuButton(
-                        hasFile: readerStore.fileURL != nil,
-                        hasActiveFolderWatch: canStopFolderWatch,
-                        apps: readerStore.openInApplications,
-                        favoriteWatchedFolders: favoriteWatchedFolders,
-                        recentWatchedFolders: recentWatchedFolders,
-                        recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-                        iconProvider: appIconImage(for:),
-                        onOpenFiles: onOpenFiles,
-                        onOpenApp: { app in
-                            readerStore.openCurrentFileInApplication(app)
-                        },
-                        onRevealInFinder: {
-                            readerStore.revealCurrentFileInFinder()
-                        },
-                        onRequestFolderWatch: onRequestFolderWatch,
-                        onStopFolderWatch: onStopFolderWatch,
-                        onStartFavoriteWatch: onStartFavoriteWatch,
-                        onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-                        onEditFavoriteWatchedFolders: { isEditingFavorites = true },
-                        onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-                        onStartRecentFolderWatch: onStartRecentFolderWatch,
-                        onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                        onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
-                    )
-                    .accessibilityLabel("Open in and watch actions")
-                    .accessibilityHint("Open a file, choose an app, reveal in Finder, or manage folder watch")
-                    .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
-                    .fixedSize()
-                }
-                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, Metrics.barHorizontalPadding)
             .frame(height: Metrics.mainBarHeight)
@@ -450,60 +385,6 @@ struct ReaderTopBar: View {
         }
     }
 
-    private struct ChangeNavigationControls: View {
-        let canNavigate: Bool
-        let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
-
-        var body: some View {
-            HStack(spacing: 4) {
-                navigationButton(
-                    symbolName: "arrow.up",
-                    label: "Previous change",
-                    direction: .previous
-                )
-
-                navigationButton(
-                    symbolName: "arrow.down",
-                    label: "Next change",
-                    direction: .next
-                )
-            }
-            .accessibilityElement(children: .contain)
-        }
-
-        private func navigationButton(
-            symbolName: String,
-            label: String,
-            direction: ReaderChangedRegionNavigationDirection
-        ) -> some View {
-            Button {
-                onNavigateChangedRegion(direction)
-            } label: {
-                Image(systemName: symbolName)
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(
-                        width: Metrics.controlHeight,
-                        height: Metrics.controlHeight
-                    )
-                    .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .background {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.primary.opacity(canNavigate ? 0.06 : 0.03))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(canNavigate ? 0.10 : 0.05), lineWidth: 1)
-            }
-            .foregroundStyle(canNavigate ? .primary : .tertiary)
-            .disabled(!canNavigate)
-            .help(label)
-            .accessibilityLabel(label)
-            .accessibilityHint("Jumps to a changed region in the current preview")
-        }
-    }
-
     private struct BreadcrumbDocumentContext: View {
         @ObservedObject var readerStore: ReaderStore
         let onRevealInFinder: () -> Void
@@ -776,44 +657,6 @@ struct ReaderTopBar: View {
         }
     }
 
-    private struct SourceEditingControls: View {
-        let canStartEditing: Bool
-        let onStartEditing: () -> Void
-
-        var body: some View {
-            editButton
-            .fixedSize(horizontal: true, vertical: true)
-            .accessibilityElement(children: .contain)
-        }
-
-        private var editButton: some View {
-            Button {
-                onStartEditing()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 11, weight: .semibold))
-
-                    Text("Edit")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                }
-                .padding(.horizontal, 12)
-                .frame(height: Metrics.controlHeight)
-                .contentShape(Capsule(style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(!canStartEditing)
-            .foregroundStyle(canStartEditing ? .primary : .tertiary)
-            .background(.thinMaterial, in: Capsule(style: .continuous))
-            .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(Color.primary.opacity(canStartEditing ? 0.10 : 0.06), lineWidth: 1)
-            }
-            .help("Edit Source")
-            .accessibilityLabel("Edit source")
-        }
-    }
-
     private struct SourceEditingStatusBar: View {
         let hasUnsavedChanges: Bool
         let canSave: Bool
@@ -943,81 +786,26 @@ struct ReaderTopBar: View {
         }
     }
 
-    private struct DocumentViewModeSwitch: View {
-        let hasFile: Bool
-        let documentViewMode: ReaderDocumentViewMode
-        let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
+}
 
-        var body: some View {
-            HStack(spacing: 2) {
-                ForEach(ReaderDocumentViewMode.allCases, id: \.self) { mode in
-                    modeButton(mode: mode)
-                }
-            }
-            .padding(2)
-            .background {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(.thinMaterial)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-            }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Document view mode")
-            .accessibilityHint("Switch between rendered preview, split view, and markdown source")
-        }
-
-        private func modeButton(mode: ReaderDocumentViewMode) -> some View {
-            let isSelected = documentViewMode == mode
-
-            return Button {
-                onSetDocumentViewMode(mode)
-            } label: {
-                Text(mode.displayName)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .padding(.horizontal, 8)
-                    .frame(height: Metrics.controlHeight)
-                    .background {
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(isSelected ? Color.accentColor.opacity(0.18) : .clear)
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .strokeBorder(
-                                isSelected ? Color.accentColor.opacity(0.28) : .clear,
-                                lineWidth: 1
-                            )
-                    }
-                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(!hasFile || isSelected)
-            .foregroundStyle(hasFile ? (isSelected ? .primary : .secondary) : .tertiary)
-            .help(mode.displayName)
-            .accessibilityLabel(mode.displayName)
-            .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        }
+@MainActor
+func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
+    let iconPath: String
+    if let bundleIdentifier = app.bundleIdentifier,
+       let installedURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+        iconPath = installedURL.path
+    } else {
+        iconPath = app.bundleURL.path
     }
 
-    private func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
-        let iconPath: String
-        if let bundleIdentifier = app.bundleIdentifier,
-           let installedURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
-            iconPath = installedURL.path
-        } else {
-            iconPath = app.bundleURL.path
-        }
-
-        guard FileManager.default.fileExists(atPath: iconPath) else {
-            return NSImage(systemSymbolName: "app", accessibilityDescription: "App")
-        }
-
-        let icon = NSWorkspace.shared.icon(forFile: iconPath)
-        icon.size = NSSize(width: 16, height: 16)
-        icon.isTemplate = false
-        return icon
+    guard FileManager.default.fileExists(atPath: iconPath) else {
+        return NSImage(systemSymbolName: "app", accessibilityDescription: "App")
     }
+
+    let icon = NSWorkspace.shared.icon(forFile: iconPath)
+    icon.size = NSSize(width: 16, height: 16)
+    icon.isTemplate = false
+    return icon
 }
 
 struct FolderWatchDetailsPopover: View {
@@ -1257,7 +1045,7 @@ private struct ExcludedSubdirectoriesSection: View {
     }
 }
 
-private struct OpenInMenuButton: NSViewRepresentable {
+struct OpenInMenuButton: NSViewRepresentable {
     let hasFile: Bool
     let hasActiveFolderWatch: Bool
     let apps: [ReaderExternalApplication]

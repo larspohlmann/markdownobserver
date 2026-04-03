@@ -124,41 +124,24 @@ struct ContentView: View {
         VStack(spacing: 0) {
             ReaderTopBar(
                 readerStore: readerStore,
-                documentViewMode: readerStore.documentViewMode,
-                showSourceEditingControls: showSourceEditingControls,
                 activeFolderWatch: activeFolderWatch,
                 isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
                 didFolderWatchInitialScanFail: isFolderWatchInitialScanFailed,
                 folderWatchHighlightColor: folderWatchHighlightColor,
-                canNavigateChangedRegions: canNavigateChangedRegions,
                 canStopFolderWatch: canStopFolderWatch,
                 isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                 favoriteWatchedFolders: favoriteWatchedFolders,
                 recentWatchedFolders: recentWatchedFolders,
-                recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-                onNavigateChangedRegion: requestChangedRegionNavigation,
-                onSetDocumentViewMode: { mode in
-                    readerStore.setDocumentViewMode(mode)
-                },
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
                 onRequestFolderWatch: onRequestFolderWatch,
                 onStopFolderWatch: onStopFolderWatch,
                 onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite,
                 onRemoveCurrentWatchFromFavorites: onRemoveCurrentWatchFromFavorites,
                 onStartFavoriteWatch: onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
                 onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
                 onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
                 onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
-                onStartSourceEditing: {
-                    readerStore.startEditingSource()
-                },
                 onSaveSourceDraft: {
                     readerStore.saveSourceDraft()
                 },
@@ -180,6 +163,9 @@ struct ContentView: View {
                 }
 
                 documentSurfaceLayout
+                    .overlay(alignment: .topTrailing) {
+                        contentUtilityRail
+                    }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
@@ -501,6 +487,49 @@ struct ContentView: View {
             currentReaderTheme: currentReaderTheme,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
+        )
+    }
+
+    private var contentUtilityRail: some View {
+        ContentUtilityRail(
+            hasFile: readerStore.fileURL != nil,
+            documentViewMode: readerStore.documentViewMode,
+            showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
+            canStartSourceEditing: readerStore.canStartSourceEditing,
+            canNavigateChangedRegions: canNavigateChangedRegions,
+            canStopFolderWatch: canStopFolderWatch,
+            apps: readerStore.openInApplications,
+            favoriteWatchedFolders: favoriteWatchedFolders,
+            recentWatchedFolders: recentWatchedFolders,
+            recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+            iconProvider: appIconImage(for:),
+            onNavigateChangedRegion: requestChangedRegionNavigation,
+            onSetDocumentViewMode: { mode in
+                readerStore.setDocumentViewMode(mode)
+            },
+            onOpenFiles: { fileURLs in
+                handlePickedFileURLs(fileURLs)
+            },
+            onOpenApp: { app in
+                readerStore.openCurrentFileInApplication(app)
+            },
+            onRevealInFinder: {
+                readerStore.revealCurrentFileInFinder()
+            },
+            onRequestFolderWatch: onRequestFolderWatch,
+            onStopFolderWatch: onStopFolderWatch,
+            onStartFavoriteWatch: onStartFavoriteWatch,
+            onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+            onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
+            onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
+            onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
+            onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
+            onStartRecentFolderWatch: onStartRecentFolderWatch,
+            onClearRecentWatchedFolders: onClearRecentWatchedFolders,
+            onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
+            onStartSourceEditing: {
+                readerStore.startEditingSource()
+            }
         )
     }
 
