@@ -33,7 +33,7 @@ private struct SidebarDividerPositionSetter: NSViewRepresentable {
     func updateNSView(_ nsView: SidebarPositionHelperView, context: Context) {}
 }
 
-final class SidebarPositionHelperView: NSView {
+private final class SidebarPositionHelperView: NSView {
     var targetWidth: CGFloat = 0
     var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
     private var didApplyPosition = false
@@ -62,7 +62,7 @@ final class SidebarPositionHelperView: NSView {
         CATransaction.commit()
     }
 
-    func ancestorSplitView() -> NSSplitView? {
+    private func ancestorSplitView() -> NSSplitView? {
         var current = superview
         while let view = current {
             if let split = view as? NSSplitView { return split }
