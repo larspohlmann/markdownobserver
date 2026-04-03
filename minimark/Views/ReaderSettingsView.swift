@@ -35,8 +35,6 @@ struct ReaderSettingsView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 58, alignment: .trailing)
                 }
-
-                lockedWindowsHint
             }
 
             Section("Theme") {

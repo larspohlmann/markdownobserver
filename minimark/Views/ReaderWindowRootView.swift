@@ -470,6 +470,13 @@ struct ReaderWindowRootView: View {
                     }
                 } else {
                     appearanceController.lock()
+                    for document in sidebarDocumentController.documents {
+                        document.readerStore.setAppearanceOverride(
+                            theme: appearanceController.effectiveTheme,
+                            baseFontSize: appearanceController.effectiveFontSize,
+                            syntaxTheme: appearanceController.effectiveSyntaxTheme
+                        )
+                    }
                     if activeFavoriteWorkspaceState != nil {
                         activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance
                     }

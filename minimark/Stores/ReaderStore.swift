@@ -650,6 +650,18 @@ final class ReaderStore: ObservableObject {
         lastRefreshAt = Date()
     }
 
+    func setAppearanceOverride(
+        theme: ReaderThemeKind,
+        baseFontSize: Double,
+        syntaxTheme: SyntaxThemeKind
+    ) {
+        appearanceOverride = LockedAppearance(
+            readerTheme: theme,
+            baseFontSize: baseFontSize,
+            syntaxTheme: syntaxTheme
+        )
+    }
+
     func clearAppearanceOverride() {
         appearanceOverride = nil
     }
