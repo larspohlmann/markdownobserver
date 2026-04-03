@@ -23,27 +23,29 @@ enum FocusTheme {
         padding: 24px 32px 24px 0;
     }
 
-    /* Headings differentiated by weight, not size */
-    .markdown-body h1 {
-        font-size: 1.3em;
-        font-weight: 700;
-    }
-
-    .markdown-body h2 {
-        font-size: 1.15em;
-        font-weight: 700;
-    }
-
-    .markdown-body h3 {
-        font-size: 1.05em;
-        font-weight: 600;
-    }
-
+    /* Headings differentiated by weight only, all same size */
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
     .markdown-body h4,
     .markdown-body h5,
     .markdown-body h6 {
         font-size: 1em;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2 {
+        font-weight: 700;
+    }
+
+    .markdown-body h3,
+    .markdown-body h4 {
         font-weight: 600;
+    }
+
+    .markdown-body h5,
+    .markdown-body h6 {
+        font-weight: 500;
     }
 
     /* Muted horizontal rules */
