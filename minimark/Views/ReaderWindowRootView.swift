@@ -293,12 +293,16 @@ struct ReaderWindowRootView: View {
     }
 
     private func reapplyAppearance() {
-        for document in sidebarDocumentController.documents {
-            try? document.readerStore.renderWithAppearance(
-                theme: appearanceController.effectiveTheme,
-                baseFontSize: appearanceController.effectiveFontSize,
-                syntaxTheme: appearanceController.effectiveSyntaxTheme
-            )
+        // Defer rendering to the next main actor hop to avoid setting @Published
+        // properties on ReaderStore during a SwiftUI view update cycle.
+        Task { @MainActor in
+            for document in sidebarDocumentController.documents {
+                try? document.readerStore.renderWithAppearance(
+                    theme: appearanceController.effectiveTheme,
+                    baseFontSize: appearanceController.effectiveFontSize,
+                    syntaxTheme: appearanceController.effectiveSyntaxTheme
+                )
+            }
         }
     }
 
