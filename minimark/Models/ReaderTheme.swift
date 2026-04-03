@@ -65,6 +65,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
     let changeAddedHex: String
     let changeEditedHex: String
     let changeDeletedHex: String
+    let hasLightBackground: Bool
 
     static let `default` = ReaderTheme.theme(for: .blackOnWhite)
 
@@ -82,7 +83,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changedBlockHex: "#FFF5CC",
                 changeAddedHex: "#2DA44E",
                 changeEditedHex: "#BF8700",
-                changeDeletedHex: "#CF222E"
+                changeDeletedHex: "#CF222E",
+                hasLightBackground: true
             )
         case .whiteOnBlack:
             return ReaderTheme(
@@ -96,7 +98,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changedBlockHex: "#2C3A20",
                 changeAddedHex: "#3FB950",
                 changeEditedHex: "#D29922",
-                changeDeletedHex: "#F85149"
+                changeDeletedHex: "#F85149",
+                hasLightBackground: false
             )
         case .darkGreyOnLightGrey:
             return ReaderTheme(
@@ -110,7 +113,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changedBlockHex: "#F0E3B5",
                 changeAddedHex: "#1A7F37",
                 changeEditedHex: "#9A6700",
-                changeDeletedHex: "#CF222E"
+                changeDeletedHex: "#CF222E",
+                hasLightBackground: true
             )
         case .lightGreyOnDarkGrey:
             return ReaderTheme(
@@ -124,7 +128,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changedBlockHex: "#4D5128",
                 changeAddedHex: "#3FB950",
                 changeEditedHex: "#D29922",
-                changeDeletedHex: "#F85149"
+                changeDeletedHex: "#F85149",
+                hasLightBackground: false
             )
         }
     }

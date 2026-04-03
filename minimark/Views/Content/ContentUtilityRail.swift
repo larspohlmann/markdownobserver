@@ -6,14 +6,12 @@ struct ContentUtilityRail: View {
     let documentViewMode: ReaderDocumentViewMode
     let showEditButton: Bool
     let canStartSourceEditing: Bool
-    let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
     let apps: [ReaderExternalApplication]
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onOpenFiles: ([URL]) -> Void
     let onOpenApp: (ReaderExternalApplication) -> Void
@@ -31,7 +29,6 @@ struct ContentUtilityRail: View {
     let onClearRecentManuallyOpenedFiles: () -> Void
     let onStartSourceEditing: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isEditingFavorites = false
     @State private var isHovering = false
 
@@ -47,43 +44,29 @@ struct ContentUtilityRail: View {
         static let separatorWidth: CGFloat = 20
     }
 
-    private var railBackground: Color {
-        if colorScheme == .dark {
-            return Color(white: 0.12, opacity: isHovering ? 0.92 : 0.55)
-        } else {
-            return Color(white: 1.0, opacity: isHovering ? 0.95 : 0.55)
-        }
-    }
-
     var body: some View {
         VStack(spacing: Metrics.groupSpacing) {
-            viewModeGroup
+            if hasFile {
+                viewModeGroup
 
-            if canNavigateChangedRegions {
+                if showEditButton {
+                    groupSeparator
+                    editGroup
+                }
+
                 groupSeparator
-                changeNavigationGroup
             }
 
-            if showEditButton {
-                groupSeparator
-                editGroup
-            }
-
-            groupSeparator
             actionsGroup
         }
         .padding(.vertical, Metrics.groupSpacing)
         .frame(width: Metrics.railWidth)
-        .background {
-            RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .fill(railBackground)
-        }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
-        .shadow(color: .black.opacity(isHovering ? 0.20 : 0.10), radius: isHovering ? 12 : 6, y: 2)
+        .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {
                 isHovering = hovering
@@ -135,47 +118,6 @@ struct ContentUtilityRail: View {
         .help(mode.displayName)
         .accessibilityLabel(mode.displayName)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
-    }
-
-    // MARK: - Change Navigation Group
-
-    private var changeNavigationGroup: some View {
-        VStack(spacing: 4) {
-            changeNavigationButton(
-                symbolName: "arrow.up",
-                label: "Previous change",
-                direction: .previous
-            )
-            changeNavigationButton(
-                symbolName: "arrow.down",
-                label: "Next change",
-                direction: .next
-            )
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private func changeNavigationButton(
-        symbolName: String,
-        label: String,
-        direction: ReaderChangedRegionNavigationDirection
-    ) -> some View {
-        Button {
-            onNavigateChangedRegion(direction)
-        } label: {
-            Image(systemName: symbolName)
-                .font(.system(size: Metrics.iconSize, weight: .semibold))
-                .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
-                    fill: Color.primary.opacity(0.06),
-                    border: Color.primary.opacity(0.10)
-                )
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.primary)
-        .help(label)
-        .accessibilityLabel(label)
-        .accessibilityHint("Jumps to a changed region in the current preview")
     }
 
     // MARK: - Edit Group

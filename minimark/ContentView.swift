@@ -113,6 +113,7 @@ struct ContentView: View {
     @State private var sourceReloadToken = 0
     @State private var changedRegionNavigationRequestID = 0
     @State private var lastChangedRegionNavigationDirection: ReaderChangedRegionNavigationDirection?
+    @State private var currentChangedRegionIndex: Int = 0
     @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
     @State private var cachedSourceHTMLDocument = ""
 
@@ -127,15 +128,9 @@ struct ContentView: View {
                 activeFolderWatch: activeFolderWatch,
                 isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
                 didFolderWatchInitialScanFail: isFolderWatchInitialScanFailed,
-                folderWatchHighlightColor: folderWatchHighlightColor,
-                canStopFolderWatch: canStopFolderWatch,
-                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                 favoriteWatchedFolders: favoriteWatchedFolders,
                 recentWatchedFolders: recentWatchedFolders,
                 onRequestFolderWatch: onRequestFolderWatch,
-                onStopFolderWatch: onStopFolderWatch,
-                onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite,
-                onRemoveCurrentWatchFromFavorites: onRemoveCurrentWatchFromFavorites,
                 onStartFavoriteWatch: onStartFavoriteWatch,
                 onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
                 onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
@@ -162,10 +157,7 @@ struct ContentView: View {
                     }
                 }
 
-                documentSurfaceLayout
-                    .overlay(alignment: .topTrailing) {
-                        contentUtilityRail
-                    }
+                documentSurfaceWithOverlays
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
@@ -182,6 +174,9 @@ struct ContentView: View {
             }
             .onChange(of: readerStore.fileURL?.standardizedFileURL.path) { _, _ in
                 handleFileIdentityChange()
+            }
+            .onChange(of: readerStore.changedRegions) { _, _ in
+                currentChangedRegionIndex = 0
             }
             .onChange(of: previewMode) { _, newValue in
                 handlePreviewModeChange(newValue)
@@ -323,6 +318,7 @@ struct ContentView: View {
     }
 
     private func handleFileIdentityChange() {
+        currentChangedRegionIndex = 0
         if previewMode == .nativeFallback {
             previewReloadToken += 1
             previewMode = .web
@@ -490,20 +486,58 @@ struct ContentView: View {
         )
     }
 
+    private var overlayColorScheme: ColorScheme? {
+        guard readerStore.fileURL != nil else { return nil }
+        return currentReaderTheme.hasLightBackground ? .light : .dark
+    }
+
+    @ViewBuilder
+    private var documentSurfaceWithOverlays: some View {
+        documentSurfaceLayout
+            .overlay(alignment: .topTrailing) {
+                contentUtilityRail
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+            }
+            .overlay(alignment: .topLeading) {
+                if canNavigateChangedRegions {
+                    ChangeNavigationPill(
+                        currentIndex: currentChangedRegionIndex,
+                        totalCount: readerStore.changedRegions.count,
+                        onNavigate: requestChangedRegionNavigation
+                    )
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                }
+            }
+            .overlay(alignment: .top) {
+                if let activeWatch = activeFolderWatch {
+                    WatchPill(
+                        activeFolderWatch: activeWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        canStop: canStopFolderWatch,
+                        onStop: onStopFolderWatch,
+                        onSaveFavorite: onSaveFolderWatchAsFavorite,
+                        onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
+                        onRevealInFinder: {
+                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                        }
+                    )
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                }
+            }
+    }
+
     private var contentUtilityRail: some View {
         ContentUtilityRail(
             hasFile: readerStore.fileURL != nil,
             documentViewMode: readerStore.documentViewMode,
             showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
             canStartSourceEditing: readerStore.canStartSourceEditing,
-            canNavigateChangedRegions: canNavigateChangedRegions,
             canStopFolderWatch: canStopFolderWatch,
             apps: readerStore.openInApplications,
             favoriteWatchedFolders: favoriteWatchedFolders,
             recentWatchedFolders: recentWatchedFolders,
             recentManuallyOpenedFiles: recentManuallyOpenedFiles,
             iconProvider: appIconImage(for:),
-            onNavigateChangedRegion: requestChangedRegionNavigation,
             onSetDocumentViewMode: { mode in
                 readerStore.setDocumentViewMode(mode)
             },
@@ -552,10 +586,6 @@ struct ContentView: View {
 
     private var currentReaderTheme: ReaderTheme {
         ReaderTheme.theme(for: readerStore.currentSettings.readerTheme)
-    }
-
-    private var folderWatchHighlightColor: Color {
-        Color.folderWatchHighlight(for: readerStore.currentSettings, colorScheme: colorScheme)
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
@@ -709,6 +739,13 @@ struct ContentView: View {
     private func requestChangedRegionNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
         guard canNavigateChangedRegions else {
             return
+        }
+
+        let count = readerStore.changedRegions.count
+        if direction == .next {
+            currentChangedRegionIndex = currentChangedRegionIndex >= count - 1 ? 0 : currentChangedRegionIndex + 1
+        } else {
+            currentChangedRegionIndex = currentChangedRegionIndex <= 0 ? count - 1 : currentChangedRegionIndex - 1
         }
 
         lastChangedRegionNavigationDirection = direction
