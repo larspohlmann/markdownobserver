@@ -70,12 +70,13 @@ extension ReaderWindowRootView {
         guard let session = sharedFolderWatchSession else {
             return
         }
-        let workspaceState = ReaderFavoriteWorkspaceState.from(
+        var workspaceState = ReaderFavoriteWorkspaceState.from(
             settings: settingsStore.currentSettings,
             pinnedGroupIDs: sidebarPinnedGroupIDs,
             collapsedGroupIDs: sidebarCollapsedGroupIDs,
             sidebarWidth: sidebarWidth
         )
+        workspaceState.lockedAppearance = appearanceController.lockedAppearance
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
@@ -110,6 +111,12 @@ extension ReaderWindowRootView {
         sidebarPinnedGroupIDs = entry.workspaceState.pinnedGroupIDs
         sidebarCollapsedGroupIDs = entry.workspaceState.collapsedGroupIDs
         sidebarWidth = entry.workspaceState.sidebarWidth
+
+        if let locked = entry.workspaceState.lockedAppearance {
+            appearanceController.restore(from: locked)
+        } else if appearanceController.isLocked {
+            appearanceController.unlock()
+        }
 
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
         startWatchingFolder(
@@ -242,6 +249,9 @@ extension ReaderWindowRootView {
                 sidebarPinnedGroupIDs = []
                 sidebarCollapsedGroupIDs = []
                 sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+                if appearanceController.isLocked {
+                    appearanceController.unlock()
+                }
             }
         }
 

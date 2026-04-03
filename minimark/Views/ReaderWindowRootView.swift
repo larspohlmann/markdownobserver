@@ -29,6 +29,7 @@ struct ReaderWindowRootView: View {
     @State var activeFavoriteID: UUID?
     @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
     @StateObject var windowCoordinator: ReaderWindowCoordinator
+    @StateObject var appearanceController: WindowAppearanceController
     @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
 
     init(
@@ -46,6 +47,9 @@ struct ReaderWindowRootView: View {
                 settingsStore: settingsStore,
                 sidebarDocumentController: sidebarDocumentController
             )
+        )
+        _appearanceController = StateObject(
+            wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
         )
     }
 
@@ -138,6 +142,10 @@ struct ReaderWindowRootView: View {
     }
 
     private func windowLifecycleAwareView<Content: View>(_ view: Content) -> some View {
+        windowLifecycleChangeObservers(windowLifecycleBaseView(view))
+    }
+
+    private func windowLifecycleBaseView<Content: View>(_ view: Content) -> some View {
         view
             .sheet(item: $folderWatchWarningCoordinator.activeFlow, onDismiss: {
                 dismissFolderWatchAutoOpenWarning()
@@ -234,6 +242,10 @@ struct ReaderWindowRootView: View {
             .onChange(of: openSidebarDocumentPathSnapshot) { _, _ in
                 syncSharedFavoriteOpenDocumentsIfNeeded()
             }
+    }
+
+    private func windowLifecycleChangeObservers<Content: View>(_ view: Content) -> some View {
+        view
             .onChange(of: sidebarDocumentController.selectedFolderWatchAutoOpenWarning) { _, warning in
                 handleFolderWatchAutoOpenWarningChange(warning)
             }
@@ -259,15 +271,35 @@ struct ReaderWindowRootView: View {
                     activeFavoriteWorkspaceState?.sidebarWidth = newWidth
                 }
             }
+            .onChange(of: appearanceController.effectiveTheme) { _, _ in
+                reapplyAppearance()
+            }
+            .onChange(of: appearanceController.effectiveFontSize) { _, _ in
+                reapplyAppearance()
+            }
+            .onChange(of: appearanceController.effectiveSyntaxTheme) { _, _ in
+                reapplyAppearance()
+            }
             .onChange(of: activeFavoriteWorkspaceState) { _, newState in
-                guard let favoriteID = activeFavoriteID, let state = newState else {
+                guard let favoriteID = activeFavoriteID, var state = newState else {
                     return
                 }
+                state.lockedAppearance = appearanceController.lockedAppearance
                 settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
                 handleWindowDidBecomeKey(notification)
             }
+    }
+
+    private func reapplyAppearance() {
+        for document in sidebarDocumentController.documents {
+            try? document.readerStore.renderWithAppearance(
+                theme: appearanceController.effectiveTheme,
+                baseFontSize: appearanceController.effectiveFontSize,
+                syntaxTheme: appearanceController.effectiveSyntaxTheme
+            )
+        }
     }
 
     private func performInitialSetupIfNeeded() {
