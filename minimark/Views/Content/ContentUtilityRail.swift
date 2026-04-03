@@ -6,14 +6,12 @@ struct ContentUtilityRail: View {
     let documentViewMode: ReaderDocumentViewMode
     let showEditButton: Bool
     let canStartSourceEditing: Bool
-    let canNavigateChangedRegions: Bool
     let canStopFolderWatch: Bool
     let apps: [ReaderExternalApplication]
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onOpenFiles: ([URL]) -> Void
     let onOpenApp: (ReaderExternalApplication) -> Void
@@ -58,11 +56,6 @@ struct ContentUtilityRail: View {
     var body: some View {
         VStack(spacing: Metrics.groupSpacing) {
             viewModeGroup
-
-            if canNavigateChangedRegions {
-                groupSeparator
-                changeNavigationGroup
-            }
 
             if showEditButton {
                 groupSeparator
@@ -135,47 +128,6 @@ struct ContentUtilityRail: View {
         .help(mode.displayName)
         .accessibilityLabel(mode.displayName)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
-    }
-
-    // MARK: - Change Navigation Group
-
-    private var changeNavigationGroup: some View {
-        VStack(spacing: 4) {
-            changeNavigationButton(
-                symbolName: "arrow.up",
-                label: "Previous change",
-                direction: .previous
-            )
-            changeNavigationButton(
-                symbolName: "arrow.down",
-                label: "Next change",
-                direction: .next
-            )
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private func changeNavigationButton(
-        symbolName: String,
-        label: String,
-        direction: ReaderChangedRegionNavigationDirection
-    ) -> some View {
-        Button {
-            onNavigateChangedRegion(direction)
-        } label: {
-            Image(systemName: symbolName)
-                .font(.system(size: Metrics.iconSize, weight: .semibold))
-                .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
-                    fill: Color.primary.opacity(0.06),
-                    border: Color.primary.opacity(0.10)
-                )
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.primary)
-        .help(label)
-        .accessibilityLabel(label)
-        .accessibilityHint("Jumps to a changed region in the current preview")
     }
 
     // MARK: - Edit Group
