@@ -635,7 +635,7 @@ final class ReaderStore: ObservableObject {
 
     private func renderCurrentMarkdown() throws {
         let settings = settingsStore.currentSettings
-        let theme = ReaderTheme.theme(for: settings.readerTheme)
+        let theme = settings.readerTheme.themeDefinition
 
         let docDir = fileURL?.deletingLastPathComponent()
         activateTrustedImageFolderAccessIfNeeded(for: docDir)
@@ -651,7 +651,7 @@ final class ReaderStore: ObservableObject {
             markdown: imageResult.markdown,
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions,
-            readerTheme: theme,
+            theme: theme,
             syntaxTheme: settings.syntaxTheme,
             baseFontSize: settings.baseFontSize
         )

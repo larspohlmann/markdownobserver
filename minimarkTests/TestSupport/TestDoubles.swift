@@ -14,7 +14,7 @@ final class TestMarkdownRenderer: MarkdownRendering {
         markdown: String,
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
-        readerTheme: ReaderTheme,
+        theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
         baseFontSize: Double
     ) throws -> RenderedMarkdown {

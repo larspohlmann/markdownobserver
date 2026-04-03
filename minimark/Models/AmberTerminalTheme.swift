@@ -1,18 +1,16 @@
 import Foundation
 
 enum AmberTerminalTheme {
-    static var definition: ThemeDefinition {
-        ThemeDefinition(
-            kind: .amberTerminal,
-            displayName: ReaderThemeKind.amberTerminal.displayName,
-            colors: ReaderTheme.theme(for: .amberTerminal),
-            customCSS: customCSS,
-            customJavaScript: nil,
-            providesSyntaxHighlighting: true,
-            syntaxCSS: syntaxCSS,
-            syntaxPreviewPalette: previewPalette
-        )
-    }
+    static let definition = ThemeDefinition(
+        kind: .amberTerminal,
+        displayName: ReaderThemeKind.amberTerminal.displayName,
+        colors: ReaderTheme.theme(for: .amberTerminal),
+        customCSS: customCSS,
+        customJavaScript: nil,
+        providesSyntaxHighlighting: true,
+        syntaxCSS: syntaxCSS,
+        syntaxPreviewPalette: previewPalette
+    )
 
     static let customCSS: String = """
     /* ── Amber Terminal CRT Theme ── */

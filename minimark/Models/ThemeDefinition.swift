@@ -27,6 +27,10 @@ extension ReaderThemeKind {
             )
         case .amberTerminal:
             return AmberTerminalTheme.definition
+        case .greenTerminal:
+            return GreenTerminalTheme.definition
+        case .greenTerminalStatic:
+            return GreenTerminalTheme.staticDefinition
         }
     }
 }

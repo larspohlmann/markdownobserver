@@ -345,7 +345,7 @@ struct RenderingAndDiffTests {
     @Test func readerCSSUsesFullAvailableDocumentWidth() {
         let factory = ReaderCSSFactory()
 
-        let css = factory.makeCSS(theme: .default, syntaxTheme: .default, baseFontSize: 16)
+        let css = factory.makeCSS(theme: ReaderThemeKind.blackOnWhite.themeDefinition, syntaxTheme: .default, baseFontSize: 16)
 
         #expect(css.contains("width: 100%;"))
         #expect(css.contains("margin: 0;"))

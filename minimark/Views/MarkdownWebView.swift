@@ -383,6 +383,8 @@ struct MarkdownWebView: NSViewRepresentable {
                 return false
             }
 
+            let themeJSBase64 = extractRuntimeThemeJSBase64(from: htmlDocument)
+
             let anchorProgressLiteral: String
             if let reloadAnchorProgress {
                 anchorProgressLiteral = String(min(max(reloadAnchorProgress, 0), 1))
@@ -390,14 +392,34 @@ struct MarkdownWebView: NSViewRepresentable {
                 anchorProgressLiteral = "null"
             }
 
+            let themeJSLiteral: String
+            if let themeJSBase64 {
+                themeJSLiteral = javaScriptStringLiteral(themeJSBase64)
+            } else {
+                themeJSLiteral = "null"
+            }
+
             isRestoringReloadScroll = reloadAnchorProgress != nil
             let script = """
             (() => {
+              if (typeof window.__minimarkThemeCleanup === 'function') {
+                window.__minimarkThemeCleanup();
+                delete window.__minimarkThemeCleanup;
+              }
                             if (typeof window.__minimarkApplyRuntimeCSS === 'function') {
                                 window.__minimarkApplyRuntimeCSS(
                                     \(javaScriptStringLiteral(cssBase64))
                                 );
                             }
+              var themeJSBase64 = \(themeJSLiteral);
+              if (themeJSBase64) {
+                try {
+                  var binary = atob(themeJSBase64);
+                  var bytes = Uint8Array.from(binary, function(c) { return c.charCodeAt(0); });
+                  var themeJS = new TextDecoder().decode(bytes);
+                  new Function(themeJS)();
+                } catch(e) { console.error('Theme JS error:', e); }
+              }
               if (typeof window.__minimarkUpdateRenderedMarkdown !== 'function') {
                 return false;
               }
@@ -813,6 +835,10 @@ struct MarkdownWebView: NSViewRepresentable {
 
         private func extractRuntimeCSSBase64(from htmlDocument: String) -> String? {
             extractMetaContent(named: "minimark-runtime-css-base64", from: htmlDocument)
+        }
+
+        private func extractRuntimeThemeJSBase64(from htmlDocument: String) -> String? {
+            extractMetaContent(named: "minimark-runtime-theme-js-base64", from: htmlDocument)
         }
 
         private func extractMetaContent(named name: String, from htmlDocument: String) -> String? {
