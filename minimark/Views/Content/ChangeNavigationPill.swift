@@ -5,7 +5,6 @@ struct ChangeNavigationPill: View {
     let totalCount: Int
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
 
     private enum Metrics {
@@ -16,14 +15,6 @@ struct ChangeNavigationPill: View {
         static let pillCornerRadius: CGFloat = 12
         static let pillInset: CGFloat = 8
         static let groupSpacing: CGFloat = 4
-    }
-
-    private var pillBackground: Color {
-        if colorScheme == .dark {
-            return Color(white: 0.12, opacity: isHovering ? 0.92 : 0.55)
-        } else {
-            return Color(white: 1.0, opacity: isHovering ? 0.95 : 0.55)
-        }
     }
 
     var body: some View {
@@ -49,14 +40,14 @@ struct ChangeNavigationPill: View {
         .frame(width: Metrics.pillWidth)
         .background {
             RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous)
-                .fill(pillBackground)
+                .fill(.ultraThinMaterial)
         }
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous))
-        .shadow(color: .black.opacity(isHovering ? 0.20 : 0.10), radius: isHovering ? 12 : 6, y: 2)
+        .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {
                 isHovering = hovering

@@ -29,12 +29,8 @@ struct WatchPill: View {
             : Color(red: 0.13, green: 0.54, blue: 0.33)
     }
 
-    private var pillBackground: Color {
-        if colorScheme == .dark {
-            return Color(red: 0.12, green: 0.18, blue: 0.14, opacity: isHovering ? 0.90 : 0.50)
-        } else {
-            return Color(red: 0.85, green: 0.95, blue: 0.88, opacity: isHovering ? 0.90 : 0.50)
-        }
+    private var greenTint: Color {
+        stripGreen.opacity(colorScheme == .dark ? 0.08 : 0.10)
     }
 
     private var pillBorder: Color {
@@ -132,15 +128,19 @@ struct WatchPill: View {
         .padding(.horizontal, Metrics.horizontalPadding)
         .frame(minHeight: Metrics.pillHeight)
         .background {
-            Capsule(style: .continuous)
-                .fill(pillBackground)
+            ZStack {
+                Capsule(style: .continuous)
+                    .fill(.ultraThinMaterial)
+                Capsule(style: .continuous)
+                    .fill(greenTint)
+            }
         }
         .overlay {
             Capsule(style: .continuous)
                 .strokeBorder(pillBorder, lineWidth: 1)
         }
         .clipShape(Capsule(style: .continuous))
-        .shadow(color: .black.opacity(isHovering ? 0.20 : 0.10), radius: isHovering ? 12 : 6, y: 2)
+        .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {
                 isHovering = hovering

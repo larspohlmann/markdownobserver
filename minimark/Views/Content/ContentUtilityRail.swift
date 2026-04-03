@@ -29,7 +29,6 @@ struct ContentUtilityRail: View {
     let onClearRecentManuallyOpenedFiles: () -> Void
     let onStartSourceEditing: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isEditingFavorites = false
     @State private var isHovering = false
 
@@ -43,14 +42,6 @@ struct ContentUtilityRail: View {
         static let railInset: CGFloat = 8
         static let railTrailingInset: CGFloat = 18
         static let separatorWidth: CGFloat = 20
-    }
-
-    private var railBackground: Color {
-        if colorScheme == .dark {
-            return Color(white: 0.12, opacity: isHovering ? 0.92 : 0.55)
-        } else {
-            return Color(white: 1.0, opacity: isHovering ? 0.95 : 0.55)
-        }
     }
 
     var body: some View {
@@ -69,14 +60,14 @@ struct ContentUtilityRail: View {
         .frame(width: Metrics.railWidth)
         .background {
             RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .fill(railBackground)
+                .fill(.ultraThinMaterial)
         }
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isHovering ? 0.14 : 0.08), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
-        .shadow(color: .black.opacity(isHovering ? 0.20 : 0.10), radius: isHovering ? 12 : 6, y: 2)
+        .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {
                 isHovering = hovering
