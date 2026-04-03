@@ -112,10 +112,17 @@ extension ReaderWindowRootView {
         sidebarCollapsedGroupIDs = entry.workspaceState.collapsedGroupIDs
         sidebarWidth = entry.workspaceState.sidebarWidth
 
-        if let locked = entry.workspaceState.lockedAppearance {
-            appearanceController.restore(from: locked)
-        } else if appearanceController.isLocked {
-            appearanceController.unlock()
+        // Defer appearance changes to the next main actor hop to avoid setting
+        // @Published properties on the controller during the view update batch
+        // triggered by the @State assignments above.
+        let lockedAppearance = entry.workspaceState.lockedAppearance
+        let wasLocked = appearanceController.isLocked
+        Task { @MainActor [appearanceController] in
+            if let locked = lockedAppearance {
+                appearanceController.restore(from: locked)
+            } else if wasLocked {
+                appearanceController.unlock()
+            }
         }
 
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
@@ -249,8 +256,10 @@ extension ReaderWindowRootView {
                 sidebarPinnedGroupIDs = []
                 sidebarCollapsedGroupIDs = []
                 sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
-                if appearanceController.isLocked {
-                    appearanceController.unlock()
+                Task { @MainActor [appearanceController] in
+                    if appearanceController.isLocked {
+                        appearanceController.unlock()
+                    }
                 }
             }
         }
