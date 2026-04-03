@@ -472,6 +472,7 @@ struct ReaderWindowRootView: View {
                     }
                 }
             },
+            effectiveReaderTheme: appearanceController.effectiveTheme,
             onStartFavoriteWatch: startFavoriteWatch,
             onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
             onRenameFavoriteWatchedFolder: { id, newName in
