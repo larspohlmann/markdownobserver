@@ -158,7 +158,11 @@ struct ContentView: View {
                 }
 
                 documentSurfaceLayout
-                    .padding(.top, activeFolderWatch != nil ? 22 : 0)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if activeFolderWatch != nil {
+                            Color.clear.frame(height: 22)
+                        }
+                    }
                     .overlay(alignment: .topTrailing) {
                         contentUtilityRail
                     }
