@@ -485,11 +485,16 @@ struct ContentView: View {
         )
     }
 
+    private var overlayColorScheme: ColorScheme {
+        currentReaderTheme.hasLightBackground ? .light : .dark
+    }
+
     @ViewBuilder
     private var documentSurfaceWithOverlays: some View {
         documentSurfaceLayout
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
+                    .environment(\.colorScheme, overlayColorScheme)
             }
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
@@ -499,6 +504,7 @@ struct ContentView: View {
                         contentHasLightBackground: currentReaderTheme.hasLightBackground,
                         onNavigate: requestChangedRegionNavigation
                     )
+                    .environment(\.colorScheme, overlayColorScheme)
                 }
             }
             .overlay(alignment: .top) {
@@ -515,6 +521,7 @@ struct ContentView: View {
                         },
                         contentHasLightBackground: currentReaderTheme.hasLightBackground
                     )
+                    .environment(\.colorScheme, overlayColorScheme)
                 }
             }
     }
