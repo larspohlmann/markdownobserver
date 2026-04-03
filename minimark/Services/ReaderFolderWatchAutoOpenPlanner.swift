@@ -22,22 +22,15 @@ protocol ReaderFolderWatchAutoOpenPlanning: AnyObject {
     func updateMinimumDiffBaselineAge(_ age: TimeInterval)
 }
 
-private struct AutoOpenDiffBaselineRecord {
-    let markdown: String
-    let capturedAt: Date
-}
-
 final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning {
-    private var minimumDiffBaselineAge: TimeInterval
+    private let diffBaselineTracker: DiffBaselineTracking
     private let nowProvider: () -> Date
-    private let maximumHistoryDepth = 32
-    private var baselineHistoryByFileURL: [URL: [AutoOpenDiffBaselineRecord]] = [:]
 
     init(
         minimumDiffBaselineAge: TimeInterval = 10,
         nowProvider: @escaping () -> Date = { .now }
     ) {
-        self.minimumDiffBaselineAge = max(0, minimumDiffBaselineAge)
+        self.diffBaselineTracker = DiffBaselineTracker(minimumAge: minimumDiffBaselineAge)
         self.nowProvider = nowProvider
     }
 
@@ -121,11 +114,11 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
     }
 
     func resetTransientState() {
-        baselineHistoryByFileURL = [:]
+        diffBaselineTracker.reset()
     }
 
     func updateMinimumDiffBaselineAge(_ age: TimeInterval) {
-        minimumDiffBaselineAge = max(0, age)
+        diffBaselineTracker.updateMinimumAge(age)
     }
 
     private func eligibleEvents(
@@ -160,23 +153,15 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
             }
 
             let fileURL = ReaderFileRouting.normalizedFileURL(event.fileURL)
-            var history = baselineHistoryByFileURL[fileURL] ?? []
-            if history.last?.markdown != previousMarkdown {
-                history.append(AutoOpenDiffBaselineRecord(markdown: previousMarkdown, capturedAt: now))
-            }
-            if history.count > maximumHistoryDepth {
-                history.removeFirst(history.count - maximumHistoryDepth)
-            }
-            baselineHistoryByFileURL[fileURL] = history
-
-            let agedBaseline = history.last(where: {
-                now.timeIntervalSince($0.capturedAt) >= minimumDiffBaselineAge
-            })?.markdown
-            let fallbackBaseline = history.first?.markdown ?? previousMarkdown
+            let baseline = diffBaselineTracker.recordAndSelectBaseline(
+                markdown: previousMarkdown,
+                for: fileURL,
+                at: now
+            )
             return ReaderFolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .modified,
-                previousMarkdown: agedBaseline ?? fallbackBaseline
+                previousMarkdown: baseline
             )
         }
     }
