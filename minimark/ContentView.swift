@@ -519,8 +519,7 @@ struct ContentView: View {
                         onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
                         onRevealInFinder: {
                             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                        },
-                        contentHasLightBackground: currentReaderTheme.hasLightBackground
+                        }
                     )
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -530,7 +529,6 @@ struct ContentView: View {
     private var contentUtilityRail: some View {
         ContentUtilityRail(
             hasFile: readerStore.fileURL != nil,
-            contentHasLightBackground: currentReaderTheme.hasLightBackground,
             documentViewMode: readerStore.documentViewMode,
             showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
             canStartSourceEditing: readerStore.canStartSourceEditing,

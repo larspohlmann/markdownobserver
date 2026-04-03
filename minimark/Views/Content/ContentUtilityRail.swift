@@ -3,7 +3,6 @@ import SwiftUI
 
 struct ContentUtilityRail: View {
     let hasFile: Bool
-    let contentHasLightBackground: Bool
     let documentViewMode: ReaderDocumentViewMode
     let showEditButton: Bool
     let canStartSourceEditing: Bool
