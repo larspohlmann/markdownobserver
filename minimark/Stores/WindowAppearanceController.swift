@@ -37,7 +37,9 @@ final class WindowAppearanceController: ObservableObject {
 
     deinit {
         if _isLockedForDeinit {
-            Self._lockedWindowCount -= 1
+            MainActor.assumeIsolated {
+                Self._lockedWindowCount -= 1
+            }
         }
     }
 

@@ -599,17 +599,7 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func rerenderWithCurrentSettings() {
-        guard fileURL != nil else {
-            return
-        }
 
-        do {
-            try renderCurrentMarkdownImmediately()
-        } catch {
-            handle(error)
-        }
-    }
 
     func scheduleDraftPreviewRender() {
         pendingDraftPreviewRenderTask?.cancel()
