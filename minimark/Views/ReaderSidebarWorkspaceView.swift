@@ -30,19 +30,37 @@ private struct SidebarDividerPositionSetter: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: SidebarPositionHelperView, context: Context) {}
+    func updateNSView(_ nsView: SidebarPositionHelperView, context: Context) {
+        nsView.updateIfNeeded(targetWidth: targetWidth, placement: placement)
+    }
 }
 
 private final class SidebarPositionHelperView: NSView {
+    /// Holding priority one tick above .defaultLow (250) so the sidebar
+    /// resists proportional resizing when the window expands or shrinks.
+    private static let sidebarHoldingPriority: NSLayoutConstraint.Priority = .init(251)
+    private static let widthEpsilon: CGFloat = 1
+
     var targetWidth: CGFloat = 0
     var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
-    private var didApplyPosition = false
+    private var lastAppliedWidth: CGFloat = 0
+    private var lastAppliedPlacement: ReaderMultiFileDisplayMode.SidebarPlacement?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        guard window != nil, !didApplyPosition else { return }
-        didApplyPosition = true
+        guard window != nil else { return }
         applyPosition()
+    }
+
+    func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
+        let widthChanged = abs(targetWidth - newWidth) > Self.widthEpsilon
+        let placementChanged = placement != newPlacement
+        if widthChanged { targetWidth = newWidth }
+        if placementChanged { placement = newPlacement }
+        if widthChanged || placementChanged {
+            lastAppliedWidth = 0
+            applyPosition()
+        }
     }
 
     private func applyPosition() {
@@ -50,6 +68,18 @@ private final class SidebarPositionHelperView: NSView {
               splitView.arrangedSubviews.count > 1 else {
             return
         }
+        guard abs(lastAppliedWidth - targetWidth) > Self.widthEpsilon
+                || lastAppliedPlacement != placement else {
+            return
+        }
+        lastAppliedWidth = targetWidth
+        lastAppliedPlacement = placement
+
+        let sidebarIndex = placement == .left ? 0 : 1
+        let detailIndex = placement == .left ? 1 : 0
+        splitView.setHoldingPriority(Self.sidebarHoldingPriority, forSubviewAt: sidebarIndex)
+        splitView.setHoldingPriority(.defaultLow, forSubviewAt: detailIndex)
+
         let position: CGFloat
         if placement == .left {
             position = targetWidth
