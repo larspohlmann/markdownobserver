@@ -402,23 +402,30 @@ struct MarkdownWebView: NSViewRepresentable {
             isRestoringReloadScroll = reloadAnchorProgress != nil
             let script = """
             (() => {
-              if (typeof window.__minimarkThemeCleanup === 'function') {
-                window.__minimarkThemeCleanup();
-                delete window.__minimarkThemeCleanup;
-              }
                             if (typeof window.__minimarkApplyRuntimeCSS === 'function') {
                                 window.__minimarkApplyRuntimeCSS(
                                     \(javaScriptStringLiteral(cssBase64))
                                 );
                             }
               var themeJSBase64 = \(themeJSLiteral);
-              if (themeJSBase64) {
-                try {
-                  var binary = atob(themeJSBase64);
-                  var bytes = Uint8Array.from(binary, function(c) { return c.charCodeAt(0); });
-                  var themeJS = new TextDecoder().decode(bytes);
-                  new Function(themeJS)();
-                } catch(e) { console.error('Theme JS error:', e); }
+              var previousThemeJSBase64 = Object.prototype.hasOwnProperty.call(window, '__minimarkLastThemeJSBase64')
+                ? window.__minimarkLastThemeJSBase64
+                : null;
+              var shouldRefreshThemeJS = previousThemeJSBase64 !== themeJSBase64;
+              if (shouldRefreshThemeJS && typeof window.__minimarkThemeCleanup === 'function') {
+                window.__minimarkThemeCleanup();
+                delete window.__minimarkThemeCleanup;
+              }
+              if (shouldRefreshThemeJS) {
+                if (themeJSBase64) {
+                  try {
+                    var binary = atob(themeJSBase64);
+                    var bytes = Uint8Array.from(binary, function(c) { return c.charCodeAt(0); });
+                    var themeJS = new TextDecoder().decode(bytes);
+                    new Function(themeJS)();
+                  } catch(e) { console.error('Theme JS error:', e); }
+                }
+                window.__minimarkLastThemeJSBase64 = themeJSBase64;
               }
               if (typeof window.__minimarkUpdateRenderedMarkdown !== 'function') {
                 return false;

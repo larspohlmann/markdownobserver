@@ -140,7 +140,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     // MARK: - JS Injection
 
-    func testHTMLDocumentIncludesThemeJSWhenProvided() {
+    func testHTMLDocumentIncludesThemeJSMetaAndBootstrapWhenProvided() {
         let factory = ReaderCSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
@@ -155,10 +155,11 @@ final class ThemeDefinitionTests: XCTestCase {
             ),
             themeJavaScript: "console.log('theme loaded');"
         )
-        XCTAssertTrue(html.contains("<script>console.log('theme loaded');</script>"))
+        XCTAssertTrue(html.contains("minimark-runtime-theme-js-base64"), "Should include theme JS meta tag")
+        XCTAssertTrue(html.contains("__minimarkLastThemeJSBase64"), "Should include bootstrap script")
     }
 
-    func testHTMLDocumentOmitsThemeJSWhenNil() {
+    func testHTMLDocumentOmitsThemeJSMetaWhenNil() {
         let factory = ReaderCSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
@@ -172,11 +173,8 @@ final class ThemeDefinitionTests: XCTestCase {
                 deflistScriptPath: nil
             )
         )
-        // Count script tags — should only be runtime scripts, no empty theme script
-        let scriptTagCount = html.components(separatedBy: "<script>").count - 1
-        let themeScriptPresent = html.contains("<script></script>")
-        XCTAssertFalse(themeScriptPresent, "Should not inject empty script tag when JS is nil")
-        XCTAssertTrue(scriptTagCount > 0, "Should still have runtime scripts")
+        XCTAssertFalse(html.contains("minimark-runtime-theme-js-base64"), "Should not include theme JS meta tag")
+        XCTAssertFalse(html.contains("__minimarkLastThemeJSBase64"), "Should not include bootstrap script")
     }
 
     // MARK: - Green Terminal Theme
