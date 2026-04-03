@@ -23,7 +23,17 @@ xcodebuild -resolvePackageDependencies -project minimark.xcodeproj -scheme minim
 
 ## 3. Build (No Signing Required)
 
-Open-source defaults disable code signing for local development builds.
+Open-source defaults disable code signing for local builds and tests.
+
+Choose one of the following build configurations:
+
+- Release (recommended for most users who just want to run the app):
+
+```bash
+xcodebuild -project minimark.xcodeproj -scheme minimark -configuration Release -destination 'platform=macOS' build
+```
+
+- Debug (recommended for contributors who are actively developing or debugging):
 
 ```bash
 xcodebuild -project minimark.xcodeproj -scheme minimark -configuration Debug -destination 'platform=macOS' build

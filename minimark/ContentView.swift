@@ -113,6 +113,7 @@ struct ContentView: View {
     @State private var sourceReloadToken = 0
     @State private var changedRegionNavigationRequestID = 0
     @State private var lastChangedRegionNavigationDirection: ReaderChangedRegionNavigationDirection?
+    @State private var currentChangedRegionIndex: Int = 0
     @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
     @State private var cachedSourceHTMLDocument = ""
 
@@ -124,41 +125,18 @@ struct ContentView: View {
         VStack(spacing: 0) {
             ReaderTopBar(
                 readerStore: readerStore,
-                documentViewMode: readerStore.documentViewMode,
-                showSourceEditingControls: showSourceEditingControls,
                 activeFolderWatch: activeFolderWatch,
                 isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
                 didFolderWatchInitialScanFail: isFolderWatchInitialScanFailed,
-                folderWatchHighlightColor: folderWatchHighlightColor,
-                canNavigateChangedRegions: canNavigateChangedRegions,
-                canStopFolderWatch: canStopFolderWatch,
-                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                 favoriteWatchedFolders: favoriteWatchedFolders,
                 recentWatchedFolders: recentWatchedFolders,
-                recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-                onNavigateChangedRegion: requestChangedRegionNavigation,
-                onSetDocumentViewMode: { mode in
-                    readerStore.setDocumentViewMode(mode)
-                },
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
                 onRequestFolderWatch: onRequestFolderWatch,
-                onStopFolderWatch: onStopFolderWatch,
-                onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite,
-                onRemoveCurrentWatchFromFavorites: onRemoveCurrentWatchFromFavorites,
                 onStartFavoriteWatch: onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
                 onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
                 onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
                 onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
-                onStartSourceEditing: {
-                    readerStore.startEditingSource()
-                },
                 onSaveSourceDraft: {
                     readerStore.saveSourceDraft()
                 },
@@ -179,7 +157,7 @@ struct ContentView: View {
                     }
                 }
 
-                documentSurfaceLayout
+                documentSurfaceWithOverlays
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
@@ -196,6 +174,9 @@ struct ContentView: View {
             }
             .onChange(of: readerStore.fileURL?.standardizedFileURL.path) { _, _ in
                 handleFileIdentityChange()
+            }
+            .onChange(of: readerStore.changedRegions) { _, _ in
+                currentChangedRegionIndex = 0
             }
             .onChange(of: previewMode) { _, newValue in
                 handlePreviewModeChange(newValue)
@@ -337,6 +318,7 @@ struct ContentView: View {
     }
 
     private func handleFileIdentityChange() {
+        currentChangedRegionIndex = 0
         if previewMode == .nativeFallback {
             previewReloadToken += 1
             previewMode = .web
@@ -496,9 +478,92 @@ struct ContentView: View {
         DocumentSurfaceLayoutView(
             documentViewMode: readerStore.documentViewMode,
             showsLoadingOverlay: shouldShowDocumentLoadingOverlay,
+            loadingOverlayHeadline: loadingOverlayHeadline,
+            loadingOverlaySubtitle: loadingOverlaySubtitle,
             currentReaderTheme: currentReaderTheme,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
+        )
+    }
+
+    private var overlayColorScheme: ColorScheme? {
+        guard readerStore.fileURL != nil else { return nil }
+        return currentReaderTheme.hasLightBackground ? .light : .dark
+    }
+
+    @ViewBuilder
+    private var documentSurfaceWithOverlays: some View {
+        documentSurfaceLayout
+            .overlay(alignment: .topTrailing) {
+                contentUtilityRail
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+            }
+            .overlay(alignment: .topLeading) {
+                if canNavigateChangedRegions {
+                    ChangeNavigationPill(
+                        currentIndex: currentChangedRegionIndex,
+                        totalCount: readerStore.changedRegions.count,
+                        onNavigate: requestChangedRegionNavigation
+                    )
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                }
+            }
+            .overlay(alignment: .top) {
+                if let activeWatch = activeFolderWatch {
+                    WatchPill(
+                        activeFolderWatch: activeWatch,
+                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                        canStop: canStopFolderWatch,
+                        onStop: onStopFolderWatch,
+                        onSaveFavorite: onSaveFolderWatchAsFavorite,
+                        onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
+                        onRevealInFinder: {
+                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                        }
+                    )
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                }
+            }
+    }
+
+    private var contentUtilityRail: some View {
+        ContentUtilityRail(
+            hasFile: readerStore.fileURL != nil,
+            documentViewMode: readerStore.documentViewMode,
+            showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
+            canStartSourceEditing: readerStore.canStartSourceEditing,
+            canStopFolderWatch: canStopFolderWatch,
+            apps: readerStore.openInApplications,
+            favoriteWatchedFolders: favoriteWatchedFolders,
+            recentWatchedFolders: recentWatchedFolders,
+            recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+            iconProvider: appIconImage(for:),
+            onSetDocumentViewMode: { mode in
+                readerStore.setDocumentViewMode(mode)
+            },
+            onOpenFiles: { fileURLs in
+                handlePickedFileURLs(fileURLs)
+            },
+            onOpenApp: { app in
+                readerStore.openCurrentFileInApplication(app)
+            },
+            onRevealInFinder: {
+                readerStore.revealCurrentFileInFinder()
+            },
+            onRequestFolderWatch: onRequestFolderWatch,
+            onStopFolderWatch: onStopFolderWatch,
+            onStartFavoriteWatch: onStartFavoriteWatch,
+            onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+            onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
+            onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
+            onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
+            onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
+            onStartRecentFolderWatch: onStartRecentFolderWatch,
+            onClearRecentWatchedFolders: onClearRecentWatchedFolders,
+            onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
+            onStartSourceEditing: {
+                readerStore.startEditingSource()
+            }
         )
     }
 
@@ -523,12 +588,26 @@ struct ContentView: View {
         ReaderTheme.theme(for: readerStore.currentSettings.readerTheme)
     }
 
-    private var folderWatchHighlightColor: Color {
-        Color.folderWatchHighlight(for: readerStore.currentSettings, colorScheme: colorScheme)
+    private var shouldShowDocumentLoadingOverlay: Bool {
+        readerStore.documentLoadState == .loading || readerStore.documentLoadState == .settlingAutoOpen
     }
 
-    private var shouldShowDocumentLoadingOverlay: Bool {
-        readerStore.documentLoadState == .settlingAutoOpen
+    private var loadingOverlayHeadline: String {
+        switch readerStore.documentLoadState {
+        case .settlingAutoOpen:
+            return "Waiting for file contents\u{2026}"
+        case .ready, .loading, .deferred:
+            return "Loading document\u{2026}"
+        }
+    }
+
+    private var loadingOverlaySubtitle: String? {
+        switch readerStore.documentLoadState {
+        case .settlingAutoOpen:
+            return "The new watched document will appear as soon as writing finishes."
+        case .ready, .loading, .deferred:
+            return nil
+        }
     }
 
     private var isDragTargeted: Bool {
@@ -660,6 +739,13 @@ struct ContentView: View {
     private func requestChangedRegionNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
         guard canNavigateChangedRegions else {
             return
+        }
+
+        let count = readerStore.changedRegions.count
+        if direction == .next {
+            currentChangedRegionIndex = currentChangedRegionIndex >= count - 1 ? 0 : currentChangedRegionIndex + 1
+        } else {
+            currentChangedRegionIndex = currentChangedRegionIndex <= 0 ? count - 1 : currentChangedRegionIndex - 1
         }
 
         lastChangedRegionNavigationDirection = direction
@@ -862,13 +948,19 @@ private struct FolderDropBlockedOverlayView: View {
 private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
     let documentViewMode: ReaderDocumentViewMode
     let showsLoadingOverlay: Bool
+    let loadingOverlayHeadline: String
+    let loadingOverlaySubtitle: String?
     let currentReaderTheme: ReaderTheme
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
 
     var body: some View {
         if showsLoadingOverlay {
-            DocumentLoadingOverlay(theme: currentReaderTheme)
+            DocumentLoadingOverlay(
+                theme: currentReaderTheme,
+                headline: loadingOverlayHeadline,
+                subtitle: loadingOverlaySubtitle
+            )
         } else {
             switch documentViewMode {
             case .preview:

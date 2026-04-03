@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MarkdownObserver — Native macOS Markdown Reader with Folder Watching & Change Tracking</title>
-    <meta name="description" content="MarkdownObserver is a native macOS app for previewing Markdown files with live folder watching, change tracking, and syntax highlighting. Works alongside AI coding agents like Claude Code and Cursor. Open source, MIT licensed.">
-    <meta name="keywords" content="markdown reader, macOS markdown viewer, markdown preview, folder watching, change tracking, syntax highlighting, AI agent markdown, Claude Code, open source markdown app, SwiftUI">
-    <link rel="canonical" href="https://lars-pohlmann.de/markdownwatcher/">
+    <title>MarkdownObserver — macOS Markdown Reader with Live File Watching and Diff Tracking</title>
+    <meta name="description" content="MarkdownObserver is a macOS markdown reader that watches your project folders and tracks changes. See what your AI agent, editor, or script modified the moment it saves.">
+    <meta name="keywords" content="markdown reader, macOS markdown viewer, markdown preview, folder watching, change tracking, syntax highlighting, AI agent markdown, Claude Code, vibe coding, open source markdown app, SwiftUI">
+    <link rel="canonical" href="https://lars-pohlmann.de/markdownobserver/">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Lars Pohlmann">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="MarkdownObserver — Native macOS Markdown Reader">
-    <meta property="og:description" content="Preview Markdown files, watch folders for changes, track diffs. Works alongside AI coding agents. Open source.">
-    <meta property="og:image" content="https://lars-pohlmann.de/markdownwatcher/assets/screenshot_0020.png">
-    <meta property="og:image:width" content="1440">
-    <meta property="og:image:height" content="900">
-    <meta property="og:image:alt" content="MarkdownObserver showing rendered Markdown alongside source view on macOS">
+    <meta property="og:title" content="MarkdownObserver — macOS Markdown Reader with Live File Watching">
+    <meta property="og:description" content="A macOS markdown reader that watches your files and tracks changes. Built for developers working with AI coding agents.">
+    <meta property="og:image" content="https://lars-pohlmann.de/markdownobserver/assets/screenshot_1.png">
+    <meta property="og:image:width" content="2560">
+    <meta property="og:image:height" content="1600">
+    <meta property="og:image:alt" content="MarkdownObserver window showing live rendered markdown in a project workspace">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://lars-pohlmann.de/markdownwatcher/">
+    <meta property="og:url" content="https://lars-pohlmann.de/markdownobserver/">
     <meta property="og:site_name" content="MarkdownObserver">
     <meta property="og:locale" content="en_US">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MarkdownObserver — Native macOS Markdown Reader">
-    <meta name="twitter:description" content="Preview Markdown files, watch folders for changes, track diffs. Works alongside AI coding agents.">
-    <meta name="twitter:image" content="https://lars-pohlmann.de/markdownwatcher/assets/screenshot_0020.png">
-    <meta name="twitter:image:alt" content="MarkdownObserver showing rendered Markdown alongside source view on macOS">
+    <meta name="twitter:title" content="MarkdownObserver — macOS Markdown Reader with Live File Watching">
+    <meta name="twitter:description" content="A macOS markdown reader that watches your files and tracks changes. Built for developers working with AI coding agents.">
+    <meta name="twitter:image" content="https://lars-pohlmann.de/markdownobserver/assets/screenshot_1.png">
+    <meta name="twitter:image:alt" content="MarkdownObserver window showing live rendered markdown in a project workspace">
 
     <link rel="icon" type="image/png" sizes="256x256" href="assets/appicon-256.png">
     <link rel="apple-touch-icon" href="assets/appicon-256.png">
@@ -265,25 +265,57 @@
         }
 
         /* ============================================
-           AI Agent Callout
+           How It Works
            ============================================ */
-        .callout-section {
+        .how-section {
             padding: 56px 24px;
             background: var(--bg-warm);
         }
-        .callout-inner {
-            max-width: 600px;
+        .how-inner {
+            max-width: 720px;
             margin: 0 auto;
+        }
+        .how-inner .section-title {
+            margin-bottom: 32px;
+        }
+        .how-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .how-step {
             text-align: center;
         }
-        .callout-inner h2 {
-            font-size: clamp(1.2rem, 2vw, 1.4rem);
+        .how-step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--bg);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.867rem;
             margin-bottom: 12px;
         }
-        .callout-inner p {
-            color: var(--text-secondary);
+        .how-step h3 {
             font-size: 0.933rem;
-            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+        .how-step p {
+            color: var(--text-secondary);
+            font-size: 0.833rem;
+            line-height: 1.55;
+        }
+        .works-with {
+            text-align: center;
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
         }
 
         /* ============================================
@@ -409,20 +441,6 @@
             line-height: 1.6;
             margin-bottom: 28px;
         }
-        .oss-code {
-            background: #0D0D0D;
-            color: #B0B0B0;
-            border-radius: 10px;
-            padding: 20px 24px;
-            text-align: left;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            line-height: 1.8;
-            white-space: pre;
-            overflow-x: auto;
-            margin-bottom: 32px;
-        }
-        .oss-code .comment { color: #6B6560; }
         .btn-green {
             display: inline-flex;
             align-items: center;
@@ -498,7 +516,8 @@
             .hero-actions { margin-bottom: 36px; }
 
             section { padding: 56px 20px; }
-            .callout-section { padding: 44px 20px; }
+            .how-section { padding: 44px 20px; }
+            .how-steps { grid-template-columns: 1fr; gap: 20px; }
             .video-section { padding-top: 44px; }
 
             .gallery-item { width: 88vw; }
@@ -535,9 +554,9 @@
             .btn-github { padding: 7px 14px; font-size: 0.8rem; }
 
             section { padding: 44px 16px; }
-            .callout-section { padding: 36px 16px; }
-            .callout-inner h2 { font-size: 1.15rem; }
-            .callout-inner p { font-size: 0.867rem; }
+            .how-section { padding: 36px 16px; }
+            .how-steps { gap: 16px; }
+            .how-step h3 { font-size: 0.867rem; }
             .video-section { padding-top: 36px; }
 
             .section-title { font-size: 1.25rem; }
@@ -584,11 +603,10 @@
     <section class="hero">
         <img src="assets/appicon-256.png" alt="MarkdownObserver" class="hero-icon fade-in" width="80" height="80">
         <h1 class="fade-in">MarkdownObserver</h1>
-        <p class="hero-tagline fade-in">A native macOS Markdown reader.</p>
+        <p class="hero-tagline fade-in">A macOS markdown reader that watches your files and tracks changes.</p>
         <p class="hero-description fade-in">
-            Preview Markdown files, watch folders for changes, and see diffs —
-            useful when AI agents write Markdown you need to review, or when
-            you want a live preview alongside your editor.
+            Point it at a project folder. When a file is added or modified — by an AI agent,
+            an editor, or a script — it renders the markdown and highlights what changed.
         </p>
         <div class="hero-actions fade-in">
             <a href="https://apps.apple.com/app/id6760550501" target="_blank" rel="noopener">
@@ -600,21 +618,35 @@
             </a>
         </div>
         <div class="hero-screenshot fade-in">
-            <img src="assets/screenshot_0020.png" alt="MarkdownObserver macOS app showing rendered Markdown preview alongside syntax-highlighted source view" width="1440" height="900">
+            <img src="assets/screenshot_1.png" alt="MarkdownObserver showing live markdown preview in a project workspace" width="2560" height="1600">
         </div>
     </section>
 
     <!-- ==========================================
-         AI Agent Callout
+         How It Works
          ========================================== -->
-    <section class="callout-section">
-        <div class="callout-inner fade-in">
-            <h2>Works well with AI agents.</h2>
-            <p>
-                Point MarkdownObserver at your project folder. When Claude Code, Cursor,
-                or any other tool writes a Markdown file, the rendered preview updates
-                automatically. Change tracking shows you exactly what was added or
-                modified — no manual refresh, no switching windows.
+    <section class="how-section">
+        <div class="how-inner">
+            <h2 class="section-title fade-in">How it works</h2>
+            <div class="how-steps fade-in">
+                <div class="how-step">
+                    <div class="how-step-number">1</div>
+                    <h3>Watch a folder</h3>
+                    <p>Pick a project directory. MarkdownObserver monitors it for new and changed markdown files.</p>
+                </div>
+                <div class="how-step">
+                    <div class="how-step-number">2</div>
+                    <h3>Changes appear automatically</h3>
+                    <p>When a file is saved, the rendered preview updates within a second. New files open on their own.</p>
+                </div>
+                <div class="how-step">
+                    <div class="how-step-number">3</div>
+                    <h3>See what changed</h3>
+                    <p>Green markers for additions, orange for edits. Step through each change or compare before and after.</p>
+                </div>
+            </div>
+            <p class="works-with fade-in">
+                Works with any tool that writes markdown to disk — Claude Code, Cursor, Aider, or your own scripts.
             </p>
         </div>
     </section>
@@ -635,31 +667,9 @@
          Features
          ========================================== -->
     <section class="features-section" id="features">
-        <h2 class="section-title fade-in">What it does</h2>
-        <p class="section-subtitle fade-in">Built with SwiftUI.</p>
+        <h2 class="section-title fade-in">Features</h2>
+        <p class="section-subtitle fade-in">Focused on reading and tracking markdown in active projects.</p>
         <div class="features-grid">
-
-            <div class="feature-card fade-in">
-                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="6" y="4" width="28" height="32" rx="3"/>
-                    <path d="M14 12h4l-2-3-2 3zM20 12h6"/>
-                    <path d="M14 18h12" opacity="0.5"/>
-                    <path d="M14 23h10" opacity="0.5"/>
-                    <path d="M14 28h8" opacity="0.5"/>
-                </svg>
-                <h3>Markdown Rendering</h3>
-                <p>Renders Markdown in a WKWebView with syntax highlighting. Supports fenced code blocks, task lists, footnotes, definition lists, and custom attributes. Theme changes inject CSS without reloading.</p>
-            </div>
-
-            <div class="feature-card fade-in">
-                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 14c0-2 1-3 3-3h8l3 3h12c2 0 3 1 3 3v12c0 2-1 3-3 3H7c-2 0-3-1-3-3z"/>
-                    <circle cx="20" cy="23" r="5"/>
-                    <circle cx="20" cy="23" r="2"/>
-                </svg>
-                <h3>File & Folder Watching</h3>
-                <p>Point it at a folder and every Markdown file is tracked. When an AI agent — Claude Code, Cursor, Copilot — writes or updates a <code>.md</code> file, the change is picked up within seconds. kqueue with polling fallback, handles rename-over-write.</p>
-            </div>
 
             <div class="feature-card fade-in">
                 <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -670,29 +680,30 @@
                     <circle cx="10" cy="20" r="1.8" fill="#2D7D5F" stroke="none"/>
                     <circle cx="10" cy="26" r="1.8" fill="#C4863A" stroke="none"/>
                 </svg>
-                <h3>Change Tracking</h3>
-                <p>Line-level LCS diff via the Differ library with token-level inline comparison. Gutter markers for added, edited, and deleted regions. Expandable before/after panels.</p>
-            </div>
-
-            <div class="feature-card fade-in">
-                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="14" cy="16" r="7" fill="#C4863A" fill-opacity="0.12" stroke="#C4863A"/>
-                    <circle cx="26" cy="16" r="7" fill="#2D7D5F" fill-opacity="0.12" stroke="#2D7D5F"/>
-                    <circle cx="20" cy="26" r="7" fill="#6B6560" fill-opacity="0.12" stroke="#6B6560"/>
-                </svg>
-                <h3>12 Syntax Themes</h3>
-                <p>Monokai, GitHub, Dracula, Nord, Gruvbox, Solarized, One Light/Dark, Xcode, and more. Four reader themes. Font size 10–48 pt, adjustable with &#8984;+/&#8984;&minus;.</p>
+                <h3>Live Diff Tracking</h3>
+                <p>See added, edited, and removed sections with color-coded gutter markers. Navigate through changes one by one, or compare before and after.</p>
             </div>
 
             <div class="feature-card fade-in">
                 <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="4" y="6" width="32" height="28" rx="3"/>
-                    <line x1="20" y1="6" x2="20" y2="34"/>
-                    <path d="M9 14h6M9 19h4M9 24h5" opacity="0.6"/>
-                    <path d="M25 14h6M25 19h4M25 24h6" opacity="0.6"/>
+                    <path d="M4 14c0-2 1-3 3-3h8l3 3h12c2 0 3 1 3 3v12c0 2-1 3-3 3H7c-2 0-3-1-3-3z"/>
+                    <circle cx="20" cy="23" r="5"/>
+                    <circle cx="20" cy="23" r="2"/>
                 </svg>
-                <h3>Source View</h3>
-                <p>CodeMirror-powered read-only source view with syntax highlighting. Inline editing with live preview (5&nbsp;ms debounce). Bidirectional scroll sync between panes.</p>
+                <h3>Folder Watching</h3>
+                <p>Watch a folder for changes, optionally including subfolders. New markdown files auto-open as they appear. Uses event-based monitoring with a polling fallback so nothing gets missed.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="4" width="28" height="32" rx="3"/>
+                    <path d="M14 12h4l-2-3-2 3zM20 12h6"/>
+                    <path d="M14 18h12" opacity="0.5"/>
+                    <path d="M14 23h10" opacity="0.5"/>
+                    <path d="M14 28h8" opacity="0.5"/>
+                </svg>
+                <h3>Markdown Rendering</h3>
+                <p>GitHub Flavored Markdown rendered natively — tables, task lists, code blocks with syntax highlighting, and inline images.</p>
             </div>
 
             <div class="feature-card fade-in">
@@ -704,7 +715,28 @@
                     <path d="M20 14h11M20 19h9M20 24h7" opacity="0.35"/>
                 </svg>
                 <h3>Multi-Document Workspace</h3>
-                <p>Sidebar with five sort modes, batch operations, context menus. Open in default app, reveal in Finder. Folder watch sessions shared across all documents in a window.</p>
+                <p>Open multiple files in a sidebar. Drag and drop files into the current window. Save watched folders as favorites to resume later.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="14" cy="16" r="7" fill="#C4863A" fill-opacity="0.12" stroke="#C4863A"/>
+                    <circle cx="26" cy="16" r="7" fill="#2D7D5F" fill-opacity="0.12" stroke="#2D7D5F"/>
+                    <circle cx="20" cy="26" r="7" fill="#6B6560" fill-opacity="0.12" stroke="#6B6560"/>
+                </svg>
+                <h3>Sidebar Grouping and Sorting</h3>
+                <p>Files grouped by subfolder. Pin important groups to the top. Sort groups and files independently.</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="6" width="32" height="28" rx="3"/>
+                    <line x1="20" y1="6" x2="20" y2="34"/>
+                    <path d="M9 14h6M9 19h4M9 24h5" opacity="0.6"/>
+                    <path d="M25 14h6M25 19h4M25 24h6" opacity="0.6"/>
+                </svg>
+                <h3>File Selection for Large Folders</h3>
+                <p>When a watched folder contains many markdown files, choose exactly which ones to open instead of loading everything.</p>
             </div>
 
         </div>
@@ -717,24 +749,28 @@
         <h2 class="section-title fade-in">Screenshots</h2>
         <div class="gallery-scroll">
             <div class="gallery-item fade-in">
-                <img src="assets/screenshot_0013.png" alt="MarkdownObserver dark theme with syntax-highlighted code blocks on macOS" width="1440" height="900" loading="lazy">
+                <img src="assets/screenshot_1.png" alt="MarkdownObserver light theme with rendered markdown and grouped sidebar" width="2560" height="1600" loading="lazy">
+                <p class="gallery-caption">Rendered markdown with grouped sidebar</p>
+            </div>
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_2.png" alt="MarkdownObserver showing inline diff markers highlighting changed sections" width="2560" height="1600" loading="lazy">
+                <p class="gallery-caption">Inline diff markers showing what changed</p>
+            </div>
+            <div class="gallery-item fade-in">
+                <img src="assets/screenshot_3.png" alt="MarkdownObserver dark theme with syntax-highlighted code blocks" width="2560" height="1600" loading="lazy">
                 <p class="gallery-caption">Dark theme with syntax highlighting</p>
             </div>
             <div class="gallery-item fade-in">
-                <img src="assets/screenshot_0022.png" alt="MarkdownObserver change tracking showing diff gutter markers for added and edited lines" width="1440" height="900" loading="lazy">
-                <p class="gallery-caption">Change tracking with gutter markers</p>
+                <img src="assets/screenshot_4.png" alt="MarkdownObserver folder watch dialog with subfolder exclusion toggles" width="2560" height="1600" loading="lazy">
+                <p class="gallery-caption">Exclude subfolders you don't need to watch</p>
             </div>
             <div class="gallery-item fade-in">
-                <img src="assets/screenshot_0017.png" alt="MarkdownObserver settings panel for themes, typography, and notification preferences" width="1440" height="900" loading="lazy">
-                <p class="gallery-caption">Settings: themes, typography, notifications</p>
+                <img src="assets/screenshot_5.png" alt="MarkdownObserver file selection sheet for choosing which files to open" width="2560" height="1600" loading="lazy">
+                <p class="gallery-caption">Pick which files to open in large folders</p>
             </div>
             <div class="gallery-item fade-in">
-                <img src="assets/screenshot_0014.png" alt="MarkdownObserver folder watch configuration dialog for monitoring Markdown files" width="1440" height="900" loading="lazy">
-                <p class="gallery-caption">Folder watch configuration</p>
-            </div>
-            <div class="gallery-item fade-in">
-                <img src="assets/screenshot_0018.png" alt="MarkdownObserver with alternative syntax highlighting color theme on macOS" width="1440" height="900" loading="lazy">
-                <p class="gallery-caption">Alternative syntax theme</p>
+                <img src="assets/screenshot_6.png" alt="MarkdownObserver favorites popover for resuming watched folders" width="2560" height="1600" loading="lazy">
+                <p class="gallery-caption">Resume watched folders from favorites</p>
             </div>
         </div>
     </section>
@@ -746,8 +782,8 @@
         <div class="oss-inner">
             <h2 class="section-title fade-in">Open source, MIT licensed.</h2>
             <p class="oss-description fade-in">
-                Built with Swift and SwiftUI.<br>
-                Rendering runs entirely local — no network calls, no telemetry.
+                Built with Swift and SwiftUI. Everything runs locally — no network calls,
+                no telemetry, no cloud sync. Open source so you can verify that yourself.
             </p>
             <a href="https://github.com/larspohlmann/markdownobserver" target="_blank" rel="noopener" class="btn-green fade-in">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.1-.4-.6-1.6.1-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.2.9 2.3v3.4c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
@@ -780,10 +816,10 @@
         "name": "MarkdownObserver",
         "operatingSystem": "macOS",
         "applicationCategory": "DeveloperApplication",
-        "description": "A native macOS Markdown reader with live folder watching, change tracking, and syntax highlighting. Works alongside AI coding agents.",
-        "url": "https://lars-pohlmann.de/markdownwatcher/",
+        "description": "A macOS markdown reader that watches your project folders and tracks changes. See what changed the moment a file is saved.",
+        "url": "https://lars-pohlmann.de/markdownobserver/",
         "downloadUrl": "https://apps.apple.com/app/id6760550501",
-        "screenshot": "https://lars-pohlmann.de/markdownwatcher/assets/screenshot_0020.png",
+        "screenshot": "https://lars-pohlmann.de/markdownobserver/assets/screenshot_1.png",
         "softwareVersion": "1.0.4",
         "author": {
             "@type": "Person",
@@ -798,13 +834,13 @@
             "availability": "https://schema.org/InStock"
         },
         "featureList": [
-            "Live Markdown preview",
-            "File and folder watching",
-            "Change tracking with diff view",
-            "12 syntax highlighting themes",
-            "Source view with CodeMirror",
-            "Multi-document workspace",
-            "Works with AI coding agents"
+            "Live diff tracking with color-coded change markers",
+            "Folder watching with auto-open for new files",
+            "GitHub Flavored Markdown rendering",
+            "Multi-document workspace with sidebar",
+            "Sidebar grouping and sorting by subfolder",
+            "File selection for large watched folders",
+            "Folder watch favorites"
         ]
     }
     </script>

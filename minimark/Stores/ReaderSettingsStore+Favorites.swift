@@ -5,7 +5,13 @@ extension ReaderSettingsStore {
         name: String,
         folderURL: URL,
         options: ReaderFolderWatchOptions,
-        openDocumentFileURLs: [URL] = []
+        openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
     ) {
         updateSettings { settings in
             settings.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
@@ -13,6 +19,7 @@ extension ReaderSettingsStore {
                 folderURL: folderURL,
                 options: options,
                 openDocumentFileURLs: openDocumentFileURLs,
+                workspaceState: workspaceState,
                 into: settings.favoriteWatchedFolders
             )
         }
@@ -57,6 +64,10 @@ extension ReaderSettingsStore {
                 return
             }
 
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+            ).sorted()
+
             settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
                 id: existing.id,
                 name: existing.name,
@@ -64,6 +75,45 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: scopedRelativePaths,
+                allKnownRelativePaths: updatedKnownPaths,
+                workspaceState: existing.workspaceState,
+                createdAt: existing.createdAt
+            )
+        }
+    }
+
+    func updateFavoriteWatchedFolderKnownDocuments(
+        id: UUID,
+        folderURL: URL,
+        knownDocumentFileURLs: [URL]
+    ) {
+        updateSettings(coalescePersistence: true) { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+            let existing = settings.favoriteWatchedFolders[index]
+            let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+                from: knownDocumentFileURLs,
+                relativeTo: folderURL,
+                options: existing.options
+            )
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+            ).sorted()
+            guard existing.allKnownRelativePaths != updatedKnownPaths else {
+                return
+            }
+
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: existing.folderPath,
+                options: existing.options,
+                bookmarkData: existing.bookmarkData,
+                openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: updatedKnownPaths,
+                workspaceState: existing.workspaceState,
                 createdAt: existing.createdAt
             )
         }
@@ -97,6 +147,29 @@ extension ReaderSettingsStore {
         }
     }
 
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+        updateSettings(coalescePersistence: true) { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+            let existing = settings.favoriteWatchedFolders[index]
+            guard existing.workspaceState != workspaceState else {
+                return
+            }
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: existing.folderPath,
+                options: existing.options,
+                bookmarkData: existing.bookmarkData,
+                openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
+                workspaceState: workspaceState,
+                createdAt: existing.createdAt
+            )
+        }
+    }
+
     func clearFavoriteWatchedFolders() {
         updateSettings { settings in
             settings.favoriteWatchedFolders = []
@@ -120,6 +193,8 @@ extension ReaderSettingsStore {
                 options: existing.options,
                 bookmarkData: refreshedBookmarkData ?? existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
+                workspaceState: existing.workspaceState,
                 createdAt: existing.createdAt
             )
         }
@@ -143,6 +218,8 @@ extension ReaderSettingsStore {
                 options: existingEntry.options,
                 bookmarkData: bookmarkData,
                 openDocumentRelativePaths: existingEntry.openDocumentRelativePaths,
+                allKnownRelativePaths: existingEntry.allKnownRelativePaths,
+                workspaceState: existingEntry.workspaceState,
                 createdAt: existingEntry.createdAt
             )
         }

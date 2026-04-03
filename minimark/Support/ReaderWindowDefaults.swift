@@ -2,9 +2,9 @@ import AppKit
 import CoreGraphics
 
 enum ReaderWindowDefaults {
-    static let goldenRatio: CGFloat = 1.61803398875
+    static let letterAspectRatio: CGFloat = 11.0 / 8.5
     static let baseWidth: CGFloat = 1100
-    static let baseHeight: CGFloat = baseWidth * goldenRatio
+    static let baseHeight: CGFloat = baseWidth * letterAspectRatio
     static let minimumUsableWidth: CGFloat = 640
     static let fittedHeightUsage: CGFloat = 0.9
     static let minimumUsableHeightTolerance: CGFloat = 0.96
@@ -27,7 +27,7 @@ enum ReaderWindowDefaults {
 
     static func size(forVisibleFrame visibleFrame: CGRect) -> CGSize {
         let fittedSize = fittedSize(maxWidth: visibleFrame.width, maxHeight: visibleFrame.height * fittedHeightUsage)
-        let minimumUsableHeight = minimumUsableWidth * goldenRatio
+        let minimumUsableHeight = minimumUsableWidth * letterAspectRatio
 
         guard fittedSize.width < minimumUsableWidth,
               visibleFrame.width >= minimumUsableWidth,
@@ -49,6 +49,30 @@ enum ReaderWindowDefaults {
         }
 
         return NSScreen.screens.first?.visibleFrame
+    }
+
+    static func sidebarResizedFrame(
+        windowFrame: CGRect,
+        screenVisibleFrame: CGRect,
+        sidebarDelta: CGFloat
+    ) -> CGRect {
+        let targetWidth = max(windowFrame.width + sidebarDelta, minimumUsableWidth)
+        let clampedWidth = min(targetWidth, screenVisibleFrame.width)
+
+        var newOriginX = windowFrame.origin.x
+
+        if newOriginX + clampedWidth > screenVisibleFrame.maxX {
+            newOriginX = screenVisibleFrame.maxX - clampedWidth
+        }
+
+        newOriginX = max(newOriginX, screenVisibleFrame.origin.x)
+
+        return CGRect(
+            x: newOriginX,
+            y: windowFrame.origin.y,
+            width: clampedWidth,
+            height: windowFrame.height
+        )
     }
 
     private static func fittedSize(maxWidth: CGFloat, maxHeight: CGFloat) -> CGSize {

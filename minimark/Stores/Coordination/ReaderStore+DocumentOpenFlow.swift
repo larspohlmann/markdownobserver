@@ -96,6 +96,35 @@ extension ReaderStore {
         )
     }
 
+    func materializeDeferredDocument(
+        origin: ReaderOpenOrigin? = nil,
+        folderWatchSession: ReaderFolderWatchSession? = nil,
+        initialDiffBaselineMarkdown: String? = nil
+    ) {
+        guard documentLoadState == .deferred || documentLoadState == .loading,
+              let url = fileURL else {
+            return
+        }
+
+        if documentLoadState == .deferred {
+            transitionToLoading()
+        }
+
+        openFile(
+            at: url,
+            origin: origin ?? currentOpenOrigin,
+            folderWatchSession: folderWatchSession ?? activeFolderWatchSession,
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+        )
+
+        // Safety: if openFile failed internally, clear the loading state
+        clearLoadingState()
+
+        if initialDiffBaselineMarkdown != nil {
+            noteObservedExternalChange()
+        }
+    }
+
     func handleIncomingOpenURL(_ url: URL) {
         handleIncomingOpenURL(url, origin: .manual)
     }

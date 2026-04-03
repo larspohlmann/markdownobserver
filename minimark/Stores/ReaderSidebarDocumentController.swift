@@ -18,6 +18,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     @Published private(set) var isFolderWatchInitialScanInProgress: Bool
     @Published private(set) var didFolderWatchInitialScanFail: Bool
+    @Published private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
+    @Published private(set) var scannedFileCount: Int?
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
@@ -47,6 +49,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
         activeFolderWatchSession = nil
         isFolderWatchInitialScanInProgress = false
         didFolderWatchInitialScanFail = false
+        contentScanProgress = nil
+        scannedFileCount = nil
         synchronizeDocumentChangeObservers()
         configureFolderWatchController()
         bindSelectedStore()
@@ -82,7 +86,16 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         selectedDocumentID = documentID
-        bindSelectedStore()
+        let store = selectedReaderStore
+
+        if store.isDeferredDocument {
+            scheduleLoadWithOverlay(on: store) {
+                store.materializeDeferredDocument()
+            }
+            bindSelectedStore()
+        } else {
+            bindSelectedStore()
+        }
     }
 
     func openDocumentInSelectedSlot(
@@ -102,12 +115,14 @@ final class ReaderSidebarDocumentController: ObservableObject {
             for: normalizedFileURL,
             requestedSession: folderWatchSession
         )
-        document.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+        scheduleLoadWithOverlay(on: document.readerStore) {
+            document.readerStore.openFile(
+                at: normalizedFileURL,
+                origin: origin,
+                folderWatchSession: effectiveFolderWatchSession,
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
+        }
         selectedDocumentID = document.id
         bindSelectedStore()
     }
@@ -121,7 +136,23 @@ final class ReaderSidebarDocumentController: ObservableObject {
     ) {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         if let existingDocument = document(for: normalizedFileURL) {
-            selectDocument(existingDocument.id)
+            if existingDocument.readerStore.isDeferredDocument {
+                let store = existingDocument.readerStore
+                let effectiveSession = resolvedFolderWatchSession(
+                    for: normalizedFileURL,
+                    requestedSession: folderWatchSession
+                )
+                scheduleLoadWithOverlay(on: store) {
+                    store.materializeDeferredDocument(
+                        origin: origin,
+                        folderWatchSession: effectiveSession,
+                        initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+                    )
+                }
+                selectDocument(existingDocument.id)
+            } else {
+                selectDocument(existingDocument.id)
+            }
             return
         }
 
@@ -147,12 +178,19 @@ final class ReaderSidebarDocumentController: ObservableObject {
             requestedSession: folderWatchSession
         )
 
-        targetDocument.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+        if origin == .folderWatchInitialBatchAutoOpen {
+            targetDocument.readerStore.deferFile(
+                at: normalizedFileURL,
+                folderWatchSession: effectiveFolderWatchSession
+            )
+        } else {
+            targetDocument.readerStore.openFile(
+                at: normalizedFileURL,
+                origin: origin,
+                folderWatchSession: effectiveFolderWatchSession,
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
+        }
 
         guard targetDocument.readerStore.fileURL != nil else {
             bindSelectedStore()
@@ -173,7 +211,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
         origin: ReaderOpenOrigin,
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool = true
+        preferEmptySelection: Bool = true,
+        materializeSelectedOnCompletion: Bool = true
     ) {
         let plannedURLs = ReaderFileRouting.plannedOpenFileURLs(from: fileURLs)
         guard !plannedURLs.isEmpty else {
@@ -189,6 +228,13 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 preferEmptySelection: preferEmptySelection && index == 0
             )
         }
+
+        if materializeSelectedOnCompletion, selectedReaderStore.isDeferredDocument {
+            let store = selectedReaderStore
+            scheduleLoadWithOverlay(on: store) {
+                store.materializeDeferredDocument()
+            }
+        }
     }
 
     @discardableResult
@@ -199,6 +245,33 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
         selectDocument(existingDocument.id)
         return true
+    }
+
+    func selectDocumentWithNewestModificationDate() {
+        let newest = documents
+            .filter { $0.readerStore.fileURL != nil }
+            .max(by: {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) < ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            })
+        if let newest {
+            selectDocument(newest.id)
+        }
+    }
+
+    func materializeNewestDeferredDocuments(
+        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+    ) {
+        let deferredDocs = documents
+            .filter { $0.readerStore.isDeferredDocument }
+            .sorted {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) > ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            }
+
+        for document in deferredDocs.prefix(count) {
+            document.readerStore.materializeDeferredDocument()
+        }
+
+        selectDocumentWithNewestModificationDate()
     }
 
     func closeDocument(_ documentID: UUID) {
@@ -299,6 +372,10 @@ final class ReaderSidebarDocumentController: ObservableObject {
         )
     }
 
+    func scanCurrentMarkdownFiles(completion: @escaping @MainActor ([URL]) -> Void) {
+        folderWatchController.scanCurrentMarkdownFiles(completion: completion)
+    }
+
     func stopFolderWatch() {
         folderWatchController.stopWatching()
     }
@@ -353,6 +430,15 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
             return ReaderFileRouting.normalizedFileURL(fileURL) == normalizedFileURL
         })
+    }
+
+    private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
+        store.transitionToLoading()
+        Task { @MainActor in
+            await Task.yield()
+            load()
+            store.holdLoadingOverlayBriefly()
+        }
     }
 
     private func bindSelectedStore() {
@@ -426,7 +512,9 @@ final class ReaderSidebarDocumentController: ObservableObject {
             self?.selectedReaderStore.fileURL
         }
         folderWatchController.openDocumentFileURLsProvider = { [weak self] in
-            self?.documents.compactMap { $0.readerStore.fileURL } ?? []
+            self?.documents.compactMap { document in
+                document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
+            } ?? []
         }
         folderWatchController.openEventsHandler = { [weak self] events, session, origin in
             self?.openDocumentsBurst(
@@ -442,8 +530,12 @@ final class ReaderSidebarDocumentController: ObservableObject {
                         return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
                     }
                 ),
-                preferEmptySelection: true
+                preferEmptySelection: true,
+                materializeSelectedOnCompletion: origin != .folderWatchInitialBatchAutoOpen
             )
+        }
+        folderWatchController.selectNewestDocumentHandler = { [weak self] in
+            self?.selectDocumentWithNewestModificationDate()
         }
         folderWatchController.onStateChange = { [weak self] in
             self?.synchronizeFolderWatchState()
@@ -457,5 +549,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         pendingFileSelectionRequest = folderWatchController.pendingFileSelectionRequest
         isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
         didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
+        contentScanProgress = folderWatchController.contentScanProgress
+        scannedFileCount = folderWatchController.scannedFileCount
     }
 }

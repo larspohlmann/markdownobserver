@@ -491,6 +491,24 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(settings.favoriteWatchedFolders.isEmpty)
     }
 
+    @Test func decodingFavoriteWithoutAllKnownRelativePathsDefaultsToEmpty() throws {
+        let json = """
+        {
+            "id": "FDFBD48E-E0AB-4F82-95EB-391C3DF5CF63",
+            "name": "Docs",
+            "folderPath": "/tmp/docs",
+            "options": {
+                "openMode": "openAllMarkdownFiles",
+                "scope": "selectedFolderOnly"
+            },
+            "createdAt": 0
+        }
+        """
+
+        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+        #expect(favorite.allKnownRelativePaths.isEmpty)
+    }
+
     @Test func decodingFavoriteWithoutOpenDocumentRelativePathsDefaultsToEmptyArray() throws {
         let json = """
         {
@@ -670,6 +688,239 @@ struct ReaderFavoriteWatchedFolderTests {
         )
 
         #expect(entry.excludedSubdirectoryRelativePaths.isEmpty)
+    }
+
+    // MARK: - Known documents
+
+    @Test @MainActor func favoriteWithKnownPathsSurvivesRoundTrip() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/project", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Project",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            openDocumentFileURLs: [folderURL.appendingPathComponent("README.md")]
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+        store.updateFavoriteWatchedFolderKnownDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            knownDocumentFileURLs: [
+                folderURL.appendingPathComponent("README.md"),
+                folderURL.appendingPathComponent("CHANGELOG.md"),
+                folderURL.appendingPathComponent("notes.md")
+            ]
+        )
+
+        let reloaded = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let entry = reloaded.currentSettings.favoriteWatchedFolders[0]
+        #expect(entry.allKnownRelativePaths == ["CHANGELOG.md", "README.md", "notes.md"])
+    }
+
+    @Test @MainActor func updatingOpenDocumentsGrowsKnownPaths() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Docs",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            openDocumentFileURLs: []
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+
+        store.updateFavoriteWatchedFolderKnownDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            knownDocumentFileURLs: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("b.md")
+            ]
+        )
+
+        store.updateFavoriteWatchedFolderOpenDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            openDocumentFileURLs: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("c.md")
+            ]
+        )
+
+        let entry = store.currentSettings.favoriteWatchedFolders[0]
+        #expect(entry.openDocumentRelativePaths == ["a.md", "c.md"])
+        #expect(entry.allKnownRelativePaths == ["a.md", "b.md", "c.md"])
+    }
+
+    @Test @MainActor func closingFileKeepsItInKnownSetAcrossSyncCycles() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+
+        store.addFavoriteWatchedFolder(
+            name: "Docs",
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            openDocumentFileURLs: []
+        )
+
+        let entryID = store.currentSettings.favoriteWatchedFolders[0].id
+
+        // Simulate initial scan setting known paths
+        store.updateFavoriteWatchedFolderKnownDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            knownDocumentFileURLs: [
+                folderURL.appendingPathComponent("a.md"),
+                folderURL.appendingPathComponent("b.md"),
+                folderURL.appendingPathComponent("c.md")
+            ]
+        )
+
+        // User has a.md and b.md open, then closes b.md
+        store.updateFavoriteWatchedFolderOpenDocuments(
+            id: entryID,
+            folderURL: folderURL,
+            openDocumentFileURLs: [folderURL.appendingPathComponent("a.md")]
+        )
+
+        let entry = store.currentSettings.favoriteWatchedFolders[0]
+        #expect(entry.openDocumentRelativePaths == ["a.md"])
+        // b.md and c.md still known even though not open
+        #expect(entry.allKnownRelativePaths == ["a.md", "b.md", "c.md"])
+    }
+
+    // MARK: - New file discovery
+
+    @Test func newFilesAreThoseNotInKnownSet() {
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: folderURL.path,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: ["a.md", "b.md"],
+            allKnownRelativePaths: ["a.md", "b.md", "c.md"],
+            createdAt: .now
+        )
+
+        let scannedURLs = [
+            folderURL.appendingPathComponent("a.md"),
+            folderURL.appendingPathComponent("b.md"),
+            folderURL.appendingPathComponent("c.md"),
+            folderURL.appendingPathComponent("d.md"),
+            folderURL.appendingPathComponent("e.md")
+        ]
+
+        let newURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: folderURL)
+        #expect(newURLs.map(\.lastPathComponent).sorted() == ["d.md", "e.md"])
+    }
+
+    @Test func emptyKnownSetTreatsAllScannedFilesAsNew() {
+        let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: folderURL.path,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: [],
+            allKnownRelativePaths: [],
+            createdAt: .now
+        )
+
+        let scannedURLs = [
+            folderURL.appendingPathComponent("a.md"),
+            folderURL.appendingPathComponent("b.md")
+        ]
+
+        let newURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: folderURL)
+        #expect(newURLs.count == 2)
+    }
+
+    @Test func watchChangesOnlyFavoriteDoesNotDiscoverNewFiles() {
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Docs",
+            folderPath: "/tmp/docs",
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: [],
+            allKnownRelativePaths: [],
+            createdAt: .now
+        )
+
+        let shouldDiscover = entry.options.openMode == .openAllMarkdownFiles
+        #expect(!shouldDiscover)
+    }
+
+    // MARK: - Workspace state migration
+
+    @Test func decodingFavoriteWithoutWorkspaceStateProducesValidDefaults() throws {
+        let json = """
+        {
+            "id": "FDFBD48E-E0AB-4F82-95EB-391C3DF5CF63",
+            "name": "Legacy Favorite",
+            "folderPath": "/tmp/legacy",
+            "options": {
+                "openMode": "openAllMarkdownFiles",
+                "scope": "selectedFolderOnly"
+            },
+            "openDocumentRelativePaths": ["readme.md"],
+            "allKnownRelativePaths": ["readme.md", "notes.md"],
+            "createdAt": 0
+        }
+        """
+
+        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+
+        #expect(favorite.name == "Legacy Favorite")
+        #expect(favorite.openDocumentRelativePaths == ["readme.md"])
+
+        let expectedDefault = ReaderFavoriteWorkspaceState.from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
+        #expect(favorite.workspaceState == expectedDefault)
+        #expect(favorite.workspaceState.pinnedGroupIDs.isEmpty)
+        #expect(favorite.workspaceState.collapsedGroupIDs.isEmpty)
+        #expect(favorite.workspaceState.sidebarWidth == ReaderFavoriteWorkspaceState.defaultSidebarWidth)
+    }
+
+    @Test func encodingAndDecodingPreservesWorkspaceState() throws {
+        let customState = ReaderFavoriteWorkspaceState(
+            fileSortMode: .nameAscending,
+            groupSortMode: .lastChangedNewestFirst,
+            sidebarPosition: .sidebarRight,
+            sidebarWidth: 320,
+            pinnedGroupIDs: ["group-1", "group-2"],
+            collapsedGroupIDs: ["group-3"]
+        )
+
+        let original = ReaderFavoriteWatchedFolder(
+            name: "Workspace Test",
+            folderPath: "/tmp/workspace",
+            options: .default,
+            bookmarkData: nil,
+            workspaceState: customState,
+            createdAt: .now
+        )
+
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: data)
+
+        #expect(decoded.workspaceState == customState)
+        #expect(decoded.workspaceState.fileSortMode == .nameAscending)
+        #expect(decoded.workspaceState.groupSortMode == .lastChangedNewestFirst)
+        #expect(decoded.workspaceState.sidebarPosition == .sidebarRight)
+        #expect(decoded.workspaceState.sidebarWidth == 320)
+        #expect(decoded.workspaceState.pinnedGroupIDs == ["group-1", "group-2"])
+        #expect(decoded.workspaceState.collapsedGroupIDs == ["group-3"])
     }
 
     // MARK: - Helpers
