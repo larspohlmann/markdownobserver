@@ -294,6 +294,10 @@ enum MarkdownSourceHTMLRenderer {
         case .lightGreyOnDarkGrey: return "rgba(138, 185, 255, 0.22)"
         case .amberTerminal: return "rgba(255, 176, 0, 0.22)"
         case .greenTerminal, .greenTerminalStatic: return "rgba(0, 255, 65, 0.22)"
+        case .newspaper: return "rgba(26, 77, 143, 0.18)"
+        case .focus: return "rgba(44, 44, 44, 0.12)"
+        case .commodore64: return "rgba(160, 160, 255, 0.22)"
+        case .gameBoy: return "rgba(15, 56, 15, 0.22)"
         }
     }
 

@@ -31,6 +31,14 @@ extension ReaderThemeKind {
             return GreenTerminalTheme.definition
         case .greenTerminalStatic:
             return GreenTerminalTheme.staticDefinition
+        case .newspaper:
+            return NewspaperTheme.definition
+        case .focus:
+            return FocusTheme.definition
+        case .commodore64:
+            return Commodore64Theme.definition
+        case .gameBoy:
+            return GameBoyTheme.definition
         }
     }
 }

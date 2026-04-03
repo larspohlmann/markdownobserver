@@ -240,6 +240,104 @@ final class ThemeDefinitionTests: XCTestCase {
         XCTAssertFalse(css.contains("#F92672"), "Should not contain Monokai keyword color")
     }
 
+    // MARK: - Newspaper Theme
+
+    func testNewspaperThemeDefinition() {
+        let definition = ReaderThemeKind.newspaper.themeDefinition
+        XCTAssertEqual(definition.displayName, "Newspaper")
+        XCTAssertFalse(definition.kind.isDark)
+        XCTAssertNotNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertFalse(definition.providesSyntaxHighlighting)
+        XCTAssertNil(definition.syntaxCSS)
+    }
+
+    func testNewspaperCSSContainsSerifTypography() {
+        let css = ReaderThemeKind.newspaper.themeDefinition.customCSS!
+        XCTAssertTrue(css.contains("Charter"))
+        XCTAssertTrue(css.contains("Georgia"))
+        XCTAssertTrue(css.contains("serif"))
+        XCTAssertTrue(css.contains("border-bottom"))
+    }
+
+    // MARK: - Focus Theme
+
+    func testFocusThemeDefinition() {
+        let definition = ReaderThemeKind.focus.themeDefinition
+        XCTAssertEqual(definition.displayName, "Focus")
+        XCTAssertFalse(definition.kind.isDark)
+        XCTAssertNotNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertFalse(definition.providesSyntaxHighlighting)
+    }
+
+    func testFocusCSSContainsGenerousLineHeight() {
+        let css = ReaderThemeKind.focus.themeDefinition.customCSS!
+        XCTAssertTrue(css.contains("line-height: 1.8"))
+        XCTAssertTrue(css.contains("text-decoration: underline"))
+    }
+
+    // MARK: - Commodore 64 Theme
+
+    func testCommodore64ThemeDefinition() {
+        let definition = ReaderThemeKind.commodore64.themeDefinition
+        XCTAssertEqual(definition.displayName, "Commodore 64")
+        XCTAssertTrue(definition.kind.isDark)
+        XCTAssertNotNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertTrue(definition.providesSyntaxHighlighting)
+        XCTAssertNotNil(definition.syntaxCSS)
+        XCTAssertNotNil(definition.syntaxPreviewPalette)
+    }
+
+    func testCommodore64ColorsAreC64Palette() {
+        let definition = ReaderThemeKind.commodore64.themeDefinition
+        XCTAssertEqual(definition.colors.backgroundHex, "#40318D")
+        XCTAssertEqual(definition.colors.linkHex, "#FFFFFF")
+    }
+
+    func testCommodore64SyntaxCSSCoversAllTokenTypes() {
+        let css = ReaderThemeKind.commodore64.themeDefinition.syntaxCSS!
+        XCTAssertTrue(css.contains(".hljs-comment"))
+        XCTAssertTrue(css.contains(".hljs-keyword"))
+        XCTAssertTrue(css.contains(".hljs-string"))
+        XCTAssertTrue(css.contains(".hljs-number"))
+        XCTAssertTrue(css.contains(".hljs-title"))
+        XCTAssertTrue(css.contains(".hljs-built_in"))
+    }
+
+    // MARK: - Game Boy Theme
+
+    func testGameBoyThemeDefinition() {
+        let definition = ReaderThemeKind.gameBoy.themeDefinition
+        XCTAssertEqual(definition.displayName, "Game Boy")
+        XCTAssertFalse(definition.kind.isDark)
+        XCTAssertNotNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertTrue(definition.providesSyntaxHighlighting)
+        XCTAssertNotNil(definition.syntaxCSS)
+        XCTAssertNotNil(definition.syntaxPreviewPalette)
+    }
+
+    func testGameBoyUsesAuthenticDMGPalette() {
+        let definition = ReaderThemeKind.gameBoy.themeDefinition
+        XCTAssertEqual(definition.colors.backgroundHex, "#9BBC0F")
+        XCTAssertEqual(definition.colors.foregroundHex, "#0F380F")
+    }
+
+    func testGameBoyCSSContainsPixelGrid() {
+        let css = ReaderThemeKind.gameBoy.themeDefinition.customCSS!
+        XCTAssertTrue(css.contains("background-image"), "Should have pixel grid overlay")
+        XCTAssertTrue(css.contains("monospace"))
+    }
+
+    func testGameBoySyntaxUsesOnly4Shades() {
+        let css = ReaderThemeKind.gameBoy.themeDefinition.syntaxCSS!
+        XCTAssertTrue(css.contains("#0F380F"), "Should use darkest shade")
+        XCTAssertTrue(css.contains("#306230"), "Should use dark shade")
+        XCTAssertTrue(css.contains("font-weight: bold"), "Should use weight to differentiate")
+    }
+
     // MARK: - Backward Compatibility
 
     func testSimpleThemesCSSOutputContainsExpectedVariables() {
