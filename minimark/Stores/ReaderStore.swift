@@ -342,6 +342,9 @@ final class ReaderStore: ObservableObject {
 
     func clearOpenDocument() {
         cancelPendingDraftPreviewRender()
+        // Note: diffBaselineTracker is intentionally NOT reset here.
+        // Per-file-URL history is preserved across open/close cycles
+        // so the lookback window remains time-based, not session-based.
         fileWatcher.stopWatching()
         securityScopeToken?.endAccess()
         securityScopeToken = nil
