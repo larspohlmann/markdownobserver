@@ -94,6 +94,8 @@ struct ContentView: View {
     let onStopFolderWatch: () -> Void
     let onSaveFolderWatchAsFavorite: (String) -> Void
     let onRemoveCurrentWatchFromFavorites: () -> Void
+    let isAppearanceLocked: Bool
+    let onToggleAppearanceLock: () -> Void
     let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
     let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
@@ -519,7 +521,9 @@ struct ContentView: View {
                         onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
                         onRevealInFinder: {
                             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                        }
+                        },
+                        isAppearanceLocked: isAppearanceLocked,
+                        onToggleAppearanceLock: onToggleAppearanceLock
                     )
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -1061,6 +1065,8 @@ private final class SplitScrollCoordinator: ObservableObject {
         onStopFolderWatch: {},
         onSaveFolderWatchAsFavorite: { _ in },
         onRemoveCurrentWatchFromFavorites: {},
+        isAppearanceLocked: false,
+        onToggleAppearanceLock: {},
         onStartFavoriteWatch: { _ in },
         onClearFavoriteWatchedFolders: {},
         onRenameFavoriteWatchedFolder: { _, _ in },

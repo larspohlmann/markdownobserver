@@ -8,6 +8,8 @@ struct WatchPill: View {
     let onSaveFavorite: (String) -> Void
     let onRemoveFavorite: () -> Void
     let onRevealInFinder: () -> Void
+    let isAppearanceLocked: Bool
+    let onToggleAppearanceLock: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
@@ -69,6 +71,25 @@ struct WatchPill: View {
             .accessibilityLabel("Folder watch details")
             .accessibilityValue(activeFolderWatch.accessibilityValue)
             .accessibilityHint("Shows details about the watched folder")
+
+            Button {
+                onToggleAppearanceLock()
+            } label: {
+                Image(systemName: isAppearanceLocked ? "lock.fill" : "lock.open")
+                    .font(.system(size: 11, weight: .medium))
+                    .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(
+                isAppearanceLocked
+                    ? stripGreen.opacity(colorScheme == .dark ? 0.90 : 0.72)
+                    : .primary.opacity(0.4)
+            )
+            .help(isAppearanceLocked ? "Unlock appearance" : "Lock appearance")
+            .accessibilityLabel(isAppearanceLocked ? "Unlock appearance" : "Lock appearance")
+            .accessibilityHint("Locks the current theme and font size for this window")
+            .accessibilityValue(isAppearanceLocked ? "Locked" : "Unlocked")
 
             Text("WATCHING")
                 .font(.system(size: 10, weight: .bold))

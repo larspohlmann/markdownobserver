@@ -454,6 +454,20 @@ struct ReaderWindowRootView: View {
             onRemoveCurrentWatchFromFavorites: {
                 removeSharedFolderWatchFromFavorites()
             },
+            isAppearanceLocked: appearanceController.isLocked,
+            onToggleAppearanceLock: {
+                if appearanceController.isLocked {
+                    appearanceController.unlock()
+                    if activeFavoriteWorkspaceState != nil {
+                        activeFavoriteWorkspaceState?.lockedAppearance = nil
+                    }
+                } else {
+                    appearanceController.lock()
+                    if activeFavoriteWorkspaceState != nil {
+                        activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance
+                    }
+                }
+            },
             onStartFavoriteWatch: startFavoriteWatch,
             onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
             onRenameFavoriteWatchedFolder: { id, newName in
