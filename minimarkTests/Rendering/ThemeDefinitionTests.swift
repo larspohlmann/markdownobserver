@@ -8,6 +8,7 @@ final class ThemeDefinitionTests: XCTestCase {
         XCTAssertNil(definition.customCSS)
         XCTAssertNil(definition.customJavaScript)
         XCTAssertNil(definition.syntaxCSS)
+        XCTAssertNil(definition.syntaxPreviewPalette)
         XCTAssertFalse(definition.providesSyntaxHighlighting)
     }
 
@@ -16,7 +17,7 @@ final class ThemeDefinitionTests: XCTestCase {
         let expectedColors = ReaderTheme.theme(for: .blackOnWhite)
         XCTAssertEqual(definition.colors, expectedColors)
         XCTAssertEqual(definition.kind, .blackOnWhite)
-        XCTAssertEqual(definition.displayName, "White background / Black text")
+        XCTAssertEqual(definition.displayName, ReaderThemeKind.blackOnWhite.displayName)
     }
 
     func testAllExistingThemesProduceValidDefinitions() {
@@ -29,6 +30,9 @@ final class ThemeDefinitionTests: XCTestCase {
             XCTAssertEqual(definition.displayName, kind.displayName, "Display name mismatch for \(kind)")
             XCTAssertEqual(definition.colors, ReaderTheme.theme(for: kind), "Colors mismatch for \(kind)")
             XCTAssertNil(definition.customCSS, "Simple theme \(kind) should not have custom CSS")
+            XCTAssertNil(definition.customJavaScript, "Simple theme \(kind) should not have custom JS")
+            XCTAssertNil(definition.syntaxCSS, "Simple theme \(kind) should not have syntax CSS")
+            XCTAssertNil(definition.syntaxPreviewPalette, "Simple theme \(kind) should not have syntax preview palette")
             XCTAssertFalse(definition.providesSyntaxHighlighting, "Simple theme \(kind) should not provide syntax highlighting")
         }
     }
