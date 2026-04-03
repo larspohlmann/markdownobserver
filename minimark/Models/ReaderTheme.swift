@@ -5,6 +5,9 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
     case whiteOnBlack
     case darkGreyOnLightGrey
     case lightGreyOnDarkGrey
+    case amberTerminal
+    case greenTerminal
+    case greenTerminalStatic
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -34,7 +37,7 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
         switch self {
         case .blackOnWhite, .darkGreyOnLightGrey:
             return false
-        case .whiteOnBlack, .lightGreyOnDarkGrey:
+        case .whiteOnBlack, .lightGreyOnDarkGrey, .amberTerminal, .greenTerminal, .greenTerminalStatic:
             return true
         }
     }
@@ -49,6 +52,12 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
             return "Light gray background / Dark gray text"
         case .lightGreyOnDarkGrey:
             return "Dark gray background / Light gray text"
+        case .amberTerminal:
+            return "Amber Terminal"
+        case .greenTerminal:
+            return "Green Terminal"
+        case .greenTerminalStatic:
+            return "Green Terminal (Static)"
         }
     }
 }
@@ -129,6 +138,36 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#3FB950",
                 changeEditedHex: "#D29922",
                 changeDeletedHex: "#F85149",
+                hasLightBackground: false
+            )
+        case .amberTerminal:
+            return ReaderTheme(
+                kind: .amberTerminal,
+                backgroundHex: "#1A1200",
+                foregroundHex: "#FFB000",
+                secondaryForegroundHex: "#CC8800",
+                codeBackgroundHex: "#1F1600",
+                borderHex: "#3D2E00",
+                linkHex: "#FFCC00",
+                changedBlockHex: "#2A2000",
+                changeAddedHex: "#7A9A40",
+                changeEditedHex: "#CC8800",
+                changeDeletedHex: "#6A4A2A",
+                hasLightBackground: false
+            )
+        case .greenTerminal, .greenTerminalStatic:
+            return ReaderTheme(
+                kind: kind,
+                backgroundHex: "#0D0208",
+                foregroundHex: "#00FF41",
+                secondaryForegroundHex: "#008F11",
+                codeBackgroundHex: "#0A0A0A",
+                borderHex: "#003B00",
+                linkHex: "#41FF7F",
+                changedBlockHex: "#0A1F0A",
+                changeAddedHex: "#00CC33",
+                changeEditedHex: "#7FCC00",
+                changeDeletedHex: "#1A3320",
                 hasLightBackground: false
             )
         }

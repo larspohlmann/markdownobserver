@@ -35,8 +35,28 @@ struct ReaderCSSFactory {
         loadBundledJS(named: "markdownobserver-inline-diff")
     }
 
-    func makeCSS(theme: ReaderTheme, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
-        let variables = theme.cssVariables(baseFontSize: baseFontSize)
+    private static let themeJSBootstrapScript = """
+    <script>
+    (function() {
+      var meta = document.querySelector('meta[name="minimark-runtime-theme-js-base64"]');
+      if (!meta) return;
+      var b64 = meta.getAttribute('content');
+      if (!b64) return;
+      try {
+        var binary = atob(b64);
+        var bytes = Uint8Array.from(binary, function(c) { return c.charCodeAt(0); });
+        var themeJS = new TextDecoder().decode(bytes);
+        new Function(themeJS)();
+        window.__minimarkLastThemeJSBase64 = b64;
+      } catch(e) { console.error('Theme JS bootstrap error:', e); }
+    })();
+    </script>
+    """
+
+    func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
+        let variables = theme.colors.cssVariables(baseFontSize: baseFontSize)
+        let syntaxLayer = theme.providesSyntaxHighlighting ? (theme.syntaxCSS ?? syntaxTheme.css) : syntaxTheme.css
+        let themeLayer = theme.customCSS ?? ""
         return """
         \(variables)
 
@@ -553,16 +573,20 @@ struct ReaderCSSFactory {
           padding: 0.1em 0;
         }
 
-        \(syntaxTheme.css)
+        \(syntaxLayer)
+
+        \(themeLayer)
         """
     }
 
     func makeHTMLDocument(
         css: String,
         payloadBase64: String,
-        runtimeAssets: ReaderRuntimeAssets
+        runtimeAssets: ReaderRuntimeAssets,
+        themeJavaScript: String? = nil
     ) -> String {
         let cssBase64 = Data(css.utf8).base64EncodedString()
+        let themeJSBase64 = themeJavaScript.map { Data($0.utf8).base64EncodedString() }
         let runtimeScripts = makeRuntimeScripts(runtimeAssets: runtimeAssets)
         let mathRuntimeScripts = makeMathRuntimeScripts()
         let bootstrapRuntime = makeBootstrapRuntime(
@@ -577,6 +601,7 @@ struct ReaderCSSFactory {
           <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
           <meta name="minimark-runtime-payload-base64" content="\(payloadBase64)" />
           <meta name="minimark-runtime-css-base64" content="\(cssBase64)" />
+          \(themeJSBase64.map { "<meta name=\"minimark-runtime-theme-js-base64\" content=\"\($0)\" />" } ?? "")
           \(Self.screenshotAutoExpandMetaTag)
           <style id="minimark-runtime-style">
           \(css)
@@ -590,6 +615,7 @@ struct ReaderCSSFactory {
               <div id="reader-change-gutter" class="reader-change-gutter" role="navigation" aria-label="Changed regions"></div>
             </div>
           \(bootstrapRuntime)
+          \(themeJSBase64 != nil ? Self.themeJSBootstrapScript : "")
         </body>
         </html>
         """

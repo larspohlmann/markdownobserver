@@ -64,6 +64,13 @@ struct ReaderSettingsView: View {
                         Text(kind.displayName).tag(kind)
                     }
                 }
+                .disabled(syntaxHighlightingControlledByTheme)
+
+                if syntaxHighlightingControlledByTheme {
+                    Text("Syntax highlighting is controlled by the active theme.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Window Layout") {
@@ -145,6 +152,10 @@ struct ReaderSettingsView: View {
         .onReceive(settingsStore.settingsPublisher) { latest in
             settings = latest
         }
+    }
+
+    private var syntaxHighlightingControlledByTheme: Bool {
+        settings.readerTheme.themeDefinition.providesSyntaxHighlighting
     }
 
     private var layoutHelpText: String {
@@ -232,7 +243,11 @@ private struct ThemePreviewCard: View {
     }
 
     private var syntaxPalette: SyntaxThemePreviewPalette {
-        settings.syntaxTheme.previewPalette
+        let themeDefinition = settings.readerTheme.themeDefinition
+        if let themePalette = themeDefinition.syntaxPreviewPalette, themeDefinition.providesSyntaxHighlighting {
+            return themePalette
+        }
+        return settings.syntaxTheme.previewPalette
     }
 
     var body: some View {

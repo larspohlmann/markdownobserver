@@ -9,7 +9,7 @@ import Testing
 @Suite
 struct CheckboxCSSTests {
     private let css = ReaderCSSFactory().makeCSS(
-        theme: .default,
+        theme: ReaderThemeKind.blackOnWhite.themeDefinition,
         syntaxTheme: .default,
         baseFontSize: 16.0
     )
