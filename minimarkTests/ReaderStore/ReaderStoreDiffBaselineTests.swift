@@ -35,7 +35,7 @@ struct ReaderStoreDiffBaselineTests {
         #expect(lastDiffCall?.newMarkdown == "# Changed twice")
     }
 
-    @Test @MainActor func externalChangeWithShortLookbackUsesRecentBaseline() throws {
+    @Test @MainActor func externalChangeWithShortLookbackFallsToOldestWhenNothingIsAged() throws {
         let fixture = try ReaderStoreTestFixture(
             autoRefreshOnExternalChange: true,
             diffBaselineLookback: .tenSeconds
