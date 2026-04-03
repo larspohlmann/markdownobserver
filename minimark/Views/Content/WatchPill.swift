@@ -73,7 +73,7 @@ struct WatchPill: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.85 : 0.55))
                 .tracking(0.4)
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.6 : 0), radius: 1, y: 0.5)
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
 
             Button {
                 onRevealInFinder()
@@ -82,7 +82,7 @@ struct WatchPill: View {
                     Text(tildeAbbreviatedPath)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 1.0 : 0.85))
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.6 : 0), radius: 1, y: 0.5)
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
                         .lineLimit(1)
                         .truncationMode(.middle)
 
@@ -90,7 +90,7 @@ struct WatchPill: View {
                         Text("[\(filteredCount) filtered]")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.70 : 0.45))
-                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.6 : 0), radius: 1, y: 0.5)
+                            .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
                     }
                 }
             }
