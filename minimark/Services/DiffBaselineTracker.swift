@@ -1,6 +1,8 @@
 import Foundation
 
 protocol DiffBaselineTracking: AnyObject {
+    var currentMinimumAge: TimeInterval { get }
+
     func recordAndSelectBaseline(
         markdown: String,
         for fileURL: URL,
@@ -12,12 +14,12 @@ protocol DiffBaselineTracking: AnyObject {
 }
 
 final class DiffBaselineTracker: DiffBaselineTracking {
-    private var minimumAge: TimeInterval
+    private(set) var currentMinimumAge: TimeInterval
     private let maximumHistoryDepth: Int
     private var historyByFileURL: [URL: [Record]] = [:]
 
     init(minimumAge: TimeInterval, maximumHistoryDepth: Int = 32) {
-        self.minimumAge = max(0, minimumAge)
+        self.currentMinimumAge = max(0, minimumAge)
         self.maximumHistoryDepth = maximumHistoryDepth
     }
 
@@ -41,13 +43,13 @@ final class DiffBaselineTracker: DiffBaselineTracking {
         // (age 0) would never qualify anyway; dropLast() makes that invariant
         // explicit and prevents surprising results when minimumAge is 0 in tests.
         let agedBaseline = history.dropLast().last(where: {
-            now.timeIntervalSince($0.capturedAt) >= minimumAge
+            now.timeIntervalSince($0.capturedAt) >= currentMinimumAge
         })?.markdown
         return agedBaseline ?? history.first?.markdown ?? markdown
     }
 
     func updateMinimumAge(_ age: TimeInterval) {
-        minimumAge = max(0, age)
+        currentMinimumAge = max(0, age)
     }
 
     func reset() {

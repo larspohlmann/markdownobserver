@@ -127,8 +127,10 @@ final class ReaderStore: ObservableObject {
             .sink { [weak self] settings in
                 guard let self else { return }
                 let lookbackInterval = settings.diffBaselineLookback.timeInterval
-                self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
-                self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
+                if lookbackInterval != self.diffBaselineTracker.currentMinimumAge {
+                    self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
+                    self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
+                }
                 self.rerenderWithCurrentSettings()
             }
     }
