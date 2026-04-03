@@ -12,7 +12,6 @@ struct WatchPill: View {
 
     let contentHasLightBackground: Bool
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
     @State private var isShowingDetails = false
 

@@ -175,7 +175,7 @@ struct ContentView: View {
             .onChange(of: readerStore.fileURL?.standardizedFileURL.path) { _, _ in
                 handleFileIdentityChange()
             }
-            .onChange(of: readerStore.changedRegions.count) { _, _ in
+            .onChange(of: readerStore.changedRegions) { _, _ in
                 currentChangedRegionIndex = 0
             }
             .onChange(of: previewMode) { _, newValue in
@@ -318,6 +318,7 @@ struct ContentView: View {
     }
 
     private func handleFileIdentityChange() {
+        currentChangedRegionIndex = 0
         if previewMode == .nativeFallback {
             previewReloadToken += 1
             previewMode = .web
@@ -502,7 +503,6 @@ struct ContentView: View {
                     ChangeNavigationPill(
                         currentIndex: currentChangedRegionIndex,
                         totalCount: readerStore.changedRegions.count,
-                        contentHasLightBackground: currentReaderTheme.hasLightBackground,
                         onNavigate: requestChangedRegionNavigation
                     )
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)

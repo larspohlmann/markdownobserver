@@ -3,7 +3,6 @@ import SwiftUI
 struct ChangeNavigationPill: View {
     let currentIndex: Int
     let totalCount: Int
-    let contentHasLightBackground: Bool
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     @State private var isHovering = false
@@ -26,7 +25,7 @@ struct ChangeNavigationPill: View {
                 direction: .previous
             )
 
-            Text("\(currentIndex + 1) / \(totalCount)")
+            Text("\(min(currentIndex, max(0, totalCount - 1)) + 1) / \(totalCount)")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
