@@ -94,6 +94,9 @@ struct ContentView: View {
     let onStopFolderWatch: () -> Void
     let onSaveFolderWatchAsFavorite: (String) -> Void
     let onRemoveCurrentWatchFromFavorites: () -> Void
+    let isAppearanceLocked: Bool
+    let onToggleAppearanceLock: () -> Void
+    let effectiveReaderTheme: ReaderThemeKind
     let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
     let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
@@ -519,7 +522,9 @@ struct ContentView: View {
                         onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
                         onRevealInFinder: {
                             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                        }
+                        },
+                        isAppearanceLocked: isAppearanceLocked,
+                        onToggleAppearanceLock: onToggleAppearanceLock
                     )
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -585,7 +590,7 @@ struct ContentView: View {
     }
 
     private var currentReaderTheme: ReaderTheme {
-        ReaderTheme.theme(for: readerStore.currentSettings.readerTheme)
+        ReaderTheme.theme(for: effectiveReaderTheme)
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
@@ -1061,6 +1066,9 @@ private final class SplitScrollCoordinator: ObservableObject {
         onStopFolderWatch: {},
         onSaveFolderWatchAsFavorite: { _ in },
         onRemoveCurrentWatchFromFavorites: {},
+        isAppearanceLocked: false,
+        onToggleAppearanceLock: {},
+        effectiveReaderTheme: .blackOnWhite,
         onStartFavoriteWatch: { _ in },
         onClearFavoriteWatchedFolders: {},
         onRenameFavoriteWatchedFolder: { _, _ in },

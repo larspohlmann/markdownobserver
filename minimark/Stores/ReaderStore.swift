@@ -57,6 +57,7 @@ final class ReaderStore: ObservableObject {
     let requestWatchedFolderReauthorization: (URL) -> URL?
 
     private var settingsCancellable: AnyCancellable?
+    private var appearanceOverride: LockedAppearance?
 
     // MARK: - Internal: accessible to Coordination extensions
     // Swift requires at least `internal` visibility for stored properties that are
@@ -131,7 +132,6 @@ final class ReaderStore: ObservableObject {
                     self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
                     self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
                 }
-                self.rerenderWithCurrentSettings()
             }
     }
 
@@ -600,18 +600,6 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-    private func rerenderWithCurrentSettings() {
-        guard fileURL != nil else {
-            return
-        }
-
-        do {
-            try renderCurrentMarkdownImmediately()
-        } catch {
-            handle(error)
-        }
-    }
-
     func scheduleDraftPreviewRender() {
         pendingDraftPreviewRenderTask?.cancel()
         pendingDraftPreviewRenderTask = Task { @MainActor [weak self] in
@@ -647,9 +635,43 @@ final class ReaderStore: ObservableObject {
         lastRefreshAt = Date()
     }
 
+    func renderWithAppearance(
+        theme: ReaderThemeKind,
+        baseFontSize: Double,
+        syntaxTheme: SyntaxThemeKind
+    ) throws {
+        appearanceOverride = LockedAppearance(
+            readerTheme: theme,
+            baseFontSize: baseFontSize,
+            syntaxTheme: syntaxTheme
+        )
+        cancelPendingDraftPreviewRender()
+        try renderCurrentMarkdown()
+        lastRefreshAt = Date()
+    }
+
+    func setAppearanceOverride(
+        theme: ReaderThemeKind,
+        baseFontSize: Double,
+        syntaxTheme: SyntaxThemeKind
+    ) {
+        appearanceOverride = LockedAppearance(
+            readerTheme: theme,
+            baseFontSize: baseFontSize,
+            syntaxTheme: syntaxTheme
+        )
+    }
+
+    func clearAppearanceOverride() {
+        appearanceOverride = nil
+    }
+
     private func renderCurrentMarkdown() throws {
         let settings = settingsStore.currentSettings
-        let theme = settings.readerTheme.themeDefinition
+        let effectiveThemeKind = appearanceOverride?.readerTheme ?? settings.readerTheme
+        let effectiveFontSize = appearanceOverride?.baseFontSize ?? settings.baseFontSize
+        let effectiveSyntaxTheme = appearanceOverride?.syntaxTheme ?? settings.syntaxTheme
+        let theme = effectiveThemeKind.themeDefinition
 
         let docDir = fileURL?.deletingLastPathComponent()
         activateTrustedImageFolderAccessIfNeeded(for: docDir)
@@ -666,8 +688,8 @@ final class ReaderStore: ObservableObject {
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions,
             theme: theme,
-            syntaxTheme: settings.syntaxTheme,
-            baseFontSize: settings.baseFontSize
+            syntaxTheme: effectiveSyntaxTheme,
+            baseFontSize: effectiveFontSize
         )
 
         renderedHTMLDocument = rendered.htmlDocument

@@ -9,6 +9,7 @@ nonisolated struct ReaderFavoriteWorkspaceState: Equatable, Hashable, Codable, S
     var sidebarWidth: CGFloat
     var pinnedGroupIDs: Set<String>
     var collapsedGroupIDs: Set<String>
+    var lockedAppearance: LockedAppearance? = nil
 
     static func from(
         settings: ReaderSettings,

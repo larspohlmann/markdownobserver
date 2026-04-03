@@ -70,12 +70,13 @@ extension ReaderWindowRootView {
         guard let session = sharedFolderWatchSession else {
             return
         }
-        let workspaceState = ReaderFavoriteWorkspaceState.from(
+        var workspaceState = ReaderFavoriteWorkspaceState.from(
             settings: settingsStore.currentSettings,
             pinnedGroupIDs: sidebarPinnedGroupIDs,
             collapsedGroupIDs: sidebarCollapsedGroupIDs,
             sidebarWidth: sidebarWidth
         )
+        workspaceState.lockedAppearance = appearanceController.lockedAppearance
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
@@ -110,6 +111,19 @@ extension ReaderWindowRootView {
         sidebarPinnedGroupIDs = entry.workspaceState.pinnedGroupIDs
         sidebarCollapsedGroupIDs = entry.workspaceState.collapsedGroupIDs
         sidebarWidth = entry.workspaceState.sidebarWidth
+
+        // Defer appearance changes to the next main actor hop to avoid setting
+        // @Published properties on the controller during the view update batch
+        // triggered by the @State assignments above.
+        let lockedAppearance = entry.workspaceState.lockedAppearance
+        let wasLocked = appearanceController.isLocked
+        Task { @MainActor [appearanceController] in
+            if let locked = lockedAppearance {
+                appearanceController.restore(from: locked)
+            } else if wasLocked {
+                appearanceController.unlock()
+            }
+        }
 
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
         startWatchingFolder(
@@ -242,6 +256,11 @@ extension ReaderWindowRootView {
                 sidebarPinnedGroupIDs = []
                 sidebarCollapsedGroupIDs = []
                 sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+                Task { @MainActor [appearanceController] in
+                    if appearanceController.isLocked {
+                        appearanceController.unlock()
+                    }
+                }
             }
         }
 
