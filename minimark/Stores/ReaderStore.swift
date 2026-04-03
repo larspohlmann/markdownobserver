@@ -63,6 +63,7 @@ final class ReaderStore: ObservableObject {
     // read or mutated from extensions declared in separate files.  These properties
     // are implementation details of the store's coordination layer and must not be
     // accessed directly from outside the Stores/ group.
+    let diffBaselineTracker: DiffBaselineTracking
     var securityScopeToken: SecurityScopedAccessToken?
     var documentDirectoryScopeToken: SecurityScopedAccessToken?
     var folderSecurityScopeToken: SecurityScopedAccessToken?
@@ -90,6 +91,7 @@ final class ReaderStore: ObservableObject {
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning,
         settler: ReaderAutoOpenSettling,
         documentIO: ReaderDocumentIO = ReaderDocumentIOService(),
+        diffBaselineTracker: DiffBaselineTracking? = nil,
         requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
     ) {
         self.renderer = renderer
@@ -103,6 +105,9 @@ final class ReaderStore: ObservableObject {
         self.folderWatchAutoOpenPlanner = folderWatchAutoOpenPlanner
         self.settler = settler
         self.documentIO = documentIO
+        self.diffBaselineTracker = diffBaselineTracker ?? DiffBaselineTracker(
+            minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        )
         if let requestWatchedFolderReauthorization {
             self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
         } else {
@@ -119,8 +124,12 @@ final class ReaderStore: ObservableObject {
         settingsCancellable = settingsStore.settingsPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.rerenderWithCurrentSettings()
+            .sink { [weak self] settings in
+                guard let self else { return }
+                let lookbackInterval = settings.diffBaselineLookback.timeInterval
+                self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
+                self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
+                self.rerenderWithCurrentSettings()
             }
     }
 
