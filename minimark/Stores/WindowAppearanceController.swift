@@ -30,9 +30,15 @@ final class WindowAppearanceController: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
                 guard let self, !self.isLocked else { return }
-                self.effectiveTheme = settings.readerTheme
-                self.effectiveFontSize = settings.baseFontSize
-                self.effectiveSyntaxTheme = settings.syntaxTheme
+                if self.effectiveTheme != settings.readerTheme {
+                    self.effectiveTheme = settings.readerTheme
+                }
+                if self.effectiveFontSize != settings.baseFontSize {
+                    self.effectiveFontSize = settings.baseFontSize
+                }
+                if self.effectiveSyntaxTheme != settings.syntaxTheme {
+                    self.effectiveSyntaxTheme = settings.syntaxTheme
+                }
             }
     }
 

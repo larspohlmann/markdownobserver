@@ -599,8 +599,6 @@ final class ReaderStore: ObservableObject {
         }
     }
 
-
-
     func scheduleDraftPreviewRender() {
         pendingDraftPreviewRenderTask?.cancel()
         pendingDraftPreviewRenderTask = Task { @MainActor [weak self] in
