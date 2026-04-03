@@ -38,15 +38,11 @@ struct ChangeNavigationPill: View {
         }
         .padding(.vertical, Metrics.groupSpacing + 4)
         .frame(width: Metrics.pillWidth)
-        .background {
-            RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-        }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous)
                 .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous))
         .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {

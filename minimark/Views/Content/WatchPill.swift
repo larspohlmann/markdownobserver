@@ -56,7 +56,7 @@ struct WatchPill: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(stripGreen.opacity(0.72))
+            .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.90 : 0.72))
             .popover(isPresented: $isShowingDetails, arrowEdge: .bottom) {
                 FolderWatchDetailsPopover(
                     activeFolderWatch: activeFolderWatch,
@@ -71,7 +71,7 @@ struct WatchPill: View {
 
             Text("WATCHING")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(stripGreen.opacity(0.55))
+                .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.85 : 0.55))
                 .tracking(0.4)
 
             Button {
@@ -80,14 +80,14 @@ struct WatchPill: View {
                 HStack(spacing: 5) {
                     Text(tildeAbbreviatedPath)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(stripGreen.opacity(0.85))
+                        .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 1.0 : 0.85))
                         .lineLimit(1)
                         .truncationMode(.middle)
 
                     if filteredCount > 0 {
                         Text("[\(filteredCount) filtered]")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(stripGreen.opacity(0.45))
+                            .foregroundStyle(stripGreen.opacity(colorScheme == .dark ? 0.70 : 0.45))
                     }
                 }
             }
@@ -127,19 +127,15 @@ struct WatchPill: View {
         }
         .padding(.horizontal, Metrics.horizontalPadding)
         .frame(minHeight: Metrics.pillHeight)
+        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
         .background {
-            ZStack {
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                Capsule(style: .continuous)
-                    .fill(greenTint)
-            }
+            Capsule(style: .continuous)
+                .fill(greenTint)
         }
         .overlay {
             Capsule(style: .continuous)
                 .strokeBorder(pillBorder, lineWidth: 1)
         }
-        .clipShape(Capsule(style: .continuous))
         .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {

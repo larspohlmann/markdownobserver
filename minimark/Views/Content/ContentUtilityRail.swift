@@ -58,15 +58,11 @@ struct ContentUtilityRail: View {
         }
         .padding(.vertical, Metrics.groupSpacing)
         .frame(width: Metrics.railWidth)
-        .background {
-            RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-        }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
                 .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
         .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.25)) {
