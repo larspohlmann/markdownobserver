@@ -65,7 +65,8 @@ private final class SidebarPositionHelperView: NSView {
 
     private func applyPosition() {
         guard let splitView = ancestorSplitView(),
-              splitView.arrangedSubviews.count > 1 else {
+              splitView.arrangedSubviews.count > 1,
+              splitView.delegate as? NSSplitViewController == nil else {
             return
         }
         guard abs(lastAppliedWidth - targetWidth) > Self.widthEpsilon
