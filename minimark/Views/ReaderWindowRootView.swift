@@ -462,6 +462,9 @@ struct ReaderWindowRootView: View {
             onToggleAppearanceLock: {
                 if appearanceController.isLocked {
                     appearanceController.unlock()
+                    for document in sidebarDocumentController.documents {
+                        document.readerStore.clearAppearanceOverride()
+                    }
                     if activeFavoriteWorkspaceState != nil {
                         activeFavoriteWorkspaceState?.lockedAppearance = nil
                     }

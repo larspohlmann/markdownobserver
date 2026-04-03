@@ -88,7 +88,7 @@ struct WatchPill: View {
             )
             .help(isAppearanceLocked ? "Unlock appearance" : "Lock appearance")
             .accessibilityLabel(isAppearanceLocked ? "Unlock appearance" : "Lock appearance")
-            .accessibilityHint("Locks the current theme and font size for this window")
+            .accessibilityHint("Locks the current theme, syntax theme, and font size for this window")
             .accessibilityValue(isAppearanceLocked ? "Locked" : "Unlocked")
 
             Text("WATCHING")

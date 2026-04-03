@@ -44,7 +44,7 @@ final class WindowAppearanceController: ObservableObject {
 
     deinit {
         if _isLockedForDeinit {
-            MainActor.assumeIsolated {
+            DispatchQueue.main.async {
                 Self._lockedWindowCount -= 1
             }
         }

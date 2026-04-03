@@ -57,6 +57,7 @@ final class ReaderStore: ObservableObject {
     let requestWatchedFolderReauthorization: (URL) -> URL?
 
     private var settingsCancellable: AnyCancellable?
+    private var appearanceOverride: LockedAppearance?
 
     // MARK: - Internal: accessible to Coordination extensions
     // Swift requires at least `internal` visibility for stored properties that are
@@ -639,20 +640,25 @@ final class ReaderStore: ObservableObject {
         baseFontSize: Double,
         syntaxTheme: SyntaxThemeKind
     ) throws {
+        appearanceOverride = LockedAppearance(
+            readerTheme: theme,
+            baseFontSize: baseFontSize,
+            syntaxTheme: syntaxTheme
+        )
         cancelPendingDraftPreviewRender()
-        try renderCurrentMarkdown(theme: theme, baseFontSize: baseFontSize, syntaxTheme: syntaxTheme)
+        try renderCurrentMarkdown()
         lastRefreshAt = Date()
     }
 
-    private func renderCurrentMarkdown(
-        theme themeKind: ReaderThemeKind? = nil,
-        baseFontSize: Double? = nil,
-        syntaxTheme: SyntaxThemeKind? = nil
-    ) throws {
+    func clearAppearanceOverride() {
+        appearanceOverride = nil
+    }
+
+    private func renderCurrentMarkdown() throws {
         let settings = settingsStore.currentSettings
-        let effectiveThemeKind = themeKind ?? settings.readerTheme
-        let effectiveFontSize = baseFontSize ?? settings.baseFontSize
-        let effectiveSyntaxTheme = syntaxTheme ?? settings.syntaxTheme
+        let effectiveThemeKind = appearanceOverride?.readerTheme ?? settings.readerTheme
+        let effectiveFontSize = appearanceOverride?.baseFontSize ?? settings.baseFontSize
+        let effectiveSyntaxTheme = appearanceOverride?.syntaxTheme ?? settings.syntaxTheme
         let theme = effectiveThemeKind.themeDefinition
 
         let docDir = fileURL?.deletingLastPathComponent()
