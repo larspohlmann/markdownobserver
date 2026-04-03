@@ -485,8 +485,9 @@ struct ContentView: View {
         )
     }
 
-    private var overlayColorScheme: ColorScheme {
-        currentReaderTheme.hasLightBackground ? .light : .dark
+    private var overlayColorScheme: ColorScheme? {
+        guard readerStore.fileURL != nil else { return nil }
+        return currentReaderTheme.hasLightBackground ? .light : .dark
     }
 
     @ViewBuilder
@@ -494,7 +495,7 @@ struct ContentView: View {
         documentSurfaceLayout
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
-                    .environment(\.colorScheme, overlayColorScheme)
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
@@ -504,7 +505,7 @@ struct ContentView: View {
                         contentHasLightBackground: currentReaderTheme.hasLightBackground,
                         onNavigate: requestChangedRegionNavigation
                     )
-                    .environment(\.colorScheme, overlayColorScheme)
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
             }
             .overlay(alignment: .top) {
@@ -521,7 +522,7 @@ struct ContentView: View {
                         },
                         contentHasLightBackground: currentReaderTheme.hasLightBackground
                     )
-                    .environment(\.colorScheme, overlayColorScheme)
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
             }
     }

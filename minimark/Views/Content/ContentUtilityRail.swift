@@ -47,14 +47,17 @@ struct ContentUtilityRail: View {
 
     var body: some View {
         VStack(spacing: Metrics.groupSpacing) {
-            viewModeGroup
+            if hasFile {
+                viewModeGroup
 
-            if showEditButton {
+                if showEditButton {
+                    groupSeparator
+                    editGroup
+                }
+
                 groupSeparator
-                editGroup
             }
 
-            groupSeparator
             actionsGroup
         }
         .padding(.vertical, Metrics.groupSpacing)
