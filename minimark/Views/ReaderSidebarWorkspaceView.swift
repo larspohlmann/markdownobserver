@@ -68,13 +68,23 @@ private final class SidebarPositionHelperView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         removeMouseMonitors()
-        guard window != nil else { return }
+        guard window != nil else {
+            resetDividerDragIfNeeded()
+            return
+        }
         installMouseMonitors()
         applyPosition()
     }
 
     deinit {
+        resetDividerDragIfNeeded()
         removeMouseMonitors()
+    }
+
+    private func resetDividerDragIfNeeded() {
+        guard isDraggingDivider else { return }
+        isDraggingDivider = false
+        onDividerDragActive?(false)
     }
 
     private func installMouseMonitors() {
@@ -386,7 +396,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .frame(
             minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
             idealWidth: sidebarWidth,
-            maxWidth: isDraggingDivider ? .infinity : sidebarWidth,
+            maxWidth: isDraggingDivider ? .infinity : max(sidebarWidth, ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth),
             maxHeight: .infinity
         )
         .background(

@@ -229,19 +229,25 @@ final class minimarkUITests: XCTestCase {
             app.staticTexts["README.md"].exists
         }
 
-        Thread.sleep(forTimeInterval: 1.0)
-
         let window = app.windows.firstMatch
+
+        // Wait for sidebar layout to stabilize
+        waitForCondition(timeout: 3) {
+            sidebar.frame.width > 100
+        }
+
         let initialSidebarWidth = sidebar.frame.width
         let initialWindowWidth = window.frame.width
-        XCTAssertGreaterThan(initialSidebarWidth, 100, "Sidebar should have measurable width")
 
         // Drag right edge of window 300px wider
         let rightEdge = window.coordinate(withNormalizedOffset: CGVector(dx: 1.0, dy: 0.5))
         let expandTarget = rightEdge.withOffset(CGVector(dx: 300, dy: 0))
         rightEdge.click(forDuration: 0.1, thenDragTo: expandTarget)
 
-        Thread.sleep(forTimeInterval: 1.0)
+        // Wait for window to have expanded
+        waitForCondition(timeout: 3) {
+            window.frame.width > initialWindowWidth + 100
+        }
 
         let expandedWindowWidth = window.frame.width
         XCTAssertGreaterThan(
