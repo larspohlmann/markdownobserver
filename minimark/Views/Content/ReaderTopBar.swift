@@ -86,7 +86,7 @@ struct ReaderTopBar: View {
 
                 BreadcrumbDocumentContext(
                     projection: projection,
-                    onRevealInFinder: { readerStore.revealCurrentFileInFinder() }
+                    onRevealInFinder: onRevealInFinder
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
 
