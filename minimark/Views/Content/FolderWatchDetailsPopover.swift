@@ -114,7 +114,7 @@ struct FolderWatchDetailsPopover: View {
     }
 }
 
-struct ExcludedSubdirectoriesSection: View {
+fileprivate struct ExcludedSubdirectoriesSection: View {
     let relativePaths: [String]
 
     private static let collapsedLimit = 10
