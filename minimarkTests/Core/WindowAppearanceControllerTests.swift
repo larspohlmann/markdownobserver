@@ -193,4 +193,19 @@ final class WindowAppearanceControllerTests: XCTestCase {
 
         XCTAssertEqual(WindowAppearanceController.lockedWindowCount, before)
     }
+
+    // MARK: - Restore reflects in lockedAppearance immediately
+
+    func testRestoreImmediatelyReflectsInLockedAppearance() {
+        let controller = WindowAppearanceController(settingsStore: settingsStore)
+        let stored = LockedAppearance(readerTheme: .commodore64, baseFontSize: 22, syntaxTheme: .solarizedDark)
+
+        controller.restore(from: stored)
+
+        let snapshot = controller.lockedAppearance
+        XCTAssertNotNil(snapshot)
+        XCTAssertEqual(snapshot?.readerTheme, .commodore64)
+        XCTAssertEqual(snapshot?.baseFontSize, 22)
+        XCTAssertEqual(snapshot?.syntaxTheme, .solarizedDark)
+    }
 }

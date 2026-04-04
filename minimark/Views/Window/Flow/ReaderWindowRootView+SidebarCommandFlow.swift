@@ -94,25 +94,20 @@ extension ReaderWindowRootView {
     }
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
+        // Restore appearance FIRST so the controller is in the correct lock state
+        // before activeFavoriteWorkspaceState triggers onChange persistence.
+        if let lockedAppearance = entry.workspaceState.lockedAppearance {
+            appearanceController.restore(from: lockedAppearance)
+        } else if appearanceController.isLocked {
+            appearanceController.unlock()
+        }
+
         // Set active favorite and restore workspace state
         activeFavoriteID = entry.id
         activeFavoriteWorkspaceState = entry.workspaceState
         sidebarPinnedGroupIDs = entry.workspaceState.pinnedGroupIDs
         sidebarCollapsedGroupIDs = entry.workspaceState.collapsedGroupIDs
         sidebarWidth = entry.workspaceState.sidebarWidth
-
-        // Defer appearance changes to the next main actor hop to avoid setting
-        // @Published properties on the controller during the view update batch
-        // triggered by the @State assignments above.
-        let lockedAppearance = entry.workspaceState.lockedAppearance
-        let wasLocked = appearanceController.isLocked
-        Task { @MainActor [appearanceController] in
-            if let locked = lockedAppearance {
-                appearanceController.restore(from: locked)
-            } else if wasLocked {
-                appearanceController.unlock()
-            }
-        }
 
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
         startWatchingFolder(
