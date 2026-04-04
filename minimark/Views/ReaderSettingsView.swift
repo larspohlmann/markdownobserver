@@ -5,7 +5,6 @@ import SwiftUI
 struct ReaderSettingsView: View {
     @ObservedObject private var settingsStore: ReaderSettingsStore
     @ObservedObject private var notificationNotifier: ReaderSystemNotifier
-    @State private var settings: ReaderSettings
 
     init(
         settingsStore: ReaderSettingsStore,
@@ -13,7 +12,6 @@ struct ReaderSettingsView: View {
     ) {
         self.settingsStore = settingsStore
         self.notificationNotifier = notificationNotifier
-        _settings = State(initialValue: settingsStore.currentSettings)
     }
 
     var body: some View {
@@ -23,14 +21,14 @@ struct ReaderSettingsView: View {
                     Text("Font size")
                     Slider(
                         value: Binding(
-                            get: { settings.baseFontSize },
+                            get: { settingsStore.currentSettings.baseFontSize },
                             set: { settingsStore.updateBaseFontSize($0) }
                         ),
                         in: 10...48,
                         step: 1
                     )
                     .accessibilityLabel("Font size")
-                    Text("\(Int(settings.baseFontSize)) pt")
+                    Text("\(Int(settingsStore.currentSettings.baseFontSize)) pt")
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                         .frame(width: 58, alignment: .trailing)
@@ -39,7 +37,7 @@ struct ReaderSettingsView: View {
 
             Section("Theme") {
                 Picker("App theme", selection: Binding(
-                    get: { settings.appAppearance },
+                    get: { settingsStore.currentSettings.appAppearance },
                     set: { settingsStore.updateAppAppearance($0) }
                 )) {
                     ForEach(AppAppearance.allCases, id: \.self) { appearance in
@@ -48,7 +46,7 @@ struct ReaderSettingsView: View {
                 }
 
                 Picker("Reader theme", selection: Binding(
-                    get: { settings.readerTheme },
+                    get: { settingsStore.currentSettings.readerTheme },
                     set: { settingsStore.updateTheme($0) }
                 )) {
                     ForEach(ReaderThemeKind.allCases, id: \.self) { kind in
@@ -57,7 +55,7 @@ struct ReaderSettingsView: View {
                 }
 
                 Picker("Syntax theme", selection: Binding(
-                    get: { settings.syntaxTheme },
+                    get: { settingsStore.currentSettings.syntaxTheme },
                     set: { settingsStore.updateSyntaxTheme($0) }
                 )) {
                     ForEach(SyntaxThemeKind.allCases, id: \.self) { kind in
@@ -77,7 +75,7 @@ struct ReaderSettingsView: View {
 
             Section("Window Layout") {
                 Picker("Open multiple files in", selection: Binding(
-                    get: { settings.multiFileDisplayMode },
+                    get: { settingsStore.currentSettings.multiFileDisplayMode },
                     set: { updateMultiFileDisplayMode($0) }
                 )) {
                     ForEach(ReaderMultiFileDisplayMode.allCases, id: \.self) { mode in
@@ -92,7 +90,7 @@ struct ReaderSettingsView: View {
 
             Section("Change Highlighting") {
                 Picker("Diff lookback", selection: Binding(
-                    get: { settings.diffBaselineLookback },
+                    get: { settingsStore.currentSettings.diffBaselineLookback },
                     set: { settingsStore.updateDiffBaselineLookback($0) }
                 )) {
                     ForEach(DiffBaselineLookback.allCases) { lookback in
@@ -107,7 +105,7 @@ struct ReaderSettingsView: View {
 
             Section("Notifications") {
                 Toggle("System notifications", isOn: Binding(
-                    get: { settings.notificationsEnabled },
+                    get: { settingsStore.currentSettings.notificationsEnabled },
                     set: { updateNotificationsEnabled($0) }
                 ))
 
@@ -128,7 +126,7 @@ struct ReaderSettingsView: View {
                     Button("Send Background Test") {
                         notificationNotifier.sendTestNotification()
                     }
-                    .disabled(!settings.notificationsEnabled)
+                    .disabled(!settingsStore.currentSettings.notificationsEnabled)
                 }
 
                 Text("Test notifications fire after 5 seconds so you can switch to another app and verify background delivery.")
@@ -137,7 +135,7 @@ struct ReaderSettingsView: View {
             }
 
             Section("Preview") {
-                ThemePreviewCard(settings: settings)
+                ThemePreviewCard(settings: settingsStore.currentSettings)
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel("Theme preview")
             }
@@ -150,9 +148,6 @@ struct ReaderSettingsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             notificationNotifier.refreshNotificationStatus()
-        }
-        .onReceive(settingsStore.settingsPublisher) { latest in
-            settings = latest
         }
     }
 
@@ -170,11 +165,11 @@ struct ReaderSettingsView: View {
     }
 
     private var syntaxHighlightingControlledByTheme: Bool {
-        settings.readerTheme.themeDefinition.providesSyntaxHighlighting
+        settingsStore.currentSettings.readerTheme.themeDefinition.providesSyntaxHighlighting
     }
 
     private var layoutHelpText: String {
-        ReaderSettingsGuidance.layoutHelpText(selectedMode: settings.multiFileDisplayMode)
+        ReaderSettingsGuidance.layoutHelpText(selectedMode: settingsStore.currentSettings.multiFileDisplayMode)
     }
 
     private func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) {

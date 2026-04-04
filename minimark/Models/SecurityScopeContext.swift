@@ -5,14 +5,14 @@ struct SecurityScopeContext {
     var directoryToken: SecurityScopedAccessToken?
     var folderToken: SecurityScopedAccessToken?
     var accessibleFileURL: URL?
-    var accessibleFileURLSource: String?
+    var accessibleFileURLSource: AccessibleFileURLSource?
 
     init(
         fileToken: SecurityScopedAccessToken? = nil,
         directoryToken: SecurityScopedAccessToken? = nil,
         folderToken: SecurityScopedAccessToken? = nil,
         accessibleFileURL: URL? = nil,
-        accessibleFileURLSource: String? = nil
+        accessibleFileURLSource: AccessibleFileURLSource? = nil
     ) {
         self.fileToken = fileToken
         self.directoryToken = directoryToken

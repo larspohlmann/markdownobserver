@@ -66,18 +66,6 @@ final class ReaderFolderWatchController {
         self.folderWatchAutoOpenPlanner = folderWatchAutoOpenPlanner
     }
 
-    convenience init(settingsStore: ReaderSettingsStoring) {
-        self.init(
-            folderWatcher: FolderChangeWatcher(),
-            settingsStore: settingsStore,
-            securityScope: SecurityScopedResourceAccess(),
-            systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
-            )
-        )
-    }
-
     var isWatchingFolder: Bool {
         activeFolderWatchSession != nil
     }

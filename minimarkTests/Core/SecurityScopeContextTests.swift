@@ -15,7 +15,7 @@ struct SecurityScopeContextTests {
     @Test func endAllAccessClearsEverything() {
         var context = SecurityScopeContext()
         context.accessibleFileURL = URL(fileURLWithPath: "/test.md")
-        context.accessibleFileURLSource = "fileScope"
+        context.accessibleFileURLSource = .fileScope
 
         context.endAllAccess()
 
@@ -29,7 +29,7 @@ struct SecurityScopeContextTests {
     @Test func endFileAndDirectoryAccessPreservesFolderToken() {
         var context = SecurityScopeContext()
         context.accessibleFileURL = URL(fileURLWithPath: "/test.md")
-        context.accessibleFileURLSource = "fileScope"
+        context.accessibleFileURLSource = .fileScope
 
         context.endFileAndDirectoryAccess()
 
