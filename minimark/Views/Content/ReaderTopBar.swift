@@ -54,6 +54,8 @@ struct ReaderTopBar: View {
     @State private var isEditingFavorites = false
 
     var body: some View {
+        let projection = ReaderTopBarStoreProjection(store: readerStore)
+
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 FolderWatchToolbarButton(
@@ -72,7 +74,7 @@ struct ReaderTopBar: View {
                 Spacer().frame(width: Metrics.watchButtonToDocSpacing)
 
                 BreadcrumbDocumentContext(
-                    readerStore: readerStore,
+                    projection: projection,
                     onRevealInFinder: { readerStore.revealCurrentFileInFinder() }
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -80,11 +82,11 @@ struct ReaderTopBar: View {
             .padding(.horizontal, Metrics.barHorizontalPadding)
             .frame(height: Metrics.mainBarHeight)
 
-            if readerStore.isSourceEditing {
+            if projection.isSourceEditing {
                 SourceEditingStatusBar(
-                    hasUnsavedChanges: readerStore.hasUnsavedDraftChanges,
-                    canSave: readerStore.canSaveSourceDraft,
-                    canDiscard: readerStore.canDiscardSourceDraft,
+                    hasUnsavedChanges: projection.hasUnsavedDraftChanges,
+                    canSave: projection.canSaveSourceDraft,
+                    canDiscard: projection.canDiscardSourceDraft,
                     onSave: onSaveSourceDraft,
                     onDiscard: onDiscardSourceDraft
                 )

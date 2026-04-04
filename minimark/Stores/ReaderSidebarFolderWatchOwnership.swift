@@ -14,42 +14,38 @@ final class ReaderFolderWatchController {
     private var initialMarkdownScanTask: Task<Void, Never>?
     private var scanProgressTask: Task<Void, Never>?
 
-    var currentDocumentFileURLProvider: (() -> URL?)?
-    var openDocumentFileURLsProvider: (() -> [URL])?
-    var openEventsHandler: (([ReaderFolderWatchChangeEvent], ReaderFolderWatchSession, ReaderOpenOrigin) -> Void)?
-    var selectNewestDocumentHandler: (() -> Void)?
-    var onStateChange: (() -> Void)?
+    weak var delegate: ReaderFolderWatchControllerDelegate?
 
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession? {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     private(set) var lastWatchedFolderEventAt: Date? {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning? {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     private(set) var isInitialMarkdownScanInProgress = false {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     private(set) var didInitialMarkdownScanFail = false {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress? {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     private(set) var scannedFileCount: Int? {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
-        didSet { onStateChange?() }
+        didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
     init(
@@ -254,7 +250,7 @@ final class ReaderFolderWatchController {
         let livePlan = folderWatchAutoOpenPlanner.livePlan(
             for: eventsExcludingOpenDocuments(markdownFileEvents),
             activeSession: nil,
-            currentDocumentFileURL: currentDocumentFileURLProvider?()
+            currentDocumentFileURL: delegate?.folderWatchControllerCurrentDocumentFileURL(self)
         )
         let plannedEvents = livePlan.autoOpenEvents
         dispatchOpenEvents(plannedEvents, session: session, origin: .folderWatchAutoOpen)
@@ -263,7 +259,7 @@ final class ReaderFolderWatchController {
     private func eventsExcludingOpenDocuments(
         _ events: [ReaderFolderWatchChangeEvent]
     ) -> [ReaderFolderWatchChangeEvent] {
-        let openDocumentURLs = Set((openDocumentFileURLsProvider?() ?? []).map {
+        let openDocumentURLs = Set((delegate?.folderWatchControllerOpenDocumentFileURLs(self) ?? []).map {
             ReaderFileRouting.normalizedFileURL($0)
         })
 
@@ -295,7 +291,7 @@ final class ReaderFolderWatchController {
             )
         }
 
-        openEventsHandler?(events, session, origin)
+        delegate?.folderWatchController(self, handleEvents: events, in: session, origin: origin)
     }
 
     private func loadInitialMarkdownFilesOffMainActor(
@@ -367,7 +363,7 @@ final class ReaderFolderWatchController {
 
         pendingFileSelectionRequest = nil
 
-        let currentDocumentFileURL = currentDocumentFileURLProvider?()
+        let currentDocumentFileURL = delegate?.folderWatchControllerCurrentDocumentFileURL(self)
         let eligibleURLs = markdownURLs.filter { url in
             let normalized = ReaderFileRouting.normalizedFileURL(url)
             if let currentDocumentFileURL,
@@ -399,7 +395,7 @@ final class ReaderFolderWatchController {
             dispatchOpenEvents(loadEvents, session: session, origin: .folderWatchAutoOpen)
         }
 
-        selectNewestDocumentHandler?()
+        delegate?.folderWatchControllerShouldSelectNewestDocument(self)
         isInitialMarkdownScanInProgress = false
     }
 

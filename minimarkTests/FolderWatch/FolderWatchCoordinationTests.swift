@@ -84,10 +84,8 @@ struct FolderWatchCoordinationTests {
             systemNotifier: TestReaderSystemNotifier(),
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
         )
-        var openedEvents: [ReaderFolderWatchChangeEvent] = []
-        controller.openEventsHandler = { events, _, _ in
-            openedEvents.append(contentsOf: events)
-        }
+        let delegate = TestFolderWatchControllerDelegate()
+        controller.delegate = delegate
 
         let startedAt = Date()
         try controller.startWatching(
@@ -100,10 +98,10 @@ struct FolderWatchCoordinationTests {
         let elapsed = Date().timeIntervalSince(startedAt)
 
         #expect(elapsed < 0.2)
-        #expect(openedEvents.isEmpty)
+        #expect(delegate.handledEvents.isEmpty)
 
         #expect(await waitUntil(timeout: .seconds(2)) {
-            openedEvents.map(\.fileURL) == [ReaderFileRouting.normalizedFileURL(initialFileURL)]
+            delegate.handledEvents.map(\.fileURL) == [ReaderFileRouting.normalizedFileURL(initialFileURL)]
         })
     }
 
@@ -124,10 +122,8 @@ struct FolderWatchCoordinationTests {
             systemNotifier: TestReaderSystemNotifier(),
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
         )
-        var openedEvents: [ReaderFolderWatchChangeEvent] = []
-        controller.openEventsHandler = { events, _, _ in
-            openedEvents.append(contentsOf: events)
-        }
+        let delegate = TestFolderWatchControllerDelegate()
+        controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
@@ -147,7 +143,7 @@ struct FolderWatchCoordinationTests {
 
         try? await Task.sleep(for: .milliseconds(500))
 
-        #expect(openedEvents.isEmpty)
+        #expect(delegate.handledEvents.isEmpty)
     }
 
     @Test @MainActor func folderWatchControllerPublishesInitialScanProgressStateForIncludeSubfolders() async throws {
@@ -229,10 +225,8 @@ struct FolderWatchCoordinationTests {
             systemNotifier: TestReaderSystemNotifier(),
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
         )
-        var openedEvents: [ReaderFolderWatchChangeEvent] = []
-        controller.openEventsHandler = { events, _, _ in
-            openedEvents.append(contentsOf: events)
-        }
+        let delegate = TestFolderWatchControllerDelegate()
+        controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
@@ -247,7 +241,7 @@ struct FolderWatchCoordinationTests {
         #expect(await waitUntil(timeout: .seconds(2)) {
             controller.didInitialMarkdownScanFail && !controller.isInitialMarkdownScanInProgress
         })
-        #expect(openedEvents.isEmpty)
+        #expect(delegate.handledEvents.isEmpty)
     }
 
     @Test @MainActor func folderWatchControllerIgnoresStaleInitialScanCompletionAfterRestart() async throws {
@@ -833,10 +827,8 @@ struct FolderWatchCoordinationTests {
             systemNotifier: TestReaderSystemNotifier(),
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
         )
-        var openedEvents: [ReaderFolderWatchChangeEvent] = []
-        controller.openEventsHandler = { events, _, _ in
-            openedEvents.append(contentsOf: events)
-        }
+        let delegate = TestFolderWatchControllerDelegate()
+        controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
@@ -857,7 +849,7 @@ struct FolderWatchCoordinationTests {
         try await Task.sleep(for: .milliseconds(50))
 
         #expect(controller.folderWatchAutoOpenWarning == nil)
-        #expect(openedEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(delegate.handledEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
     }
 
     @Test @MainActor func focusNotificationTargetFallsBackToWatchedFolderWindow() {

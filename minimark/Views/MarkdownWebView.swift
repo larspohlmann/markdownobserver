@@ -7,7 +7,7 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let scrollSyncMessageName = "minimarkScrollSync"
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
-    private static let scrollSyncObserverScript = ReaderCSSFactory.scrollSyncObserverJavaScript
+    private static let scrollSyncObserverScript = ReaderJavaScriptLoader.scrollSyncObserverJavaScript
 
     let htmlDocument: String
     let documentIdentity: String?

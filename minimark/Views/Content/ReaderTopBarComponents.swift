@@ -221,20 +221,20 @@ struct FolderWatchToolbarButton: View {
 // MARK: - BreadcrumbDocumentContext
 
 struct BreadcrumbDocumentContext: View {
-    @ObservedObject var readerStore: ReaderStore
+    let projection: ReaderTopBarStoreProjection
     let onRevealInFinder: () -> Void
 
-    private var hasFile: Bool { readerStore.fileURL != nil }
+    private var hasFile: Bool { projection.fileURL != nil }
 
     private var titleText: String {
-        if readerStore.fileDisplayName.isEmpty {
+        if projection.fileDisplayName.isEmpty {
             return "No document open"
         }
-        return readerStore.fileDisplayName
+        return projection.fileDisplayName
     }
 
     private var breadcrumbPath: String {
-        guard let url = readerStore.fileURL else { return "" }
+        guard let url = projection.fileURL else { return "" }
         let abbreviated = abbreviatePathWithTilde(url.deletingLastPathComponent().path)
         let components = abbreviated
             .split(separator: "/", omittingEmptySubsequences: true)
@@ -260,8 +260,8 @@ struct BreadcrumbDocumentContext: View {
 
                     BreadcrumbTimestampLine(
                         breadcrumbPath: breadcrumbPath,
-                        statusTimestamp: readerStore.statusBarTimestamp,
-                        isCurrentFileMissing: readerStore.isCurrentFileMissing
+                        statusTimestamp: projection.statusBarTimestamp,
+                        isCurrentFileMissing: projection.isCurrentFileMissing
                     )
                 }
             }
