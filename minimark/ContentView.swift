@@ -1067,8 +1067,25 @@ private final class SplitScrollCoordinator: ObservableObject {
 }
 
 #Preview {
-    ContentView(
-        readerStore: ReaderStore(),
+    let settingsStore = ReaderSettingsStore()
+    let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+    let store = ReaderStore(
+        renderer: MarkdownRenderingService(),
+        differ: ChangedRegionDiffer(),
+        fileWatcher: FileChangeWatcher(),
+        folderWatcher: FolderChangeWatcher(),
+        settingsStore: settingsStore,
+        securityScope: SecurityScopedResourceAccess(),
+        fileActions: ReaderFileActionService(),
+        systemNotifier: ReaderSystemNotifier.shared,
+        folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+            minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        ),
+        settler: settler
+    )
+    store.configureSettler(settler)
+    return ContentView(
+        readerStore: store,
         onRequestFileOpen: { _ in },
         activeFolderWatch: nil,
         isFolderWatchInitialScanInProgress: false,

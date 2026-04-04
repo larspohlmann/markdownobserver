@@ -35,7 +35,23 @@ final class ReaderSidebarDocumentController: ObservableObject {
         makeFolderWatchController: (() -> ReaderFolderWatchController)? = nil
     ) {
         let resolvedMakeReaderStore = makeReaderStore ?? {
-            ReaderStore(settingsStore: settingsStore)
+            let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+            let store = ReaderStore(
+                renderer: MarkdownRenderingService(),
+                differ: ChangedRegionDiffer(),
+                fileWatcher: FileChangeWatcher(),
+                folderWatcher: FolderChangeWatcher(),
+                settingsStore: settingsStore,
+                securityScope: SecurityScopedResourceAccess(),
+                fileActions: ReaderFileActionService(),
+                systemNotifier: ReaderSystemNotifier.shared,
+                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                    minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+                ),
+                settler: settler
+            )
+            store.configureSettler(settler)
+            return store
         }
         self.makeReaderStore = resolvedMakeReaderStore
         self.folderWatchController = makeFolderWatchController?() ?? ReaderFolderWatchController(settingsStore: settingsStore)
