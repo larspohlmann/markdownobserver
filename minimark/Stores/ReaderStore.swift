@@ -539,6 +539,7 @@ final class ReaderStore: ObservableObject {
 
     func clearAppearanceOverride() {
         appearanceOverride = nil
+        needsAppearanceRender = false
     }
 
     private func renderCurrentMarkdown() throws {
