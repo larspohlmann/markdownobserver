@@ -53,6 +53,7 @@ struct ReaderWindowRootView: View {
             wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
         )
         self.fileOpenCoordinator = FileOpenCoordinator(controller: sidebarDocumentController)
+        sidebarDocumentController.fileOpenCoordinator = self.fileOpenCoordinator
     }
 
     private var sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement {
@@ -608,6 +609,7 @@ struct ReaderWindowRootView: View {
                 fileURLs: fileURLs,
                 origin: .manual
             ))
+            refreshWindowPresentation()
         }
     }
 
