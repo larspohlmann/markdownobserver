@@ -18,38 +18,125 @@ private struct SidebarWidthPreferenceKey: PreferenceKey {
 /// Bridges to AppKit to set the NSSplitView divider position and holding priorities.
 /// HSplitView ignores `idealWidth` for restored widths, so this applies the correct
 /// position programmatically on first appearance and whenever width or placement changes.
+///
+/// Also monitors mouse events to detect divider drags: when the user clicks near the
+/// divider, `onDividerDragActive` is called with `true` to lift the `maxWidth` constraint,
+/// allowing the sidebar to resize. On mouse up, it's called with `false` and the new
+/// sidebar width is reported via `onDividerDragged`.
 private struct SidebarDividerPositionSetter: NSViewRepresentable {
     let targetWidth: CGFloat
     let placement: ReaderMultiFileDisplayMode.SidebarPlacement
+    let onDividerDragged: (CGFloat) -> Void
+    let onDividerDragActive: (Bool) -> Void
 
     func makeNSView(context: Context) -> SidebarPositionHelperView {
         let view = SidebarPositionHelperView()
         view.isHidden = true
         view.targetWidth = targetWidth
         view.placement = placement
+        view.onDividerDragged = onDividerDragged
+        view.onDividerDragActive = onDividerDragActive
         return view
     }
 
     func updateNSView(_ nsView: SidebarPositionHelperView, context: Context) {
+        nsView.onDividerDragged = onDividerDragged
+        nsView.onDividerDragActive = onDividerDragActive
         nsView.updateIfNeeded(targetWidth: targetWidth, placement: placement)
     }
 }
 
 private final class SidebarPositionHelperView: NSView {
-    /// Holding priority one tick above .defaultLow (250) so the sidebar
-    /// resists proportional resizing when the window expands or shrinks.
-    private static let sidebarHoldingPriority: NSLayoutConstraint.Priority = .init(251)
+    /// High holding priority so the sidebar strongly resists proportional
+    /// resizing when the window expands or shrinks.
+    private static let sidebarHoldingPriority: NSLayoutConstraint.Priority = .defaultHigh
     private static let widthEpsilon: CGFloat = 1
+    private static let dividerHitZone: CGFloat = 6
 
     var targetWidth: CGFloat = 0
     var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
+    var onDividerDragged: ((CGFloat) -> Void)?
+    var onDividerDragActive: ((Bool) -> Void)?
     private var lastAppliedWidth: CGFloat = 0
     private var lastAppliedPlacement: ReaderMultiFileDisplayMode.SidebarPlacement?
+    private var mouseDownMonitor: Any?
+    private var mouseUpMonitor: Any?
+    private var isDraggingDivider = false
+
+    private var sidebarSubviewIndex: Int { placement == .left ? 0 : 1 }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        guard window != nil else { return }
+        removeMouseMonitors()
+        guard window != nil else {
+            resetDividerDragIfNeeded()
+            return
+        }
+        installMouseMonitors()
         applyPosition()
+    }
+
+    deinit {
+        resetDividerDragIfNeeded()
+        removeMouseMonitors()
+    }
+
+    private func resetDividerDragIfNeeded() {
+        guard isDraggingDivider else { return }
+        isDraggingDivider = false
+        onDividerDragActive?(false)
+    }
+
+    private func installMouseMonitors() {
+        mouseDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            self?.handleMouseDown(event)
+            return event
+        }
+        mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
+            self?.handleMouseUp(event)
+            return event
+        }
+    }
+
+    private func removeMouseMonitors() {
+        if let monitor = mouseDownMonitor { NSEvent.removeMonitor(monitor) }
+        mouseDownMonitor = nil
+        if let monitor = mouseUpMonitor { NSEvent.removeMonitor(monitor) }
+        mouseUpMonitor = nil
+    }
+
+    private func handleMouseDown(_ event: NSEvent) {
+        guard let splitView = ancestorSplitView(),
+              splitView.subviews.count > 1,
+              event.window === self.window else { return }
+
+        let sidebarFrame = splitView.subviews[sidebarSubviewIndex].frame
+        let locationInSplitView = splitView.convert(event.locationInWindow, from: nil)
+
+        // Check if click is near the divider edge
+        let dividerX = placement == .left ? sidebarFrame.maxX : sidebarFrame.minX
+        if abs(locationInSplitView.x - dividerX) <= Self.dividerHitZone + splitView.dividerThickness {
+            isDraggingDivider = true
+            onDividerDragActive?(true)
+        }
+    }
+
+    private func handleMouseUp(_ event: NSEvent) {
+        guard isDraggingDivider else { return }
+        isDraggingDivider = false
+
+        // Read the final sidebar width from NSSplitView
+        if let splitView = ancestorSplitView(), splitView.subviews.count > 1 {
+            let finalWidth = splitView.subviews[sidebarSubviewIndex].frame.width
+            if finalWidth > 0 {
+                targetWidth = finalWidth
+                lastAppliedWidth = finalWidth
+                onDividerDragged?(finalWidth)
+            }
+        }
+
+        // Re-engage the maxWidth constraint
+        onDividerDragActive?(false)
     }
 
     func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
@@ -76,9 +163,8 @@ private final class SidebarPositionHelperView: NSView {
         lastAppliedWidth = targetWidth
         lastAppliedPlacement = placement
 
-        let sidebarIndex = placement == .left ? 0 : 1
         let detailIndex = placement == .left ? 1 : 0
-        splitView.setHoldingPriority(Self.sidebarHoldingPriority, forSubviewAt: sidebarIndex)
+        splitView.setHoldingPriority(Self.sidebarHoldingPriority, forSubviewAt: sidebarSubviewIndex)
         splitView.setHoldingPriority(.defaultLow, forSubviewAt: detailIndex)
 
         let position: CGFloat
@@ -122,6 +208,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
     @State private var selectedDocumentIDs: Set<UUID> = []
+    @State private var isDraggingDivider = false
 
     var body: some View {
         Group {
@@ -309,6 +396,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .frame(
             minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
             idealWidth: sidebarWidth,
+            maxWidth: isDraggingDivider ? .infinity : max(sidebarWidth, ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth),
             maxHeight: .infinity
         )
         .background(
@@ -319,12 +407,22 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 )
             }
         )
-        .background(SidebarDividerPositionSetter(targetWidth: sidebarWidth, placement: sidebarPlacement))
+        .background(SidebarDividerPositionSetter(
+            targetWidth: sidebarWidth,
+            placement: sidebarPlacement,
+            onDividerDragged: { width in
+                sidebarWidth = width
+            },
+            onDividerDragActive: { active in
+                isDraggingDivider = active
+            }
+        ))
         .onPreferenceChange(SidebarWidthPreferenceKey.self) { width in
-            if width > 0 {
+            if width > 0, isDraggingDivider {
                 sidebarWidth = width
             }
         }
+        .accessibilityIdentifier("sidebar-column")
     }
 
     private var sidebarToolbar: some View {
