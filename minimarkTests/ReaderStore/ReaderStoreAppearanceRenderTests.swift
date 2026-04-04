@@ -1,47 +1,46 @@
-import Foundation
-import Testing
+import XCTest
 @testable import minimark
 
-@Suite(.serialized)
-struct ReaderStoreAppearanceRenderTests {
+@MainActor
+final class ReaderStoreAppearanceRenderTests: XCTestCase {
     private let testAppearance = LockedAppearance(readerTheme: .newspaper, baseFontSize: 20, syntaxTheme: .nord)
 
-    @Test @MainActor func setAppearanceOverrideSetsNeedsAppearanceRender() throws {
+    func testSetAppearanceOverrideSetsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
-        #expect(!fixture.store.needsAppearanceRender)
+        XCTAssertFalse(fixture.store.needsAppearanceRender)
 
         fixture.store.setAppearanceOverride(testAppearance)
 
-        #expect(fixture.store.needsAppearanceRender)
+        XCTAssertTrue(fixture.store.needsAppearanceRender)
     }
 
-    @Test @MainActor func renderWithAppearanceClearsNeedsAppearanceRender() throws {
+    func testRenderWithAppearanceClearsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
-        #expect(fixture.store.needsAppearanceRender)
+        XCTAssertTrue(fixture.store.needsAppearanceRender)
 
         try fixture.store.renderWithAppearance(testAppearance)
 
-        #expect(!fixture.store.needsAppearanceRender)
+        XCTAssertFalse(fixture.store.needsAppearanceRender)
     }
 
-    @Test @MainActor func renderCurrentMarkdownClearsNeedsAppearanceRender() throws {
+    func testRenderCurrentMarkdownClearsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
-        #expect(fixture.store.needsAppearanceRender)
+        XCTAssertTrue(fixture.store.needsAppearanceRender)
 
         try fixture.store.renderCurrentMarkdownImmediately()
 
-        #expect(!fixture.store.needsAppearanceRender)
+        XCTAssertFalse(fixture.store.needsAppearanceRender)
     }
 }
