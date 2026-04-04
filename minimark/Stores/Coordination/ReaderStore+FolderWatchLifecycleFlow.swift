@@ -46,7 +46,7 @@ extension ReaderStore {
         folderURL: URL,
         options: ReaderFolderWatchOptions
     ) throws -> ReaderFolderWatchSession {
-        folderSecurityScopeToken = securityScope.beginAccess(to: folderURL)
+        scopeContext.folderToken = securityScope.beginAccess(to: folderURL)
 
         try folderWatcher.startWatching(
             folderURL: folderURL,
@@ -137,8 +137,8 @@ extension ReaderStore {
         folderWatcher.stopWatching()
         folderWatchAutoOpenPlanner.resetTransientState()
         pendingFileSelectionRequest = nil
-        folderSecurityScopeToken?.endAccess()
-        folderSecurityScopeToken = nil
+        scopeContext.folderToken?.endAccess()
+        scopeContext.folderToken = nil
         setActiveFolderWatchSession(nil)
         setLastWatchedFolderEventAt(nil)
         setFolderWatchAutoOpenWarning(nil)

@@ -150,7 +150,7 @@ struct ContentView: View {
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
                         fileName: readerStore.fileDisplayName,
-                        message: readerStore.lastError
+                        message: readerStore.lastError?.message
                     )
                 } else if readerStore.needsImageDirectoryAccess {
                     ImageAccessWarningBar {

@@ -198,7 +198,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
         #expect(fixture.store.sourceMarkdown == originalMarkdown)
         #expect(fixture.store.renderedHTMLDocument == originalHTML)
-        #expect(fixture.store.lastError?.contains("Failed to read file") == true)
+        #expect(fixture.store.lastError?.message.contains("Failed to read file") == true)
         #expect(fixture.store.hasUnacknowledgedExternalChange)
     }
 
