@@ -24,32 +24,31 @@ struct ContentUtilityRail: View {
     }
 
     var body: some View {
-        VStack(spacing: Metrics.groupSpacing) {
-            if hasFile {
+        if hasFile {
+            VStack(spacing: Metrics.groupSpacing) {
                 viewModeGroup
 
                 if showEditButton {
                     groupSeparator
                     editGroup
                 }
-
             }
-        }
-        .padding(.vertical, Metrics.groupSpacing)
-        .frame(width: Metrics.railWidth)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.25)) {
-                isHovering = hovering
+            .padding(.vertical, Metrics.groupSpacing)
+            .frame(width: Metrics.railWidth)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Metrics.railCornerRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
             }
+            .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isHovering = hovering
+                }
+            }
+            .padding(.top, Metrics.railInset)
+            .padding(.trailing, Metrics.railTrailingInset)
         }
-        .padding(.top, Metrics.railInset)
-        .padding(.trailing, Metrics.railTrailingInset)
     }
 
     // MARK: - View Mode Group
