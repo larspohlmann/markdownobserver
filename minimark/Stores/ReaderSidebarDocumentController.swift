@@ -27,6 +27,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     private var storeConfigurator: ((ReaderStore) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
     private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
+    var fileOpenCoordinator: FileOpenCoordinator?
 
     init(
         settingsStore: ReaderSettingsStore,
@@ -626,22 +627,42 @@ final class ReaderSidebarDocumentController: ObservableObject {
             } ?? []
         }
         folderWatchController.openEventsHandler = { [weak self] events, session, origin in
-            self?.openDocumentsBurst(
-                at: events.map(\.fileURL),
+            guard let self else { return }
+            let diffBaselineByURL: [URL: String] = Dictionary(
+                uniqueKeysWithValues: events.compactMap { event in
+                    guard let previousMarkdown = event.previousMarkdown else {
+                        return nil
+                    }
+                    return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
+                }
+            )
+
+            let materializationStrategy: FileOpenRequest.MaterializationStrategy =
+                origin == .folderWatchInitialBatchAutoOpen
+                    ? .deferThenMaterializeSelected
+                    : .loadAll
+
+            let request = FileOpenRequest(
+                fileURLs: events.map(\.fileURL),
                 origin: origin,
                 folderWatchSession: session,
-                initialDiffBaselineMarkdownByURL: Dictionary(
-                    uniqueKeysWithValues: events.compactMap { event in
-                        guard let previousMarkdown = event.previousMarkdown else {
-                            return nil
-                        }
-
-                        return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
-                    }
-                ),
-                preferEmptySelection: true,
-                materializeSelectedOnCompletion: origin != .folderWatchInitialBatchAutoOpen
+                initialDiffBaselineMarkdownByURL: diffBaselineByURL,
+                slotStrategy: .reuseEmptySlotForFirst,
+                materializationStrategy: materializationStrategy
             )
+
+            if let coordinator = self.fileOpenCoordinator {
+                coordinator.open(request)
+            } else {
+                self.openDocumentsBurst(
+                    at: events.map(\.fileURL),
+                    origin: origin,
+                    folderWatchSession: session,
+                    initialDiffBaselineMarkdownByURL: diffBaselineByURL,
+                    preferEmptySelection: true,
+                    materializeSelectedOnCompletion: origin != .folderWatchInitialBatchAutoOpen
+                )
+            }
         }
         folderWatchController.selectNewestDocumentHandler = { [weak self] in
             self?.selectDocumentWithNewestModificationDate()
