@@ -299,7 +299,7 @@ struct ReaderWindowRootView: View {
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
                 let store = document.readerStore
-                guard store.hasOpenDocument else { continue }
+                guard store.hasOpenDocument, !store.isDeferredDocument else { continue }
 
                 if document.id == sidebarDocumentController.selectedDocumentID {
                     try? store.renderWithAppearance(
@@ -321,7 +321,7 @@ struct ReaderWindowRootView: View {
     private func renderSelectedDocumentIfNeeded() {
         guard let document = sidebarDocumentController.selectedDocument else { return }
         let store = document.readerStore
-        guard store.needsAppearanceRender, store.hasOpenDocument else { return }
+        guard store.needsAppearanceRender, store.hasOpenDocument, !store.isDeferredDocument else { return }
         let appearance = appearanceController.effectiveAppearance
         try? store.renderWithAppearance(
             theme: appearance.readerTheme,
