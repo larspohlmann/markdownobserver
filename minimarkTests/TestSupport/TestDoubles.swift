@@ -838,7 +838,6 @@ struct ReaderStoreTestFixture {
             settler: settler,
             requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
         )
-        store.configureSettler(settler)
     }
 
     func write(content: String, to url: URL) {

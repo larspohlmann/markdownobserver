@@ -116,33 +116,33 @@ final class ReaderStore: ObservableObject {
                     self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
                 }
             }
-    }
 
-    func configureSettler(_ settler: ReaderAutoOpenSettler) {
-        settler.configure(
-            currentFileURL: { [weak self] in self?.fileURL },
-            loadFile: { [weak self] url in
-                guard let self else { throw ReaderError.noOpenFileInReader }
-                return try self.loadMarkdownFile(at: url)
-            },
-            onDocumentSettled: { [weak self] loaded, fileURL, diffBaselineMarkdown in
-                guard let self else { return }
-                do {
-                    try self.presentLoadedDocument(
-                        loaded,
-                        at: fileURL,
-                        diffBaselineMarkdown: diffBaselineMarkdown,
-                        resetDocumentViewMode: false,
-                        acknowledgeExternalChange: true
-                    )
-                } catch {
-                    self.handle(error)
+        if let concreteSettler = settler as? ReaderAutoOpenSettler {
+            concreteSettler.configure(
+                currentFileURL: { [weak self] in self?.fileURL },
+                loadFile: { [weak self] url in
+                    guard let self else { throw ReaderError.noOpenFileInReader }
+                    return try self.loadMarkdownFile(at: url)
+                },
+                onDocumentSettled: { [weak self] loaded, fileURL, diffBaselineMarkdown in
+                    guard let self else { return }
+                    do {
+                        try self.presentLoadedDocument(
+                            loaded,
+                            at: fileURL,
+                            diffBaselineMarkdown: diffBaselineMarkdown,
+                            resetDocumentViewMode: false,
+                            acknowledgeExternalChange: true
+                        )
+                    } catch {
+                        self.handle(error)
+                    }
+                },
+                onLoadStateChanged: { [weak self] state in
+                    self?.document.documentLoadState = state
                 }
-            },
-            onLoadStateChanged: { [weak self] state in
-                self?.document.documentLoadState = state
-            }
-        )
+            )
+        }
     }
 
     var isWatchingFolder: Bool {

@@ -1084,7 +1084,6 @@ private final class SplitScrollCoordinator: ObservableObject {
         settler: settler,
         requestWatchedFolderReauthorization: { _ in nil }
     )
-    store.configureSettler(settler)
     return ContentView(
         readerStore: store,
         onRequestFileOpen: { _ in },

@@ -58,7 +58,6 @@ final class ReaderSidebarDocumentController: ObservableObject {
                     )
                 }
             )
-            store.configureSettler(settler)
             return store
         }
         self.makeReaderStore = resolvedMakeReaderStore
