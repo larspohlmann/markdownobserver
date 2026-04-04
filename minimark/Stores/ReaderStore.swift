@@ -227,7 +227,7 @@ final class ReaderStore: ObservableObject {
         document.currentOpenOrigin = origin
         document.lastError = nil
         document.isCurrentFileMissing = false
-        document.fileLastModifiedAt = (try? FileManager.default.attributesOfItem(atPath: normalizedURL.path))?[.modificationDate] as? Date
+        document.fileLastModifiedAt = documentIO.modificationDate(for: normalizedURL)
         if let folderWatchSession {
             activeFolderWatchSession = folderWatchSession
         }
