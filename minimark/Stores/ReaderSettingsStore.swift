@@ -138,6 +138,9 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateTheme(_ kind: ReaderThemeKind)
     func updateSyntaxTheme(_ kind: SyntaxThemeKind)
     func updateBaseFontSize(_ value: Double)
+    func increaseFontSize(step: Double)
+    func decreaseFontSize(step: Double)
+    func resetFontSize()
     func updateNotificationsEnabled(_ isEnabled: Bool)
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
@@ -264,6 +267,20 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         updateSettings(coalescePersistence: true) { settings in
             settings.baseFontSize = min(max(value, 10), 48)
         }
+    }
+
+    func increaseFontSize(step: Double = 1.0) {
+        let next = currentSettings.baseFontSize + step
+        updateBaseFontSize(next)
+    }
+
+    func decreaseFontSize(step: Double = 1.0) {
+        let next = currentSettings.baseFontSize - step
+        updateBaseFontSize(next)
+    }
+
+    func resetFontSize() {
+        updateBaseFontSize(ReaderSettings.default.baseFontSize)
     }
 
     func updateNotificationsEnabled(_ isEnabled: Bool) {

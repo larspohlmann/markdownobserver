@@ -125,45 +125,6 @@ final class ReaderStore: ObservableObject {
             }
     }
 
-    convenience init() {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
-        let settingsStore = ReaderSettingsStore()
-        self.init(
-            renderer: MarkdownRenderingService(),
-            differ: ChangedRegionDiffer(),
-            fileWatcher: FileChangeWatcher(),
-            folderWatcher: FolderChangeWatcher(),
-            settingsStore: settingsStore,
-            securityScope: SecurityScopedResourceAccess(),
-            fileActions: ReaderFileActionService(),
-            systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
-            ),
-            settler: settler
-        )
-        configureSettler(settler)
-    }
-
-    convenience init(settingsStore: ReaderSettingsStoring) {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
-        self.init(
-            renderer: MarkdownRenderingService(),
-            differ: ChangedRegionDiffer(),
-            fileWatcher: FileChangeWatcher(),
-            folderWatcher: FolderChangeWatcher(),
-            settingsStore: settingsStore,
-            securityScope: SecurityScopedResourceAccess(),
-            fileActions: ReaderFileActionService(),
-            systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
-            ),
-            settler: settler
-        )
-        configureSettler(settler)
-    }
-
     func configureSettler(_ settler: ReaderAutoOpenSettler) {
         settler.configure(
             currentFileURL: { [weak self] in self?.fileURL },
@@ -454,21 +415,6 @@ final class ReaderStore: ObservableObject {
                 origin: eventOrigin
             )
         }
-    }
-
-
-    func increaseFontSize(step: Double = 1.0) {
-        let next = settingsStore.currentSettings.baseFontSize + step
-        settingsStore.updateBaseFontSize(next)
-    }
-
-    func decreaseFontSize(step: Double = 1.0) {
-        let next = settingsStore.currentSettings.baseFontSize - step
-        settingsStore.updateBaseFontSize(next)
-    }
-
-    func resetFontSize() {
-        settingsStore.updateBaseFontSize(ReaderSettings.default.baseFontSize)
     }
 
     func refreshOpenInApplications() {

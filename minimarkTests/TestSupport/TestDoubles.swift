@@ -157,6 +157,18 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
+    func increaseFontSize(step: Double) {
+        updateBaseFontSize(subject.value.baseFontSize + step)
+    }
+
+    func decreaseFontSize(step: Double) {
+        updateBaseFontSize(subject.value.baseFontSize - step)
+    }
+
+    func resetFontSize() {
+        updateBaseFontSize(ReaderSettings.default.baseFontSize)
+    }
+
     func updateNotificationsEnabled(_ isEnabled: Bool) {
         var next = subject.value
         next.notificationsEnabled = isEnabled
