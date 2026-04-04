@@ -2,11 +2,11 @@ import Foundation
 
 extension ReaderStore {
     func activateFileSecurityScope(for url: URL, reason: String) {
-        securityScopeToken?.endAccess()
-        securityScopeToken = securityScope.beginAccess(to: url)
-        if securityScopeToken?.didStartAccess == true {
-            currentAccessibleFileURL = url
-            currentAccessibleFileURLSource = "fileScope"
+        scopeContext.fileToken?.endAccess()
+        scopeContext.fileToken = securityScope.beginAccess(to: url)
+        if scopeContext.fileToken?.didStartAccess == true {
+            scopeContext.accessibleFileURL = url
+            scopeContext.accessibleFileURLSource = "fileScope"
         }
     }
 
@@ -24,47 +24,47 @@ extension ReaderStore {
             return
         }
 
-        if folderSecurityScopeToken?.didStartAccess == true {
+        if scopeContext.folderToken?.didStartAccess == true {
             return
         }
 
         let accessURL = resolvedWatchedFolderAccessURL(for: activeFolderWatchSession)
-        folderSecurityScopeToken?.endAccess()
-        folderSecurityScopeToken = securityScope.beginAccess(to: accessURL)
+        scopeContext.folderToken?.endAccess()
+        scopeContext.folderToken = securityScope.beginAccess(to: accessURL)
     }
 
     func effectiveAccessibleFileURL(for url: URL, reason: String) -> URL {
         let normalizedURL = Self.normalizedFileURL(url)
         ensureFolderWatchAccessIfNeeded(for: normalizedURL, reason: reason)
 
-        if let securityScopeToken,
-           securityScopeToken.didStartAccess,
-           Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
-            currentAccessibleFileURL = securityScopeToken.url
-            currentAccessibleFileURLSource = "fileScope"
-            return securityScopeToken.url
+        if let fileToken = scopeContext.fileToken,
+           fileToken.didStartAccess,
+           Self.normalizedFileURL(fileToken.url) == normalizedURL {
+            scopeContext.accessibleFileURL = fileToken.url
+            scopeContext.accessibleFileURLSource = "fileScope"
+            return fileToken.url
         }
 
-        if let currentAccessibleFileURL,
-           currentAccessibleFileURLSource == "fileScope",
-           Self.normalizedFileURL(currentAccessibleFileURL) == normalizedURL {
-            return currentAccessibleFileURL
+        if let accessibleFileURL = scopeContext.accessibleFileURL,
+           scopeContext.accessibleFileURLSource == "fileScope",
+           Self.normalizedFileURL(accessibleFileURL) == normalizedURL {
+            return accessibleFileURL
         }
 
         if let folderScopedFileURL = folderScopedAccessibleFileURL(for: normalizedURL) {
-            currentAccessibleFileURL = folderScopedFileURL
-            currentAccessibleFileURLSource = "folderScopeChildURL"
+            scopeContext.accessibleFileURL = folderScopedFileURL
+            scopeContext.accessibleFileURLSource = "folderScopeChildURL"
             return folderScopedFileURL
         }
 
         deriveFileSecurityScopeFromFolderIfNeeded(for: normalizedURL, reason: reason)
 
-        if let securityScopeToken,
-           securityScopeToken.didStartAccess,
-           Self.normalizedFileURL(securityScopeToken.url) == normalizedURL {
-            currentAccessibleFileURL = securityScopeToken.url
-            currentAccessibleFileURLSource = "fileScope"
-            return securityScopeToken.url
+        if let fileToken = scopeContext.fileToken,
+           fileToken.didStartAccess,
+           Self.normalizedFileURL(fileToken.url) == normalizedURL {
+            scopeContext.accessibleFileURL = fileToken.url
+            scopeContext.accessibleFileURLSource = "fileScope"
+            return fileToken.url
         }
 
         return normalizedURL
@@ -73,8 +73,8 @@ extension ReaderStore {
     func folderScopedAccessibleFileURL(for fileURL: URL) -> URL? {
         guard let activeFolderWatchSession,
               watchedFolderSession(activeFolderWatchSession, appliesTo: fileURL),
-              let folderSecurityScopeToken,
-              folderSecurityScopeToken.didStartAccess else {
+              let folderToken = scopeContext.folderToken,
+              folderToken.didStartAccess else {
             return nil
         }
 
@@ -89,10 +89,10 @@ extension ReaderStore {
 
         let relativePath = filePath.dropFirst(watchedFolderPath.count).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !relativePath.isEmpty else {
-            return folderSecurityScopeToken.url
+            return folderToken.url
         }
 
-        return URL(fileURLWithPath: relativePath, relativeTo: folderSecurityScopeToken.url).standardizedFileURL
+        return URL(fileURLWithPath: relativePath, relativeTo: folderToken.url).standardizedFileURL
     }
 
     func tryReauthorizeWatchedFolderIfNeeded(after error: Error, for fileURL: URL) -> Bool {
@@ -123,8 +123,8 @@ extension ReaderStore {
         }
 
         settingsStore.addRecentWatchedFolder(selectedFolderURL, options: activeFolderWatchSession.options)
-        folderSecurityScopeToken?.endAccess()
-        folderSecurityScopeToken = securityScope.beginAccess(to: selectedFolderURL)
+        scopeContext.folderToken?.endAccess()
+        scopeContext.folderToken = securityScope.beginAccess(to: selectedFolderURL)
         setActiveFolderWatchSession(
             ReaderFolderWatchSession(
                 folderURL: watchedFolderURL,
@@ -132,16 +132,16 @@ extension ReaderStore {
                 startedAt: activeFolderWatchSession.startedAt
             )
         )
-        securityScopeToken?.endAccess()
-        securityScopeToken = nil
-        currentAccessibleFileURL = nil
-        currentAccessibleFileURLSource = nil
+        scopeContext.fileToken?.endAccess()
+        scopeContext.fileToken = nil
+        scopeContext.accessibleFileURL = nil
+        scopeContext.accessibleFileURLSource = nil
 
         logSaveInfo(
-            "watched-folder reauthorization completed: watchedFolder=\(redactedPathText(for: watchedFolderURL)) selected=\(redactedPathText(for: normalizedSelectedFolderURL)) started=\(folderSecurityScopeToken?.didStartAccess == true)"
+            "watched-folder reauthorization completed: watchedFolder=\(redactedPathText(for: watchedFolderURL)) selected=\(redactedPathText(for: normalizedSelectedFolderURL)) started=\(scopeContext.folderToken?.didStartAccess == true)"
         )
 
-        return folderSecurityScopeToken?.didStartAccess == true
+        return scopeContext.folderToken?.didStartAccess == true
     }
 
     func isPermissionDeniedWriteError(_ error: Error) -> Bool {
@@ -168,8 +168,8 @@ extension ReaderStore {
     func deriveFileSecurityScopeFromFolderIfNeeded(for fileURL: URL, reason: String) {
         guard let activeFolderWatchSession,
               watchedFolderSession(activeFolderWatchSession, appliesTo: fileURL),
-              let folderSecurityScopeToken,
-              folderSecurityScopeToken.didStartAccess else {
+              let folderToken = scopeContext.folderToken,
+              folderToken.didStartAccess else {
             return
         }
 
@@ -235,15 +235,15 @@ extension ReaderStore {
         // Skip if folder watch already grants access to this directory
         if let activeFolderWatchSession,
            watchedFolderSession(activeFolderWatchSession, appliesTo: directoryURL.appendingPathComponent("dummy")),
-           folderSecurityScopeToken?.didStartAccess == true {
+           scopeContext.folderToken?.didStartAccess == true {
             return
         }
 
         // Skip if already active for the right directory (directory is within token's scope)
-        if let documentDirectoryScopeToken,
-           documentDirectoryScopeToken.didStartAccess,
+        if let directoryToken = scopeContext.directoryToken,
+           directoryToken.didStartAccess,
            Self.normalizedFileURL(directoryURL)
-               .path.hasPrefix(Self.normalizedFileURL(URL(fileURLWithPath: documentDirectoryScopeToken.url.path)).path) {
+               .path.hasPrefix(Self.normalizedFileURL(URL(fileURLWithPath: directoryToken.url.path)).path) {
             return
         }
 
@@ -253,20 +253,20 @@ extension ReaderStore {
             return
         }
 
-        documentDirectoryScopeToken?.endAccess()
-        documentDirectoryScopeToken = securityScope.beginAccess(to: resolvedURL)
+        scopeContext.directoryToken?.endAccess()
+        scopeContext.directoryToken = securityScope.beginAccess(to: resolvedURL)
         logSaveInfo(
-            "trusted image folder scope activated: directory=\(redactedPathText(for: directoryURL)) started=\(documentDirectoryScopeToken?.didStartAccess == true)"
+            "trusted image folder scope activated: directory=\(redactedPathText(for: directoryURL)) started=\(scopeContext.directoryToken?.didStartAccess == true)"
         )
     }
 
     func grantImageDirectoryAccess(folderURL: URL) {
         settingsStore.addTrustedImageFolder(folderURL)
 
-        documentDirectoryScopeToken?.endAccess()
-        documentDirectoryScopeToken = securityScope.beginAccess(to: folderURL)
+        scopeContext.directoryToken?.endAccess()
+        scopeContext.directoryToken = securityScope.beginAccess(to: folderURL)
         logSaveInfo(
-            "image directory access granted: folder=\(redactedPathText(for: folderURL)) started=\(documentDirectoryScopeToken?.didStartAccess == true)"
+            "image directory access granted: folder=\(redactedPathText(for: folderURL)) started=\(scopeContext.directoryToken?.didStartAccess == true)"
         )
 
         do {

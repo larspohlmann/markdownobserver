@@ -65,11 +65,7 @@ final class ReaderStore: ObservableObject {
     // are implementation details of the store's coordination layer and must not be
     // accessed directly from outside the Stores/ group.
     let diffBaselineTracker: DiffBaselineTracking
-    var securityScopeToken: SecurityScopedAccessToken?
-    var documentDirectoryScopeToken: SecurityScopedAccessToken?
-    var folderSecurityScopeToken: SecurityScopedAccessToken?
-    var currentAccessibleFileURL: URL?
-    var currentAccessibleFileURLSource: String?
+    var scopeContext = SecurityScopeContext()
     var currentOpenOrigin: ReaderOpenOrigin = .manual
     var savedMarkdown: String = ""
     var draftMarkdown: String?
@@ -348,12 +344,7 @@ final class ReaderStore: ObservableObject {
         // Per-file-URL history is preserved across open/close cycles
         // so the lookback window remains time-based, not session-based.
         fileWatcher.stopWatching()
-        securityScopeToken?.endAccess()
-        securityScopeToken = nil
-        documentDirectoryScopeToken?.endAccess()
-        documentDirectoryScopeToken = nil
-        currentAccessibleFileURL = nil
-        currentAccessibleFileURLSource = nil
+        scopeContext.endFileAndDirectoryAccess()
         currentOpenOrigin = .manual
 
         fileURL = nil
@@ -805,10 +796,10 @@ final class ReaderStore: ObservableObject {
     func saveLogContext(for url: URL?) -> String {
         let filePath = redactedPathText(for: url)
         let watchedFolderPath = redactedPathText(for: activeFolderWatchSession?.folderURL)
-        let fileScopeURL = redactedPathText(for: securityScopeToken?.url)
-        let folderScopeURL = redactedPathText(for: folderSecurityScopeToken?.url)
-        let accessibleFilePath = redactedPathText(for: currentAccessibleFileURL)
-        return "file=\(filePath) origin=\(currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(securityScopeToken != nil) fileScopeStarted=\(securityScopeToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(folderSecurityScopeToken != nil) folderScopeStarted=\(folderSecurityScopeToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        let fileScopeURL = redactedPathText(for: scopeContext.fileToken?.url)
+        let folderScopeURL = redactedPathText(for: scopeContext.folderToken?.url)
+        let accessibleFilePath = redactedPathText(for: scopeContext.accessibleFileURL)
+        return "file=\(filePath) origin=\(currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(scopeContext.fileToken != nil) fileScopeStarted=\(scopeContext.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(scopeContext.folderToken != nil) folderScopeStarted=\(scopeContext.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
     func redactedPathText(for url: URL?) -> String {
