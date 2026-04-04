@@ -52,19 +52,20 @@ extension ReaderStore {
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String
     ) {
+        let now = Date()
         settler.beginSettling(
             settler.makePendingContext(
                 origin: origin,
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
                 loadedMarkdown: loadedMarkdown,
-                now: Date()
+                now: now
             )
         )
         if let initialDiffBaselineMarkdown {
             _ = diffBaselineTracker.recordAndSelectBaseline(
                 markdown: initialDiffBaselineMarkdown,
                 for: normalizedURL,
-                at: Date()
+                at: now
             )
         }
         refreshOpenInApplications()
