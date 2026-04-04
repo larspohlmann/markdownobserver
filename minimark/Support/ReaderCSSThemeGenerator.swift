@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 enum ReaderCSSThemeGenerator {
     private static var cachedInput: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double)?
     private static var cachedCSS: String?
