@@ -48,7 +48,15 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
                     minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                 ),
-                settler: settler
+                settler: settler,
+                requestWatchedFolderReauthorization: { folderURL in
+                    MarkdownOpenPanel.pickFolder(
+                        directoryURL: folderURL,
+                        title: "Reauthorize Watched Folder",
+                        message: "MarkdownObserver needs write access to this watched folder to save auto-opened documents.",
+                        prompt: "Grant Access"
+                    )
+                }
             )
             store.configureSettler(settler)
             return store

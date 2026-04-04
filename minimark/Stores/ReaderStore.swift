@@ -87,7 +87,7 @@ final class ReaderStore: ObservableObject {
         settler: ReaderAutoOpenSettling,
         documentIO: ReaderDocumentIO = ReaderDocumentIOService(),
         diffBaselineTracker: DiffBaselineTracking? = nil,
-        requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
+        requestWatchedFolderReauthorization: @escaping (URL) -> URL?
     ) {
         self.renderer = renderer
         self.differ = differ
@@ -103,18 +103,7 @@ final class ReaderStore: ObservableObject {
         self.diffBaselineTracker = diffBaselineTracker ?? DiffBaselineTracker(
             minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         )
-        if let requestWatchedFolderReauthorization {
-            self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
-        } else {
-            self.requestWatchedFolderReauthorization = { folderURL in
-                MarkdownOpenPanel.pickFolder(
-                    directoryURL: folderURL,
-                    title: "Reauthorize Watched Folder",
-                    message: "MarkdownObserver needs write access to this watched folder to save auto-opened documents.",
-                    prompt: "Grant Access"
-                )
-            }
-        }
+        self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
 
         settingsCancellable = settingsStore.settingsPublisher
             .dropFirst()

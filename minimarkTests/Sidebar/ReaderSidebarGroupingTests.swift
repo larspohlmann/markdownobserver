@@ -410,7 +410,8 @@ private struct ReaderSidebarGroupingTestHarness {
                     fileActions: TestReaderFileActions(),
                     systemNotifier: TestReaderSystemNotifier(),
                     folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0)
+                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                    requestWatchedFolderReauthorization: { _ in nil }
                 )
                 store.testSetFileURL(fileURL)
                 store.testSetFileDisplayName(fileURL.lastPathComponent)

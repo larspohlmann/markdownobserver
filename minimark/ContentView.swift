@@ -1081,7 +1081,8 @@ private final class SplitScrollCoordinator: ObservableObject {
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
             minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         ),
-        settler: settler
+        settler: settler,
+        requestWatchedFolderReauthorization: { _ in nil }
     )
     store.configureSettler(settler)
     return ContentView(

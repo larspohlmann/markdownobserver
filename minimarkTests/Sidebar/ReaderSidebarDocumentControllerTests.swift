@@ -271,7 +271,8 @@ struct ReaderSidebarDocumentControllerTests {
                         fileActions: TestReaderFileActions(),
                         systemNotifier: TestReaderSystemNotifier(),
                         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                        settler: settler
+                        settler: settler,
+                        requestWatchedFolderReauthorization: { _ in nil }
                     )
                 }()
             },
