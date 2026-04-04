@@ -505,47 +505,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     }
 
     private func configureFolderWatchController() {
-        folderWatchController.currentDocumentFileURLProvider = { [weak self] in
-            self?.selectedReaderStore.fileURL
-        }
-        folderWatchController.openDocumentFileURLsProvider = { [weak self] in
-            self?.documents.compactMap { document in
-                document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
-            } ?? []
-        }
-        folderWatchController.openEventsHandler = { [weak self] events, session, origin in
-            guard let self else { return }
-            let coordinator = self.fileOpenCoordinator
-            let diffBaselineByURL: [URL: String] = Dictionary(
-                uniqueKeysWithValues: events.compactMap { event in
-                    guard let previousMarkdown = event.previousMarkdown else {
-                        return nil
-                    }
-                    return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
-                }
-            )
-
-            // For initial batch auto-open, the folder-watch planner sends defer
-            // and load events separately, managing materialization itself via
-            // selectNewestDocumentHandler. Use .deferOnly so the planner stays in control.
-            let materializationStrategy: FileOpenRequest.MaterializationStrategy =
-                origin == .folderWatchInitialBatchAutoOpen ? .deferOnly : .loadAll
-
-            coordinator.open(FileOpenRequest(
-                fileURLs: events.map(\.fileURL),
-                origin: origin,
-                folderWatchSession: session,
-                initialDiffBaselineMarkdownByURL: diffBaselineByURL,
-                slotStrategy: .reuseEmptySlotForFirst,
-                materializationStrategy: materializationStrategy
-            ))
-        }
-        folderWatchController.selectNewestDocumentHandler = { [weak self] in
-            self?.selectDocumentWithNewestModificationDate()
-        }
-        folderWatchController.onStateChange = { [weak self] in
-            self?.synchronizeFolderWatchState()
-        }
+        folderWatchController.delegate = self
         synchronizeFolderWatchState()
     }
 
@@ -557,5 +517,57 @@ final class ReaderSidebarDocumentController: ObservableObject {
         didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
         contentScanProgress = folderWatchController.contentScanProgress
         scannedFileCount = folderWatchController.scannedFileCount
+    }
+}
+
+extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
+    func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
+        selectedReaderStore.fileURL
+    }
+
+    func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
+        documents.compactMap { document in
+            document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
+        }
+    }
+
+    func folderWatchController(
+        _ controller: ReaderFolderWatchController,
+        handleEvents events: [ReaderFolderWatchChangeEvent],
+        in session: ReaderFolderWatchSession,
+        origin: ReaderOpenOrigin
+    ) {
+        let coordinator = fileOpenCoordinator
+        let diffBaselineByURL: [URL: String] = Dictionary(
+            uniqueKeysWithValues: events.compactMap { event in
+                guard let previousMarkdown = event.previousMarkdown else {
+                    return nil
+                }
+                return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
+            }
+        )
+
+        // For initial batch auto-open, the folder-watch planner sends defer
+        // and load events separately, managing materialization itself via
+        // folderWatchControllerShouldSelectNewestDocument. Use .deferOnly so the planner stays in control.
+        let materializationStrategy: FileOpenRequest.MaterializationStrategy =
+            origin == .folderWatchInitialBatchAutoOpen ? .deferOnly : .loadAll
+
+        coordinator.open(FileOpenRequest(
+            fileURLs: events.map(\.fileURL),
+            origin: origin,
+            folderWatchSession: session,
+            initialDiffBaselineMarkdownByURL: diffBaselineByURL,
+            slotStrategy: .reuseEmptySlotForFirst,
+            materializationStrategy: materializationStrategy
+        ))
+    }
+
+    func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
+        selectDocumentWithNewestModificationDate()
+    }
+
+    func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController) {
+        synchronizeFolderWatchState()
     }
 }

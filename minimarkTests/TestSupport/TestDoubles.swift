@@ -743,6 +743,40 @@ func makeTestApplicationBundle(
     return bundleURL
 }
 
+@MainActor
+final class TestFolderWatchControllerDelegate: ReaderFolderWatchControllerDelegate {
+    var currentDocumentFileURL: URL?
+    var openDocumentFileURLs: [URL] = []
+    private(set) var handledEvents: [ReaderFolderWatchChangeEvent] = []
+    private(set) var selectNewestDocumentCallCount = 0
+    private(set) var stateDidChangeCallCount = 0
+
+    func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
+        currentDocumentFileURL
+    }
+
+    func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
+        openDocumentFileURLs
+    }
+
+    func folderWatchController(
+        _ controller: ReaderFolderWatchController,
+        handleEvents events: [ReaderFolderWatchChangeEvent],
+        in session: ReaderFolderWatchSession,
+        origin: ReaderOpenOrigin
+    ) {
+        handledEvents.append(contentsOf: events)
+    }
+
+    func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
+        selectNewestDocumentCallCount += 1
+    }
+
+    func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController) {
+        stateDidChangeCallCount += 1
+    }
+}
+
 struct SidebarSortTestItem {
     let id: String
     let displayName: String?
