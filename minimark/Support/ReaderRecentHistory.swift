@@ -46,8 +46,8 @@ nonisolated enum ReaderRecentHistory {
         menuTitle(
             for: entry,
             among: entries,
-            displayName: \ .displayName,
-            pathText: \ .pathText
+            displayName: \.displayName,
+            pathText: \.pathText
         )
     }
 
@@ -62,8 +62,8 @@ nonisolated enum ReaderRecentHistory {
         let baseTitle = menuTitle(
             for: entry,
             among: entries,
-            displayName: \ .displayName,
-            pathText: \ .pathText
+            displayName: \.displayName,
+            pathText: \.pathText
         )
 
         let excludedCount = entry.options.excludedSubdirectoryPaths.count
