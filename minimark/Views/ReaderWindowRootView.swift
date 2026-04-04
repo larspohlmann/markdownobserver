@@ -201,6 +201,7 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
                 applyWindowTitlePresentation()
+                renderSelectedDocumentIfNeeded()
             }
             .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
                 let isSidebarVisible = newCount > 1
@@ -276,13 +277,7 @@ struct ReaderWindowRootView: View {
                     activeFavoriteWorkspaceState?.sidebarWidth = newWidth
                 }
             }
-            .onChange(of: appearanceController.effectiveTheme) { _, _ in
-                reapplyAppearance()
-            }
-            .onChange(of: appearanceController.effectiveFontSize) { _, _ in
-                reapplyAppearance()
-            }
-            .onChange(of: appearanceController.effectiveSyntaxTheme) { _, _ in
+            .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()
             }
             .onChange(of: activeFavoriteWorkspaceState) { _, newState in
@@ -301,13 +296,26 @@ struct ReaderWindowRootView: View {
         // Defer rendering to the next main actor hop to avoid setting @Published
         // properties on ReaderStore during a SwiftUI view update cycle.
         Task { @MainActor in
+            let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
-                try? document.readerStore.renderWithAppearance(
-                    theme: appearanceController.effectiveTheme,
-                    baseFontSize: appearanceController.effectiveFontSize,
-                    syntaxTheme: appearanceController.effectiveSyntaxTheme
-                )
+                let store = document.readerStore
+                guard store.hasOpenDocument, !store.isDeferredDocument else { continue }
+
+                if document.id == sidebarDocumentController.selectedDocumentID {
+                    try? store.renderWithAppearance(appearance)
+                } else {
+                    store.setAppearanceOverride(appearance)
+                }
             }
+        }
+    }
+
+    private func renderSelectedDocumentIfNeeded() {
+        guard let document = sidebarDocumentController.selectedDocument else { return }
+        let store = document.readerStore
+        guard store.needsAppearanceRender, store.hasOpenDocument, !store.isDeferredDocument else { return }
+        Task { @MainActor in
+            try? store.renderWithAppearance(appearanceController.effectiveAppearance)
         }
     }
 
@@ -463,7 +471,7 @@ struct ReaderWindowRootView: View {
                 recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
                 recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
                 isAppearanceLocked: appearanceController.isLocked,
-                effectiveReaderTheme: appearanceController.effectiveTheme
+                effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
             ),
             callbacks: ContentViewCallbacks(
                 onRequestFileOpen: { [self] request in
@@ -491,12 +499,9 @@ struct ReaderWindowRootView: View {
                         }
                     } else {
                         appearanceController.lock()
+                        let appearance = appearanceController.effectiveAppearance
                         for document in sidebarDocumentController.documents {
-                            document.readerStore.setAppearanceOverride(
-                                theme: appearanceController.effectiveTheme,
-                                baseFontSize: appearanceController.effectiveFontSize,
-                                syntaxTheme: appearanceController.effectiveSyntaxTheme
-                            )
+                            document.readerStore.setAppearanceOverride(appearance)
                         }
                         if activeFavoriteWorkspaceState != nil {
                             activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance

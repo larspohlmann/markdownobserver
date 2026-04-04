@@ -5,9 +5,11 @@ import Synchronization
 @MainActor
 final class WindowAppearanceController: ObservableObject {
     @Published private(set) var isLocked = false
-    @Published private(set) var effectiveTheme: ReaderThemeKind
-    @Published private(set) var effectiveFontSize: Double
-    @Published private(set) var effectiveSyntaxTheme: SyntaxThemeKind
+    @Published private(set) var effectiveAppearance: LockedAppearance
+
+    var effectiveTheme: ReaderThemeKind { effectiveAppearance.readerTheme }
+    var effectiveFontSize: Double { effectiveAppearance.baseFontSize }
+    var effectiveSyntaxTheme: SyntaxThemeKind { effectiveAppearance.syntaxTheme }
 
     private static let _lockedWindowCount = Mutex(0)
     static var lockedWindowCount: Int { _lockedWindowCount.withLock { $0 } }
@@ -22,23 +24,24 @@ final class WindowAppearanceController: ObservableObject {
     init(settingsStore: ReaderSettingsReading) {
         self.settingsStore = settingsStore
         let current = settingsStore.currentSettings
-        self.effectiveTheme = current.readerTheme
-        self.effectiveFontSize = current.baseFontSize
-        self.effectiveSyntaxTheme = current.syntaxTheme
+        self.effectiveAppearance = LockedAppearance(
+            readerTheme: current.readerTheme,
+            baseFontSize: current.baseFontSize,
+            syntaxTheme: current.syntaxTheme
+        )
 
         cancellable = settingsStore.settingsPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] settings in
                 guard let self, !self.isLocked else { return }
-                if self.effectiveTheme != settings.readerTheme {
-                    self.effectiveTheme = settings.readerTheme
-                }
-                if self.effectiveFontSize != settings.baseFontSize {
-                    self.effectiveFontSize = settings.baseFontSize
-                }
-                if self.effectiveSyntaxTheme != settings.syntaxTheme {
-                    self.effectiveSyntaxTheme = settings.syntaxTheme
+                let newAppearance = LockedAppearance(
+                    readerTheme: settings.readerTheme,
+                    baseFontSize: settings.baseFontSize,
+                    syntaxTheme: settings.syntaxTheme
+                )
+                if self.effectiveAppearance != newAppearance {
+                    self.effectiveAppearance = newAppearance
                 }
             }
     }
@@ -63,15 +66,15 @@ final class WindowAppearanceController: ObservableObject {
         Self._lockedWindowCount.withLock { $0 -= 1 }
 
         let current = settingsStore.currentSettings
-        effectiveTheme = current.readerTheme
-        effectiveFontSize = current.baseFontSize
-        effectiveSyntaxTheme = current.syntaxTheme
+        effectiveAppearance = LockedAppearance(
+            readerTheme: current.readerTheme,
+            baseFontSize: current.baseFontSize,
+            syntaxTheme: current.syntaxTheme
+        )
     }
 
     func restore(from appearance: LockedAppearance) {
-        effectiveTheme = appearance.readerTheme
-        effectiveFontSize = appearance.baseFontSize
-        effectiveSyntaxTheme = appearance.syntaxTheme
+        effectiveAppearance = appearance
 
         if !isLocked {
             isLocked = true
@@ -82,10 +85,6 @@ final class WindowAppearanceController: ObservableObject {
 
     var lockedAppearance: LockedAppearance? {
         guard isLocked else { return nil }
-        return LockedAppearance(
-            readerTheme: effectiveTheme,
-            baseFontSize: effectiveFontSize,
-            syntaxTheme: effectiveSyntaxTheme
-        )
+        return effectiveAppearance
     }
 }
