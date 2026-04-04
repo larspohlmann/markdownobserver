@@ -109,10 +109,14 @@ final class ReaderFolderWatchController {
             settingsStore.addRecentWatchedFolder(accessibleFolderURL, options: options)
             lastWatchedFolderEventAt = nil
 
+            let isAutoOpenPath = performInitialAutoOpen && options.openMode == .openAllMarkdownFiles
+            isInitialMarkdownScanInProgress = true
+
+            let progressStream = folderWatcher.scanProgressStream
             scanProgressTask?.cancel()
             scanProgressTask = Task { [weak self] in
                 var lastProgress: FolderChangeWatcher.ScanProgress?
-                for await progress in folderWatcher.scanProgressStream {
+                for await progress in progressStream {
                     guard !Task.isCancelled else { return }
                     self?.contentScanProgress = progress
                     lastProgress = progress
@@ -121,20 +125,19 @@ final class ReaderFolderWatchController {
                 if let lastProgress {
                     self?.scannedFileCount = lastProgress.total
                 }
+                if !isAutoOpenPath {
+                    self?.isInitialMarkdownScanInProgress = false
+                }
                 try? await Task.sleep(for: Self.scanProgressLingerDuration)
                 guard !Task.isCancelled else { return }
                 self?.contentScanProgress = nil
             }
 
-            guard performInitialAutoOpen,
-                  options.openMode == .openAllMarkdownFiles else {
-                isInitialMarkdownScanInProgress = false
-                didInitialMarkdownScanFail = false
+            guard isAutoOpenPath else {
                 return
             }
 
             if options.scope == .includeSubfolders {
-                isInitialMarkdownScanInProgress = true
                 loadInitialMarkdownFilesOffMainActor(
                     for: session,
                     folderURL: accessibleFolderURL,
@@ -142,13 +145,11 @@ final class ReaderFolderWatchController {
                     excludedSubdirectoryURLs: excludedSubdirectoryURLs
                 )
             } else {
-                isInitialMarkdownScanInProgress = true
                 let markdownURLs = try folderWatcher.markdownFiles(
                     in: accessibleFolderURL,
                     includeSubfolders: false,
                     excludedSubdirectoryURLs: excludedSubdirectoryURLs
                 )
-                didInitialMarkdownScanFail = false
                 applyInitialAutoOpenMarkdownURLs(markdownURLs, for: session)
             }
         } catch {
