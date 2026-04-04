@@ -24,7 +24,7 @@ final class ReaderStore: ObservableObject {
     @Published private(set) var fileLastModifiedAt: Date?
     @Published private(set) var hasUnacknowledgedExternalChange = false
     @Published private(set) var openInApplications: [ReaderExternalApplication] = []
-    @Published private(set) var lastError: String?
+    @Published private(set) var lastError: ReaderPresentableError?
     @Published private(set) var isCurrentFileMissing = false
     @Published private(set) var isSourceEditing = false
     @Published private(set) var hasUnsavedDraftChanges = false
@@ -751,7 +751,7 @@ final class ReaderStore: ObservableObject {
         fileLastModifiedAt = nil
         openInApplications = []
         isCurrentFileMissing = true
-        lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        lastError = ReaderPresentableError(from: error)
         settler.clearSettling()
     }
 
@@ -831,7 +831,7 @@ final class ReaderStore: ObservableObject {
     }
 
     func handle(_ error: Error) {
-        lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        lastError = ReaderPresentableError(from: error)
     }
 
     func clearLastError() {
