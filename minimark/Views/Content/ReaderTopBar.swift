@@ -33,15 +33,26 @@ struct ReaderTopBar: View {
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
     let didFolderWatchInitialScanFail: Bool
+    let canStopFolderWatch: Bool
+    let apps: [ReaderExternalApplication]
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
+    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
+    let iconProvider: (ReaderExternalApplication) -> NSImage?
+    let onOpenFiles: ([URL]) -> Void
+    let onOpenApp: (ReaderExternalApplication) -> Void
+    let onRevealInFinder: () -> Void
     let onRequestFolderWatch: (URL) -> Void
+    let onStopFolderWatch: () -> Void
     let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+    let onClearFavoriteWatchedFolders: () -> Void
     let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
     let onRemoveFavoriteWatchedFolder: (UUID) -> Void
     let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
+    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
+    let onClearRecentManuallyOpenedFiles: () -> Void
     let onSaveSourceDraft: () -> Void
     let onDiscardSourceDraft: () -> Void
 
@@ -78,6 +89,29 @@ struct ReaderTopBar: View {
                     onRevealInFinder: { readerStore.revealCurrentFileInFinder() }
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                OpenInMenuButton(
+                    hasFile: readerStore.fileURL != nil,
+                    hasActiveFolderWatch: canStopFolderWatch,
+                    apps: apps,
+                    favoriteWatchedFolders: favoriteWatchedFolders,
+                    recentWatchedFolders: recentWatchedFolders,
+                    recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+                    iconProvider: iconProvider,
+                    onOpenFiles: onOpenFiles,
+                    onOpenApp: onOpenApp,
+                    onRevealInFinder: onRevealInFinder,
+                    onRequestFolderWatch: onRequestFolderWatch,
+                    onStopFolderWatch: onStopFolderWatch,
+                    onStartFavoriteWatch: onStartFavoriteWatch,
+                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
+                    onEditFavoriteWatchedFolders: { isEditingFavorites = true },
+                    onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
+                    onStartRecentFolderWatch: onStartRecentFolderWatch,
+                    onClearRecentWatchedFolders: onClearRecentWatchedFolders,
+                    onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
+                )
+                .frame(width: 28, height: 28)
             }
             .padding(.horizontal, Metrics.barHorizontalPadding)
             .frame(height: Metrics.mainBarHeight)

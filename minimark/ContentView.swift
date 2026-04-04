@@ -103,15 +103,32 @@ struct ContentView: View {
                 activeFolderWatch: folderWatchState.activeFolderWatch,
                 isFolderWatchInitialScanInProgress: folderWatchState.isFolderWatchInitialScanInProgress,
                 didFolderWatchInitialScanFail: folderWatchState.isFolderWatchInitialScanFailed,
+                canStopFolderWatch: folderWatchState.canStopFolderWatch,
+                apps: readerStore.openInApplications,
                 favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
                 recentWatchedFolders: folderWatchState.recentWatchedFolders,
+                recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
+                iconProvider: appIconImage(for:),
+                onOpenFiles: { fileURLs in
+                    handlePickedFileURLs(fileURLs)
+                },
+                onOpenApp: { app in
+                    readerStore.openCurrentFileInApplication(app)
+                },
+                onRevealInFinder: {
+                    readerStore.revealCurrentFileInFinder()
+                },
                 onRequestFolderWatch: callbacks.onRequestFolderWatch,
+                onStopFolderWatch: callbacks.onStopFolderWatch,
                 onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
+                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
                 onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
                 onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
                 onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
+                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
                 onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
                 onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
+                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
                 onSaveSourceDraft: {
                     readerStore.saveSourceDraft()
                 },
@@ -536,35 +553,9 @@ struct ContentView: View {
             documentViewMode: readerStore.documentViewMode,
             showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
             canStartSourceEditing: readerStore.canStartSourceEditing,
-            canStopFolderWatch: folderWatchState.canStopFolderWatch,
-            apps: readerStore.openInApplications,
-            favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
-            recentWatchedFolders: folderWatchState.recentWatchedFolders,
-            recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
-            iconProvider: appIconImage(for:),
             onSetDocumentViewMode: { mode in
                 readerStore.setDocumentViewMode(mode)
             },
-            onOpenFiles: { fileURLs in
-                handlePickedFileURLs(fileURLs)
-            },
-            onOpenApp: { app in
-                readerStore.openCurrentFileInApplication(app)
-            },
-            onRevealInFinder: {
-                readerStore.revealCurrentFileInFinder()
-            },
-            onRequestFolderWatch: callbacks.onRequestFolderWatch,
-            onStopFolderWatch: callbacks.onStopFolderWatch,
-            onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
-            onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
-            onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
-            onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
-            onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
-            onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
-            onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
-            onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
-            onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
             onStartSourceEditing: {
                 readerStore.startEditingSource()
             }

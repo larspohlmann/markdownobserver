@@ -6,30 +6,9 @@ struct ContentUtilityRail: View {
     let documentViewMode: ReaderDocumentViewMode
     let showEditButton: Bool
     let canStartSourceEditing: Bool
-    let canStopFolderWatch: Bool
-    let apps: [ReaderExternalApplication]
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let iconProvider: (ReaderExternalApplication) -> NSImage?
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
-    let onOpenFiles: ([URL]) -> Void
-    let onOpenApp: (ReaderExternalApplication) -> Void
-    let onRevealInFinder: () -> Void
-    let onRequestFolderWatch: (URL) -> Void
-    let onStopFolderWatch: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
-    let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
-    let onRemoveFavoriteWatchedFolder: (UUID) -> Void
-    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
     let onStartSourceEditing: () -> Void
 
-    @State private var isEditingFavorites = false
     @State private var isHovering = false
 
     private enum Metrics {
@@ -54,10 +33,7 @@ struct ContentUtilityRail: View {
                     editGroup
                 }
 
-                groupSeparator
             }
-
-            actionsGroup
         }
         .padding(.vertical, Metrics.groupSpacing)
         .frame(width: Metrics.railWidth)
@@ -74,15 +50,6 @@ struct ContentUtilityRail: View {
         }
         .padding(.top, Metrics.railInset)
         .padding(.trailing, Metrics.railTrailingInset)
-        .sheet(isPresented: $isEditingFavorites) {
-            EditFavoritesSheet(
-                favorites: favoriteWatchedFolders,
-                onRename: onRenameFavoriteWatchedFolder,
-                onDelete: onRemoveFavoriteWatchedFolder,
-                onReorder: onReorderFavoriteWatchedFolders,
-                onDismiss: { isEditingFavorites = false }
-            )
-        }
     }
 
     // MARK: - View Mode Group
@@ -139,36 +106,6 @@ struct ContentUtilityRail: View {
         .foregroundStyle(canStartSourceEditing ? .primary : .tertiary)
         .help("Edit Source")
         .accessibilityLabel("Edit source")
-    }
-
-    // MARK: - Actions Group
-
-    private var actionsGroup: some View {
-        OpenInMenuButton(
-            hasFile: hasFile,
-            hasActiveFolderWatch: canStopFolderWatch,
-            apps: apps,
-            favoriteWatchedFolders: favoriteWatchedFolders,
-            recentWatchedFolders: recentWatchedFolders,
-            recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-            iconProvider: iconProvider,
-            onOpenFiles: onOpenFiles,
-            onOpenApp: onOpenApp,
-            onRevealInFinder: onRevealInFinder,
-            onRequestFolderWatch: onRequestFolderWatch,
-            onStopFolderWatch: onStopFolderWatch,
-            onStartFavoriteWatch: onStartFavoriteWatch,
-            onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-            onEditFavoriteWatchedFolders: { isEditingFavorites = true },
-            onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-            onStartRecentFolderWatch: onStartRecentFolderWatch,
-            onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-            onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
-        )
-        .accessibilityLabel("Open in and watch actions")
-        .accessibilityHint("Open a file, choose an app, reveal in Finder, or manage folder watch")
-        .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-        .help("Actions")
     }
 
     // MARK: - Separator
