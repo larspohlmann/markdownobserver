@@ -66,6 +66,20 @@ final class WindowAppearanceControllerTests: XCTestCase {
         XCTAssertEqual(controller.effectiveSyntaxTheme, .dracula)
     }
 
+    // MARK: - Coalesced objectWillChange
+
+    func testSingleSettingsChangeProducesOneObjectWillChange() {
+        let controller = WindowAppearanceController(settingsStore: settingsStore)
+        var changeCount = 0
+        let cancellable = controller.objectWillChange.sink { _ in changeCount += 1 }
+
+        settingsStore.updateTheme(.newspaper)
+        drainMainQueue()
+
+        XCTAssertEqual(changeCount, 1)
+        _ = cancellable
+    }
+
     // MARK: - Lock
 
     func testLockFreezesCurrentValues() {
