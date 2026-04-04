@@ -21,12 +21,12 @@ struct ReaderSidebarDocumentControllerTests {
             startedAt: .now
         )
         harness.settingsStore.addRecentWatchedFolder(harness.temporaryDirectoryURL, options: folderOptions)
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
             origin: .folderWatchAutoOpen,
-            folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            folderWatchSession: session
+        ))
 
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.selectedReaderStore.fileURL?.path == harness.primaryFileURL.path)
@@ -37,14 +37,15 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [
                 harness.secondaryFileURL,
                 harness.primaryFileURL,
                 harness.primaryFileURL
             ],
             origin: .manual
-        )
+        ))
 
         #expect(harness.controller.documents.count == 2)
         #expect(harness.controller.documents.compactMap { $0.readerStore.fileURL?.path } == [
@@ -54,16 +55,17 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.selectedReaderStore.fileURL?.path == harness.secondaryFileURL.path)
     }
 
-    @Test @MainActor func sidebarControllerSelectingExistingDocumentDoesNotDuplicateEntry() throws {
+    @Test @MainActor func sidebarControllerFocusingExistingDocumentDoesNotDuplicateEntry() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
-        harness.controller.openDocumentInSelectedSlot(at: harness.primaryFileURL, origin: .manual)
+        harness.controller.focusDocument(at: harness.primaryFileURL)
 
         #expect(harness.controller.documents.count == 2)
         #expect(harness.controller.selectedReaderStore.fileURL?.path == harness.primaryFileURL.path)
@@ -77,16 +79,17 @@ struct ReaderSidebarDocumentControllerTests {
             .appendingPathComponent("nested", isDirectory: true)
             .appendingPathComponent("missing.md")
 
-        harness.controller.openAdditionalDocument(
-            at: missingFileURL,
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [missingFileURL],
             origin: .folderWatchAutoOpen,
             folderWatchSession: ReaderFolderWatchSession(
                 folderURL: harness.temporaryDirectoryURL,
                 options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
                 startedAt: .now
             ),
-            preferEmptySelection: false
-        )
+            slotStrategy: .alwaysAppend
+        ))
 
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.selectedReaderStore.fileURL == nil)
@@ -106,12 +109,13 @@ struct ReaderSidebarDocumentControllerTests {
             .appendingPathComponent("nested", isDirectory: true)
             .appendingPathComponent("missing.md")
 
-        harness.controller.openAdditionalDocument(
-            at: missingFileURL,
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [missingFileURL],
             origin: .folderWatchAutoOpen,
             folderWatchSession: harness.controller.activeFolderWatchSession,
-            preferEmptySelection: false
-        )
+            slotStrategy: .alwaysAppend
+        ))
 
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.selectedReaderStore.fileURL == nil)
@@ -170,11 +174,12 @@ struct ReaderSidebarDocumentControllerTests {
             options: .default
         )
 
-        harness.controller.openDocumentInSelectedSlot(
-            at: harness.primaryFileURL,
-            origin: .manual
-        )
-        for _ in 0..<5 { await Task.yield() }
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
 
         #expect(harness.controller.selectedReaderStore.fileURL?.path == harness.primaryFileURL.path)
         #expect(harness.controller.selectedReaderStore.activeFolderWatchSession?.folderURL.path == harness.temporaryDirectoryURL.path)
@@ -189,10 +194,11 @@ struct ReaderSidebarDocumentControllerTests {
             options: .default
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
         harness.controller.selectDocument(harness.controller.documents[0].id)
 
         #expect(harness.controller.documents.count == 2)
@@ -208,17 +214,18 @@ struct ReaderSidebarDocumentControllerTests {
         let nestedFileURL = nestedDirectoryURL.appendingPathComponent("nested.md")
         try "# Nested".write(to: nestedFileURL, atomically: true, encoding: .utf8)
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL, nestedFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL, nestedFileURL],
             origin: .manual
-        )
+        ))
 
         try harness.controller.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
 
-                let topLevelDocumentIDs: Set<UUID> = Set(harness.controller.documents.compactMap { document in
+        let topLevelDocumentIDs: Set<UUID> = Set(harness.controller.documents.compactMap { document in
             guard let fileURL = document.readerStore.fileURL,
                   fileURL.deletingLastPathComponent().path == harness.temporaryDirectoryURL.path else {
                 return nil
@@ -324,12 +331,13 @@ struct ReaderSidebarDocumentControllerTests {
             options: favoriteEntry.options
         )
 
-        harness.controller.openDocumentsBurst(
-            at: favoriteEntry.resolvedOpenDocumentFileURLs(relativeTo: harness.temporaryDirectoryURL),
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: favoriteEntry.resolvedOpenDocumentFileURLs(relativeTo: harness.temporaryDirectoryURL),
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: harness.controller.activeFolderWatchSession,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         #expect(harness.controller.documents.count == 2)
         #expect(harness.controller.documents.compactMap { $0.readerStore.fileURL?.path } == [
@@ -342,10 +350,11 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         let primaryDocument = harness.controller.documents[0]
         let secondaryDocument = harness.controller.documents[1]
@@ -365,10 +374,11 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         let selectedDocument = harness.controller.documents[0]
         let unselectedDocument = harness.controller.documents[1]
@@ -434,10 +444,11 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
             origin: .manual
-        )
+        ))
 
         try harness.controller.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
@@ -465,10 +476,11 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         let keptDocumentID = harness.controller.documents[1].id
         harness.controller.closeOtherDocuments(keeping: keptDocumentID)
@@ -485,10 +497,11 @@ struct ReaderSidebarDocumentControllerTests {
         let thirdFileURL = harness.temporaryDirectoryURL.appendingPathComponent("beta.md")
         try "# Beta".write(to: thirdFileURL, atomically: true, encoding: .utf8)
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, thirdFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, thirdFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         let keptDocumentIDs = Set(harness.controller.documents.prefix(2).map(\.id))
 
@@ -503,10 +516,11 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         harness.controller.closeAllDocuments()
 
@@ -519,10 +533,11 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
         harness.controller.selectDocument(harness.controller.documents[0].id)
 
         try harness.controller.startWatchingFolder(
@@ -614,13 +629,14 @@ struct ReaderSidebarDocumentControllerTests {
             startedAt: .now
         )
 
-        // Simulate the file selection dialog confirm flow: open files with preferEmptySelection true.
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        // Simulate the file selection dialog confirm flow via coordinator.
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         // The initial empty document should be reused for the first file.
         #expect(harness.controller.documents.count == 2)
@@ -641,10 +657,11 @@ struct ReaderSidebarDocumentControllerTests {
         try FileManager.default.setAttributes([.modificationDate: olderDate], ofItemAtPath: olderFileURL.path)
         try FileManager.default.setAttributes([.modificationDate: newerDate], ofItemAtPath: newerFileURL.path)
 
-        harness.controller.openDocumentsBurst(
-            at: [olderFileURL, newerFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [olderFileURL, newerFileURL],
             origin: .manual
-        )
+        ))
 
         harness.controller.selectDocumentWithNewestModificationDate()
 
@@ -659,10 +676,11 @@ struct ReaderSidebarDocumentControllerTests {
         let thirdFileURL = harness.temporaryDirectoryURL.appendingPathComponent("beta.md")
         try "# Beta".write(to: thirdFileURL, atomically: true, encoding: .utf8)
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, thirdFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, thirdFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         let documentIDsToClose = Set(harness.controller.documents.prefix(2).map(\.id))
         let expectedRemainingDocumentID = harness.controller.documents[2].id
@@ -732,14 +750,23 @@ struct ReaderSidebarDocumentControllerTests {
             fileURLs.append(fileURL)
         }
 
-        // Simulate favorite restore: all files deferred
-        harness.controller.openDocumentsBurst(
-            at: fileURLs,
+        // Simulate favorite restore: all files deferred via coordinator, then materialize separately.
+        // Build a plan that defers all files with no post-materialization.
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        let plan = coordinator.buildPlan(for: FileOpenRequest(
+            fileURLs: fileURLs,
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true,
-            materializeSelectedOnCompletion: false
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
+        // Execute the plan's assignments but override the strategy to skip materialization,
+        // since the test explicitly calls materializeNewestDeferredDocuments() below.
+        harness.controller.executePlan(FileOpenPlan(
+            assignments: plan.assignments,
+            origin: plan.origin,
+            folderWatchSession: plan.folderWatchSession,
+            materializationStrategy: .loadAll
+        ))
 
         // All should be deferred
         #expect(harness.controller.documents.count == fileCount)

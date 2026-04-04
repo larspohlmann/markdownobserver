@@ -99,145 +99,6 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
     }
 
-    func openDocumentInSelectedSlot(
-        at fileURL: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        if let existingDocument = document(for: normalizedFileURL) {
-            selectDocument(existingDocument.id)
-            return
-        }
-
-        let document = selectedDocument ?? documents[0]
-        let effectiveFolderWatchSession = resolvedFolderWatchSession(
-            for: normalizedFileURL,
-            requestedSession: folderWatchSession
-        )
-        scheduleLoadWithOverlay(on: document.readerStore) {
-            document.readerStore.openFile(
-                at: normalizedFileURL,
-                origin: origin,
-                folderWatchSession: effectiveFolderWatchSession,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-            )
-        }
-        selectedDocumentID = document.id
-        bindSelectedStore()
-    }
-
-    func openAdditionalDocument(
-        at fileURL: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil,
-        preferEmptySelection: Bool = true
-    ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        if let existingDocument = document(for: normalizedFileURL) {
-            if existingDocument.readerStore.isDeferredDocument {
-                let store = existingDocument.readerStore
-                let effectiveSession = resolvedFolderWatchSession(
-                    for: normalizedFileURL,
-                    requestedSession: folderWatchSession
-                )
-                scheduleLoadWithOverlay(on: store) {
-                    store.materializeDeferredDocument(
-                        origin: origin,
-                        folderWatchSession: effectiveSession,
-                        initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-                    )
-                }
-                selectDocument(existingDocument.id)
-            } else {
-                selectDocument(existingDocument.id)
-            }
-            return
-        }
-
-        let targetDocument: Document
-        let shouldAppendDocument: Bool
-        if preferEmptySelection,
-           let selectedDocument,
-           selectedDocument.readerStore.fileURL == nil,
-           documents.count == 1 {
-            targetDocument = selectedDocument
-            shouldAppendDocument = false
-        } else {
-            let document = makeDocument()
-            if let storeConfigurator {
-                storeConfigurator(document.readerStore)
-            }
-            targetDocument = document
-            shouldAppendDocument = true
-        }
-
-        let effectiveFolderWatchSession = resolvedFolderWatchSession(
-            for: normalizedFileURL,
-            requestedSession: folderWatchSession
-        )
-
-        if origin == .folderWatchInitialBatchAutoOpen {
-            targetDocument.readerStore.deferFile(
-                at: normalizedFileURL,
-                folderWatchSession: effectiveFolderWatchSession
-            )
-        } else {
-            targetDocument.readerStore.openFile(
-                at: normalizedFileURL,
-                origin: origin,
-                folderWatchSession: effectiveFolderWatchSession,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-            )
-        }
-
-        guard targetDocument.readerStore.fileURL != nil else {
-            bindSelectedStore()
-            return
-        }
-
-        if shouldAppendDocument {
-            documents.append(targetDocument)
-            synchronizeDocumentChangeObservers()
-        }
-
-        selectedDocumentID = targetDocument.id
-        bindSelectedStore()
-    }
-
-    func openDocumentsBurst(
-        at fileURLs: [URL],
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool = true,
-        materializeSelectedOnCompletion: Bool = true
-    ) {
-        let plannedURLs = ReaderFileRouting.plannedOpenFileURLs(from: fileURLs)
-        guard !plannedURLs.isEmpty else {
-            return
-        }
-
-        for (index, fileURL) in plannedURLs.enumerated() {
-            openAdditionalDocument(
-                at: fileURL,
-                origin: origin,
-                folderWatchSession: folderWatchSession,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdownByURL[fileURL],
-                preferEmptySelection: preferEmptySelection && index == 0
-            )
-        }
-
-        if materializeSelectedOnCompletion, selectedReaderStore.isDeferredDocument {
-            let store = selectedReaderStore
-            scheduleLoadWithOverlay(on: store) {
-                store.materializeDeferredDocument()
-            }
-        }
-    }
-
     @discardableResult
     func focusDocument(at fileURL: URL) -> Bool {
         guard let existingDocument = document(for: fileURL) else {
@@ -627,7 +488,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             } ?? []
         }
         folderWatchController.openEventsHandler = { [weak self] events, session, origin in
-            guard let self else { return }
+            guard let self, let coordinator = self.fileOpenCoordinator else { return }
             let diffBaselineByURL: [URL: String] = Dictionary(
                 uniqueKeysWithValues: events.compactMap { event in
                     guard let previousMarkdown = event.previousMarkdown else {
@@ -637,31 +498,35 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 }
             )
 
-            let materializationStrategy: FileOpenRequest.MaterializationStrategy =
-                origin == .folderWatchInitialBatchAutoOpen
-                    ? .deferThenMaterializeSelected
-                    : .loadAll
-
-            let request = FileOpenRequest(
-                fileURLs: events.map(\.fileURL),
-                origin: origin,
-                folderWatchSession: session,
-                initialDiffBaselineMarkdownByURL: diffBaselineByURL,
-                slotStrategy: .reuseEmptySlotForFirst,
-                materializationStrategy: materializationStrategy
-            )
-
-            if let coordinator = self.fileOpenCoordinator {
-                coordinator.open(request)
-            } else {
-                self.openDocumentsBurst(
-                    at: events.map(\.fileURL),
+            if origin == .folderWatchInitialBatchAutoOpen {
+                // The planner sends defer events first, then dispatches load events
+                // separately and calls selectNewestDocumentHandler afterward.
+                // Build a defer-only plan with no post-materialization.
+                let request = FileOpenRequest(
+                    fileURLs: events.map(\.fileURL),
                     origin: origin,
                     folderWatchSession: session,
                     initialDiffBaselineMarkdownByURL: diffBaselineByURL,
-                    preferEmptySelection: true,
-                    materializeSelectedOnCompletion: origin != .folderWatchInitialBatchAutoOpen
+                    slotStrategy: .reuseEmptySlotForFirst,
+                    materializationStrategy: .deferThenMaterializeSelected
                 )
+                let plan = coordinator.buildPlan(for: request)
+                self.executePlan(FileOpenPlan(
+                    assignments: plan.assignments,
+                    origin: plan.origin,
+                    folderWatchSession: plan.folderWatchSession,
+                    materializationStrategy: .loadAll
+                ))
+            } else {
+                let request = FileOpenRequest(
+                    fileURLs: events.map(\.fileURL),
+                    origin: origin,
+                    folderWatchSession: session,
+                    initialDiffBaselineMarkdownByURL: diffBaselineByURL,
+                    slotStrategy: .reuseEmptySlotForFirst,
+                    materializationStrategy: .loadAll
+                )
+                coordinator.open(request)
             }
         }
         folderWatchController.selectNewestDocumentHandler = { [weak self] in
