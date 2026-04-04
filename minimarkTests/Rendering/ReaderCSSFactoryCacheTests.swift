@@ -1,7 +1,6 @@
 import XCTest
 @testable import minimark
 
-@MainActor
 final class ReaderCSSFactoryCacheTests: XCTestCase {
 
     func testSameInputsReturnIdenticalCSS() {

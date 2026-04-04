@@ -1,8 +1,8 @@
 import Foundation
 
-@MainActor
 enum ReaderCSSThemeGenerator {
-    private static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, css: String)?
+    // All production callers reach this via @MainActor ReaderStore → MarkdownRenderingService.
+    private nonisolated(unsafe) static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, css: String)?
 
     static func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
         if let cache,
