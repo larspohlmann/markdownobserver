@@ -1,7 +1,24 @@
 import Foundation
 
 enum ReaderCSSThemeGenerator {
+    private static var cachedInput: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double)?
+    private static var cachedCSS: String?
+
     static func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
+        if let cachedInput, let cachedCSS,
+           cachedInput.theme == theme,
+           cachedInput.syntaxTheme == syntaxTheme,
+           cachedInput.baseFontSize == baseFontSize {
+            return cachedCSS
+        }
+
+        let css = generateCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
+        cachedInput = (theme, syntaxTheme, baseFontSize)
+        cachedCSS = css
+        return css
+    }
+
+    private static func generateCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
         let variables = theme.colors.cssVariables(baseFontSize: baseFontSize)
         let syntaxLayer = theme.providesSyntaxHighlighting ? (theme.syntaxCSS ?? syntaxTheme.css) : syntaxTheme.css
         let themeLayer = theme.customCSS ?? ""
