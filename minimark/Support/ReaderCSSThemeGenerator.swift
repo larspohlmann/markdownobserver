@@ -2,20 +2,18 @@ import Foundation
 
 @MainActor
 enum ReaderCSSThemeGenerator {
-    private static var cachedInput: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double)?
-    private static var cachedCSS: String?
+    private static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, css: String)?
 
     static func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
-        if let cachedInput, let cachedCSS,
-           cachedInput.theme == theme,
-           cachedInput.syntaxTheme == syntaxTheme,
-           cachedInput.baseFontSize == baseFontSize {
-            return cachedCSS
+        if let cache,
+           cache.theme == theme,
+           cache.syntaxTheme == syntaxTheme,
+           cache.baseFontSize == baseFontSize {
+            return cache.css
         }
 
         let css = generateCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
-        cachedInput = (theme, syntaxTheme, baseFontSize)
-        cachedCSS = css
+        cache = (theme, syntaxTheme, baseFontSize, css)
         return css
     }
 

@@ -4,6 +4,7 @@ import Testing
 
 @Suite(.serialized)
 struct ReaderStoreAppearanceRenderTests {
+    private let testAppearance = LockedAppearance(readerTheme: .newspaper, baseFontSize: 20, syntaxTheme: .nord)
 
     @Test @MainActor func setAppearanceOverrideSetsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
@@ -11,11 +12,7 @@ struct ReaderStoreAppearanceRenderTests {
 
         #expect(!fixture.store.needsAppearanceRender)
 
-        fixture.store.setAppearanceOverride(
-            theme: .newspaper,
-            baseFontSize: 20,
-            syntaxTheme: .nord
-        )
+        fixture.store.setAppearanceOverride(testAppearance)
 
         #expect(fixture.store.needsAppearanceRender)
     }
@@ -26,18 +23,10 @@ struct ReaderStoreAppearanceRenderTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        fixture.store.setAppearanceOverride(
-            theme: .newspaper,
-            baseFontSize: 20,
-            syntaxTheme: .nord
-        )
+        fixture.store.setAppearanceOverride(testAppearance)
         #expect(fixture.store.needsAppearanceRender)
 
-        try fixture.store.renderWithAppearance(
-            theme: .newspaper,
-            baseFontSize: 20,
-            syntaxTheme: .nord
-        )
+        try fixture.store.renderWithAppearance(testAppearance)
 
         #expect(!fixture.store.needsAppearanceRender)
     }
@@ -48,11 +37,7 @@ struct ReaderStoreAppearanceRenderTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        fixture.store.setAppearanceOverride(
-            theme: .newspaper,
-            baseFontSize: 20,
-            syntaxTheme: .nord
-        )
+        fixture.store.setAppearanceOverride(testAppearance)
         #expect(fixture.store.needsAppearanceRender)
 
         try fixture.store.renderCurrentMarkdownImmediately()

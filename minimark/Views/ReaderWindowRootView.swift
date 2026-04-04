@@ -302,17 +302,9 @@ struct ReaderWindowRootView: View {
                 guard store.hasOpenDocument, !store.isDeferredDocument else { continue }
 
                 if document.id == sidebarDocumentController.selectedDocumentID {
-                    try? store.renderWithAppearance(
-                        theme: appearance.readerTheme,
-                        baseFontSize: appearance.baseFontSize,
-                        syntaxTheme: appearance.syntaxTheme
-                    )
+                    try? store.renderWithAppearance(appearance)
                 } else {
-                    store.setAppearanceOverride(
-                        theme: appearance.readerTheme,
-                        baseFontSize: appearance.baseFontSize,
-                        syntaxTheme: appearance.syntaxTheme
-                    )
+                    store.setAppearanceOverride(appearance)
                 }
             }
         }
@@ -322,12 +314,9 @@ struct ReaderWindowRootView: View {
         guard let document = sidebarDocumentController.selectedDocument else { return }
         let store = document.readerStore
         guard store.needsAppearanceRender, store.hasOpenDocument, !store.isDeferredDocument else { return }
-        let appearance = appearanceController.effectiveAppearance
-        try? store.renderWithAppearance(
-            theme: appearance.readerTheme,
-            baseFontSize: appearance.baseFontSize,
-            syntaxTheme: appearance.syntaxTheme
-        )
+        Task { @MainActor in
+            try? store.renderWithAppearance(appearanceController.effectiveAppearance)
+        }
     }
 
     private func performInitialSetupIfNeeded() {
@@ -512,11 +501,7 @@ struct ReaderWindowRootView: View {
                         appearanceController.lock()
                         let appearance = appearanceController.effectiveAppearance
                         for document in sidebarDocumentController.documents {
-                            document.readerStore.setAppearanceOverride(
-                                theme: appearance.readerTheme,
-                                baseFontSize: appearance.baseFontSize,
-                                syntaxTheme: appearance.syntaxTheme
-                            )
+                            document.readerStore.setAppearanceOverride(appearance)
                         }
                         if activeFavoriteWorkspaceState != nil {
                             activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance

@@ -508,32 +508,16 @@ final class ReaderStore: ObservableObject {
         document.lastRefreshAt = Date()
     }
 
-    func renderWithAppearance(
-        theme: ReaderThemeKind,
-        baseFontSize: Double,
-        syntaxTheme: SyntaxThemeKind
-    ) throws {
-        appearanceOverride = LockedAppearance(
-            readerTheme: theme,
-            baseFontSize: baseFontSize,
-            syntaxTheme: syntaxTheme
-        )
+    func renderWithAppearance(_ appearance: LockedAppearance) throws {
+        appearanceOverride = appearance
         cancelPendingDraftPreviewRender()
         try renderCurrentMarkdown()
         needsAppearanceRender = false
         document.lastRefreshAt = Date()
     }
 
-    func setAppearanceOverride(
-        theme: ReaderThemeKind,
-        baseFontSize: Double,
-        syntaxTheme: SyntaxThemeKind
-    ) {
-        appearanceOverride = LockedAppearance(
-            readerTheme: theme,
-            baseFontSize: baseFontSize,
-            syntaxTheme: syntaxTheme
-        )
+    func setAppearanceOverride(_ appearance: LockedAppearance) {
+        appearanceOverride = appearance
         needsAppearanceRender = true
     }
 
