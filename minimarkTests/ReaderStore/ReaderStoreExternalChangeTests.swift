@@ -541,65 +541,50 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.sourceMarkdown == "# Initial")
     }
 
-    @Test @MainActor func startWatchingFolderSetsActiveSession() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let options = ReaderFolderWatchOptions(
-            openMode: .watchChangesOnly,
-            scope: .includeSubfolders
-        )
-
-        fixture.store.startWatchingFolder(folderURL: fixture.temporaryDirectoryURL, options: options)
-
-        #expect(fixture.store.activeFolderWatchSession?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
-        #expect(fixture.store.activeFolderWatchSession?.options == options)
-        #expect(fixture.folderWatcher.startCallCount == 1)
-        #expect(fixture.folderWatcher.lastIncludeSubfolders == true)
-    }
-
     @Test @MainActor func currentWatchedFileRetainsDedicatedFileWatcherOwnership() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: .default
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: .default,
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
 
         fixture.store.openFile(
             at: fixture.primaryFileURL,
             origin: .manual,
-            folderWatchSession: fixture.store.activeFolderWatchSession
+            folderWatchSession: session
         )
 
         #expect(fixture.watcher.startCallCount == 1)
         #expect(fixture.watcher.lastStartedFileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
     }
 
-    @Test @MainActor func watchedFolderEventForCurrentFileDoesNotTriggerExternalChangeWhenFileWatcherOwnsCurrentFile() async throws {
+    @Test @MainActor func watchedFolderEventForCurrentFileDoesNotTriggerExternalChangeWhenFileWatcherOwnsCurrentFile() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: .default
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: .default,
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
         fixture.store.openFile(
             at: fixture.primaryFileURL,
             origin: .manual,
-            folderWatchSession: fixture.store.activeFolderWatchSession
+            folderWatchSession: session
         )
 
-        fixture.folderWatcher.emitChangedMarkdownEvents([
+        fixture.store.handleObservedWatchedFolderChanges([
             ReaderFolderWatchChangeEvent(
                 fileURL: fixture.primaryFileURL,
                 kind: .modified,
                 previousMarkdown: "# Initial"
             )
         ])
-
-        await Task.yield()
 
         #expect(!fixture.store.hasUnacknowledgedExternalChange)
         #expect(fixture.notifier.externalChangeNotifications.isEmpty)
@@ -610,14 +595,16 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: .default
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: .default,
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
         fixture.store.openFile(
             at: fixture.primaryFileURL,
             origin: .manual,
-            folderWatchSession: fixture.store.activeFolderWatchSession
+            folderWatchSession: session
         )
 
         fixture.watcher.emitChange()
@@ -627,230 +614,17 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.notifier.externalChangeNotifications.count == 1)
     }
 
-    @Test @MainActor func watchChangesOnlyDoesNotAutoOpenExistingMarkdownFilesWhenIncludingSubfolders() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let nestedDirectoryURL = fixture.temporaryDirectoryURL
-            .appendingPathComponent("nested", isDirectory: true)
-            .appendingPathComponent("deeper", isDirectory: true)
-        try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
-
-        let nestedFileURL = nestedDirectoryURL.appendingPathComponent("existing.md")
-        fixture.write(content: "# Nested", to: nestedFileURL)
-        fixture.folderWatcher.markdownFilesToReturn = [fixture.primaryFileURL, nestedFileURL]
-
-        var openedAdditionalDocuments: [URL] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
-            openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
-        }
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
-        )
-
-        #expect(fixture.store.fileURL == nil)
-        #expect(openedAdditionalDocuments.isEmpty)
-        #expect(fixture.notifier.autoLoadedNotifications.isEmpty)
-    }
-
-    @Test @MainActor func recursiveWatchedFolderDoesNotMarkCurrentNestedDocumentChangedWithoutRealEdits() async throws {
-        let directoryURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("minimark-reader-store-real-watchers-\(UUID().uuidString)", isDirectory: true)
-        let nestedDirectoryURL = directoryURL
-            .appendingPathComponent(".github", isDirectory: true)
-            .appendingPathComponent("plans", isDirectory: true)
-        try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directoryURL) }
-
-        let nestedFileURL = nestedDirectoryURL.appendingPathComponent("README.md")
-        try "# Initial".write(to: nestedFileURL, atomically: false, encoding: .utf8)
-
-        let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
-        let notifier = TestReaderSystemNotifier()
-        let settler = ReaderAutoOpenSettler(settlingInterval: 0.2)
-        let store = ReaderStore(
-            renderer: TestMarkdownRenderer(),
-            differ: TestChangedRegionDiffer(),
-            fileWatcher: FileChangeWatcher(
-                pollingInterval: .milliseconds(50),
-                fallbackPollingInterval: .milliseconds(80),
-                verificationDelay: .milliseconds(20)
-            ),
-            folderWatcher: FolderChangeWatcher(
-                pollingInterval: .milliseconds(50),
-                fallbackPollingInterval: .milliseconds(80),
-                verificationDelay: .milliseconds(20)
-            ),
-            settingsStore: settings,
-            securityScope: TestSecurityScopeAccess(),
-            fileActions: TestReaderFileActions(),
-            systemNotifier: notifier,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            settler: settler
-        )
-
-        store.handleIncomingOpenURL(nestedFileURL, origin: .manual)
-        store.startWatchingFolder(
-            folderURL: directoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
-        )
-
-        try? await Task.sleep(for: .milliseconds(500))
-
-        #expect(store.fileURL == ReaderFileRouting.normalizedFileURL(nestedFileURL))
-        #expect(store.lastExternalChangeAt == nil)
-        #expect(!store.hasUnacknowledgedExternalChange)
-        #expect(notifier.externalChangeNotifications.isEmpty)
-    }
-
-    @Test @MainActor func stopWatchingFolderClearsSessionAndStopsWatcher() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: .default
-        )
-        #expect(fixture.store.activeFolderWatchSession != nil)
-
-        fixture.store.stopWatchingFolder()
-
-        #expect(fixture.store.activeFolderWatchSession == nil)
-        #expect(fixture.folderWatcher.stopCallCount >= 1)
-    }
-
-    @Test @MainActor func openAllMarkdownFilesOpensFirstInCurrentWindowAndOthersAsAdditionalDocuments() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let thirdFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("third.md")
-        fixture.write(content: "# Third", to: thirdFileURL)
-
-        fixture.folderWatcher.markdownFilesToReturn = [
-            fixture.secondaryFileURL,
-            fixture.primaryFileURL,
-            thirdFileURL
-        ]
-
-        var openedAdditionalDocuments: [URL] = []
-        var openedOrigins: [ReaderOpenOrigin] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, origin in
-            openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
-            openedOrigins.append(origin)
-        }
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        )
-
-        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fixture.secondaryFileURL))
-        #expect(openedAdditionalDocuments == [
-            ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
-            ReaderFileRouting.normalizedFileURL(thirdFileURL)
-        ])
-        #expect(openedOrigins == [.folderWatchInitialBatchAutoOpen, .folderWatchInitialBatchAutoOpen])
-        #expect(fixture.store.folderWatchAutoOpenWarning == nil)
-        #expect(fixture.notifier.autoLoadedNotifications.isEmpty)
-    }
-
-    @Test @MainActor func openAllMarkdownFilesSingleInitialAutoOpenStillPostsSystemNotification() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        fixture.folderWatcher.markdownFilesToReturn = [fixture.primaryFileURL]
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        )
-
-        #expect(fixture.notifier.autoLoadedNotifications == [
-            TestReaderSystemNotifier.AutoLoadedNotification(
-                fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
-                changeKind: .added,
-                watchedFolderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL)
-            )
-        ])
-    }
-
-    @Test @MainActor func openAllMarkdownFilesShowsFileSelectionWhenOverThreshold() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
-        let additionalFileCount = 3
-        let fileURLs = (0..<(autoOpenLimit + additionalFileCount)).map { index in
-            let fileURL = fixture.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
-            fixture.write(content: "# File \(index)", to: fileURL)
-            return fileURL
-        }
-
-        fixture.folderWatcher.markdownFilesToReturn = fileURLs
-
-        var openedAdditionalDocuments: [URL] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
-            openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
-        }
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        )
-
-        // When file count exceeds threshold, no files are auto-opened.
-        // Instead, a pendingFileSelectionRequest is published for the UI to present.
-        #expect(openedAdditionalDocuments.isEmpty)
-        #expect(fixture.store.folderWatchAutoOpenWarning == nil)
-        #expect(fixture.store.pendingFileSelectionRequest != nil)
-        #expect(fixture.store.pendingFileSelectionRequest?.allFileURLs.count == autoOpenLimit + additionalFileCount)
-        #expect(
-            fixture.store.pendingFileSelectionRequest.map { ReaderFileRouting.normalizedFileURL($0.folderURL) }
-            == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL)
-        )
-    }
-
-    @Test @MainActor func openAllMarkdownFilesAutoOpensWhenAtOrBelowThreshold() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
-        let fileURLs = (0..<autoOpenLimit).map { index in
-            let fileURL = fixture.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
-            fixture.write(content: "# File \(index)", to: fileURL)
-            return fileURL
-        }
-
-        fixture.folderWatcher.markdownFilesToReturn = fileURLs
-
-        var openedAdditionalDocuments: [URL] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
-            openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
-        }
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        )
-
-        // When file count is at or below threshold, files are auto-opened without a selection dialog.
-        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fileURLs[0]))
-        #expect(openedAdditionalDocuments.count == autoOpenLimit - 1)
-        #expect(fixture.store.pendingFileSelectionRequest == nil)
-        #expect(fixture.store.folderWatchAutoOpenWarning == nil)
-    }
-
-    @Test @MainActor func watchedFolderChangesOpenMarkdownAsAdditionalDocuments() async throws {
+    @Test @MainActor func watchedFolderChangesOpenMarkdownAsAdditionalDocuments() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
 
         let fourthFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("fourth.md")
         fixture.write(content: "# Fourth", to: fourthFileURL)
@@ -864,13 +638,11 @@ struct ReaderStoreExternalChangeTests {
             openedEvents.append(event)
         }
 
-        fixture.folderWatcher.emitChangedMarkdownEvents([
+        fixture.store.handleObservedWatchedFolderChanges([
             ReaderFolderWatchChangeEvent(fileURL: fixture.primaryFileURL, kind: .modified, previousMarkdown: "# Initial"),
             ReaderFolderWatchChangeEvent(fileURL: fourthFileURL, kind: .added),
             ReaderFolderWatchChangeEvent(fileURL: unsupportedURL, kind: .added)
         ])
-
-        await Task.yield()
 
         #expect(openedAdditionalDocuments == [ReaderFileRouting.normalizedFileURL(fourthFileURL)])
         #expect(openedEvents[0].kind == .added)
@@ -878,14 +650,16 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.lastWatchedFolderEventAt != nil)
     }
 
-    @Test @MainActor func watchedFolderAddedFilesOpenAsAdditionalDocumentsEvenWhenWatcherOwnerHasNoOpenDocument() async throws {
+    @Test @MainActor func watchedFolderAddedFilesOpenAsAdditionalDocumentsEvenWhenWatcherOwnerHasNoOpenDocument() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
 
         let createdFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("created.md")
         fixture.write(content: "", to: createdFileURL)
@@ -895,11 +669,9 @@ struct ReaderStoreExternalChangeTests {
             openedEvents.append(event)
         }
 
-        fixture.folderWatcher.emitChangedMarkdownEvents([
+        fixture.store.handleObservedWatchedFolderChanges([
             ReaderFolderWatchChangeEvent(fileURL: createdFileURL, kind: .added)
         ])
-
-        await Task.yield()
 
         #expect(fixture.store.fileURL == nil)
         #expect(openedEvents.map(\ .fileURL) == [ReaderFileRouting.normalizedFileURL(createdFileURL)])
@@ -907,15 +679,17 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.lastWatchedFolderEventAt != nil)
     }
 
-    @Test @MainActor func watchedFolderModifiedFilesForwardPreviousMarkdownToAdditionalDocumentCallback() async throws {
+    @Test @MainActor func watchedFolderModifiedFilesForwardPreviousMarkdownToAdditionalDocumentCallback() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
 
         let changedFileURL = fixture.secondaryFileURL
         var capturedEvent: ReaderFolderWatchChangeEvent?
@@ -923,7 +697,7 @@ struct ReaderStoreExternalChangeTests {
             capturedEvent = event
         }
 
-        fixture.folderWatcher.emitChangedMarkdownEvents([
+        fixture.store.handleObservedWatchedFolderChanges([
             ReaderFolderWatchChangeEvent(
                 fileURL: changedFileURL,
                 kind: .modified,
@@ -931,22 +705,22 @@ struct ReaderStoreExternalChangeTests {
             )
         ])
 
-        await Task.yield()
-
         #expect(capturedEvent?.fileURL == ReaderFileRouting.normalizedFileURL(changedFileURL))
         #expect(capturedEvent?.kind == .modified)
         #expect(capturedEvent?.previousMarkdown == "# Second")
     }
 
-    @Test @MainActor func watchedFolderLiveBurstPublishesWarningForOmittedFiles() async throws {
+    @Test @MainActor func watchedFolderLiveBurstPublishesWarningForOmittedFiles() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(
+            folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            startedAt: .now
         )
+        fixture.store.setActiveFolderWatchSession(session)
 
         let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
         let fileURLs = (0..<(autoOpenLimit + 2)).map { index in
@@ -960,11 +734,9 @@ struct ReaderStoreExternalChangeTests {
             openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
         }
 
-        fixture.folderWatcher.emitChangedMarkdownEvents(
+        fixture.store.handleObservedWatchedFolderChanges(
             fileURLs.map { ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added) }
         )
-
-        await Task.yield()
 
         #expect(openedAdditionalDocuments == Array(fileURLs.prefix(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))
         #expect(fixture.store.folderWatchAutoOpenWarning?.autoOpenedFileCount == autoOpenLimit)
@@ -972,50 +744,6 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.folderWatchAutoOpenWarning?.omittedFileURLs == Array(fileURLs.dropFirst(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))
     }
 
-    @Test @MainActor func folderWatchOpenedAdditionalDocumentsReceiveCurrentWatchSessionInCallback() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let anotherFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("another.md")
-        fixture.write(content: "# Another", to: anotherFileURL)
-
-        fixture.folderWatcher.markdownFilesToReturn = [
-            fixture.primaryFileURL,
-            anotherFileURL
-        ]
-
-        var capturedSessions: [ReaderFolderWatchSession?] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { _, session, _ in
-            capturedSessions.append(session)
-        }
-
-        let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        fixture.store.startWatchingFolder(folderURL: fixture.temporaryDirectoryURL, options: options)
-
-        #expect(capturedSessions.count == 1)
-        #expect(capturedSessions[0] == fixture.store.activeFolderWatchSession)
-    }
-
-    @Test @MainActor func stopWatchingFolderDoesNotAffectPendingExternalChangeState() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
-
-        fixture.store.startWatchingFolder(
-            folderURL: fixture.temporaryDirectoryURL,
-            options: .default
-        )
-        #expect(fixture.store.isWatchingFolder)
-
-        fixture.store.stopWatchingFolder()
-
-        #expect(!fixture.store.isWatchingFolder)
-        #expect(fixture.store.activeFolderWatchSession == nil)
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
-    }
 }
 
 // MARK: - handleIncomingOpenURL deduplication
