@@ -60,6 +60,13 @@ extension ReaderStore {
                 now: Date()
             )
         )
+        if let initialDiffBaselineMarkdown {
+            _ = diffBaselineTracker.recordAndSelectBaseline(
+                markdown: initialDiffBaselineMarkdown,
+                for: normalizedURL,
+                at: Date()
+            )
+        }
         refreshOpenInApplications()
         recordRecentManualOpenIfNeeded(accessibleURL, origin: origin)
         notifyAutoLoadedFileIfNeeded(

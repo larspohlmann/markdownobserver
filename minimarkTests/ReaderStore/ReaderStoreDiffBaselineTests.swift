@@ -85,4 +85,34 @@ struct ReaderStoreDiffBaselineTests {
         let lastDiffCall = fixture.differ.computeChangedRegionsCalls.last
         #expect(lastDiffCall?.oldMarkdown == "# Second")
     }
+
+    @Test @MainActor func autoOpenedFileUsesInitialBaselineForSubsequentChanges() throws {
+        let fixture = try ReaderStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenMinutes
+        )
+        defer { fixture.cleanup() }
+
+        // Simulate sidebar auto-open: file changed from "# Before" to "# After auto-open"
+        fixture.write(content: "# After auto-open", to: fixture.primaryFileURL)
+        fixture.store.openFile(
+            at: fixture.primaryFileURL,
+            origin: .folderWatchAutoOpen,
+            initialDiffBaselineMarkdown: "# Before"
+        )
+
+        // Clear settler (simulates expiry)
+        fixture.store.settler.clearSettling()
+        fixture.differ.computeChangedRegionsCalls = []
+
+        // External change after settler expired
+        fixture.write(content: "# Changed again", to: fixture.primaryFileURL)
+        fixture.store.handleObservedFileChange()
+
+        // The diff should be against "# Before" (the initial baseline),
+        // not "# After auto-open" (the content at auto-open time).
+        let lastDiffCall = fixture.differ.computeChangedRegionsCalls.last
+        #expect(lastDiffCall?.oldMarkdown == "# Before")
+        #expect(lastDiffCall?.newMarkdown == "# Changed again")
+    }
 }
