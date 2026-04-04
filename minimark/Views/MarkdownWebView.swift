@@ -141,6 +141,7 @@ struct MarkdownWebView: NSViewRepresentable {
             self.webView = webView
             self.containerView = containerView
             scrollSync.containerView = containerView
+            scrollSync.logger = logger
         }
 
         func prepareForDocumentChangeIfNeeded(_ identity: String?) -> Bool {
@@ -409,7 +410,7 @@ struct MarkdownWebView: NSViewRepresentable {
             }
 
             var hadPendingScrollSync = false
-            if let request = scrollSync.pendingScrollSyncRequest {
+            if !hadPendingChangedRegionNavigation, let request = scrollSync.pendingScrollSyncRequest {
                 hadPendingScrollSync = true
                 scrollSync.consumePendingScrollSyncRequest()
                 scrollSync.performScrollSync(request, in: webView)

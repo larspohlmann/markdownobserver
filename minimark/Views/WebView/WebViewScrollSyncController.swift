@@ -1,10 +1,13 @@
 import Foundation
+import OSLog
 import WebKit
 
 /// Owns all scroll-sync state for the ``MarkdownWebView`` Coordinator:
 /// snapshot capture, reload-scroll restoration, progress-based scroll sync,
 /// and deduplication of scroll-sync requests.
 final class WebViewScrollSyncController {
+
+    var logger: Logger?
 
     struct ScrollSnapshot {
         let offsetY: Double
@@ -140,8 +143,7 @@ final class WebViewScrollSyncController {
             }
 
             if let error {
-                // Log is best-effort; the Coordinator owns the logger.
-                _ = error
+                self.logger?.debug("scroll sync JS evaluation failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

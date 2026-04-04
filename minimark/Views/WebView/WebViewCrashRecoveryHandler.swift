@@ -27,8 +27,8 @@ final class WebViewCrashRecoveryHandler {
         isCrashRecoveryLocked = false
     }
 
-    /// Unlocks crash recovery without resetting termination counters.
-    /// Used by retry-token resets which also clear the counters separately.
+    /// Unlocks crash recovery and resets termination counters.
+    /// Used by retry-token resets to give the web view a fresh start.
     func unlock() {
         isCrashRecoveryLocked = false
         rapidTerminationCount = 0
