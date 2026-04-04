@@ -467,9 +467,20 @@ struct ContentView: View {
         }
 
         onRequestFileOpen(FileOpenRequest(
-            fileURLs: markdownURLs,
+            fileURLs: [markdownURLs[0]],
             origin: .manual,
-            slotStrategy: .reuseEmptySlotForFirst
+            slotStrategy: .replaceSelectedSlot
+        ))
+
+        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
+        guard !additionalMarkdownURLs.isEmpty else {
+            return
+        }
+
+        onRequestFileOpen(FileOpenRequest(
+            fileURLs: additionalMarkdownURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
         ))
     }
 

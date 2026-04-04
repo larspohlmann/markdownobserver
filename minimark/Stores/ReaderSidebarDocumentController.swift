@@ -199,6 +199,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             case .deferOnly:
                 targetDocument.readerStore.deferFile(
                     at: fileURL,
+                    origin: plan.origin,
                     folderWatchSession: effectiveFolderWatchSession
                 )
             case .loadFully:

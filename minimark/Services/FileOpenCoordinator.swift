@@ -118,10 +118,17 @@ final class FileOpenCoordinator {
     ) -> [FileOpenPlan.SlotAssignment] {
         let loadMode = loadMode(for: request.materializationStrategy)
         var emptySlotConsumed = false
+        var replaceSlotConsumed = false
         var assignments: [FileOpenPlan.SlotAssignment] = []
 
-        for (index, fileURL) in normalizedURLs.enumerated() {
-            if controller.document(for: fileURL) != nil {
+        for fileURL in normalizedURLs {
+            if let existingDocument = controller.document(for: fileURL) {
+                assignments.append(FileOpenPlan.SlotAssignment(
+                    fileURL: fileURL,
+                    target: .reuseExisting(documentID: existingDocument.id),
+                    loadMode: loadMode,
+                    initialDiffBaselineMarkdown: request.initialDiffBaselineMarkdownByURL[fileURL]
+                ))
                 continue
             }
 
@@ -129,10 +136,12 @@ final class FileOpenCoordinator {
 
             switch request.slotStrategy {
             case .replaceSelectedSlot:
-                if let selectedDocument = controller.selectedDocument {
-                    target = .reuseExisting(documentID: selectedDocument.id)
+                if !replaceSlotConsumed {
+                    let selectedID = controller.selectedDocument?.id ?? controller.documents[0].id
+                    target = .reuseExisting(documentID: selectedID)
+                    replaceSlotConsumed = true
                 } else {
-                    target = .reuseExisting(documentID: controller.documents[0].id)
+                    target = .createNew
                 }
 
             case .reuseEmptySlotForFirst:

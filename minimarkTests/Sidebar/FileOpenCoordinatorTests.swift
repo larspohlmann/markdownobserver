@@ -63,7 +63,7 @@ struct FileOpenCoordinatorTests {
         #expect(plan.assignments.count == 2)
     }
 
-    @Test @MainActor func planSkipsAlreadyOpenURL() throws {
+    @Test @MainActor func planFocusesAlreadyOpenURLAndAppendsNew() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
@@ -74,14 +74,21 @@ struct FileOpenCoordinatorTests {
             slotStrategy: .replaceSelectedSlot
         ))
 
+        let existingDocID = harness.controller.documents.first(where: {
+            $0.readerStore.fileURL?.lastPathComponent == "alpha.md"
+        })!.id
+
         let plan = coordinator.buildPlan(for: FileOpenRequest(
             fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual,
             slotStrategy: .alwaysAppend
         ))
 
-        #expect(plan.assignments.count == 1)
-        #expect(plan.assignments[0].fileURL.lastPathComponent == "zeta.md")
+        #expect(plan.assignments.count == 2)
+        #expect(plan.assignments[0].target == .reuseExisting(documentID: existingDocID))
+        #expect(plan.assignments[0].fileURL.lastPathComponent == "alpha.md")
+        #expect(plan.assignments[1].target == .createNew)
+        #expect(plan.assignments[1].fileURL.lastPathComponent == "zeta.md")
     }
 
     // MARK: - Plan building: alwaysAppend
