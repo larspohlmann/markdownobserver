@@ -142,13 +142,14 @@ final class ReaderSidebarDocumentController: ObservableObject {
         var didAppendDocuments = false
 
         for assignment in plan.assignments {
-            let normalizedFileURL = ReaderFileRouting.normalizedFileURL(assignment.fileURL)
+            // assignment.fileURL is already normalized by FileOpenCoordinator.deduplicateAndSort
+            let fileURL = assignment.fileURL
 
-            if let existingDocument = document(for: normalizedFileURL) {
+            if let existingDocument = document(for: fileURL) {
                 if existingDocument.readerStore.isDeferredDocument, assignment.loadMode == .loadFully {
                     let store = existingDocument.readerStore
                     let effectiveSession = resolvedFolderWatchSession(
-                        for: normalizedFileURL,
+                        for: fileURL,
                         requestedSession: plan.folderWatchSession
                     )
                     scheduleLoadWithOverlay(on: store) {
@@ -164,7 +165,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             }
 
             let effectiveFolderWatchSession = resolvedFolderWatchSession(
-                for: normalizedFileURL,
+                for: fileURL,
                 requestedSession: plan.folderWatchSession
             )
 
@@ -197,12 +198,12 @@ final class ReaderSidebarDocumentController: ObservableObject {
             switch assignment.loadMode {
             case .deferOnly:
                 targetDocument.readerStore.deferFile(
-                    at: normalizedFileURL,
+                    at: fileURL,
                     folderWatchSession: effectiveFolderWatchSession
                 )
             case .loadFully:
                 targetDocument.readerStore.openFile(
-                    at: normalizedFileURL,
+                    at: fileURL,
                     origin: plan.origin,
                     folderWatchSession: effectiveFolderWatchSession,
                     initialDiffBaselineMarkdown: assignment.initialDiffBaselineMarkdown
@@ -498,18 +499,22 @@ final class ReaderSidebarDocumentController: ObservableObject {
                 }
             )
 
-            if origin == .folderWatchInitialBatchAutoOpen {
-                // The planner sends defer events first, then dispatches load events
-                // separately and calls selectNewestDocumentHandler afterward.
-                // Build a defer-only plan with no post-materialization.
-                let request = FileOpenRequest(
-                    fileURLs: events.map(\.fileURL),
-                    origin: origin,
-                    folderWatchSession: session,
-                    initialDiffBaselineMarkdownByURL: diffBaselineByURL,
-                    slotStrategy: .reuseEmptySlotForFirst,
-                    materializationStrategy: .deferThenMaterializeSelected
-                )
+            // For initial batch auto-open, the folder-watch planner sends defer
+            // events and load events separately, managing materialization itself via
+            // selectNewestDocumentHandler. Use .deferThenMaterializeSelected to get
+            // deferOnly load mode, but suppress post-materialization (.loadAll = no-op)
+            // so the planner stays in control.
+            let useDeferOnly = origin == .folderWatchInitialBatchAutoOpen
+            let request = FileOpenRequest(
+                fileURLs: events.map(\.fileURL),
+                origin: origin,
+                folderWatchSession: session,
+                initialDiffBaselineMarkdownByURL: diffBaselineByURL,
+                slotStrategy: .reuseEmptySlotForFirst,
+                materializationStrategy: useDeferOnly ? .deferThenMaterializeSelected : .loadAll
+            )
+
+            if useDeferOnly {
                 let plan = coordinator.buildPlan(for: request)
                 self.executePlan(FileOpenPlan(
                     assignments: plan.assignments,
@@ -518,14 +523,6 @@ final class ReaderSidebarDocumentController: ObservableObject {
                     materializationStrategy: .loadAll
                 ))
             } else {
-                let request = FileOpenRequest(
-                    fileURLs: events.map(\.fileURL),
-                    origin: origin,
-                    folderWatchSession: session,
-                    initialDiffBaselineMarkdownByURL: diffBaselineByURL,
-                    slotStrategy: .reuseEmptySlotForFirst,
-                    materializationStrategy: .loadAll
-                )
                 coordinator.open(request)
             }
         }

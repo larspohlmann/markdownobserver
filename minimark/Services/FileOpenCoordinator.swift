@@ -136,8 +136,7 @@ final class FileOpenCoordinator {
                 }
 
             case .reuseEmptySlotForFirst:
-                if !emptySlotConsumed && index == firstNewAssignmentIndex(in: normalizedURLs),
-                   canReuseEmptySlot {
+                if !emptySlotConsumed, canReuseEmptySlot {
                     target = .reuseExisting(documentID: controller.selectedDocumentID)
                     emptySlotConsumed = true
                 } else {
@@ -157,15 +156,6 @@ final class FileOpenCoordinator {
         }
 
         return assignments
-    }
-
-    private func firstNewAssignmentIndex(in normalizedURLs: [URL]) -> Int {
-        for (index, fileURL) in normalizedURLs.enumerated() {
-            if controller.document(for: fileURL) == nil {
-                return index
-            }
-        }
-        return 0
     }
 
     private var canReuseEmptySlot: Bool {
