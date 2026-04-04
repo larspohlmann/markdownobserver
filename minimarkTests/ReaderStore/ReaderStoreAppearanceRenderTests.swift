@@ -1,46 +1,52 @@
-import XCTest
+//
+//  ReaderStoreAppearanceRenderTests.swift
+//  minimarkTests
+//
+
+import Foundation
+import Testing
 @testable import minimark
 
-@MainActor
-final class ReaderStoreAppearanceRenderTests: XCTestCase {
+@Suite(.serialized)
+struct ReaderStoreAppearanceRenderTests {
     private let testAppearance = LockedAppearance(readerTheme: .newspaper, baseFontSize: 20, syntaxTheme: .nord)
 
-    func testSetAppearanceOverrideSetsNeedsAppearanceRender() throws {
+    @Test @MainActor func setAppearanceOverrideSetsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
-        XCTAssertFalse(fixture.store.needsAppearanceRender)
+        #expect(!fixture.store.needsAppearanceRender)
 
         fixture.store.setAppearanceOverride(testAppearance)
 
-        XCTAssertTrue(fixture.store.needsAppearanceRender)
+        #expect(fixture.store.needsAppearanceRender)
     }
 
-    func testRenderWithAppearanceClearsNeedsAppearanceRender() throws {
+    @Test @MainActor func renderWithAppearanceClearsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
-        XCTAssertTrue(fixture.store.needsAppearanceRender)
+        #expect(fixture.store.needsAppearanceRender)
 
         try fixture.store.renderWithAppearance(testAppearance)
 
-        XCTAssertFalse(fixture.store.needsAppearanceRender)
+        #expect(!fixture.store.needsAppearanceRender)
     }
 
-    func testRenderCurrentMarkdownClearsNeedsAppearanceRender() throws {
+    @Test @MainActor func renderCurrentMarkdownClearsNeedsAppearanceRender() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
-        XCTAssertTrue(fixture.store.needsAppearanceRender)
+        #expect(fixture.store.needsAppearanceRender)
 
         try fixture.store.renderCurrentMarkdownImmediately()
 
-        XCTAssertFalse(fixture.store.needsAppearanceRender)
+        #expect(!fixture.store.needsAppearanceRender)
     }
 }
