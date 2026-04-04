@@ -31,6 +31,7 @@ struct ReaderWindowRootView: View {
     @StateObject var windowCoordinator: ReaderWindowCoordinator
     @StateObject var appearanceController: WindowAppearanceController
     @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+    var fileOpenCoordinator: FileOpenCoordinator
 
     init(
         seed: ReaderWindowSeed?,
@@ -51,6 +52,7 @@ struct ReaderWindowRootView: View {
         _appearanceController = StateObject(
             wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
         )
+        self.fileOpenCoordinator = FileOpenCoordinator(controller: sidebarDocumentController)
     }
 
     private var sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement {
@@ -170,12 +172,14 @@ struct ReaderWindowRootView: View {
                     },
                     onConfirm: { selectedFileURLs in
                         sidebarDocumentController.dismissPendingFileSelectionRequest()
-                        openSidebarDocumentsBurst(
-                            at: selectedFileURLs,
+                        fileOpenCoordinator.open(FileOpenRequest(
+                            fileURLs: selectedFileURLs,
                             origin: .folderWatchInitialBatchAutoOpen,
                             folderWatchSession: request.session,
-                            preferEmptySelection: true
-                        )
+                            slotStrategy: .reuseEmptySlotForFirst,
+                            materializationStrategy: .deferThenMaterializeSelected
+                        ))
+                        refreshWindowPresentation()
                     }
                 )
             }
@@ -318,13 +322,26 @@ struct ReaderWindowRootView: View {
     }
 
     private func configureStoreCallbacks() {
-        windowCoordinator.configureStoreCallbacks { fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
-            openAdditionalDocument(
-                fileURL,
-                folderWatchSession: folderWatchSession,
+        windowCoordinator.configureStoreCallbacks { [self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
+            let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+            if ReaderWindowRegistry.shared.focusDocumentIfAlreadyOpen(at: normalizedFileURL) {
+                return
+            }
+            if folderWatchSession != nil {
+                enqueueFolderWatchOpen(
+                    folderWatchChangeEvent(for: normalizedFileURL, initialDiffBaselineMarkdown: initialDiffBaselineMarkdown),
+                    folderWatchSession: folderWatchSession,
+                    origin: origin
+                )
+                return
+            }
+            fileOpenCoordinator.open(FileOpenRequest(
+                fileURLs: [normalizedFileURL],
                 origin: origin,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-            )
+                initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedFileURL: $0] } ?? [:],
+                slotStrategy: .alwaysAppend
+            ))
+            applyWindowTitlePresentation()
         }
     }
 
@@ -367,7 +384,13 @@ struct ReaderWindowRootView: View {
                 }
 
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-                openDocumentInCurrentWindow(resolvedURL)
+                fileOpenCoordinator.open(FileOpenRequest(
+                    fileURLs: [resolvedURL],
+                    origin: .manual,
+                    folderWatchSession: sharedFolderWatchSession,
+                    slotStrategy: .replaceSelectedSlot
+                ))
+                applyWindowTitlePresentation()
             }
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
                 guard notificationTargetsCurrentWindow(notification) else {
@@ -426,14 +449,9 @@ struct ReaderWindowRootView: View {
     private func contentView(for store: ReaderStore) -> some View {
         ContentView(
             readerStore: store,
-            openAdditionalDocument: { fileURL in
-                openAdditionalDocumentInCurrentWindow(fileURL)
-            },
-            openAdditionalDocumentsInCurrentWindow: { fileURLs in
-                openAdditionalDocumentsInCurrentWindow(fileURLs)
-            },
-            openDocumentInCurrentWindow: { fileURL in
-                openDocumentInCurrentWindow(fileURL)
+            onRequestFileOpen: { [self] request in
+                fileOpenCoordinator.open(request)
+                refreshWindowPresentation()
             },
             activeFolderWatch: sharedFolderWatchSession,
             isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
@@ -496,7 +514,13 @@ struct ReaderWindowRootView: View {
             },
             onStartRecentManuallyOpenedFile: { entry in
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-                openDocumentInCurrentWindow(resolvedURL)
+                fileOpenCoordinator.open(FileOpenRequest(
+                    fileURLs: [resolvedURL],
+                    origin: .manual,
+                    folderWatchSession: sharedFolderWatchSession,
+                    slotStrategy: .replaceSelectedSlot
+                ))
+                applyWindowTitlePresentation()
             },
             onStartRecentFolderWatch: startRecentFolderWatch,
             onClearRecentWatchedFolders: clearRecentWatchedFolders,
@@ -580,10 +604,10 @@ struct ReaderWindowRootView: View {
 
     private func startUITestGroupedSidebarFlow() {
         ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { fileURLs in
-            sidebarDocumentController.openDocumentsBurst(
-                at: fileURLs,
+            fileOpenCoordinator.open(FileOpenRequest(
+                fileURLs: fileURLs,
                 origin: .manual
-            )
+            ))
         }
     }
 

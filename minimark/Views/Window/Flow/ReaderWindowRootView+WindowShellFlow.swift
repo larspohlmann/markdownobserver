@@ -53,13 +53,14 @@ extension ReaderWindowRootView {
             return
         }
 
-        openSidebarDocumentsBurst(
-            at: batch.fileURLs,
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: batch.fileURLs,
             origin: batch.openOrigin,
             folderWatchSession: batch.folderWatchSession,
             initialDiffBaselineMarkdownByURL: batch.initialDiffBaselineMarkdownByURL,
-            preferEmptySelection: true
-        )
+            slotStrategy: .reuseEmptySlotForFirst
+        ))
+        refreshWindowPresentation()
     }
 
     func openSidebarDocumentsBurst(
@@ -74,14 +75,23 @@ extension ReaderWindowRootView {
             return
         }
 
-        sidebarDocumentController.openDocumentsBurst(
-            at: fileURLs,
+        let materializationStrategy: FileOpenRequest.MaterializationStrategy
+        if !materializeSelectedOnCompletion {
+            materializationStrategy = .loadAll
+        } else if origin == .folderWatchInitialBatchAutoOpen {
+            materializationStrategy = .deferThenMaterializeSelected
+        } else {
+            materializationStrategy = .loadAll
+        }
+
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: fileURLs,
             origin: origin,
             folderWatchSession: folderWatchSession,
             initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdownByURL,
-            preferEmptySelection: preferEmptySelection,
-            materializeSelectedOnCompletion: materializeSelectedOnCompletion
-        )
+            slotStrategy: preferEmptySelection ? .reuseEmptySlotForFirst : .alwaysAppend,
+            materializationStrategy: materializationStrategy
+        ))
         refreshWindowPresentation()
     }
 

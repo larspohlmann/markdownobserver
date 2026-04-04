@@ -54,7 +54,12 @@ extension ReaderWindowRootView {
         }
 
         dismissFolderWatchAutoOpenWarning()
-        openSidebarDocumentsBurst(at: selectedFileURLs, preferEmptySelection: false)
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: selectedFileURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        ))
+        refreshWindowPresentation()
     }
 
     func isFolderWatchWarningPresentationAllowed() -> Bool {
