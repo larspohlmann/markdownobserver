@@ -42,24 +42,13 @@ extension ReaderWindowRootView {
             return
         }
 
-        sidebarDocumentController.openAdditionalDocument(
-            at: normalizedFileURL,
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: [normalizedFileURL],
             origin: origin,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+            initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedFileURL: $0] } ?? [:],
+            slotStrategy: .reuseEmptySlotForFirst
+        ))
         applyWindowTitlePresentation()
-    }
-
-    func openAdditionalDocumentsInCurrentWindow(
-        _ fileURLs: [URL],
-        origin: ReaderOpenOrigin = .manual,
-        preferEmptySelection: Bool = true
-    ) {
-        openSidebarDocumentsBurst(
-            at: fileURLs,
-            origin: origin,
-            preferEmptySelection: preferEmptySelection
-        )
     }
 
     var isSharedFolderWatchAFavorite: Bool {
@@ -135,14 +124,14 @@ extension ReaderWindowRootView {
         let restoredFileURLs = entry.resolvedOpenDocumentFileURLs(relativeTo: resolvedURL)
         if let session = sharedFolderWatchSession,
            !restoredFileURLs.isEmpty {
-            openSidebarDocumentsBurst(
-                at: restoredFileURLs,
+            fileOpenCoordinator.open(FileOpenRequest(
+                fileURLs: restoredFileURLs,
                 origin: .folderWatchInitialBatchAutoOpen,
                 folderWatchSession: session,
-                preferEmptySelection: true,
-                materializeSelectedOnCompletion: false
-            )
-            sidebarDocumentController.materializeNewestDeferredDocuments()
+                slotStrategy: .reuseEmptySlotForFirst,
+                materializationStrategy: .deferThenMaterializeNewest(count: ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+            ))
+            refreshWindowPresentation()
         }
 
         syncSharedFavoriteOpenDocumentsIfNeeded()
@@ -163,12 +152,14 @@ extension ReaderWindowRootView {
 
             let newFileURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: resolvedFolderURL)
             if !newFileURLs.isEmpty {
-                openSidebarDocumentsBurst(
-                    at: newFileURLs,
+                fileOpenCoordinator.open(FileOpenRequest(
+                    fileURLs: newFileURLs,
                     origin: .folderWatchInitialBatchAutoOpen,
                     folderWatchSession: session,
-                    preferEmptySelection: false
-                )
+                    slotStrategy: .alwaysAppend,
+                    materializationStrategy: .deferThenMaterializeSelected
+                ))
+                refreshWindowPresentation()
             }
 
             settingsStore.updateFavoriteWatchedFolderKnownDocuments(

@@ -42,7 +42,10 @@ struct FolderWatchCoordinationTests {
         #expect(plan.warning?.omittedFileURLs == [folderURL.appendingPathComponent("note-12.md")])
     }
 
-    @Test @MainActor func burstOpenPlanningNormalizesDeduplicatesAndSorts() {
+    @Test @MainActor func burstOpenPlanningNormalizesDeduplicatesAndSorts() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
         let urls: [URL] = [
             URL(fileURLWithPath: "/tmp/zeta.md"),
             URL(fileURLWithPath: "/tmp/alpha.md"),
@@ -50,9 +53,14 @@ struct FolderWatchCoordinationTests {
             URL(fileURLWithPath: "/tmp/notes.markdown")
         ]
 
-        let planned = ReaderFileRouting.plannedOpenFileURLs(from: urls)
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        let plan = coordinator.buildPlan(for: FileOpenRequest(
+            fileURLs: urls,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        ))
 
-        #expect(planned.map(\.path) == [
+        #expect(plan.assignments.map(\.fileURL.path) == [
             "/tmp/alpha.md",
             "/tmp/notes.markdown",
             "/tmp/zeta.md"
@@ -744,7 +752,11 @@ struct FolderWatchCoordinationTests {
             multiFileDisplayMode: .sidebarLeft
         )
 
-        view.openAdditionalDocumentsInCurrentWindow([zetaURL, alphaURL])
+        view.fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: [zetaURL, alphaURL],
+            origin: .manual,
+            slotStrategy: .reuseEmptySlotForFirst
+        ))
 
         #expect(focusedURLs.isEmpty)
         #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL?.path }) == Set([

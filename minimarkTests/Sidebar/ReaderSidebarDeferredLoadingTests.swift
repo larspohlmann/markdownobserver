@@ -77,12 +77,13 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         #expect(harness.controller.documents.count == 2)
         // The non-selected document should be deferred
@@ -101,10 +102,11 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         #expect(harness.controller.documents.count == 2)
         for document in harness.controller.documents {
@@ -124,12 +126,13 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         // Find the non-selected deferred document
         let deferredDocument = harness.controller.documents.first {
@@ -159,24 +162,25 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         let countBefore = harness.controller.documents.count
 
-        harness.controller.openAdditionalDocument(
-            at: harness.secondaryFileURL,
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.secondaryFileURL],
             origin: .manual
-        )
+        ))
 
         #expect(harness.controller.documents.count == countBefore)
     }
 
-    @Test @MainActor func openDocumentInSelectedSlotOnDeferredDocumentReplacesCleanly() async throws {
+    @Test @MainActor func openDocumentInSelectedSlotOnDeferredDocumentReplacesCleanly() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -186,18 +190,22 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         let thirdFileURL = harness.temporaryDirectoryURL.appendingPathComponent("gamma.md")
         try "# Gamma".write(to: thirdFileURL, atomically: true, encoding: .utf8)
 
-        harness.controller.openDocumentInSelectedSlot(at: thirdFileURL, origin: .manual)
-        for _ in 0..<5 { await Task.yield() }
+        coordinator.open(FileOpenRequest(
+            fileURLs: [thirdFileURL],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
 
         #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "gamma.md")
         #expect(!harness.controller.selectedReaderStore.isDeferredDocument)
@@ -214,20 +222,21 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         let countBefore = harness.controller.documents.count
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.secondaryFileURL],
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.secondaryFileURL],
             origin: .folderWatchAutoOpen,
             folderWatchSession: session
-        )
+        ))
 
         #expect(harness.controller.documents.count == countBefore)
     }
@@ -244,12 +253,13 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
         await Task.yield()
 
         // Find the deferred (non-selected) document
@@ -258,13 +268,22 @@ struct ReaderSidebarDeferredLoadingTests {
         }!
         #expect(deferredDocument.readerStore.sourceMarkdown.isEmpty)
 
-        // Simulate a live folder-watch change event for the deferred file
-        harness.controller.openAdditionalDocument(
-            at: deferredDocument.readerStore.fileURL!,
+        // Simulate a live folder-watch change event for the deferred file.
+        // Use executePlan directly so this test can provide a one-off plan
+        // that reuses the existing deferred document, forces .loadFully,
+        // and supplies a specific diff baseline for the change event.
+        let deferredFileURL = deferredDocument.readerStore.fileURL!
+        harness.controller.executePlan(FileOpenPlan(
+            assignments: [FileOpenPlan.SlotAssignment(
+                fileURL: deferredFileURL,
+                target: .reuseExisting(documentID: deferredDocument.id),
+                loadMode: .loadFully,
+                initialDiffBaselineMarkdown: "# Old content"
+            )],
             origin: .folderWatchAutoOpen,
             folderWatchSession: session,
-            initialDiffBaselineMarkdown: "# Old content"
-        )
+            materializationStrategy: .loadAll
+        ))
         for _ in 0..<5 { await Task.yield() }
 
         // The deferred document should now be fully loaded
@@ -283,25 +302,32 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
         await Task.yield()
 
         let deferredDocument = harness.controller.documents.first {
             $0.readerStore.isDeferredDocument
         }!
 
-        // Simulate a live change with a diff baseline (file was modified)
-        harness.controller.openAdditionalDocument(
-            at: deferredDocument.readerStore.fileURL!,
+        // Simulate a live change with a diff baseline (file was modified).
+        let deferredFileURL = deferredDocument.readerStore.fileURL!
+        harness.controller.executePlan(FileOpenPlan(
+            assignments: [FileOpenPlan.SlotAssignment(
+                fileURL: deferredFileURL,
+                target: .reuseExisting(documentID: deferredDocument.id),
+                loadMode: .loadFully,
+                initialDiffBaselineMarkdown: "# Old content"
+            )],
             origin: .folderWatchAutoOpen,
             folderWatchSession: session,
-            initialDiffBaselineMarkdown: "# Old content"
-        )
+            materializationStrategy: .loadAll
+        ))
         for _ in 0..<5 { await Task.yield() }
 
         // The yellow change indicator should be visible
@@ -318,25 +344,32 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
         await Task.yield()
 
         let deferredDocument = harness.controller.documents.first {
             $0.readerStore.isDeferredDocument
         }!
 
-        // Simulate a live event without a diff baseline (new file, not a modification)
-        harness.controller.openAdditionalDocument(
-            at: deferredDocument.readerStore.fileURL!,
+        // Simulate a live event without a diff baseline (new file, not a modification).
+        let deferredFileURL = deferredDocument.readerStore.fileURL!
+        harness.controller.executePlan(FileOpenPlan(
+            assignments: [FileOpenPlan.SlotAssignment(
+                fileURL: deferredFileURL,
+                target: .reuseExisting(documentID: deferredDocument.id),
+                loadMode: .loadFully,
+                initialDiffBaselineMarkdown: nil
+            )],
             origin: .folderWatchAutoOpen,
             folderWatchSession: session,
-            initialDiffBaselineMarkdown: nil
-        )
+            materializationStrategy: .loadAll
+        ))
         for _ in 0..<5 { await Task.yield() }
 
         // No yellow indicator — this wasn't a modification
@@ -375,12 +408,13 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        harness.controller.openDocumentsBurst(
-            at: [harness.primaryFileURL, harness.secondaryFileURL],
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
-            preferEmptySelection: true
-        )
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
 
         let deferredDocument = harness.controller.documents.first {
             $0.id != harness.controller.selectedDocumentID
@@ -420,23 +454,21 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(store.documentLoadState == .loading)
     }
 
-    @Test @MainActor func openDocumentInSelectedSlotSetsLoadingState() async throws {
+    @Test @MainActor func replaceSelectedSlotLoadsContentSynchronously() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let store = harness.controller.selectedReaderStore
 
-        harness.controller.openDocumentInSelectedSlot(
-            at: harness.primaryFileURL,
-            origin: .manual
-        )
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
 
-        // Immediately: state should be .loading
-        #expect(store.documentLoadState == .loading)
-
-        // After yields: content is loaded. State may still be .loading due to
-        // holdLoadingOverlayBriefly() keeping the overlay visible briefly.
-        for _ in 0..<5 { await Task.yield() }
+        // Content is loaded synchronously via executePlan
         #expect(!store.sourceMarkdown.isEmpty)
+        #expect(store.fileURL?.lastPathComponent == "alpha.md")
     }
 }

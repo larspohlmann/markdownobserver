@@ -72,9 +72,7 @@ struct ContentView: View {
     )
 
     @ObservedObject var readerStore: ReaderStore
-    let openAdditionalDocument: (URL) -> Void
-    let openAdditionalDocumentsInCurrentWindow: ([URL]) -> Void
-    let openDocumentInCurrentWindow: (URL) -> Void
+    let onRequestFileOpen: (FileOpenRequest) -> Void
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
     let isFolderWatchInitialScanFailed: Bool
@@ -224,23 +222,53 @@ struct ContentView: View {
         .focusedValue(
             \.readerOpenDocumentInCurrentWindow,
             ReaderOpenDocumentInCurrentWindowAction { fileURL in
-                openDocumentReplacingCurrentWindow(fileURL)
+                let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+                let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
+                if readerStore.hasUnsavedDraftChanges, currentURL != normalizedURL {
+                    readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
+                    return
+                }
+                onRequestFileOpen(FileOpenRequest(
+                    fileURLs: [fileURL],
+                    origin: .manual,
+                    slotStrategy: .replaceSelectedSlot
+                ))
             }
         )
         .focusedValue(
             \.readerOpenDocument,
             ReaderOpenDocumentAction { fileURL in
                 if readerStore.fileURL == nil {
-                    readerStore.openFile(at: fileURL)
+                    onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .replaceSelectedSlot
+                    ))
                 } else {
-                    openAdditionalDocument(fileURL)
+                    onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .alwaysAppend
+                    ))
                 }
             }
         )
         .focusedValue(
             \.readerOpenAdditionalDocument,
             ReaderOpenAdditionalDocumentAction { fileURL in
-                openAdditionalDocument(fileURL)
+                if readerStore.fileURL == nil {
+                    onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .replaceSelectedSlot
+                    ))
+                } else {
+                    onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .alwaysAppend
+                    ))
+                }
             }
         )
         .focusedValue(
@@ -423,48 +451,45 @@ struct ContentView: View {
             return
         }
 
-        if readerStore.fileURL == nil {
-            openDocumentInCurrentWindow(markdownURLs[0])
-            let additionalURLs = Array(markdownURLs.dropFirst())
-            if !additionalURLs.isEmpty {
-                openAdditionalDocumentsInCurrentWindow(additionalURLs)
-            }
-            return
-        }
-
-        openAdditionalDocumentsInCurrentWindow(markdownURLs)
+        let slotStrategy: FileOpenRequest.SlotStrategy =
+            readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
+        onRequestFileOpen(FileOpenRequest(
+            fileURLs: markdownURLs,
+            origin: .manual,
+            slotStrategy: slotStrategy
+        ))
     }
 
     private func handlePickedFileURLs(_ fileURLs: [URL]) {
         let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
-        guard let firstURL = markdownURLs.first else {
+        guard !markdownURLs.isEmpty else {
             return
         }
 
-        guard openDocumentReplacingCurrentWindow(firstURL) else {
-            return
-        }
-
-        let additionalURLs = Array(markdownURLs.dropFirst())
-        guard !additionalURLs.isEmpty else {
-            return
-        }
-
-        openAdditionalDocumentsInCurrentWindow(additionalURLs)
-    }
-
-    @discardableResult
-    private func openDocumentReplacingCurrentWindow(_ fileURL: URL) -> Bool {
-        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
         let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
         if readerStore.hasUnsavedDraftChanges,
            currentURL != normalizedIncomingURL {
             readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
-            return false
+            return
         }
 
-        openDocumentInCurrentWindow(fileURL)
-        return true
+        onRequestFileOpen(FileOpenRequest(
+            fileURLs: [markdownURLs[0]],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
+
+        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
+        guard !additionalMarkdownURLs.isEmpty else {
+            return
+        }
+
+        onRequestFileOpen(FileOpenRequest(
+            fileURLs: additionalMarkdownURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        ))
     }
 
     private var previewAccessibilityValue: String {
@@ -1044,9 +1069,7 @@ private final class SplitScrollCoordinator: ObservableObject {
 #Preview {
     ContentView(
         readerStore: ReaderStore(),
-        openAdditionalDocument: { _ in },
-        openAdditionalDocumentsInCurrentWindow: { _ in },
-        openDocumentInCurrentWindow: { _ in },
+        onRequestFileOpen: { _ in },
         activeFolderWatch: nil,
         isFolderWatchInitialScanInProgress: false,
         isFolderWatchInitialScanFailed: false,
