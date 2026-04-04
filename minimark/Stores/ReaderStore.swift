@@ -58,14 +58,18 @@ final class ReaderStore: ObservableObject {
     private var appearanceOverride: LockedAppearance?
 
     // MARK: - Internal: accessible to Coordination extensions
-    // Swift requires at least `internal` visibility for stored properties that are
-    // read or mutated from extensions declared in separate files.  These properties
-    // are implementation details of the store's coordination layer and must not be
-    // accessed directly from outside the Stores/ group.
+    // These properties exist for coordination extensions in Stores/Coordination/.
+    // They must be at least `internal` because Swift extensions in separate files
+    // cannot see `private` members.  Do not access them from views or other stores.
+    //
+    // - diffBaselineTracker: read-only (`let`) — used by ExternalChangeFlow
+    // - scopeContext: read/write — used by SecurityScopeFlow, FolderWatchLifecycleFlow
+    // - onFolderWatchStarted/Stopped: read-only from extensions (called, never reassigned);
+    //   set exclusively through setFolderWatchStateCallbacks(_:onStopped:)
     let diffBaselineTracker: DiffBaselineTracking
     var scopeContext = SecurityScopeContext()
-    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
-    var onFolderWatchStopped: (() -> Void)?
+    private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
+    private(set) var onFolderWatchStopped: (() -> Void)?
 
     private var pendingDraftPreviewRenderTask: Task<Void, Never>?
     private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
