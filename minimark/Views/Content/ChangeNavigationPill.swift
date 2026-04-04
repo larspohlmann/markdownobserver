@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChangeNavigationPill: View {
-    let currentIndex: Int
+    let currentIndex: Int?
     let totalCount: Int
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
@@ -25,7 +25,8 @@ struct ChangeNavigationPill: View {
                 direction: .previous
             )
 
-            Text("\(min(currentIndex, max(0, totalCount - 1)) + 1) / \(totalCount)")
+            Text(currentIndex.map { "\(min($0, max(0, totalCount - 1)) + 1)" } ?? "\u{2014}")
+                + Text(" / \(totalCount)")
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()

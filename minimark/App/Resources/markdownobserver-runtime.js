@@ -1065,7 +1065,7 @@
 
     var maxScrollTop = Math.max(0, scrollContainer.scrollHeight - window.innerHeight);
     var rootDocumentTop = getRootDocumentTop(root);
-    return clampMarkerTop(rootDocumentTop + row.top - 24, maxScrollTop);
+    return clampMarkerTop(rootDocumentTop + row.top - 56, maxScrollTop);
   }
 
   function scrollToChangedRegion(row, root) {
@@ -1101,7 +1101,7 @@
       return -1;
     }
 
-    var alignmentOffset = 24;
+    var alignmentOffset = 56;
     var probeTop = currentTop + alignmentOffset;
     var selectedIndex = -1;
 

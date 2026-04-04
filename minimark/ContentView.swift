@@ -88,7 +88,7 @@ struct ContentView: View {
     @State private var sourceReloadToken = 0
     @State private var changedRegionNavigationRequestID = 0
     @State private var lastChangedRegionNavigationDirection: ReaderChangedRegionNavigationDirection?
-    @State private var currentChangedRegionIndex: Int = 0
+    @State private var currentChangedRegionIndex: Int?
     @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
     @State private var cachedSourceHTMLDocument = ""
 
@@ -151,7 +151,7 @@ struct ContentView: View {
                 handleFileIdentityChange()
             }
             .onChange(of: readerStore.changedRegions) { _, _ in
-                currentChangedRegionIndex = 0
+                currentChangedRegionIndex = nil
             }
             .onChange(of: previewMode) { _, newValue in
                 handlePreviewModeChange(newValue)
@@ -323,7 +323,7 @@ struct ContentView: View {
     }
 
     private func handleFileIdentityChange() {
-        currentChangedRegionIndex = 0
+        currentChangedRegionIndex = nil
         if previewMode == .nativeFallback {
             previewReloadToken += 1
             previewMode = .web
@@ -746,10 +746,14 @@ struct ContentView: View {
         }
 
         let count = readerStore.changedRegions.count
-        if direction == .next {
-            currentChangedRegionIndex = currentChangedRegionIndex >= count - 1 ? 0 : currentChangedRegionIndex + 1
+        if let current = currentChangedRegionIndex {
+            if direction == .next {
+                currentChangedRegionIndex = current >= count - 1 ? 0 : current + 1
+            } else {
+                currentChangedRegionIndex = current <= 0 ? count - 1 : current - 1
+            }
         } else {
-            currentChangedRegionIndex = currentChangedRegionIndex <= 0 ? count - 1 : currentChangedRegionIndex - 1
+            currentChangedRegionIndex = direction == .next ? 0 : count - 1
         }
 
         lastChangedRegionNavigationDirection = direction
