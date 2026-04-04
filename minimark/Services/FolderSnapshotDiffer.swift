@@ -284,8 +284,9 @@ struct FolderFileSnapshot: Equatable {
             do {
                 markdown = try String(contentsOf: url, encoding: .utf8)
             } catch {
+                let nsError = error as NSError
                 FolderSnapshotDiffer.logger.error(
-                    "snapshot read failed: \(error.localizedDescription, privacy: .public)"
+                    "snapshot read failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
                 )
                 markdown = nil
             }
@@ -313,8 +314,9 @@ struct FolderFileSnapshot: Equatable {
         do {
             content = try String(contentsOf: url, encoding: .utf8)
         } catch {
+            let nsError = error as NSError
             FolderSnapshotDiffer.logger.error(
-                "snapshot content reload failed: \(error.localizedDescription, privacy: .public)"
+                "snapshot content reload failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
             )
             content = nil
         }

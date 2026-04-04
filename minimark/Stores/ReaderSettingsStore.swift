@@ -376,7 +376,10 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         do {
             data = try encoder.encode(subject.value)
         } catch {
-            Self.logger.error("settings persist encode failed: \(error.localizedDescription, privacy: .public)")
+            let nsError = error as NSError
+            Self.logger.error(
+                "settings persist encode failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
+            )
             return
         }
         lastPersistAt = Date()

@@ -666,7 +666,10 @@ final class ReaderStore: ObservableObject {
         do {
             loaded = try documentIO.load(at: accessibleURL)
         } catch {
-            Self.logger.error("draft baseline load failed: \(error.localizedDescription, privacy: .public)")
+            let nsError = error as NSError
+            Self.logger.error(
+                "draft baseline load failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
+            )
             document.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
