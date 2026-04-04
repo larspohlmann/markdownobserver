@@ -752,7 +752,11 @@ struct FolderWatchCoordinationTests {
             multiFileDisplayMode: .sidebarLeft
         )
 
-        view.openAdditionalDocumentsInCurrentWindow([zetaURL, alphaURL])
+        view.fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: [zetaURL, alphaURL],
+            origin: .manual,
+            slotStrategy: .reuseEmptySlotForFirst
+        ))
 
         #expect(focusedURLs.isEmpty)
         #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL?.path }) == Set([

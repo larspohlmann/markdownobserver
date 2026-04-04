@@ -63,37 +63,6 @@ extension ReaderWindowRootView {
         refreshWindowPresentation()
     }
 
-    func openSidebarDocumentsBurst(
-        at fileURLs: [URL],
-        origin: ReaderOpenOrigin = .manual,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool,
-        materializeSelectedOnCompletion: Bool = true
-    ) {
-        guard !fileURLs.isEmpty else {
-            return
-        }
-
-        let materializationStrategy: FileOpenRequest.MaterializationStrategy
-        if !materializeSelectedOnCompletion {
-            materializationStrategy = .loadAll
-        } else if origin == .folderWatchInitialBatchAutoOpen {
-            materializationStrategy = .deferThenMaterializeSelected
-        } else {
-            materializationStrategy = .loadAll
-        }
-
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: fileURLs,
-            origin: origin,
-            folderWatchSession: folderWatchSession,
-            initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdownByURL,
-            slotStrategy: preferEmptySelection ? .reuseEmptySlotForFirst : .alwaysAppend,
-            materializationStrategy: materializationStrategy
-        ))
-        refreshWindowPresentation()
-    }
 
     func refreshSharedFolderWatchState() {
         let state = windowCoordinator.sharedFolderWatchState()

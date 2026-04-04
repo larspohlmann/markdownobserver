@@ -51,18 +51,6 @@ extension ReaderWindowRootView {
         applyWindowTitlePresentation()
     }
 
-    func openAdditionalDocumentsInCurrentWindow(
-        _ fileURLs: [URL],
-        origin: ReaderOpenOrigin = .manual,
-        preferEmptySelection: Bool = true
-    ) {
-        openSidebarDocumentsBurst(
-            at: fileURLs,
-            origin: origin,
-            preferEmptySelection: preferEmptySelection
-        )
-    }
-
     var isSharedFolderWatchAFavorite: Bool {
         favoriteMatchingSharedFolderWatchSession() != nil
     }

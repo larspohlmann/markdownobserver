@@ -269,8 +269,9 @@ struct ReaderSidebarDeferredLoadingTests {
         #expect(deferredDocument.readerStore.sourceMarkdown.isEmpty)
 
         // Simulate a live folder-watch change event for the deferred file.
-        // Use executePlan directly since the coordinator skips existing URLs,
-        // but executePlan handles materializing existing deferred documents.
+        // Use executePlan directly so this test can provide a one-off plan
+        // that reuses the existing deferred document, forces .loadFully,
+        // and supplies a specific diff baseline for the change event.
         let deferredFileURL = deferredDocument.readerStore.fileURL!
         harness.controller.executePlan(FileOpenPlan(
             assignments: [FileOpenPlan.SlotAssignment(

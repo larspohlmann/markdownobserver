@@ -256,11 +256,19 @@ struct ContentView: View {
         .focusedValue(
             \.readerOpenAdditionalDocument,
             ReaderOpenAdditionalDocumentAction { fileURL in
-                onRequestFileOpen(FileOpenRequest(
-                    fileURLs: [fileURL],
-                    origin: .manual,
-                    slotStrategy: .alwaysAppend
-                ))
+                if readerStore.fileURL == nil {
+                    onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .replaceSelectedSlot
+                    ))
+                } else {
+                    onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .alwaysAppend
+                    ))
+                }
             }
         )
         .focusedValue(
