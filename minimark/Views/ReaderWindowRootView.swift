@@ -32,12 +32,7 @@ struct ReaderWindowRootView: View {
     @StateObject var appearanceController: WindowAppearanceController
     @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     var fileOpenCoordinator: FileOpenCoordinator {
-        if let existing = sidebarDocumentController.fileOpenCoordinator {
-            return existing
-        }
-        let coordinator = FileOpenCoordinator(controller: sidebarDocumentController)
-        sidebarDocumentController.fileOpenCoordinator = coordinator
-        return coordinator
+        sidebarDocumentController.fileOpenCoordinator
     }
 
     init(

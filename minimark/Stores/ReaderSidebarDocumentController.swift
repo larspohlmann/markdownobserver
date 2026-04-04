@@ -27,7 +27,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     private var storeConfigurator: ((ReaderStore) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
     private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
-    var fileOpenCoordinator: FileOpenCoordinator?
+    lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
     init(
         settingsStore: ReaderSettingsStore,
@@ -489,7 +489,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
             } ?? []
         }
         folderWatchController.openEventsHandler = { [weak self] events, session, origin in
-            guard let self, let coordinator = self.fileOpenCoordinator else { return }
+            guard let self else { return }
+            let coordinator = self.fileOpenCoordinator
             let diffBaselineByURL: [URL: String] = Dictionary(
                 uniqueKeysWithValues: events.compactMap { event in
                     guard let previousMarkdown = event.previousMarkdown else {

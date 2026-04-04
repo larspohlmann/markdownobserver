@@ -874,7 +874,6 @@ struct ReaderSidebarControllerTestHarness {
         )
         fileWatchers = createdFileWatchers
         folderWatchers = createdWatchers
-        controller.fileOpenCoordinator = FileOpenCoordinator(controller: controller)
     }
 
     func cleanup() {
