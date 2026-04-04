@@ -56,6 +56,7 @@ final class ReaderStore: ObservableObject {
 
     private var settingsCancellable: AnyCancellable?
     private var appearanceOverride: LockedAppearance?
+    private(set) var needsAppearanceRender = false
 
     // MARK: - Internal: accessible to Coordination extensions
     // These properties exist for coordination extensions in Stores/Coordination/.
@@ -519,6 +520,7 @@ final class ReaderStore: ObservableObject {
         )
         cancelPendingDraftPreviewRender()
         try renderCurrentMarkdown()
+        needsAppearanceRender = false
         document.lastRefreshAt = Date()
     }
 
@@ -532,6 +534,7 @@ final class ReaderStore: ObservableObject {
             baseFontSize: baseFontSize,
             syntaxTheme: syntaxTheme
         )
+        needsAppearanceRender = true
     }
 
     func clearAppearanceOverride() {
@@ -565,6 +568,7 @@ final class ReaderStore: ObservableObject {
         )
 
         document.renderedHTMLDocument = rendered.htmlDocument
+        needsAppearanceRender = false
     }
 
     func presentLoadedDocument(

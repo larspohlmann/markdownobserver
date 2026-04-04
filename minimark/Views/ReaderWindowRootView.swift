@@ -201,6 +201,7 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
                 applyWindowTitlePresentation()
+                renderSelectedDocumentIfNeeded()
             }
             .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
                 let isSidebarVisible = newCount > 1
@@ -297,13 +298,36 @@ struct ReaderWindowRootView: View {
         Task { @MainActor in
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
-                try? document.readerStore.renderWithAppearance(
-                    theme: appearance.readerTheme,
-                    baseFontSize: appearance.baseFontSize,
-                    syntaxTheme: appearance.syntaxTheme
-                )
+                let store = document.readerStore
+                guard store.hasOpenDocument else { continue }
+
+                if document.id == sidebarDocumentController.selectedDocumentID {
+                    try? store.renderWithAppearance(
+                        theme: appearance.readerTheme,
+                        baseFontSize: appearance.baseFontSize,
+                        syntaxTheme: appearance.syntaxTheme
+                    )
+                } else {
+                    store.setAppearanceOverride(
+                        theme: appearance.readerTheme,
+                        baseFontSize: appearance.baseFontSize,
+                        syntaxTheme: appearance.syntaxTheme
+                    )
+                }
             }
         }
+    }
+
+    private func renderSelectedDocumentIfNeeded() {
+        guard let document = sidebarDocumentController.selectedDocument else { return }
+        let store = document.readerStore
+        guard store.needsAppearanceRender, store.hasOpenDocument else { return }
+        let appearance = appearanceController.effectiveAppearance
+        try? store.renderWithAppearance(
+            theme: appearance.readerTheme,
+            baseFontSize: appearance.baseFontSize,
+            syntaxTheme: appearance.syntaxTheme
+        )
     }
 
     private func performInitialSetupIfNeeded() {
