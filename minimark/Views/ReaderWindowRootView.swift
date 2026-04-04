@@ -452,82 +452,86 @@ struct ReaderWindowRootView: View {
     private func contentView(for store: ReaderStore) -> some View {
         ContentView(
             readerStore: store,
-            onRequestFileOpen: { [self] request in
-                fileOpenCoordinator.open(request)
-                refreshWindowPresentation()
-            },
-            activeFolderWatch: sharedFolderWatchSession,
-            isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
-            isFolderWatchInitialScanFailed: sidebarDocumentController.didFolderWatchInitialScanFail,
-            canStopFolderWatch: canStopSharedFolderWatch,
+            folderWatchState: ContentViewFolderWatchState(
+                activeFolderWatch: sharedFolderWatchSession,
+                isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
+                isFolderWatchInitialScanFailed: sidebarDocumentController.didFolderWatchInitialScanFail,
+                canStopFolderWatch: canStopSharedFolderWatch,
+                pendingFolderWatchURL: pendingFolderWatchURL,
+                isCurrentWatchAFavorite: isSharedFolderWatchAFavorite,
+                favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+                recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
+                isAppearanceLocked: appearanceController.isLocked,
+                effectiveReaderTheme: appearanceController.effectiveTheme
+            ),
+            callbacks: ContentViewCallbacks(
+                onRequestFileOpen: { [self] request in
+                    fileOpenCoordinator.open(request)
+                    refreshWindowPresentation()
+                },
+                onRequestFolderWatch: prepareFolderWatchOptions,
+                onConfirmFolderWatch: confirmFolderWatch,
+                onCancelFolderWatch: cancelFolderWatch,
+                onStopFolderWatch: stopFolderWatch,
+                onSaveFolderWatchAsFavorite: { name in
+                    saveSharedFolderWatchAsFavorite(name: name)
+                },
+                onRemoveCurrentWatchFromFavorites: {
+                    removeSharedFolderWatchFromFavorites()
+                },
+                onToggleAppearanceLock: {
+                    if appearanceController.isLocked {
+                        appearanceController.unlock()
+                        for document in sidebarDocumentController.documents {
+                            document.readerStore.clearAppearanceOverride()
+                        }
+                        if activeFavoriteWorkspaceState != nil {
+                            activeFavoriteWorkspaceState?.lockedAppearance = nil
+                        }
+                    } else {
+                        appearanceController.lock()
+                        for document in sidebarDocumentController.documents {
+                            document.readerStore.setAppearanceOverride(
+                                theme: appearanceController.effectiveTheme,
+                                baseFontSize: appearanceController.effectiveFontSize,
+                                syntaxTheme: appearanceController.effectiveSyntaxTheme
+                            )
+                        }
+                        if activeFavoriteWorkspaceState != nil {
+                            activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance
+                        }
+                    }
+                },
+                onStartFavoriteWatch: startFavoriteWatch,
+                onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
+                onRenameFavoriteWatchedFolder: { id, newName in
+                    settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
+                },
+                onRemoveFavoriteWatchedFolder: { id in
+                    settingsStore.removeFavoriteWatchedFolder(id: id)
+                },
+                onReorderFavoriteWatchedFolders: { orderedIDs in
+                    settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
+                },
+                onStartRecentManuallyOpenedFile: { entry in
+                    let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
+                    fileOpenCoordinator.open(FileOpenRequest(
+                        fileURLs: [resolvedURL],
+                        origin: .manual,
+                        folderWatchSession: sharedFolderWatchSession,
+                        slotStrategy: .replaceSelectedSlot
+                    ))
+                    applyWindowTitlePresentation()
+                },
+                onStartRecentFolderWatch: startRecentFolderWatch,
+                onClearRecentWatchedFolders: clearRecentWatchedFolders,
+                onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles
+            ),
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
-            pendingFolderWatchURL: pendingFolderWatchURL,
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
             pendingFolderWatchScope: pendingFolderWatchScopeBinding,
-            pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPathsBinding,
-            isCurrentWatchAFavorite: isSharedFolderWatchAFavorite,
-            favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
-            recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
-            recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
-            onRequestFolderWatch: prepareFolderWatchOptions,
-            onConfirmFolderWatch: confirmFolderWatch,
-            onCancelFolderWatch: cancelFolderWatch,
-            onStopFolderWatch: stopFolderWatch,
-            onSaveFolderWatchAsFavorite: { name in
-                saveSharedFolderWatchAsFavorite(name: name)
-            },
-            onRemoveCurrentWatchFromFavorites: {
-                removeSharedFolderWatchFromFavorites()
-            },
-            isAppearanceLocked: appearanceController.isLocked,
-            onToggleAppearanceLock: {
-                if appearanceController.isLocked {
-                    appearanceController.unlock()
-                    for document in sidebarDocumentController.documents {
-                        document.readerStore.clearAppearanceOverride()
-                    }
-                    if activeFavoriteWorkspaceState != nil {
-                        activeFavoriteWorkspaceState?.lockedAppearance = nil
-                    }
-                } else {
-                    appearanceController.lock()
-                    for document in sidebarDocumentController.documents {
-                        document.readerStore.setAppearanceOverride(
-                            theme: appearanceController.effectiveTheme,
-                            baseFontSize: appearanceController.effectiveFontSize,
-                            syntaxTheme: appearanceController.effectiveSyntaxTheme
-                        )
-                    }
-                    if activeFavoriteWorkspaceState != nil {
-                        activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance
-                    }
-                }
-            },
-            effectiveReaderTheme: appearanceController.effectiveTheme,
-            onStartFavoriteWatch: startFavoriteWatch,
-            onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
-            onRenameFavoriteWatchedFolder: { id, newName in
-                settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
-            },
-            onRemoveFavoriteWatchedFolder: { id in
-                settingsStore.removeFavoriteWatchedFolder(id: id)
-            },
-            onReorderFavoriteWatchedFolders: { orderedIDs in
-                settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
-            },
-            onStartRecentManuallyOpenedFile: { entry in
-                let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-                fileOpenCoordinator.open(FileOpenRequest(
-                    fileURLs: [resolvedURL],
-                    origin: .manual,
-                    folderWatchSession: sharedFolderWatchSession,
-                    slotStrategy: .replaceSelectedSlot
-                ))
-                applyWindowTitlePresentation()
-            },
-            onStartRecentFolderWatch: startRecentFolderWatch,
-            onClearRecentWatchedFolders: clearRecentWatchedFolders,
-            onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles
+            pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPathsBinding
         )
     }
 
