@@ -662,7 +662,11 @@ final class ReaderStore: ObservableObject {
         }
 
         let accessibleURL = effectiveAccessibleFileURL(for: fileURL, reason: "read")
-        guard let loaded = try? documentIO.load(at: accessibleURL) else {
+        let loaded: (markdown: String, modificationDate: Date)
+        do {
+            loaded = try documentIO.load(at: accessibleURL)
+        } catch {
+            Self.logger.error("draft baseline load failed: \(error.localizedDescription, privacy: .public)")
             document.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }

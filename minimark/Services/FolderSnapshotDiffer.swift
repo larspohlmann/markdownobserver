@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 protocol FolderSnapshotDiffing: Sendable {
     func buildMetadataSnapshot(
@@ -27,6 +28,11 @@ protocol FolderSnapshotDiffing: Sendable {
 }
 
 struct FolderSnapshotDiffer: FolderSnapshotDiffing {
+    fileprivate static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "FolderSnapshotDiffer"
+    )
+
     func buildMetadataSnapshot(
         folderURL: URL,
         includeSubfolders: Bool,
@@ -274,7 +280,18 @@ struct FolderFileSnapshot: Equatable {
         fileSize = metadata.fileSize
         modificationDate = metadata.modificationDate
         resourceIdentity = metadata.resourceIdentity
-        markdown = metadata.exists ? (try? String(contentsOf: url, encoding: .utf8)) : nil
+        if metadata.exists {
+            do {
+                markdown = try String(contentsOf: url, encoding: .utf8)
+            } catch {
+                FolderSnapshotDiffer.logger.error(
+                    "snapshot read failed: \(error.localizedDescription, privacy: .public)"
+                )
+                markdown = nil
+            }
+        } else {
+            markdown = nil
+        }
     }
 
     init(metadata: FolderFileMetadata) {
@@ -292,7 +309,15 @@ struct FolderFileSnapshot: Equatable {
     }
 
     func withContent(from url: URL) -> FolderFileSnapshot {
-        let content = (try? String(contentsOf: url, encoding: .utf8))
+        let content: String?
+        do {
+            content = try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            FolderSnapshotDiffer.logger.error(
+                "snapshot content reload failed: \(error.localizedDescription, privacy: .public)"
+            )
+            content = nil
+        }
         return FolderFileSnapshot(
             fileSize: fileSize,
             modificationDate: modificationDate,

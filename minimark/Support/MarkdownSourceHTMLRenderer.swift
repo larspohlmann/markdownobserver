@@ -1,6 +1,12 @@
 import Foundation
+import OSLog
 
 enum MarkdownSourceHTMLRenderer {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "MarkdownSourceHTMLRenderer"
+    )
+
     private struct Payload: Encodable {
         let markdown: String
         let isEditable: Bool
@@ -228,7 +234,11 @@ enum MarkdownSourceHTMLRenderer {
             isDark: isDarkTheme(theme)
         )
 
-        guard let data = try? JSONEncoder().encode(payload) else {
+        let data: Data
+        do {
+            data = try JSONEncoder().encode(payload)
+        } catch {
+            logger.error("source HTML payload encode failed: \(error.localizedDescription, privacy: .public)")
             return ""
         }
 

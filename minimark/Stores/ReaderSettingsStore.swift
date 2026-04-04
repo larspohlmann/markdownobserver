@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import OSLog
 
 nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var appAppearance: AppAppearance
@@ -181,6 +182,11 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
 @MainActor final class ReaderSettingsStore: ObservableObject, ReaderSettingsStoring {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "ReaderSettingsStore"
+    )
+
     typealias BookmarkResolution = (url: URL, isStale: Bool)
     typealias BookmarkResolver = (Data) throws -> BookmarkResolution
     typealias BookmarkCreator = (URL) throws -> Data
@@ -366,7 +372,11 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     }
 
     private func persist() {
-        guard let data = try? encoder.encode(subject.value) else {
+        let data: Data
+        do {
+            data = try encoder.encode(subject.value)
+        } catch {
+            Self.logger.error("settings persist encode failed: \(error.localizedDescription, privacy: .public)")
             return
         }
         lastPersistAt = Date()
