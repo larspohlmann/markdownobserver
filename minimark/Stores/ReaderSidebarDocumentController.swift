@@ -233,7 +233,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
     private func applyMaterializationStrategy(_ strategy: FileOpenRequest.MaterializationStrategy) {
         switch strategy {
-        case .loadAll:
+        case .loadAll, .deferOnly:
             break
         case .deferThenMaterializeNewest(let count):
             materializeNewestDeferredDocuments(count: count)
@@ -502,31 +502,19 @@ final class ReaderSidebarDocumentController: ObservableObject {
             )
 
             // For initial batch auto-open, the folder-watch planner sends defer
-            // events and load events separately, managing materialization itself via
-            // selectNewestDocumentHandler. Use .deferThenMaterializeSelected to get
-            // deferOnly load mode, but suppress post-materialization (.loadAll = no-op)
-            // so the planner stays in control.
-            let useDeferOnly = origin == .folderWatchInitialBatchAutoOpen
-            let request = FileOpenRequest(
+            // and load events separately, managing materialization itself via
+            // selectNewestDocumentHandler. Use .deferOnly so the planner stays in control.
+            let materializationStrategy: FileOpenRequest.MaterializationStrategy =
+                origin == .folderWatchInitialBatchAutoOpen ? .deferOnly : .loadAll
+
+            coordinator.open(FileOpenRequest(
                 fileURLs: events.map(\.fileURL),
                 origin: origin,
                 folderWatchSession: session,
                 initialDiffBaselineMarkdownByURL: diffBaselineByURL,
                 slotStrategy: .reuseEmptySlotForFirst,
-                materializationStrategy: useDeferOnly ? .deferThenMaterializeSelected : .loadAll
-            )
-
-            if useDeferOnly {
-                let plan = coordinator.buildPlan(for: request)
-                self.executePlan(FileOpenPlan(
-                    assignments: plan.assignments,
-                    origin: plan.origin,
-                    folderWatchSession: plan.folderWatchSession,
-                    materializationStrategy: .loadAll
-                ))
-            } else {
-                coordinator.open(request)
-            }
+                materializationStrategy: materializationStrategy
+            ))
         }
         folderWatchController.selectNewestDocumentHandler = { [weak self] in
             self?.selectDocumentWithNewestModificationDate()

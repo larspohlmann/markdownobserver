@@ -340,7 +340,7 @@ struct ReaderWindowRootView: View {
                 fileURLs: [normalizedFileURL],
                 origin: origin,
                 initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedFileURL: $0] } ?? [:],
-                slotStrategy: .alwaysAppend
+                slotStrategy: .reuseEmptySlotForFirst
             ))
             applyWindowTitlePresentation()
         }

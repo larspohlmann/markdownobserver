@@ -29,13 +29,17 @@ struct FileOpenRequest {
         case reuseEmptySlotForFirst
         /// All files always append new slots.
         case alwaysAppend
-        /// Replace the content of the currently selected slot (single-file only).
+        /// Replace the content of the currently selected slot for the first file;
+        /// if multiple files are provided, remaining files append as new slots.
         case replaceSelectedSlot
     }
 
     enum MaterializationStrategy: Equatable {
         /// Open all files fully (sync load).
         case loadAll
+        /// Defer all files, no post-materialization. Used when the caller
+        /// manages materialization separately (e.g., folder-watch planner).
+        case deferOnly
         /// Defer all files, then materialize the N newest.
         case deferThenMaterializeNewest(count: Int)
         /// Defer all files, then materialize whichever ends up selected.
@@ -178,7 +182,7 @@ final class FileOpenCoordinator {
         switch strategy {
         case .loadAll:
             return .loadFully
-        case .deferThenMaterializeNewest, .deferThenMaterializeSelected:
+        case .deferOnly, .deferThenMaterializeNewest, .deferThenMaterializeSelected:
             return .deferOnly
         }
     }
