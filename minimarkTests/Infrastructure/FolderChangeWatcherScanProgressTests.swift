@@ -60,6 +60,62 @@ struct FolderChangeWatcherScanProgressTests {
         #expect(final.isFinished)
     }
 
+    @Test @MainActor func scanProgressStreamCompletesForManyFiles() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let fileCount = 20
+        for i in 0..<fileCount {
+            let fileURL = directoryURL.appendingPathComponent("file\(i).md")
+            try "# File \(i)\nContent for file \(i)".write(to: fileURL, atomically: false, encoding: .utf8)
+        }
+
+        let watcher = makeFolderChangeWatcher()
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { _ in }
+        defer { watcher.stopWatching() }
+
+        var progressUpdates: [FolderChangeWatcher.ScanProgress] = []
+        for await progress in watcher.scanProgressStream {
+            progressUpdates.append(progress)
+        }
+
+        #expect(!progressUpdates.isEmpty)
+
+        let final = try #require(progressUpdates.last)
+        #expect(final.total == fileCount)
+        #expect(final.completed == fileCount)
+        #expect(final.isFinished)
+    }
+
+    @Test @MainActor func cachedMarkdownFileURLsReturnsSnapshotURLs() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let fileURL1 = directoryURL.appendingPathComponent("a.md")
+        let fileURL2 = directoryURL.appendingPathComponent("b.md")
+        try "# A".write(to: fileURL1, atomically: false, encoding: .utf8)
+        try "# B".write(to: fileURL2, atomically: false, encoding: .utf8)
+
+        let watcher = makeFolderChangeWatcher()
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { _ in }
+        defer { watcher.stopWatching() }
+
+        // Wait for scan to complete by draining the stream
+        for await _ in watcher.scanProgressStream {}
+
+        let cachedURLs = try #require(watcher.cachedMarkdownFileURLs())
+        #expect(cachedURLs.count == 2)
+        let paths = Set(cachedURLs.map(\.lastPathComponent))
+        #expect(paths.contains("a.md"))
+        #expect(paths.contains("b.md"))
+    }
+
+    @Test @MainActor func cachedMarkdownFileURLsReturnsNilWhenNotWatching() {
+        let watcher = makeFolderChangeWatcher()
+        #expect(watcher.cachedMarkdownFileURLs() == nil)
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
