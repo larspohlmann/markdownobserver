@@ -140,16 +140,10 @@ struct ReaderTopBar: View {
     }
 
     private func pickFolderToWatch() -> URL? {
-        let panel = NSOpenPanel()
-        panel.title = "Choose Folder to Watch"
-        panel.message = "Select a folder, then choose watch options."
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = false
-        panel.prompt = "Choose Folder"
-
-        return panel.runModal() == .OK ? panel.url : nil
+        MarkdownOpenPanel.pickFolder(
+            title: "Choose Folder to Watch",
+            message: "Select a folder, then choose watch options."
+        )
     }
 
     private struct FolderWatchToolbarButton: View {
@@ -1185,16 +1179,10 @@ struct OpenInMenuButton: NSViewRepresentable {
         }
 
         private func pickFolder() -> URL? {
-            let panel = NSOpenPanel()
-            panel.title = "Choose Folder to Watch"
-            panel.message = "Select a folder, then choose watch options."
-            panel.canChooseFiles = false
-            panel.canChooseDirectories = true
-            panel.allowsMultipleSelection = false
-            panel.canCreateDirectories = false
-            panel.prompt = "Choose Folder"
-
-            return panel.runModal() == .OK ? panel.url : nil
+            MarkdownOpenPanel.pickFolder(
+                title: "Choose Folder to Watch",
+                message: "Select a folder, then choose watch options."
+            )
         }
     }
 }
