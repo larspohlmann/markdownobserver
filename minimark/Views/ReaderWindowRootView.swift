@@ -376,11 +376,12 @@ struct ReaderWindowRootView: View {
     private func commandNotificationAwareView<Content: View>(_ view: Content) -> some View {
         view
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.openRecentFile)) { notification in
-                guard notificationTargetsCurrentWindow(notification) else {
+                guard let payload = ReaderCommandNotification.Payload(notification: notification),
+                      payload.targetWindowNumber == hostWindow?.windowNumber else {
                     return
                 }
 
-                guard let entry = notification.userInfo?[ReaderCommandNotification.recentFileEntryKey] as? ReaderRecentOpenedFile else {
+                guard let entry = payload.recentFileEntry else {
                     return
                 }
 
@@ -394,11 +395,12 @@ struct ReaderWindowRootView: View {
                 applyWindowTitlePresentation()
             }
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
-                guard notificationTargetsCurrentWindow(notification) else {
+                guard let payload = ReaderCommandNotification.Payload(notification: notification),
+                      payload.targetWindowNumber == hostWindow?.windowNumber else {
                     return
                 }
 
-                guard let entry = notification.userInfo?[ReaderCommandNotification.recentWatchedFolderEntryKey] as? ReaderRecentWatchedFolder else {
+                guard let entry = payload.recentWatchedFolderEntry else {
                     return
                 }
 
