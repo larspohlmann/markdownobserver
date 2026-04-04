@@ -99,16 +99,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var currentFileSidebarSortMode: ReaderSidebarSortMode {
-        fileSortMode
-    }
-
-    private var currentGroupSidebarSortMode: ReaderSidebarSortMode {
-        groupSortMode
-    }
-
     private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
-        currentFileSidebarSortMode.sorted(controller.documents) { document in
+        fileSortMode.sorted(controller.documents) { document in
             ReaderSidebarSortDescriptor(
                 displayName: document.readerStore.fileDisplayName,
                 lastChangedAt: document.readerStore.fileLastModifiedAt ?? document.readerStore.lastExternalChangeAt ?? document.readerStore.lastRefreshAt
@@ -119,7 +111,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     private func sidebarGrouping(for documents: [ReaderSidebarDocumentController.Document]) -> ReaderSidebarGrouping {
         let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
 
-        if currentGroupSidebarSortMode == .openOrder {
+        if groupSortMode == .openOrder {
             let allowedDocumentIDs = Set(documents.map(\.id))
             directoryOrderSourceDocuments = controller.documents.filter { allowedDocumentIDs.contains($0.id) }
         } else {
@@ -128,7 +120,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
         return ReaderSidebarGrouping.group(
             documents,
-            sortMode: currentGroupSidebarSortMode,
+            sortMode: groupSortMode,
             directoryOrderSourceDocuments: directoryOrderSourceDocuments,
             pinnedGroupIDs: pinnedGroupIDs
         )
@@ -316,24 +308,14 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             watchedDocumentIDs: watchedDocumentIDs,
             selectedDocumentIDs: selectedDocumentIDs,
             canClose: true,
-            onOpenInDefaultApp: {
-                onOpenInDefaultApp($0)
-            },
+            onOpenInDefaultApp: onOpenInDefaultApp,
             onOpenInApplication: { application, documentIDs in
                 onOpenInApplication(application, documentIDs)
             },
-            onRevealInFinder: {
-                onRevealInFinder($0)
-            },
-            onStopWatchingFolders: {
-                onStopWatchingFolders($0)
-            },
-            onClose: {
-                onCloseDocuments($0)
-            },
-            onCloseOthers: {
-                onCloseOtherDocuments($0)
-            },
+            onRevealInFinder: onRevealInFinder,
+            onStopWatchingFolders: onStopWatchingFolders,
+            onClose: onCloseDocuments,
+            onCloseOthers: onCloseOtherDocuments,
             onCloseAll: {
                 onCloseAllDocuments()
             }
@@ -355,7 +337,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 Button {
                     groupSortMode = mode
                 } label: {
-                    if mode == currentGroupSidebarSortMode {
+                    if mode == groupSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
                     } else {
                         Text(mode.displayName)
@@ -366,7 +348,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             HStack(spacing: 3) {
                 Image(systemName: "folder")
                     .font(.system(size: 9, weight: .medium))
-                Text(currentGroupSidebarSortMode.footerLabel)
+                Text(groupSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
@@ -380,9 +362,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize(horizontal: true, vertical: false)
-        .help("Sort groups by \(currentGroupSidebarSortMode.displayName)")
+        .help("Sort groups by \(groupSortMode.displayName)")
         .accessibilityLabel("Sidebar group sorting")
-        .accessibilityValue(currentGroupSidebarSortMode.displayName)
+        .accessibilityValue(groupSortMode.displayName)
     }
 
     private var sidebarFileSortMenu: some View {
@@ -391,7 +373,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 Button {
                     fileSortMode = mode
                 } label: {
-                    if mode == currentFileSidebarSortMode {
+                    if mode == fileSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
                     } else {
                         Text(mode.displayName)
@@ -402,7 +384,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             HStack(spacing: 3) {
                 Image(systemName: "doc")
                     .font(.system(size: 9, weight: .medium))
-                Text(currentFileSidebarSortMode.footerLabel)
+                Text(fileSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
@@ -416,9 +398,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize(horizontal: true, vertical: false)
-        .help("Sort files by \(currentFileSidebarSortMode.displayName)")
+        .help("Sort files by \(fileSortMode.displayName)")
         .accessibilityLabel("Sidebar file sorting")
-        .accessibilityValue(currentFileSidebarSortMode.displayName)
+        .accessibilityValue(fileSortMode.displayName)
     }
 
     private var sidebarPlacementButton: some View {
