@@ -44,7 +44,7 @@ struct FileOpenRequest {
 }
 
 struct FileOpenPlan {
-    struct SlotAssignment {
+    struct SlotAssignment: Equatable {
         let fileURL: URL
         let target: SlotTarget
         let loadMode: LoadMode
