@@ -17,7 +17,7 @@ extension ReaderStore {
             activateFileSecurityScope(for: accessibleURL, reason: "open")
             bindFolderWatchSessionIfNeeded(folderWatchSession)
             let readURL = effectiveAccessibleFileURL(for: normalizedURL, reason: "open")
-            currentOpenOrigin = origin
+            document.currentOpenOrigin = origin
 
             let loaded = try loadMarkdownFile(at: readURL)
 
@@ -112,7 +112,7 @@ extension ReaderStore {
 
         openFile(
             at: url,
-            origin: origin ?? currentOpenOrigin,
+            origin: origin ?? document.currentOpenOrigin,
             folderWatchSession: folderWatchSession ?? activeFolderWatchSession,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )

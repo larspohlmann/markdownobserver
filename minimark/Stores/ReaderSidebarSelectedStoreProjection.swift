@@ -32,19 +32,7 @@ final class ReaderSidebarSelectedStoreProjection {
 
         publishState()
 
-        readerStore.$fileDisplayName
-            .sink { _ in
-                publishState()
-            }
-            .store(in: &cancellables)
-
-        readerStore.$fileURL
-            .sink { _ in
-                publishState()
-            }
-            .store(in: &cancellables)
-
-        readerStore.$hasUnacknowledgedExternalChange
+        readerStore.$document
             .sink { _ in
                 publishState()
             }
