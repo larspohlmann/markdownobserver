@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Synchronization
 
 @MainActor
 final class WindowAppearanceController: ObservableObject {
@@ -8,8 +9,8 @@ final class WindowAppearanceController: ObservableObject {
     @Published private(set) var effectiveFontSize: Double
     @Published private(set) var effectiveSyntaxTheme: SyntaxThemeKind
 
-    private nonisolated(unsafe) static var _lockedWindowCount = 0
-    static var lockedWindowCount: Int { _lockedWindowCount }
+    private static let _lockedWindowCount = Mutex(0)
+    static var lockedWindowCount: Int { _lockedWindowCount.withLock { $0 } }
 
     /// Tracks whether this instance contributed to `_lockedWindowCount`.
     /// Must be `nonisolated(unsafe)` so `deinit` (which is nonisolated) can read it.
@@ -44,9 +45,7 @@ final class WindowAppearanceController: ObservableObject {
 
     deinit {
         if _isLockedForDeinit {
-            DispatchQueue.main.async {
-                Self._lockedWindowCount -= 1
-            }
+            Self._lockedWindowCount.withLock { $0 -= 1 }
         }
     }
 
@@ -54,14 +53,14 @@ final class WindowAppearanceController: ObservableObject {
         guard !isLocked else { return }
         isLocked = true
         _isLockedForDeinit = true
-        Self._lockedWindowCount += 1
+        Self._lockedWindowCount.withLock { $0 += 1 }
     }
 
     func unlock() {
         guard isLocked else { return }
         isLocked = false
         _isLockedForDeinit = false
-        Self._lockedWindowCount -= 1
+        Self._lockedWindowCount.withLock { $0 -= 1 }
 
         let current = settingsStore.currentSettings
         effectiveTheme = current.readerTheme
@@ -77,7 +76,7 @@ final class WindowAppearanceController: ObservableObject {
         if !isLocked {
             isLocked = true
             _isLockedForDeinit = true
-            Self._lockedWindowCount += 1
+            Self._lockedWindowCount.withLock { $0 += 1 }
         }
     }
 
