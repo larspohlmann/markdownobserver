@@ -31,7 +31,14 @@ struct ReaderWindowRootView: View {
     @StateObject var windowCoordinator: ReaderWindowCoordinator
     @StateObject var appearanceController: WindowAppearanceController
     @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
-    var fileOpenCoordinator: FileOpenCoordinator
+    var fileOpenCoordinator: FileOpenCoordinator {
+        if let existing = sidebarDocumentController.fileOpenCoordinator {
+            return existing
+        }
+        let coordinator = FileOpenCoordinator(controller: sidebarDocumentController)
+        sidebarDocumentController.fileOpenCoordinator = coordinator
+        return coordinator
+    }
 
     init(
         seed: ReaderWindowSeed?,
@@ -52,8 +59,6 @@ struct ReaderWindowRootView: View {
         _appearanceController = StateObject(
             wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
         )
-        self.fileOpenCoordinator = FileOpenCoordinator(controller: sidebarDocumentController)
-        sidebarDocumentController.fileOpenCoordinator = self.fileOpenCoordinator
     }
 
     private var sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement {
