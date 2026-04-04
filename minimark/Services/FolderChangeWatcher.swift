@@ -18,6 +18,8 @@ protocol FolderChangeWatching: AnyObject, Sendable {
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
     ) throws -> [URL]
+
+    func cachedMarkdownFileURLs() -> [URL]?
 }
 
 extension FolderChangeWatching {
@@ -295,6 +297,17 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         )
     }
 
+    func cachedMarkdownFileURLs() -> [URL]? {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            guard didCompleteStartup else { return nil }
+            return lastSnapshot.keys.sorted(by: { $0.path < $1.path })
+        }
+        return queue.sync {
+            guard didCompleteStartup else { return nil }
+            return lastSnapshot.keys.sorted(by: { $0.path < $1.path })
+        }
+    }
+
     var isUsingEventSourcesForTesting: Bool {
         if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
             return usesEventSource
@@ -367,9 +380,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             return
         }
 
+        let signpostID = Self.signposter.makeSignpostID()
+        let intervalState = Self.signposter.beginInterval("populateContentPhase", id: signpostID)
+        Self.signposter.emitEvent("contentScanStart", "files \(total)")
+
         var completed = 0
-        var lastYieldedCompleted = 0
-        let yieldInterval = max(1, total / 100)
+        var lastYieldTime = CFAbsoluteTimeGetCurrent()
 
         for url in urls {
             guard startupSequence == self.startupSequence else {
@@ -383,12 +399,16 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             }
             completed += 1
 
+            let now = CFAbsoluteTimeGetCurrent()
             let isLast = completed == total
-            if isLast || (completed - lastYieldedCompleted) >= yieldInterval {
+            if isLast || (now - lastYieldTime) >= 0.25 {
                 scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
-                lastYieldedCompleted = completed
+                lastYieldTime = now
             }
         }
+
+        Self.signposter.endInterval("populateContentPhase", intervalState)
+        Self.signposter.emitEvent("contentScanEnd", "files \(total)")
 
         scanProgressContinuation?.finish()
         scanProgressContinuation = nil

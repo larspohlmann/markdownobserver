@@ -447,6 +447,7 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
     var markdownFilesToReturn: [URL] = []
     var markdownFilesError: Error?
     var markdownFilesDelay: TimeInterval = 0
+    var cachedMarkdownFileURLsToReturn: [URL]?
 
     var scanProgressStreamToReturn: AsyncStream<FolderChangeWatcher.ScanProgress> = AsyncStream { $0.finish() }
     var scanProgressStream: AsyncStream<FolderChangeWatcher.ScanProgress> {
@@ -483,6 +484,10 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
         }
         lastExcludedSubdirectoryURLs = excludedSubdirectoryURLs
         return markdownFilesToReturn
+    }
+
+    func cachedMarkdownFileURLs() -> [URL]? {
+        cachedMarkdownFileURLsToReturn
     }
 
     func emitChangedMarkdownEvents(_ events: [ReaderFolderWatchChangeEvent]) {

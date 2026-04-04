@@ -217,6 +217,12 @@ final class ReaderFolderWatchController {
             return
         }
 
+        if let cachedURLs = folderWatcher.cachedMarkdownFileURLs() {
+            completion(cachedURLs)
+            return
+        }
+
+        // Fall back to full enumeration if scan not yet complete
         let folderURL = session.folderURL
         let includeSubfolders = session.options.scope == .includeSubfolders
         let excludedURLs = session.options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
