@@ -274,6 +274,115 @@ final class ReaderSidebarDocumentController: ObservableObject {
         selectDocumentWithNewestModificationDate()
     }
 
+    func executePlan(_ plan: FileOpenPlan) {
+        guard !plan.assignments.isEmpty else { return }
+
+        var didAppendDocuments = false
+
+        for assignment in plan.assignments {
+            let normalizedFileURL = ReaderFileRouting.normalizedFileURL(assignment.fileURL)
+
+            if let existingDocument = document(for: normalizedFileURL) {
+                if existingDocument.readerStore.isDeferredDocument, assignment.loadMode == .loadFully {
+                    let store = existingDocument.readerStore
+                    let effectiveSession = resolvedFolderWatchSession(
+                        for: normalizedFileURL,
+                        requestedSession: plan.folderWatchSession
+                    )
+                    scheduleLoadWithOverlay(on: store) {
+                        store.materializeDeferredDocument(
+                            origin: plan.origin,
+                            folderWatchSession: effectiveSession,
+                            initialDiffBaselineMarkdown: assignment.initialDiffBaselineMarkdown
+                        )
+                    }
+                }
+                selectDocument(existingDocument.id)
+                continue
+            }
+
+            let effectiveFolderWatchSession = resolvedFolderWatchSession(
+                for: normalizedFileURL,
+                requestedSession: plan.folderWatchSession
+            )
+
+            let targetDocument: Document
+            let shouldAppendDocument: Bool
+
+            switch assignment.target {
+            case .reuseExisting(let documentID):
+                if let existing = documents.first(where: { $0.id == documentID }) {
+                    targetDocument = existing
+                    shouldAppendDocument = false
+                } else {
+                    let document = makeDocument()
+                    if let storeConfigurator {
+                        storeConfigurator(document.readerStore)
+                    }
+                    targetDocument = document
+                    shouldAppendDocument = true
+                }
+
+            case .createNew:
+                let document = makeDocument()
+                if let storeConfigurator {
+                    storeConfigurator(document.readerStore)
+                }
+                targetDocument = document
+                shouldAppendDocument = true
+            }
+
+            switch assignment.loadMode {
+            case .deferOnly:
+                targetDocument.readerStore.deferFile(
+                    at: normalizedFileURL,
+                    folderWatchSession: effectiveFolderWatchSession
+                )
+            case .loadFully:
+                targetDocument.readerStore.openFile(
+                    at: normalizedFileURL,
+                    origin: plan.origin,
+                    folderWatchSession: effectiveFolderWatchSession,
+                    initialDiffBaselineMarkdown: assignment.initialDiffBaselineMarkdown
+                )
+            }
+
+            guard targetDocument.readerStore.fileURL != nil else {
+                continue
+            }
+
+            if shouldAppendDocument {
+                documents.append(targetDocument)
+                didAppendDocuments = true
+            }
+
+            selectedDocumentID = targetDocument.id
+        }
+
+        if didAppendDocuments {
+            synchronizeDocumentChangeObservers()
+        }
+
+        applyMaterializationStrategy(plan.materializationStrategy)
+        bindSelectedStore()
+    }
+
+    private func applyMaterializationStrategy(_ strategy: FileOpenRequest.MaterializationStrategy) {
+        switch strategy {
+        case .loadAll:
+            break
+        case .deferThenMaterializeNewest(let count):
+            materializeNewestDeferredDocuments(count: count)
+        case .deferThenMaterializeSelected:
+            if selectedReaderStore.isDeferredDocument {
+                let store = selectedReaderStore
+                scheduleLoadWithOverlay(on: store) {
+                    store.materializeDeferredDocument()
+                }
+            }
+        }
+    }
+
     func closeDocument(_ documentID: UUID) {
         guard let index = documents.firstIndex(where: { $0.id == documentID }) else {
             return
@@ -421,7 +530,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         })
     }
 
-    private func document(for fileURL: URL) -> Document? {
+    func document(for fileURL: URL) -> Document? {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         return documents.first(where: { document in
             guard let fileURL = document.readerStore.fileURL else {
