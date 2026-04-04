@@ -14,6 +14,21 @@ import Foundation
         fileURL: URL,
         loader: (URL) throws -> (markdown: String, modificationDate: Date)
     ) -> Bool
+    func configure(
+        currentFileURL: @escaping () -> URL?,
+        loadFile: @escaping (URL) throws -> (markdown: String, modificationDate: Date),
+        onDocumentSettled: @escaping (_ loaded: (markdown: String, modificationDate: Date), _ fileURL: URL, _ diffBaselineMarkdown: String?) -> Void,
+        onLoadStateChanged: @escaping (ReaderDocumentLoadState) -> Void
+    )
+}
+
+extension ReaderAutoOpenSettling {
+    func configure(
+        currentFileURL: @escaping () -> URL?,
+        loadFile: @escaping (URL) throws -> (markdown: String, modificationDate: Date),
+        onDocumentSettled: @escaping (_ loaded: (markdown: String, modificationDate: Date), _ fileURL: URL, _ diffBaselineMarkdown: String?) -> Void,
+        onLoadStateChanged: @escaping (ReaderDocumentLoadState) -> Void
+    ) {}
 }
 
 @MainActor

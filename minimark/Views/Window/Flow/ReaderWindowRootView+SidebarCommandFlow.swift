@@ -214,18 +214,6 @@ extension ReaderWindowRootView {
         settingsStore.clearRecentManuallyOpenedFiles()
     }
 
-    func notificationTargetsCurrentWindow(_ notification: Notification) -> Bool {
-        guard let hostWindow else {
-            return false
-        }
-
-        guard let requestedWindowNumber = notification.userInfo?[ReaderCommandNotification.targetWindowNumberKey] as? Int else {
-            return false
-        }
-
-        return hostWindow.windowNumber == requestedWindowNumber
-    }
-
     func startWatchingFolder(
         folderURL: URL,
         options: ReaderFolderWatchOptions,

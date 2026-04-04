@@ -805,7 +805,7 @@ struct ReaderStoreTestFixture {
         changedRegionsForModifiedContent: [ChangedRegion] = [],
         autoOpenSettlingInterval: TimeInterval = 1.0,
         diffBaselineLookback: DiffBaselineLookback = .twoMinutes,
-        requestWatchedFolderReauthorization: ((URL) -> URL?)? = nil
+        requestWatchedFolderReauthorization: @escaping (URL) -> URL? = { _ in nil }
     ) throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("minimark-tests-\(UUID().uuidString)", isDirectory: true)
@@ -838,7 +838,6 @@ struct ReaderStoreTestFixture {
             settler: settler,
             requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
         )
-        store.configureSettler(settler)
     }
 
     func write(content: String, to url: URL) {
@@ -904,7 +903,8 @@ struct ReaderSidebarControllerTestHarness {
                     fileActions: TestReaderFileActions(),
                     systemNotifier: TestReaderSystemNotifier(),
                     folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: settler
+                    settler: settler,
+                    requestWatchedFolderReauthorization: { _ in nil }
                 )
                 return store
             },

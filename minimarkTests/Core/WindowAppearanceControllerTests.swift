@@ -181,4 +181,16 @@ final class WindowAppearanceControllerTests: XCTestCase {
 
         XCTAssertEqual(WindowAppearanceController.lockedWindowCount, afterLock - 1)
     }
+
+    func testLockedWindowCountDecrementsOnDeinit() {
+        let before = WindowAppearanceController.lockedWindowCount
+
+        var controller: WindowAppearanceController? = WindowAppearanceController(settingsStore: settingsStore)
+        controller?.lock()
+        XCTAssertEqual(WindowAppearanceController.lockedWindowCount, before + 1)
+
+        controller = nil
+
+        XCTAssertEqual(WindowAppearanceController.lockedWindowCount, before)
+    }
 }

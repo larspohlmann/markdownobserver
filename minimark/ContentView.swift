@@ -72,38 +72,12 @@ struct ContentView: View {
     )
 
     @ObservedObject var readerStore: ReaderStore
-    let onRequestFileOpen: (FileOpenRequest) -> Void
-    let activeFolderWatch: ReaderFolderWatchSession?
-    let isFolderWatchInitialScanInProgress: Bool
-    let isFolderWatchInitialScanFailed: Bool
-    let canStopFolderWatch: Bool
+    let folderWatchState: ContentViewFolderWatchState
+    let callbacks: ContentViewCallbacks
     @Binding var isFolderWatchOptionsPresented: Bool
-    let pendingFolderWatchURL: URL?
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
-    let isCurrentWatchAFavorite: Bool
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let onRequestFolderWatch: (URL) -> Void
-    let onConfirmFolderWatch: (ReaderFolderWatchOptions) -> Void
-    let onCancelFolderWatch: () -> Void
-    let onStopFolderWatch: () -> Void
-    let onSaveFolderWatchAsFavorite: (String) -> Void
-    let onRemoveCurrentWatchFromFavorites: () -> Void
-    let isAppearanceLocked: Bool
-    let onToggleAppearanceLock: () -> Void
-    let effectiveReaderTheme: ReaderThemeKind
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
-    let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
-    let onRemoveFavoriteWatchedFolder: (UUID) -> Void
-    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
 
     @StateObject private var splitScrollCoordinator = SplitScrollCoordinator()
     @State private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
@@ -126,18 +100,18 @@ struct ContentView: View {
         VStack(spacing: 0) {
             ReaderTopBar(
                 readerStore: readerStore,
-                activeFolderWatch: activeFolderWatch,
-                isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
-                didFolderWatchInitialScanFail: isFolderWatchInitialScanFailed,
-                favoriteWatchedFolders: favoriteWatchedFolders,
-                recentWatchedFolders: recentWatchedFolders,
-                onRequestFolderWatch: onRequestFolderWatch,
-                onStartFavoriteWatch: onStartFavoriteWatch,
-                onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
-                onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
-                onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
-                onStartRecentFolderWatch: onStartRecentFolderWatch,
-                onClearRecentWatchedFolders: onClearRecentWatchedFolders,
+                activeFolderWatch: folderWatchState.activeFolderWatch,
+                isFolderWatchInitialScanInProgress: folderWatchState.isFolderWatchInitialScanInProgress,
+                didFolderWatchInitialScanFail: folderWatchState.isFolderWatchInitialScanFailed,
+                favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+                recentWatchedFolders: folderWatchState.recentWatchedFolders,
+                onRequestFolderWatch: callbacks.onRequestFolderWatch,
+                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
+                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
+                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
+                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
+                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
+                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
                 onSaveSourceDraft: {
                     readerStore.saveSourceDraft()
                 },
@@ -191,7 +165,7 @@ struct ContentView: View {
             .onChange(of: sourceHTMLInputs) { _, _ in
                 handleSourceHTMLInputsChange()
             }
-            .onChange(of: activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
+            .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
                 clearDropTargetState()
             }
             .onAppear {
@@ -228,7 +202,7 @@ struct ContentView: View {
                     readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
                     return
                 }
-                onRequestFileOpen(FileOpenRequest(
+                callbacks.onRequestFileOpen(FileOpenRequest(
                     fileURLs: [fileURL],
                     origin: .manual,
                     slotStrategy: .replaceSelectedSlot
@@ -239,13 +213,13 @@ struct ContentView: View {
             \.readerOpenDocument,
             ReaderOpenDocumentAction { fileURL in
                 if readerStore.fileURL == nil {
-                    onRequestFileOpen(FileOpenRequest(
+                    callbacks.onRequestFileOpen(FileOpenRequest(
                         fileURLs: [fileURL],
                         origin: .manual,
                         slotStrategy: .replaceSelectedSlot
                     ))
                 } else {
-                    onRequestFileOpen(FileOpenRequest(
+                    callbacks.onRequestFileOpen(FileOpenRequest(
                         fileURLs: [fileURL],
                         origin: .manual,
                         slotStrategy: .alwaysAppend
@@ -257,13 +231,13 @@ struct ContentView: View {
             \.readerOpenAdditionalDocument,
             ReaderOpenAdditionalDocumentAction { fileURL in
                 if readerStore.fileURL == nil {
-                    onRequestFileOpen(FileOpenRequest(
+                    callbacks.onRequestFileOpen(FileOpenRequest(
                         fileURLs: [fileURL],
                         origin: .manual,
                         slotStrategy: .replaceSelectedSlot
                     ))
                 } else {
-                    onRequestFileOpen(FileOpenRequest(
+                    callbacks.onRequestFileOpen(FileOpenRequest(
                         fileURLs: [fileURL],
                         origin: .manual,
                         slotStrategy: .alwaysAppend
@@ -274,27 +248,27 @@ struct ContentView: View {
         .focusedValue(
             \.readerWatchFolder,
             ReaderWatchFolderAction { folderURL in
-                onRequestFolderWatch(folderURL)
+                callbacks.onRequestFolderWatch(folderURL)
             }
         )
         .focusedValue(
             \.readerStartRecentFolderWatch,
             ReaderStartRecentFolderWatchAction { entry in
-                onStartRecentFolderWatch(entry)
+                callbacks.onStartRecentFolderWatch(entry)
             }
         )
         .focusedValue(
             \.readerStopFolderWatch,
             ReaderStopFolderWatchAction {
-                guard canStopFolderWatch else {
+                guard folderWatchState.canStopFolderWatch else {
                     return
                 }
-                onStopFolderWatch()
+                callbacks.onStopFolderWatch()
             }
         )
         .focusedValue(
             \.readerHasActiveFolderWatch,
-            canStopFolderWatch
+            folderWatchState.canStopFolderWatch
         )
         .focusedValue(
             \.readerDocumentViewModeContext,
@@ -338,12 +312,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isFolderWatchOptionsPresented) {
             FolderWatchOptionsSheet(
-                folderURL: pendingFolderWatchURL,
+                folderURL: folderWatchState.pendingFolderWatchURL,
                 openMode: $pendingFolderWatchOpenMode,
                 scope: $pendingFolderWatchScope,
                 excludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths,
-                onCancel: onCancelFolderWatch,
-                onConfirm: onConfirmFolderWatch
+                onCancel: callbacks.onCancelFolderWatch,
+                onConfirm: callbacks.onConfirmFolderWatch
             )
         }
     }
@@ -411,7 +385,7 @@ struct ContentView: View {
             return
         }
 
-        onCancelFolderWatch()
+        callbacks.onCancelFolderWatch()
     }
 
     private func promptForImageDirectoryAccess() {
@@ -438,11 +412,11 @@ struct ContentView: View {
 
     private func handleDroppedFileURLs(_ fileURLs: [URL]) {
         if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
-            guard activeFolderWatch == nil else {
+            guard folderWatchState.activeFolderWatch == nil else {
                 return
             }
 
-            onRequestFolderWatch(droppedFolderURL)
+            callbacks.onRequestFolderWatch(droppedFolderURL)
             return
         }
 
@@ -453,7 +427,7 @@ struct ContentView: View {
 
         let slotStrategy: FileOpenRequest.SlotStrategy =
             readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
-        onRequestFileOpen(FileOpenRequest(
+        callbacks.onRequestFileOpen(FileOpenRequest(
             fileURLs: markdownURLs,
             origin: .manual,
             slotStrategy: slotStrategy
@@ -474,7 +448,7 @@ struct ContentView: View {
             return
         }
 
-        onRequestFileOpen(FileOpenRequest(
+        callbacks.onRequestFileOpen(FileOpenRequest(
             fileURLs: [markdownURLs[0]],
             origin: .manual,
             slotStrategy: .replaceSelectedSlot
@@ -485,7 +459,7 @@ struct ContentView: View {
             return
         }
 
-        onRequestFileOpen(FileOpenRequest(
+        callbacks.onRequestFileOpen(FileOpenRequest(
             fileURLs: additionalMarkdownURLs,
             origin: .manual,
             slotStrategy: .alwaysAppend
@@ -537,19 +511,19 @@ struct ContentView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let activeWatch = activeFolderWatch {
+                if let activeWatch = folderWatchState.activeFolderWatch {
                     WatchPill(
                         activeFolderWatch: activeWatch,
-                        isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                        canStop: canStopFolderWatch,
-                        onStop: onStopFolderWatch,
-                        onSaveFavorite: onSaveFolderWatchAsFavorite,
-                        onRemoveFavorite: onRemoveCurrentWatchFromFavorites,
+                        isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
+                        canStop: folderWatchState.canStopFolderWatch,
+                        onStop: callbacks.onStopFolderWatch,
+                        onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
+                        onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
                         onRevealInFinder: {
                             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
                         },
-                        isAppearanceLocked: isAppearanceLocked,
-                        onToggleAppearanceLock: onToggleAppearanceLock
+                        isAppearanceLocked: folderWatchState.isAppearanceLocked,
+                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock
                     )
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -562,11 +536,11 @@ struct ContentView: View {
             documentViewMode: readerStore.documentViewMode,
             showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
             canStartSourceEditing: readerStore.canStartSourceEditing,
-            canStopFolderWatch: canStopFolderWatch,
+            canStopFolderWatch: folderWatchState.canStopFolderWatch,
             apps: readerStore.openInApplications,
-            favoriteWatchedFolders: favoriteWatchedFolders,
-            recentWatchedFolders: recentWatchedFolders,
-            recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+            favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+            recentWatchedFolders: folderWatchState.recentWatchedFolders,
+            recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
             iconProvider: appIconImage(for:),
             onSetDocumentViewMode: { mode in
                 readerStore.setDocumentViewMode(mode)
@@ -580,17 +554,17 @@ struct ContentView: View {
             onRevealInFinder: {
                 readerStore.revealCurrentFileInFinder()
             },
-            onRequestFolderWatch: onRequestFolderWatch,
-            onStopFolderWatch: onStopFolderWatch,
-            onStartFavoriteWatch: onStartFavoriteWatch,
-            onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-            onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
-            onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
-            onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
-            onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-            onStartRecentFolderWatch: onStartRecentFolderWatch,
-            onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-            onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
+            onRequestFolderWatch: callbacks.onRequestFolderWatch,
+            onStopFolderWatch: callbacks.onStopFolderWatch,
+            onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
+            onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
+            onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
+            onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
+            onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
+            onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
+            onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
+            onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
+            onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
             onStartSourceEditing: {
                 readerStore.startEditingSource()
             }
@@ -615,7 +589,7 @@ struct ContentView: View {
     }
 
     private var currentReaderTheme: ReaderTheme {
-        ReaderTheme.theme(for: effectiveReaderTheme)
+        ReaderTheme.theme(for: folderWatchState.effectiveReaderTheme)
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
@@ -854,7 +828,7 @@ struct ContentView: View {
     }
 
     private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
-        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || activeFolderWatch == nil
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || folderWatchState.activeFolderWatch == nil
     }
 
     private func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
@@ -1081,42 +1055,46 @@ private final class SplitScrollCoordinator: ObservableObject {
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
             minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         ),
-        settler: settler
+        settler: settler,
+        requestWatchedFolderReauthorization: { _ in nil }
     )
-    store.configureSettler(settler)
     return ContentView(
         readerStore: store,
-        onRequestFileOpen: { _ in },
-        activeFolderWatch: nil,
-        isFolderWatchInitialScanInProgress: false,
-        isFolderWatchInitialScanFailed: false,
-        canStopFolderWatch: false,
+        folderWatchState: ContentViewFolderWatchState(
+            activeFolderWatch: nil,
+            isFolderWatchInitialScanInProgress: false,
+            isFolderWatchInitialScanFailed: false,
+            canStopFolderWatch: false,
+            pendingFolderWatchURL: nil,
+            isCurrentWatchAFavorite: false,
+            favoriteWatchedFolders: [],
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [],
+            isAppearanceLocked: false,
+            effectiveReaderTheme: .blackOnWhite
+        ),
+        callbacks: ContentViewCallbacks(
+            onRequestFileOpen: { _ in },
+            onRequestFolderWatch: { _ in },
+            onConfirmFolderWatch: { _ in },
+            onCancelFolderWatch: {},
+            onStopFolderWatch: {},
+            onSaveFolderWatchAsFavorite: { _ in },
+            onRemoveCurrentWatchFromFavorites: {},
+            onToggleAppearanceLock: {},
+            onStartFavoriteWatch: { _ in },
+            onClearFavoriteWatchedFolders: {},
+            onRenameFavoriteWatchedFolder: { _, _ in },
+            onRemoveFavoriteWatchedFolder: { _ in },
+            onReorderFavoriteWatchedFolders: { _ in },
+            onStartRecentManuallyOpenedFile: { _ in },
+            onStartRecentFolderWatch: { _ in },
+            onClearRecentWatchedFolders: {},
+            onClearRecentManuallyOpenedFiles: {}
+        ),
         isFolderWatchOptionsPresented: .constant(false),
-        pendingFolderWatchURL: nil,
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
-        pendingFolderWatchExcludedSubdirectoryPaths: .constant([]),
-        isCurrentWatchAFavorite: false,
-        favoriteWatchedFolders: [],
-        recentWatchedFolders: [],
-        recentManuallyOpenedFiles: [],
-        onRequestFolderWatch: { _ in },
-        onConfirmFolderWatch: { _ in },
-        onCancelFolderWatch: {},
-        onStopFolderWatch: {},
-        onSaveFolderWatchAsFavorite: { _ in },
-        onRemoveCurrentWatchFromFavorites: {},
-        isAppearanceLocked: false,
-        onToggleAppearanceLock: {},
-        effectiveReaderTheme: .blackOnWhite,
-        onStartFavoriteWatch: { _ in },
-        onClearFavoriteWatchedFolders: {},
-        onRenameFavoriteWatchedFolder: { _, _ in },
-        onRemoveFavoriteWatchedFolder: { _ in },
-        onReorderFavoriteWatchedFolders: { _ in },
-        onStartRecentManuallyOpenedFile: { _ in },
-        onStartRecentFolderWatch: { _ in },
-        onClearRecentWatchedFolders: {},
-        onClearRecentManuallyOpenedFiles: {}
+        pendingFolderWatchExcludedSubdirectoryPaths: .constant([])
     )
 }
