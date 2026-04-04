@@ -674,8 +674,8 @@ struct ReaderStoreExternalChangeTests {
         ])
 
         #expect(fixture.store.fileURL == nil)
-        #expect(openedEvents.map(\ .fileURL) == [ReaderFileRouting.normalizedFileURL(createdFileURL)])
-        #expect(openedEvents.map(\ .kind) == [.added])
+        #expect(openedEvents.map(\.fileURL) == [ReaderFileRouting.normalizedFileURL(createdFileURL)])
+        #expect(openedEvents.map(\.kind) == [.added])
         #expect(fixture.store.lastWatchedFolderEventAt != nil)
     }
 
