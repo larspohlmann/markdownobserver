@@ -276,13 +276,7 @@ struct ReaderWindowRootView: View {
                     activeFavoriteWorkspaceState?.sidebarWidth = newWidth
                 }
             }
-            .onChange(of: appearanceController.effectiveTheme) { _, _ in
-                reapplyAppearance()
-            }
-            .onChange(of: appearanceController.effectiveFontSize) { _, _ in
-                reapplyAppearance()
-            }
-            .onChange(of: appearanceController.effectiveSyntaxTheme) { _, _ in
+            .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()
             }
             .onChange(of: activeFavoriteWorkspaceState) { _, newState in
@@ -301,11 +295,12 @@ struct ReaderWindowRootView: View {
         // Defer rendering to the next main actor hop to avoid setting @Published
         // properties on ReaderStore during a SwiftUI view update cycle.
         Task { @MainActor in
+            let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
                 try? document.readerStore.renderWithAppearance(
-                    theme: appearanceController.effectiveTheme,
-                    baseFontSize: appearanceController.effectiveFontSize,
-                    syntaxTheme: appearanceController.effectiveSyntaxTheme
+                    theme: appearance.readerTheme,
+                    baseFontSize: appearance.baseFontSize,
+                    syntaxTheme: appearance.syntaxTheme
                 )
             }
         }
@@ -463,7 +458,7 @@ struct ReaderWindowRootView: View {
                 recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
                 recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
                 isAppearanceLocked: appearanceController.isLocked,
-                effectiveReaderTheme: appearanceController.effectiveTheme
+                effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
             ),
             callbacks: ContentViewCallbacks(
                 onRequestFileOpen: { [self] request in
@@ -491,11 +486,12 @@ struct ReaderWindowRootView: View {
                         }
                     } else {
                         appearanceController.lock()
+                        let appearance = appearanceController.effectiveAppearance
                         for document in sidebarDocumentController.documents {
                             document.readerStore.setAppearanceOverride(
-                                theme: appearanceController.effectiveTheme,
-                                baseFontSize: appearanceController.effectiveFontSize,
-                                syntaxTheme: appearanceController.effectiveSyntaxTheme
+                                theme: appearance.readerTheme,
+                                baseFontSize: appearance.baseFontSize,
+                                syntaxTheme: appearance.syntaxTheme
                             )
                         }
                         if activeFavoriteWorkspaceState != nil {
