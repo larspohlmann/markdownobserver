@@ -35,6 +35,10 @@ struct ReaderCSSFactory {
         loadBundledJS(named: "markdownobserver-inline-diff")
     }
 
+    static var scrollSyncObserverJavaScript: String {
+        loadBundledJS(named: "markdownobserver-scroll-sync")
+    }
+
     private static let themeJSBootstrapScript = """
     <script>
     (function() {
