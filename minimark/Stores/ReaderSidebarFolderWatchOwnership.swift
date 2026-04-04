@@ -111,7 +111,6 @@ final class ReaderFolderWatchController {
 
             let isAutoOpenPath = performInitialAutoOpen && options.openMode == .openAllMarkdownFiles
             isInitialMarkdownScanInProgress = true
-            didInitialMarkdownScanFail = false
 
             let progressStream = folderWatcher.scanProgressStream
             scanProgressTask?.cancel()
