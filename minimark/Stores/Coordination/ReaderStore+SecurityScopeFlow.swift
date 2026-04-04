@@ -6,7 +6,7 @@ extension ReaderStore {
         scopeContext.fileToken = securityScope.beginAccess(to: url)
         if scopeContext.fileToken?.didStartAccess == true {
             scopeContext.accessibleFileURL = url
-            scopeContext.accessibleFileURLSource = "fileScope"
+            scopeContext.accessibleFileURLSource = .fileScope
         }
     }
 
@@ -41,19 +41,19 @@ extension ReaderStore {
            fileToken.didStartAccess,
            Self.normalizedFileURL(fileToken.url) == normalizedURL {
             scopeContext.accessibleFileURL = fileToken.url
-            scopeContext.accessibleFileURLSource = "fileScope"
+            scopeContext.accessibleFileURLSource = .fileScope
             return fileToken.url
         }
 
         if let accessibleFileURL = scopeContext.accessibleFileURL,
-           scopeContext.accessibleFileURLSource == "fileScope",
+           scopeContext.accessibleFileURLSource == .fileScope,
            Self.normalizedFileURL(accessibleFileURL) == normalizedURL {
             return accessibleFileURL
         }
 
         if let folderScopedFileURL = folderScopedAccessibleFileURL(for: normalizedURL) {
             scopeContext.accessibleFileURL = folderScopedFileURL
-            scopeContext.accessibleFileURLSource = "folderScopeChildURL"
+            scopeContext.accessibleFileURLSource = .folderScopeChildURL
             return folderScopedFileURL
         }
 
@@ -63,7 +63,7 @@ extension ReaderStore {
            fileToken.didStartAccess,
            Self.normalizedFileURL(fileToken.url) == normalizedURL {
             scopeContext.accessibleFileURL = fileToken.url
-            scopeContext.accessibleFileURLSource = "fileScope"
+            scopeContext.accessibleFileURLSource = .fileScope
             return fileToken.url
         }
 
