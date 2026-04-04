@@ -245,17 +245,11 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var sidebarToolbar: some View {
         HStack(spacing: 6) {
-            Text("Files")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
-            Spacer(minLength: 0)
-
             sidebarGroupSortMenu
 
             sidebarFileSortMenu
+
+            Spacer(minLength: 0)
 
             sidebarPlacementButton
         }
@@ -350,6 +344,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     .font(.system(size: 9, weight: .medium))
                 Text(groupSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
             }
@@ -361,7 +357,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize(horizontal: true, vertical: false)
         .help("Sort groups by \(groupSortMode.displayName)")
         .accessibilityLabel("Sidebar group sorting")
         .accessibilityValue(groupSortMode.displayName)
@@ -386,6 +381,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     .font(.system(size: 9, weight: .medium))
                 Text(fileSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .semibold))
             }
@@ -397,7 +394,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize(horizontal: true, vertical: false)
         .help("Sort files by \(fileSortMode.displayName)")
         .accessibilityLabel("Sidebar file sorting")
         .accessibilityValue(fileSortMode.displayName)
