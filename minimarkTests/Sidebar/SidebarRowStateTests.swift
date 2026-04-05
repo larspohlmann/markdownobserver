@@ -85,6 +85,9 @@ struct SidebarRowStateDerivationTests {
         let store = harness.controller.documents[0].readerStore
         let initialState = harness.controller.rowStates[docID]
 
+        // Let the observation tracking tasks start their first withObservationTracking call
+        await Task.yield()
+
         // Simulate an external change notification on the store
         store.noteObservedExternalChange()
 
