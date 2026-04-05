@@ -890,4 +890,171 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(newDocument != nil)
         #expect(newDocument?.readerStore.needsAppearanceRender == false)
     }
+
+    // MARK: - Favorite restore newest-file selection (#144)
+
+    @Test @MainActor func favoriteRestoreSelectsNewestDocumentByModificationDate() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        // Create 5 files where the newest by mod date (charlie) is NOT last alphabetically (echo is).
+        let filesAndDates: [(name: String, secondsOffset: TimeInterval)] = [
+            ("alpha.md", 1000),
+            ("bravo.md", 3000),
+            ("charlie.md", 5000),  // newest
+            ("delta.md", 2000),
+            ("echo.md", 4000),
+        ]
+        let baseDate = Date(timeIntervalSince1970: 1_000_000)
+        var fileURLs: [URL] = []
+        for (name, offset) in filesAndDates {
+            let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(name)
+            try "# \(name)".write(to: fileURL, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.modificationDate: baseDate.addingTimeInterval(offset)],
+                ofItemAtPath: fileURL.path
+            )
+            fileURLs.append(fileURL)
+        }
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        // Open via coordinator with deferThenMaterializeNewest, simulating favorite restore.
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: fileURLs,
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            materializationStrategy: .deferThenMaterializeNewest(count: 12)
+        ))
+
+        // All 5 files should be loaded (count <= 12 so all get materialized).
+        #expect(harness.controller.documents.count == 5)
+
+        // The selected document must be charlie.md (newest by mod date), not echo.md (last alphabetically).
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "charlie.md")
+    }
+
+    @Test @MainActor func discoveryOfAlreadyOpenFilesDoesNotOverrideNewestSelection() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let baseDate = Date(timeIntervalSince1970: 1_000_000)
+        let alphaURL = harness.temporaryDirectoryURL.appendingPathComponent("alpha.md")
+        let betaURL = harness.temporaryDirectoryURL.appendingPathComponent("beta.md")
+        let zetaURL = harness.temporaryDirectoryURL.appendingPathComponent("zeta.md")
+
+        try "# Alpha".write(to: alphaURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: baseDate.addingTimeInterval(1000)],
+            ofItemAtPath: alphaURL.path
+        )
+
+        try "# Beta".write(to: betaURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: baseDate.addingTimeInterval(5000)],  // newest
+            ofItemAtPath: betaURL.path
+        )
+
+        try "# Zeta".write(to: zetaURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: baseDate.addingTimeInterval(3000)],  // middle
+            ofItemAtPath: zetaURL.path
+        )
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+        let allURLs = [alphaURL, betaURL, zetaURL]
+
+        // Initial open with deferThenMaterializeNewest.
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: allURLs,
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            materializationStrategy: .deferThenMaterializeNewest(count: 12)
+        ))
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "beta.md")
+
+        // Simulate discoverNewFilesForFavorite re-processing the same files.
+        coordinator.open(FileOpenRequest(
+            fileURLs: allURLs,
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            slotStrategy: .alwaysAppend,
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
+
+        // Re-select newest after discovery (this is what the fix adds).
+        harness.controller.selectDocumentWithNewestModificationDate()
+
+        // beta.md should still be selected (newest by mod date).
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "beta.md")
+    }
+
+    @Test @MainActor func discoveryOfNewFilesSelectsNewestOverall() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let baseDate = Date(timeIntervalSince1970: 1_000_000)
+        let alphaURL = harness.temporaryDirectoryURL.appendingPathComponent("alpha.md")
+        let betaURL = harness.temporaryDirectoryURL.appendingPathComponent("beta.md")
+
+        try "# Alpha".write(to: alphaURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: baseDate.addingTimeInterval(1000)],
+            ofItemAtPath: alphaURL.path
+        )
+
+        try "# Beta".write(to: betaURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: baseDate.addingTimeInterval(3000)],
+            ofItemAtPath: betaURL.path
+        )
+
+        let session = ReaderFolderWatchSession(
+            folderURL: harness.temporaryDirectoryURL,
+            options: .default,
+            startedAt: .now
+        )
+
+        // Initial open.
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [alphaURL, betaURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            materializationStrategy: .deferThenMaterializeNewest(count: 12)
+        ))
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "beta.md")
+
+        // A newer file appears (discovered by folder watch).
+        let gammaURL = harness.temporaryDirectoryURL.appendingPathComponent("gamma.md")
+        try "# Gamma".write(to: gammaURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: baseDate.addingTimeInterval(5000)],  // newest overall
+            ofItemAtPath: gammaURL.path
+        )
+
+        coordinator.open(FileOpenRequest(
+            fileURLs: [gammaURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            folderWatchSession: session,
+            slotStrategy: .alwaysAppend,
+            materializationStrategy: .deferThenMaterializeSelected
+        ))
+
+        // Re-select newest after discovery.
+        harness.controller.selectDocumentWithNewestModificationDate()
+
+        // gamma.md should now be selected (newest overall).
+        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "gamma.md")
+    }
 }

@@ -156,6 +156,7 @@ extension ReaderWindowRootView {
                     slotStrategy: .alwaysAppend,
                     materializationStrategy: .deferThenMaterializeSelected
                 ))
+                sidebarDocumentController.selectDocumentWithNewestModificationDate()
                 refreshWindowPresentation()
             }
 

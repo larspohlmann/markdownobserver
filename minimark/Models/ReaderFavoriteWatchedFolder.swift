@@ -61,12 +61,15 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
-        self.openDocumentRelativePaths = Self.scopedOpenDocumentRelativePaths(
+        let computedOpenPaths = Self.scopedOpenDocumentRelativePaths(
             from: openDocumentFileURLs,
             relativeTo: normalizedURL,
             options: options
         )
-        self.allKnownRelativePaths = allKnownRelativePaths
+        self.openDocumentRelativePaths = computedOpenPaths
+        self.allKnownRelativePaths = allKnownRelativePaths.isEmpty
+            ? computedOpenPaths
+            : allKnownRelativePaths
         self.workspaceState = workspaceState
         self.createdAt = createdAt
     }
