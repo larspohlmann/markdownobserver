@@ -955,40 +955,11 @@ private struct FolderWatchTreeNodeRow: View {
     @Binding var expandedDirectoryPaths: Set<String>
     @Binding var excludedSubdirectoryPaths: [String]
 
-    private var excludedSet: Set<String> {
-        Set(excludedSubdirectoryPaths)
-    }
-
-    private var isExplicitlyExcluded: Bool {
-        excludedSet.contains(node.path)
-    }
-
-    private var isExcludedByAncestor: Bool {
-        guard !isExplicitlyExcluded else {
-            return false
-        }
-
-        var ancestorCandidate = node.path
-        while let separatorIndex = ancestorCandidate.lastIndex(of: "/") {
-            if separatorIndex == ancestorCandidate.startIndex {
-                break
-            }
-
-            ancestorCandidate = String(ancestorCandidate[..<separatorIndex])
-            if excludedSet.contains(ancestorCandidate) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private var isEffectivelyExcluded: Bool {
-        isExplicitlyExcluded || isExcludedByAncestor
-    }
-
-    private var canToggle: Bool {
-        !isExcludedByAncestor
+    private var exclusionState: FolderWatchExclusionLogic.ExclusionState {
+        FolderWatchExclusionLogic.exclusionState(
+            for: node.path,
+            excludedPaths: excludedSubdirectoryPaths
+        )
     }
 
     private var hasChildren: Bool {
@@ -999,26 +970,13 @@ private struct FolderWatchTreeNodeRow: View {
         expandedDirectoryPaths.contains(node.path)
     }
 
-    private var isActive: Bool {
-        !isEffectivelyExcluded
-    }
-
-    private var toggleBinding: Binding<Bool> {
-        Binding(
-            get: { isActive },
-            set: { newValue in
-                if newValue != isActive {
-                    toggleExclusion()
-                }
-            }
-        )
-    }
-
     private var inlineStats: String {
         "\(node.subdirectoryCount) sub \u{00B7} \(node.markdownFileCount) files"
     }
 
     var body: some View {
+        let exclusion = exclusionState
+
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Button {
@@ -1032,9 +990,9 @@ private struct FolderWatchTreeNodeRow: View {
                 .buttonStyle(.plain)
                 .disabled(!hasChildren)
 
-                Image(systemName: isEffectivelyExcluded ? "folder.badge.minus" : "folder.fill")
+                Image(systemName: exclusion.isEffectivelyExcluded ? "folder.badge.minus" : "folder.fill")
                     .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(isEffectivelyExcluded ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
+                    .foregroundStyle(exclusion.isEffectivelyExcluded ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
 
                 Text(node.name)
                     .font(.system(size: 12.5, weight: .medium))
@@ -1046,24 +1004,31 @@ private struct FolderWatchTreeNodeRow: View {
 
                 Spacer()
 
-                Toggle(isOn: toggleBinding) {
+                Toggle(isOn: Binding(
+                    get: { self.exclusionState.isActive },
+                    set: { newValue in
+                        if newValue != self.exclusionState.isActive {
+                            self.toggleExclusion()
+                        }
+                    }
+                )) {
                     EmptyView()
                 }
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .labelsHidden()
-                .disabled(!canToggle)
-                .help(isExcludedByAncestor ? "Exclusion inherited from a parent folder" : "Toggle to include or exclude this folder")
+                .disabled(!exclusion.canToggle)
+                .help(exclusion.isByAncestor ? "Exclusion inherited from a parent folder" : "Toggle to include or exclude this folder")
                 .accessibilityLabel("\(node.name)")
-                .accessibilityValue(isEffectivelyExcluded ? (isExcludedByAncestor ? "Inherited" : "Deactivated") : "Active")
+                .accessibilityValue(exclusion.isEffectivelyExcluded ? (exclusion.isByAncestor ? "Inherited" : "Deactivated") : "Active")
             }
             .padding(.leading, CGFloat(level) * 16)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .opacity(isEffectivelyExcluded ? 0.5 : 1.0)
+            .opacity(exclusion.isEffectivelyExcluded ? 0.5 : 1.0)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isEffectivelyExcluded ? Color.secondary.opacity(0.04) : Color.clear)
+                    .fill(exclusion.isEffectivelyExcluded ? Color.secondary.opacity(0.04) : Color.clear)
             )
 
             if hasChildren && isExpanded {
@@ -1092,7 +1057,7 @@ private struct FolderWatchTreeNodeRow: View {
     }
 
     private func toggleExclusion() {
-        guard canToggle else {
+        guard exclusionState.canToggle else {
             return
         }
 
@@ -1104,6 +1069,27 @@ private struct FolderWatchTreeNodeRow: View {
 }
 
 enum FolderWatchExclusionLogic {
+
+    struct ExclusionState {
+        let isExplicit: Bool
+        let isByAncestor: Bool
+
+        var isEffectivelyExcluded: Bool { isExplicit || isByAncestor }
+        var canToggle: Bool { !isByAncestor }
+        var isActive: Bool { !isEffectivelyExcluded }
+    }
+
+    static func exclusionState(for nodePath: String, excludedPaths: [String]) -> ExclusionState {
+        let set = Set(excludedPaths)
+        let isExplicit = set.contains(nodePath)
+
+        guard !isExplicit else {
+            return ExclusionState(isExplicit: true, isByAncestor: false)
+        }
+
+        let isByAncestor = isExcludedByAncestor(nodePath: nodePath, excludedSet: set)
+        return ExclusionState(isExplicit: false, isByAncestor: isByAncestor)
+    }
 
     static func toggleExclusion(for nodePath: String, in excludedPaths: [String]) -> [String] {
         var next = Set(excludedPaths)

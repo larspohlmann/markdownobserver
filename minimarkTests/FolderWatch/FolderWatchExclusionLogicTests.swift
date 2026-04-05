@@ -68,6 +68,44 @@ struct FolderWatchExclusionLogicTests {
         #expect(restored == original)
     }
 
+    // MARK: - exclusionState
+
+    @Test func exclusionStateNoneWhenNoExclusions() {
+        let state = FolderWatchExclusionLogic.exclusionState(
+            for: "/root/sub1",
+            excludedPaths: []
+        )
+
+        #expect(state.isExplicit == false)
+        #expect(state.isByAncestor == false)
+        #expect(state.isActive == true)
+        #expect(state.canToggle == true)
+    }
+
+    @Test func exclusionStateExplicit() {
+        let state = FolderWatchExclusionLogic.exclusionState(
+            for: "/root/sub1",
+            excludedPaths: ["/root/sub1"]
+        )
+
+        #expect(state.isExplicit == true)
+        #expect(state.isByAncestor == false)
+        #expect(state.isActive == false)
+        #expect(state.canToggle == true)
+    }
+
+    @Test func exclusionStateByAncestor() {
+        let state = FolderWatchExclusionLogic.exclusionState(
+            for: "/root/sub1/child",
+            excludedPaths: ["/root/sub1"]
+        )
+
+        #expect(state.isExplicit == false)
+        #expect(state.isByAncestor == true)
+        #expect(state.isActive == false)
+        #expect(state.canToggle == false)
+    }
+
     // MARK: - isExcludedByAncestor
 
     @Test func notExcludedByAncestorWhenSetEmpty() {
