@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 import Observation
 
 @MainActor
@@ -34,7 +33,7 @@ final class ReaderSidebarDocumentController {
     private var storeConfigurator: ((ReaderStore) -> Void)?
     var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
-    private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
+    @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
     init(
@@ -494,16 +493,31 @@ final class ReaderSidebarDocumentController {
     private func synchronizeDocumentChangeObservers() {
         let currentDocumentIDs = Set(documents.map(\.id))
 
-        for documentID in documentChangeCancellables.keys where !currentDocumentIDs.contains(documentID) {
-            documentChangeCancellables[documentID] = nil
+        for documentID in documentObservationTasks.keys where !currentDocumentIDs.contains(documentID) {
+            documentObservationTasks[documentID]?.cancel()
+            documentObservationTasks[documentID] = nil
         }
 
-        for document in documents where documentChangeCancellables[document.id] == nil {
-            documentChangeCancellables[document.id] = document.readerStore.objectWillChange
-                .receive(on: RunLoop.main)
-                .sink { [weak self] _ in
+        for document in documents where documentObservationTasks[document.id] == nil {
+            documentObservationTasks[document.id] = Task { [weak self] in
+                let store = document.readerStore
+                while !Task.isCancelled {
+                    let changed = await withCheckedContinuation { continuation in
+                        withObservationTracking {
+                            _ = store.fileDisplayName
+                            _ = store.fileLastModifiedAt
+                            _ = store.lastExternalChangeAt
+                            _ = store.lastRefreshAt
+                            _ = store.isCurrentFileMissing
+                            _ = store.hasUnacknowledgedExternalChange
+                        } onChange: {
+                            continuation.resume(returning: true)
+                        }
+                    }
+                    guard changed, !Task.isCancelled else { break }
                     self?.updateRowStateIfNeeded(for: document.id)
                 }
+            }
         }
 
         rebuildAllRowStates()
