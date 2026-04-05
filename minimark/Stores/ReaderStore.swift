@@ -1,20 +1,22 @@
 import Foundation
 import Combine
+import Observation
 import OSLog
 
 @MainActor
-final class ReaderStore: ObservableObject {
+@Observable
+final class ReaderStore {
     private static let draftPreviewRenderDebounceInterval: Duration = .milliseconds(5)
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ReaderStore"
     )
 
-    @Published var document = ReaderDocumentState.empty
-    @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    @Published private(set) var lastWatchedFolderEventAt: Date?
-    @Published private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    var document = ReaderDocumentState.empty
+    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+    private(set) var lastWatchedFolderEventAt: Date?
+    private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
 
     // MARK: - Forwarding computed properties (backward compat for views)
 
@@ -54,8 +56,8 @@ final class ReaderStore: ObservableObject {
     private let documentIO: ReaderDocumentIO
     let requestWatchedFolderReauthorization: (URL) -> URL?
 
-    private var settingsCancellable: AnyCancellable?
-    private var appearanceOverride: LockedAppearance?
+    @ObservationIgnored private var settingsCancellable: AnyCancellable?
+    @ObservationIgnored private var appearanceOverride: LockedAppearance?
     private(set) var needsAppearanceRender = false
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -72,8 +74,8 @@ final class ReaderStore: ObservableObject {
     private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
     private(set) var onFolderWatchStopped: (() -> Void)?
 
-    private var pendingDraftPreviewRenderTask: Task<Void, Never>?
-    private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
+    @ObservationIgnored private var pendingDraftPreviewRenderTask: Task<Void, Never>?
+    @ObservationIgnored private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
     init(
         renderer: MarkdownRendering,
