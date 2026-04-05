@@ -4,7 +4,7 @@ import Foundation
 
 @MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
-    let lockedAppearanceProvider: () -> LockedAppearance?
+    let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
     let onOpenAdditionalDocument: (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
 
     func configure(_ store: ReaderStore) {
@@ -43,7 +43,7 @@ final class ReaderWindowCoordinator: ObservableObject {
     }
 
     func configureStoreCallbacks(
-        lockedAppearanceProvider: @escaping () -> LockedAppearance? = { nil },
+        lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil },
         onOpenAdditionalDocument: @escaping (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
     ) {
         sidebarDocumentController.setStoreConfigurator { store in
@@ -52,11 +52,6 @@ final class ReaderWindowCoordinator: ObservableObject {
                 onOpenAdditionalDocument: onOpenAdditionalDocument
             ).configure(store)
         }
-
-        ReaderWindowStoreCallbackConfigurator(
-            lockedAppearanceProvider: lockedAppearanceProvider,
-            onOpenAdditionalDocument: onOpenAdditionalDocument
-        ).configure(sidebarDocumentController.selectedReaderStore)
     }
 
     func sharedFolderWatchState() -> (session: ReaderFolderWatchSession?, canStop: Bool) {
