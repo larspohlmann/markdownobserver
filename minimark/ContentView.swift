@@ -71,7 +71,7 @@ struct ContentView: View {
         category: "ContentView"
     )
 
-    @ObservedObject var readerStore: ReaderStore
+    var readerStore: ReaderStore
     let folderWatchState: ContentViewFolderWatchState
     let callbacks: ContentViewCallbacks
     @Binding var isFolderWatchOptionsPresented: Bool

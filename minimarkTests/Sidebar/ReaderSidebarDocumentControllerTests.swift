@@ -385,6 +385,9 @@ struct ReaderSidebarDocumentControllerTests {
         let unselectedDocument = harness.controller.documents[1]
         harness.controller.selectDocument(selectedDocument.id)
 
+        // Let the observation tracking tasks start their first withObservationTracking call
+        await Task.yield()
+
         var changeDetected = false
         withObservationTracking {
             _ = harness.controller.rowStates
@@ -393,7 +396,7 @@ struct ReaderSidebarDocumentControllerTests {
         }
 
         unselectedDocument.readerStore.handleObservedFileChange()
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(50))
 
         #expect(unselectedDocument.readerStore.lastExternalChangeAt != nil)
         #expect(changeDetected)
