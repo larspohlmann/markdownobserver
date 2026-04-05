@@ -30,6 +30,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     private let folderWatchController: ReaderFolderWatchController
     private let selectedStoreProjection = ReaderSidebarSelectedStoreProjection()
     private var storeConfigurator: ((ReaderStore) -> Void)?
+    var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
     private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
     lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
@@ -484,6 +485,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             states[document.id] = deriveRowState(from: document)
         }
         rowStates = states
+        onRowStatesChanged?(states)
     }
 
     private func synchronizeDocumentChangeObservers() {
@@ -509,6 +511,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         let newState = deriveRowState(from: document)
         if rowStates[documentID] != newState {
             rowStates[documentID] = newState
+            onRowStatesChanged?(rowStates)
         }
     }
 
