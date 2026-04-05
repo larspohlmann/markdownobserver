@@ -393,7 +393,7 @@ struct ReaderSidebarDocumentControllerTests {
         }
 
         unselectedDocument.readerStore.handleObservedFileChange()
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(50))
 
         #expect(unselectedDocument.readerStore.lastExternalChangeAt != nil)
         #expect(changeDetected)

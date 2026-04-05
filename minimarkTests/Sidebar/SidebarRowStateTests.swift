@@ -70,7 +70,7 @@ struct SidebarRowStateDerivationTests {
         #expect(harness.controller.rowStates.count == 2)
     }
 
-    @Test @MainActor func controllerUpdatesRowStateWhenStorePropertyChanges() throws {
+    @Test @MainActor func controllerUpdatesRowStateWhenStorePropertyChanges() async throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
@@ -88,8 +88,8 @@ struct SidebarRowStateDerivationTests {
         // Simulate an external change notification on the store
         store.noteObservedExternalChange()
 
-        // Allow the RunLoop.main receive to process the observation change -> updateRowStateIfNeeded
-        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        // Allow the observation tracking task to process and update rowStates
+        try await Task.sleep(for: .milliseconds(50))
 
         let updatedState = harness.controller.rowStates[docID]
         #expect(updatedState?.indicatorState == .externalChange)
