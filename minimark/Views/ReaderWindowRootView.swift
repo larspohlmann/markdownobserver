@@ -230,28 +230,28 @@ struct ReaderWindowRootView: View {
             .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
                 handleFolderWatchOptionsPresentationChange(isPresented)
             }
-            .onChange(of: groupStateController.pinnedGroupIDs) { _, newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.pinnedGroupIDs = newValue
-                }
-            }
-            .onChange(of: groupStateController.collapsedGroupIDs) { _, newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.collapsedGroupIDs = newValue
-                }
-            }
-            .onChange(of: groupStateController.sortMode) { _, newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.groupSortMode = newValue
+            .onChange(of: groupStateController.persistenceSnapshot) { oldSnapshot, newSnapshot in
+                if var state = activeFavoriteWorkspaceState {
+                    let needsUpdate =
+                        state.pinnedGroupIDs != newSnapshot.pinnedGroupIDs ||
+                        state.collapsedGroupIDs != newSnapshot.collapsedGroupIDs ||
+                        state.groupSortMode != newSnapshot.sortMode ||
+                        state.fileSortMode != newSnapshot.fileSortMode
+
+                    if needsUpdate {
+                        state.pinnedGroupIDs = newSnapshot.pinnedGroupIDs
+                        state.collapsedGroupIDs = newSnapshot.collapsedGroupIDs
+                        state.groupSortMode = newSnapshot.sortMode
+                        state.fileSortMode = newSnapshot.fileSortMode
+                        activeFavoriteWorkspaceState = state
+                    }
                 } else {
-                    settingsStore.updateSidebarGroupSortMode(newValue)
-                }
-            }
-            .onChange(of: groupStateController.fileSortMode) { _, newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.fileSortMode = newValue
-                } else {
-                    settingsStore.updateSidebarSortMode(newValue)
+                    if oldSnapshot.sortMode != newSnapshot.sortMode {
+                        settingsStore.updateSidebarGroupSortMode(newSnapshot.sortMode)
+                    }
+                    if oldSnapshot.fileSortMode != newSnapshot.fileSortMode {
+                        settingsStore.updateSidebarSortMode(newSnapshot.fileSortMode)
+                    }
                 }
             }
             .onChange(of: sidebarDocumentController.documents.map(\.id)) { _, _ in

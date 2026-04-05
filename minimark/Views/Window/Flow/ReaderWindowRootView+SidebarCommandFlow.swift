@@ -59,7 +59,7 @@ extension ReaderWindowRootView {
         guard let session = sharedFolderWatchSession else {
             return
         }
-        let groupSnapshot = groupStateController.workspaceStateSnapshot()
+        let groupSnapshot = groupStateController.persistenceSnapshot
         var workspaceState = ReaderFavoriteWorkspaceState.from(
             settings: settingsStore.currentSettings,
             pinnedGroupIDs: groupSnapshot.pinnedGroupIDs,
