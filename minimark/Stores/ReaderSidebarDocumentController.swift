@@ -2,7 +2,8 @@ import Foundation
 import Combine
 
 @MainActor
-final class ReaderSidebarDocumentController: ObservableObject {
+@Observable
+final class ReaderSidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
@@ -12,19 +13,19 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
     }
 
-    @Published private(set) var documents: [Document]
-    @Published var selectedDocumentID: UUID
-    @Published private(set) var selectedWindowTitle: String
-    @Published private(set) var selectedFileURL: URL?
-    @Published private(set) var selectedHasUnacknowledgedExternalChange: Bool
-    @Published private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
-    @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    @Published private(set) var isFolderWatchInitialScanInProgress: Bool
-    @Published private(set) var didFolderWatchInitialScanFail: Bool
-    @Published private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
-    @Published private(set) var scannedFileCount: Int?
-    @Published private(set) var rowStates: [UUID: SidebarRowState] = [:]
+    private(set) var documents: [Document]
+    var selectedDocumentID: UUID
+    private(set) var selectedWindowTitle: String
+    private(set) var selectedFileURL: URL?
+    private(set) var selectedHasUnacknowledgedExternalChange: Bool
+    private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+    private(set) var isFolderWatchInitialScanInProgress: Bool
+    private(set) var didFolderWatchInitialScanFail: Bool
+    private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
+    private(set) var scannedFileCount: Int?
+    private(set) var rowStates: [UUID: SidebarRowState] = [:]
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
