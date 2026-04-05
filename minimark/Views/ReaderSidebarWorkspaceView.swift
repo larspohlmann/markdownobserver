@@ -27,6 +27,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
     @State private var selectedDocumentIDs: Set<UUID> = []
+    @State private var isDraggingDivider = false
 
     var body: some View {
         Group {
@@ -208,7 +209,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .frame(
             minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
             idealWidth: sidebarWidth,
-            maxWidth: .infinity,
+            maxWidth: isDraggingDivider ? .infinity : max(sidebarWidth, ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth),
             maxHeight: .infinity
         )
         .background(SidebarDividerPositionSetter(
@@ -216,6 +217,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             placement: sidebarPlacement,
             onDividerDragged: { width in
                 onSidebarWidthChanged(width)
+            },
+            onDividerDragActive: { active in
+                isDraggingDivider = active
             }
         ))
         .accessibilityIdentifier("sidebar-column")
