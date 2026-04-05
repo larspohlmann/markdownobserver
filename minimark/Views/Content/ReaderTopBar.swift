@@ -29,7 +29,7 @@ enum ReaderTopBarMetrics {
 }
 
 struct ReaderTopBar: View {
-    @ObservedObject var readerStore: ReaderStore
+    var readerStore: ReaderStore
     let activeFolderWatch: ReaderFolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
     let didFolderWatchInitialScanFail: Bool
