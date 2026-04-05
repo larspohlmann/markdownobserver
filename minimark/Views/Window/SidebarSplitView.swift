@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Bridges to AppKit to set NSSplitView holding priorities and divider position,
-/// and reports the sidebar width on drag end. Attaches as a hidden background
-/// on the sidebar column inside an HSplitView.
+/// and reports the sidebar width after the user finishes dragging the divider.
+/// Attaches as a hidden background on the sidebar column inside an HSplitView.
 struct SidebarWidthBridge: NSViewRepresentable {
     let targetWidth: CGFloat
     let placement: ReaderMultiFileDisplayMode.SidebarPlacement
@@ -29,29 +29,28 @@ struct SidebarWidthBridge: NSViewRepresentable {
 final class SidebarWidthBridgeView: NSView {
     private static let sidebarHoldingPriority: NSLayoutConstraint.Priority = .defaultHigh
     private static let widthEpsilon: CGFloat = 1
-    private static let dividerHitZone: CGFloat = 6
 
     var targetWidth: CGFloat = 0
     var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
     var onSidebarWidthChanged: ((CGFloat) -> Void)?
     private var lastAppliedWidth: CGFloat = 0
     private var lastAppliedPlacement: ReaderMultiFileDisplayMode.SidebarPlacement?
-    private var mouseDownMonitor: Any?
     private var mouseUpMonitor: Any?
     private var isDraggingDivider = false
+    private var resizeObserver: NSObjectProtocol?
 
     private var sidebarSubviewIndex: Int { placement == .left ? 0 : 1 }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        removeMouseMonitors()
+        removeMonitors()
         guard window != nil else { return }
-        installMouseMonitors()
+        installMonitors()
         applyPosition()
     }
 
     deinit {
-        removeMouseMonitors()
+        removeMonitors()
     }
 
     func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
@@ -65,38 +64,41 @@ final class SidebarWidthBridgeView: NSView {
         }
     }
 
-    // MARK: - Mouse monitoring
+    // MARK: - Monitoring
 
-    private func installMouseMonitors() {
-        mouseDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            self?.handleMouseDown(event)
-            return event
+    private func installMonitors() {
+        guard let splitView = ancestorSplitView() else { return }
+
+        // Observe NSSplitView resize to detect user-initiated divider drags.
+        // This fires for both user drags and programmatic resizes; we use
+        // isDraggingDivider + mouse-up to distinguish and report only user drags.
+        resizeObserver = NotificationCenter.default.addObserver(
+            forName: NSSplitView.didResizeSubviewsNotification,
+            object: splitView,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, !self.isDraggingDivider else { return }
+            // A subview resize happened without us tracking a drag — check if the
+            // mouse is currently down (the user is dragging the divider right now).
+            if NSEvent.pressedMouseButtons & 1 != 0 {
+                self.isDraggingDivider = true
+            }
         }
+
         mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
             self?.handleMouseUp(event)
             return event
         }
     }
 
-    private func removeMouseMonitors() {
-        if let monitor = mouseDownMonitor { NSEvent.removeMonitor(monitor) }
-        mouseDownMonitor = nil
+    private func removeMonitors() {
+        if let observer = resizeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        resizeObserver = nil
         if let monitor = mouseUpMonitor { NSEvent.removeMonitor(monitor) }
         mouseUpMonitor = nil
-    }
-
-    private func handleMouseDown(_ event: NSEvent) {
-        guard let splitView = ancestorSplitView(),
-              splitView.subviews.count > 1,
-              event.window === self.window else { return }
-
-        let sidebarFrame = splitView.subviews[sidebarSubviewIndex].frame
-        let locationInSplitView = splitView.convert(event.locationInWindow, from: nil)
-
-        let dividerX = placement == .left ? sidebarFrame.maxX : sidebarFrame.minX
-        if abs(locationInSplitView.x - dividerX) <= Self.dividerHitZone + splitView.dividerThickness {
-            isDraggingDivider = true
-        }
+        isDraggingDivider = false
     }
 
     private func handleMouseUp(_ event: NSEvent) {
