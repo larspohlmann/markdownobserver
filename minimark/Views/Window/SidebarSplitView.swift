@@ -72,7 +72,9 @@ final class SidebarSplitViewController: NSSplitViewController {
         onSidebarWidthChanged: @escaping (CGFloat) -> Void
     ) {
         sidebarHostingController = NSHostingController(rootView: sidebar)
+        sidebarHostingController.sizingOptions = []
         detailHostingController = NSHostingController(rootView: detail)
+        detailHostingController.sizingOptions = []
         sidebarItem = NSSplitViewItem(viewController: sidebarHostingController)
         detailItem = NSSplitViewItem(viewController: detailHostingController)
         self.currentSidebarWidth = sidebarWidth
