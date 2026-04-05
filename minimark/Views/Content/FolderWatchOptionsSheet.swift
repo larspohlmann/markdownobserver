@@ -1006,7 +1006,7 @@ private struct FolderWatchTreeNodeRow: View {
                 Spacer()
 
                 Toggle(isOn: Binding(
-                    get: { self.exclusionState.isActive },
+                    get: { exclusion.isActive },
                     set: { self.setExclusion(active: $0) }
                 )) {
                     EmptyView()
