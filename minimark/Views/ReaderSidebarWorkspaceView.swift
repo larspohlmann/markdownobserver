@@ -7,14 +7,6 @@ enum ReaderSidebarWorkspaceMetrics {
     static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
 }
 
-private struct SidebarWidthPreferenceKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        let next = nextValue()
-        if next > 0 { value = next }
-    }
-}
-
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
     @ObservedObject var controller: ReaderSidebarDocumentController
     @ObservedObject var settingsStore: ReaderSettingsStore
@@ -34,19 +26,20 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
     @State private var selectedDocumentIDs: Set<UUID> = []
-    @State private var isDraggingDivider = false
 
     var body: some View {
         Group {
             if controller.documents.count > 1 {
-                HSplitView {
-                    if sidebarPlacement == .left {
-                        sidebarColumn
-                        detailColumn
-                    } else {
-                        detailColumn
-                        sidebarColumn
+                SidebarSplitView(
+                    sidebarWidth: sidebarWidth,
+                    sidebarPlacement: sidebarPlacement,
+                    onSidebarWidthChanged: { newWidth in
+                        sidebarWidth = newWidth
                     }
+                ) {
+                    sidebarColumn
+                } detail: {
+                    detailColumn
                 }
             } else {
                 detail(controller.selectedReaderStore)
@@ -161,84 +154,57 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         let sortedDocuments = displayedDocuments
         let grouping = sidebarGrouping(for: sortedDocuments)
 
-        return VStack(spacing: 0) {
-            sidebarToolbar
+        return ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                sidebarToolbar
 
-            Divider()
+                Divider()
 
-            List(
-                selection: Binding(
-                    get: { selectedDocumentIDs },
-                    set: { updateSelection($0) }
-                )
-            ) {
-                switch grouping {
-                case .flat(let documents):
-                    ForEach(documents) { document in
-                        documentRow(for: document, allDocuments: sortedDocuments, currentDate: Date())
-                            .tag(document.id)
-                    }
-                case .grouped(let groups):
-                    ForEach(groups) { group in
-                        DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
-                            ForEach(group.documents) { document in
-                                documentRow(for: document, allDocuments: sortedDocuments, currentDate: Date())
+                TimelineView(.periodic(from: .now, by: 5)) { context in
+                    List(
+                        selection: Binding(
+                            get: { selectedDocumentIDs },
+                            set: { updateSelection($0) }
+                        )
+                    ) {
+                        switch grouping {
+                        case .flat(let documents):
+                            ForEach(documents) { document in
+                                documentRow(for: document, allDocuments: sortedDocuments, currentDate: context.date)
                                     .tag(document.id)
                             }
-                        } label: {
-                            ReaderSidebarGroupHeader(
-                                displayName: group.displayName,
-                                documentCount: group.documents.count,
-                                isPinned: group.isPinned,
-                                indicatorState: group.indicatorState,
-                                settings: settingsStore.currentSettings,
-                                onTogglePin: {
-                                    toggleGroupPin(group.id)
-                                },
-                                onCloseGroup: {
-                                    onCloseDocuments(Set(group.documents.map(\.id)))
+                        case .grouped(let groups):
+                            ForEach(groups) { group in
+                                DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
+                                    ForEach(group.documents) { document in
+                                        documentRow(for: document, allDocuments: sortedDocuments, currentDate: context.date)
+                                            .tag(document.id)
+                                    }
+                                } label: {
+                                    ReaderSidebarGroupHeader(
+                                        displayName: group.displayName,
+                                        documentCount: group.documents.count,
+                                        isPinned: group.isPinned,
+                                        indicatorState: group.indicatorState,
+                                        settings: settingsStore.currentSettings,
+                                        onTogglePin: {
+                                            toggleGroupPin(group.id)
+                                        },
+                                        onCloseGroup: {
+                                            onCloseDocuments(Set(group.documents.map(\.id)))
+                                        }
+                                    )
                                 }
-                            )
+                                .disclosureGroupStyle(SidebarGroupDisclosureStyle())
+                            }
                         }
-                        .disclosureGroupStyle(SidebarGroupDisclosureStyle())
                     }
+                    .listStyle(.sidebar)
                 }
             }
-            .listStyle(.sidebar)
+            .frame(maxHeight: .infinity)
 
-            if let session = controller.activeFolderWatchSession {
-                Divider()
-                sidebarWatchingFooter(session: session)
-            }
-        }
-        .frame(
-            minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
-            idealWidth: sidebarWidth,
-            maxWidth: isDraggingDivider ? .infinity : max(sidebarWidth, ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth),
-            maxHeight: .infinity
-        )
-        .background(
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: SidebarWidthPreferenceKey.self,
-                    value: geometry.size.width
-                )
-            }
-        )
-        .background(SidebarDividerPositionSetter(
-            targetWidth: sidebarWidth,
-            placement: sidebarPlacement,
-            onDividerDragged: { width in
-                sidebarWidth = width
-            },
-            onDividerDragActive: { active in
-                isDraggingDivider = active
-            }
-        ))
-        .onPreferenceChange(SidebarWidthPreferenceKey.self) { width in
-            if width > 0, isDraggingDivider {
-                sidebarWidth = width
-            }
+            SidebarScanProgressView(controller: controller)
         }
         .accessibilityIdentifier("sidebar-column")
     }
@@ -255,40 +221,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .padding(.horizontal, 12)
         .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
-    }
-
-    private func sidebarWatchingFooter(session: ReaderFolderWatchSession) -> some View {
-        HStack(spacing: 6) {
-            if let progress = controller.contentScanProgress, !progress.isFinished {
-                ProgressView(value: Double(progress.completed), total: max(Double(progress.total), 1))
-                    .progressViewStyle(.linear)
-                    .frame(maxWidth: 60)
-
-                Text("Scanning \(progress.completed)/\(progress.total) files")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            } else {
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 6, height: 6)
-
-                if let fileCount = controller.scannedFileCount, fileCount > 0 {
-                    Text("\(fileCount) \(fileCount == 1 ? "file" : "files")")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(session.detailSummaryTitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .animation(.easeInOut(duration: 0.3), value: controller.contentScanProgress?.isFinished)
     }
 
     private func documentRow(
@@ -333,11 +265,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var detailColumn: some View {
         detail(controller.selectedReaderStore)
-            .frame(
-                minWidth: ReaderSidebarWorkspaceMetrics.detailMinimumWidth,
-                maxWidth: .infinity,
-                maxHeight: .infinity
-            )
     }
 
     private var sidebarGroupSortMenu: some View {
