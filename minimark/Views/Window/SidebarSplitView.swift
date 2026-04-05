@@ -191,11 +191,11 @@ final class SidebarSplitViewController: NSSplitViewController {
     }
 
     private func handleMouseDown(_ event: NSEvent) {
-        guard splitView.subviews.count > 1,
+        guard splitView.arrangedSubviews.count > 1,
               event.window === view.window else { return }
 
         let sidebarIndex = currentPlacement == .left ? 0 : 1
-        let sidebarFrame = splitView.subviews[sidebarIndex].frame
+        let sidebarFrame = splitView.arrangedSubviews[sidebarIndex].frame
         let location = splitView.convert(event.locationInWindow, from: nil)
 
         let dividerX = currentPlacement == .left ? sidebarFrame.maxX : sidebarFrame.minX
@@ -209,8 +209,8 @@ final class SidebarSplitViewController: NSSplitViewController {
         isDraggingDivider = false
 
         let sidebarIndex = currentPlacement == .left ? 0 : 1
-        guard splitView.subviews.count > 1 else { return }
-        let finalWidth = splitView.subviews[sidebarIndex].frame.width
+        guard splitView.arrangedSubviews.count > 1 else { return }
+        let finalWidth = splitView.arrangedSubviews[sidebarIndex].frame.width
         if finalWidth > 0, abs(finalWidth - currentSidebarWidth) > 1 {
             currentSidebarWidth = finalWidth
             onSidebarWidthChanged(finalWidth)
