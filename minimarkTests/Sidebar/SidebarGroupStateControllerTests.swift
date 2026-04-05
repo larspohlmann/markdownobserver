@@ -77,11 +77,17 @@ struct SidebarGroupStateControllerTests {
         let controller = SidebarGroupStateController()
         controller.updateDocuments(harness.documents)
 
-        let groupingBefore = controller.computedGrouping
-        controller.collapsedGroupIDs.insert("src")
-        let groupingAfter = controller.computedGrouping
+        var groupingEmissionCount = 0
+        let cancellable = controller.$computedGrouping
+            .dropFirst()
+            .sink { _ in
+                groupingEmissionCount += 1
+            }
+        defer { cancellable.cancel() }
 
-        #expect(groupingBefore == groupingAfter)
+        controller.collapsedGroupIDs.insert("src")
+
+        #expect(groupingEmissionCount == 0)
     }
 
     @Test @MainActor func groupIndicatorStatesReflectDocumentState() throws {
@@ -91,11 +97,30 @@ struct SidebarGroupStateControllerTests {
         )
         defer { harness.cleanup() }
 
-        harness.documentsInSubdirectory("src").first!.readerStore
-            .testSetHasUnacknowledgedExternalChange(true)
+        let srcDoc = harness.documentsInSubdirectory("src").first!
+        let testsDoc = harness.documentsInSubdirectory("tests").first!
+
+        let rowStates: [UUID: SidebarRowState] = [
+            srcDoc.id: SidebarRowState(
+                id: srcDoc.id,
+                title: "file0.md",
+                lastModified: nil,
+                sortDate: nil,
+                isFileMissing: false,
+                indicatorState: .externalChange
+            ),
+            testsDoc.id: SidebarRowState(
+                id: testsDoc.id,
+                title: "file0.md",
+                lastModified: nil,
+                sortDate: nil,
+                isFileMissing: false,
+                indicatorState: .none
+            )
+        ]
 
         let controller = SidebarGroupStateController()
-        controller.updateDocuments(harness.documents)
+        controller.updateDocuments(harness.documents, rowStates: rowStates)
 
         let srcPath = harness.directoryPath(for: "src")
         #expect(controller.groupIndicatorStates[srcPath] == .externalChange)

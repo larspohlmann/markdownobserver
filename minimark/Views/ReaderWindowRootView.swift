@@ -253,12 +253,19 @@ struct ReaderWindowRootView: View {
                 }
             }
             .onChange(of: sidebarDocumentController.documents.map(\.id)) { _, _ in
-                groupStateController.updateDocuments(sidebarDocumentController.documents)
+                groupStateController.updateDocuments(
+                    sidebarDocumentController.documents,
+                    rowStates: sidebarDocumentController.rowStates
+                )
             }
             .onAppear {
                 groupStateController.sortMode = settingsStore.currentSettings.sidebarGroupSortMode
                 groupStateController.fileSortMode = settingsStore.currentSettings.sidebarSortMode
-                groupStateController.updateDocuments(sidebarDocumentController.documents)
+                groupStateController.updateDocuments(
+                    sidebarDocumentController.documents,
+                    rowStates: sidebarDocumentController.rowStates
+                )
+                groupStateController.observeRowStates(from: sidebarDocumentController)
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()

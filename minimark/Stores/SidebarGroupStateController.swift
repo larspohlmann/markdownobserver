@@ -20,6 +20,8 @@ final class SidebarGroupStateController: ObservableObject {
 
     private var documents: [ReaderSidebarDocumentController.Document] = []
     private var recomputeCancellable: AnyCancellable?
+    private var rowStatesCancellable: AnyCancellable?
+    private var lastRowStates: [UUID: SidebarRowState] = [:]
 
     // MARK: - Init
 
@@ -29,9 +31,27 @@ final class SidebarGroupStateController: ObservableObject {
 
     // MARK: - Document Updates
 
-    func updateDocuments(_ documents: [ReaderSidebarDocumentController.Document]) {
+    func updateDocuments(
+        _ documents: [ReaderSidebarDocumentController.Document],
+        rowStates: [UUID: SidebarRowState] = [:]
+    ) {
         self.documents = documents
+        self.lastRowStates = rowStates
         pruneStaleGroupIDs()
+        rebuildGroupIndicatorStates()
+        recomputeGrouping()
+    }
+
+    func observeRowStates(from documentController: ReaderSidebarDocumentController) {
+        rowStatesCancellable = documentController.$rowStates
+            .sink { [weak self] rowStates in
+                self?.handleRowStatesChanged(rowStates)
+            }
+    }
+
+    private func handleRowStatesChanged(_ rowStates: [UUID: SidebarRowState]) {
+        guard rowStates != lastRowStates else { return }
+        lastRowStates = rowStates
         rebuildGroupIndicatorStates()
         recomputeGrouping()
     }
@@ -70,8 +90,8 @@ final class SidebarGroupStateController: ObservableObject {
         !collapsedGroupIDs.contains(groupID)
     }
 
-    func toggleGroupExpansion(_ groupID: String) {
-        if collapsedGroupIDs.contains(groupID) {
+    func setGroupExpanded(_ groupID: String, isExpanded: Bool) {
+        if isExpanded {
             collapsedGroupIDs.remove(groupID)
         } else {
             collapsedGroupIDs.insert(groupID)
@@ -141,11 +161,8 @@ final class SidebarGroupStateController: ObservableObject {
         }
         var result: [String: ReaderDocumentIndicatorState] = [:]
         for (path, docs) in grouped {
-            let states = docs.map { doc in
-                ReaderDocumentIndicatorState(
-                    hasUnacknowledgedExternalChange: doc.readerStore.hasUnacknowledgedExternalChange,
-                    isCurrentFileMissing: doc.readerStore.isCurrentFileMissing
-                )
+            let states = docs.compactMap { doc in
+                lastRowStates[doc.id]?.indicatorState
             }
             result[path] = ReaderSidebarGrouping.aggregatedIndicatorState(from: states)
         }

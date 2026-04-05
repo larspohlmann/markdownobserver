@@ -619,7 +619,7 @@ private struct SidebarGroupListContent: View {
     private func isGroupExpanded(_ groupID: String) -> Binding<Bool> {
         Binding(
             get: { groupState.isGroupExpanded(groupID) },
-            set: { _ in groupState.toggleGroupExpansion(groupID) }
+            set: { isExpanded in groupState.setGroupExpanded(groupID, isExpanded: isExpanded) }
         )
     }
 
