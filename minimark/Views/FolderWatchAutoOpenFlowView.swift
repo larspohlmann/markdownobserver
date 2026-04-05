@@ -1,10 +1,10 @@
-import Combine
 import SwiftUI
 
 @MainActor
-final class FolderWatchAutoOpenSelectionModel: ObservableObject {
+@Observable
+final class FolderWatchAutoOpenSelectionModel {
     let omittedFileURLs: [URL]
-    @Published var selectedFileURLs: Set<URL>
+    var selectedFileURLs: Set<URL>
 
     init(omittedFileURLs: [URL]) {
         self.omittedFileURLs = omittedFileURLs
@@ -33,7 +33,8 @@ final class FolderWatchAutoOpenSelectionModel: ObservableObject {
 }
 
 @MainActor
-final class FolderWatchAutoOpenWarningFlow: ObservableObject, Identifiable {
+@Observable
+final class FolderWatchAutoOpenWarningFlow: Identifiable {
     enum Step {
         case warning
         case selection
@@ -42,17 +43,12 @@ final class FolderWatchAutoOpenWarningFlow: ObservableObject, Identifiable {
     let id = UUID()
     let warning: ReaderFolderWatchAutoOpenWarning
     let selectionModel: FolderWatchAutoOpenSelectionModel
-    @Published var step: Step
-
-    private var selectionChangeObserver: AnyCancellable?
+    var step: Step
 
     init(warning: ReaderFolderWatchAutoOpenWarning) {
         self.warning = warning
         self.selectionModel = FolderWatchAutoOpenSelectionModel(omittedFileURLs: warning.omittedFileURLs)
         self.step = .warning
-        self.selectionChangeObserver = selectionModel.objectWillChange.sink { [weak self] _ in
-            self?.objectWillChange.send()
-        }
     }
 
     func showSelectionStep() {
@@ -65,7 +61,7 @@ final class FolderWatchAutoOpenWarningFlow: ObservableObject, Identifiable {
 }
 
 struct FolderWatchAutoOpenWarningFlowSheet: View {
-    @ObservedObject var flow: FolderWatchAutoOpenWarningFlow
+    var flow: FolderWatchAutoOpenWarningFlow
     let onKeepCurrentFiles: () -> Void
     let onOpenSelectedFiles: () -> Void
 
@@ -97,7 +93,7 @@ struct FolderWatchAutoOpenWarningFlowSheet: View {
 
 private struct FolderWatchAutoOpenSelectionView: View {
     let folderURL: URL
-    @ObservedObject var model: FolderWatchAutoOpenSelectionModel
+    var model: FolderWatchAutoOpenSelectionModel
     let onBack: () -> Void
     let onOpenSelectedFiles: () -> Void
 
