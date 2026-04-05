@@ -1007,13 +1007,16 @@ private struct FolderWatchTreeNodeRow: View {
                 Button {
                     setExclusion(active: exclusion.isEffectivelyExcluded)
                 } label: {
-                    Toggle(isOn: .constant(exclusion.isActive)) {
-                        EmptyView()
-                    }
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .labelsHidden()
-                    .allowsHitTesting(false)
+                    Capsule()
+                        .fill(exclusion.isActive ? Color.green : Color(nsColor: .separatorColor))
+                        .frame(width: 26, height: 15)
+                        .overlay(alignment: exclusion.isActive ? .trailing : .leading) {
+                            Circle()
+                                .fill(.white)
+                                .shadow(color: .black.opacity(0.15), radius: 0.5, y: 0.5)
+                                .padding(2)
+                        }
+                        .animation(.easeInOut(duration: 0.15), value: exclusion.isActive)
                 }
                 .buttonStyle(.plain)
                 .disabled(!exclusion.canToggle)
