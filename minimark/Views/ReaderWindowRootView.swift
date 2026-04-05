@@ -458,21 +458,14 @@ struct ReaderWindowRootView: View {
     }
 
     private func contentView(for store: ReaderStore) -> some View {
-        ContentView(
+        ContentViewAdapter(
             readerStore: store,
-            folderWatchState: ContentViewFolderWatchState(
-                activeFolderWatch: sharedFolderWatchSession,
-                isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
-                isFolderWatchInitialScanFailed: sidebarDocumentController.didFolderWatchInitialScanFail,
-                canStopFolderWatch: canStopSharedFolderWatch,
-                pendingFolderWatchURL: pendingFolderWatchURL,
-                isCurrentWatchAFavorite: isSharedFolderWatchAFavorite,
-                favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
-                recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
-                recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
-                isAppearanceLocked: appearanceController.isLocked,
-                effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
-            ),
+            sidebarDocumentController: sidebarDocumentController,
+            settingsStore: settingsStore,
+            appearanceController: appearanceController,
+            sharedFolderWatchSession: sharedFolderWatchSession,
+            canStopSharedFolderWatch: canStopSharedFolderWatch,
+            pendingFolderWatchURL: pendingFolderWatchURL,
             callbacks: ContentViewCallbacks(
                 onRequestFileOpen: { [self] request in
                     fileOpenCoordinator.open(request)
