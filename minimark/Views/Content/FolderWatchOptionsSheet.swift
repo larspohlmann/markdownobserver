@@ -821,7 +821,6 @@ private struct LargeFolderExclusionDialog: View {
                             FolderWatchTreeNodeRow(
                                 node: node,
                                 level: 0,
-                                excludedSubdirectoryPathSet: excludedSet,
                                 expandedDirectoryPaths: $expandedDirectoryPaths,
                                 excludedSubdirectoryPaths: $excludedSubdirectoryPaths
                             )
@@ -953,12 +952,15 @@ private struct LargeFolderExclusionDialog: View {
 private struct FolderWatchTreeNodeRow: View {
     let node: FolderWatchDirectoryNode
     let level: Int
-    let excludedSubdirectoryPathSet: Set<String>
     @Binding var expandedDirectoryPaths: Set<String>
     @Binding var excludedSubdirectoryPaths: [String]
 
+    private var excludedSet: Set<String> {
+        Set(excludedSubdirectoryPaths)
+    }
+
     private var isExplicitlyExcluded: Bool {
-        excludedSubdirectoryPathSet.contains(node.path)
+        excludedSet.contains(node.path)
     }
 
     private var isExcludedByAncestor: Bool {
@@ -973,7 +975,7 @@ private struct FolderWatchTreeNodeRow: View {
             }
 
             ancestorCandidate = String(ancestorCandidate[..<separatorIndex])
-            if excludedSubdirectoryPathSet.contains(ancestorCandidate) {
+            if excludedSet.contains(ancestorCandidate) {
                 return true
             }
         }
@@ -1069,7 +1071,6 @@ private struct FolderWatchTreeNodeRow: View {
                     FolderWatchTreeNodeRow(
                         node: child,
                         level: level + 1,
-                        excludedSubdirectoryPathSet: excludedSubdirectoryPathSet,
                         expandedDirectoryPaths: $expandedDirectoryPaths,
                         excludedSubdirectoryPaths: $excludedSubdirectoryPaths
                     )
@@ -1095,12 +1096,22 @@ private struct FolderWatchTreeNodeRow: View {
             return
         }
 
-        var next = Set(excludedSubdirectoryPaths)
-        let prefix = node.path.hasSuffix("/") ? node.path : node.path + "/"
+        excludedSubdirectoryPaths = FolderWatchExclusionLogic.toggleExclusion(
+            for: node.path,
+            in: excludedSubdirectoryPaths
+        )
+    }
+}
 
-        if isExplicitlyExcluded {
+enum FolderWatchExclusionLogic {
+
+    static func toggleExclusion(for nodePath: String, in excludedPaths: [String]) -> [String] {
+        var next = Set(excludedPaths)
+        let prefix = nodePath.hasSuffix("/") ? nodePath : nodePath + "/"
+
+        if next.contains(nodePath) {
             next = next.filter { path in
-                guard path != node.path else {
+                guard path != nodePath else {
                     return false
                 }
 
@@ -1108,10 +1119,30 @@ private struct FolderWatchTreeNodeRow: View {
             }
         } else {
             next = next.filter { !$0.hasPrefix(prefix) }
-            next.insert(node.path)
+            next.insert(nodePath)
         }
 
-        excludedSubdirectoryPaths = Array(next).sorted()
+        return Array(next).sorted()
+    }
+
+    static func isExcludedByAncestor(nodePath: String, excludedSet: Set<String>) -> Bool {
+        guard !excludedSet.contains(nodePath) else {
+            return false
+        }
+
+        var ancestorCandidate = nodePath
+        while let separatorIndex = ancestorCandidate.lastIndex(of: "/") {
+            if separatorIndex == ancestorCandidate.startIndex {
+                break
+            }
+
+            ancestorCandidate = String(ancestorCandidate[..<separatorIndex])
+            if excludedSet.contains(ancestorCandidate) {
+                return true
+            }
+        }
+
+        return false
     }
 }
 
