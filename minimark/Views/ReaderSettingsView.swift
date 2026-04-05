@@ -1,9 +1,8 @@
 import AppKit
-import Combine
 import SwiftUI
 
 struct ReaderSettingsView: View {
-    @ObservedObject private var settingsStore: ReaderSettingsStore
+    private var settingsStore: ReaderSettingsStore
     @ObservedObject private var notificationNotifier: ReaderSystemNotifier
 
     init(

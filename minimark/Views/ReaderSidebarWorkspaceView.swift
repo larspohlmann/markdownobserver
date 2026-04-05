@@ -8,9 +8,9 @@ enum ReaderSidebarWorkspaceMetrics {
 }
 
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
-    @ObservedObject var controller: ReaderSidebarDocumentController
-    @ObservedObject var settingsStore: ReaderSettingsStore
-    @ObservedObject var groupState: SidebarGroupStateController
+    var controller: ReaderSidebarDocumentController
+    var settingsStore: ReaderSettingsStore
+    var groupState: SidebarGroupStateController
     let sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement
     let sidebarWidth: CGFloat
     let onSidebarWidthChanged: (CGFloat) -> Void
@@ -558,8 +558,8 @@ private struct ReaderSidebarGroupHeader: View {
 }
 
 private struct SidebarGroupListContent: View {
-    @ObservedObject var groupState: SidebarGroupStateController
-    @ObservedObject var controller: ReaderSidebarDocumentController
+    var groupState: SidebarGroupStateController
+    var controller: ReaderSidebarDocumentController
     let settingsStore: ReaderSettingsStore
     @Binding var selectedDocumentIDs: Set<UUID>
     let watchedDocumentIDs: Set<UUID>

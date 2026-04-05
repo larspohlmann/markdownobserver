@@ -1,6 +1,6 @@
 import AppKit
-import Combine
 import Foundation
+import Observation
 
 @MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
@@ -23,9 +23,8 @@ private struct ReaderWindowStoreCallbackConfigurator {
 }
 
 @MainActor
-final class ReaderWindowCoordinator: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
-
+@Observable
+final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private let folderWatchOpenCoordinator = ReaderFolderWatchOpenCoordinator()

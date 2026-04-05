@@ -4,11 +4,11 @@ import SwiftUI
 @main
 struct MarkdownObserverApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var settingsStore: ReaderSettingsStore
+    @State private var settingsStore: ReaderSettingsStore
 
     init() {
         let settingsStore = ReaderSettingsStore()
-        _settingsStore = StateObject(wrappedValue: settingsStore)
+        _settingsStore = State(wrappedValue: settingsStore)
         ReaderUITestWindowBootstrapper.shared.configure(settingsStore: settingsStore)
 
         ReaderSystemNotifier.shared.configure()

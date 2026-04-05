@@ -1,32 +1,37 @@
-import Combine
 import Foundation
+import Observation
 
 @MainActor
-final class SidebarGroupStateController: ObservableObject {
+@Observable
+final class SidebarGroupStateController {
 
     // MARK: - Mutable Inputs
 
-    @Published var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst
-    @Published var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst
-    @Published var pinnedGroupIDs: Set<String> = []
-    @Published var collapsedGroupIDs: Set<String> = []
+    var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
+    var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
+    var pinnedGroupIDs: Set<String> = [] { didSet { recomputeGroupingIfNeeded() } }
+    var collapsedGroupIDs: Set<String> = []
 
     // MARK: - Computed Outputs
 
-    @Published private(set) var computedGrouping: ReaderSidebarGrouping = .flat([])
-    @Published private(set) var groupIndicatorStates: [String: ReaderDocumentIndicatorState] = [:]
+    private(set) var computedGrouping: ReaderSidebarGrouping = .flat([])
+    private(set) var groupIndicatorStates: [String: ReaderDocumentIndicatorState] = [:]
 
     // MARK: - Private
 
     private var documents: [ReaderSidebarDocumentController.Document] = []
-    private var recomputeCancellable: AnyCancellable?
-    private var rowStatesCancellable: AnyCancellable?
+    private var suppressRecompute = false
     private var lastRowStates: [UUID: SidebarRowState] = [:]
 
     // MARK: - Init
 
-    init() {
-        subscribeToArrangementChanges()
+    init() {}
+
+    func configureSortModes(sortMode: ReaderSidebarSortMode, fileSortMode: ReaderSidebarSortMode) {
+        suppressRecompute = true
+        self.sortMode = sortMode
+        self.fileSortMode = fileSortMode
+        suppressRecompute = false
     }
 
     // MARK: - Document Updates
@@ -37,16 +42,17 @@ final class SidebarGroupStateController: ObservableObject {
     ) {
         self.documents = documents
         self.lastRowStates = rowStates
+        suppressRecompute = true
         pruneStaleGroupIDs()
+        suppressRecompute = false
         rebuildGroupIndicatorStates()
         recomputeGrouping()
     }
 
     func observeRowStates(from documentController: ReaderSidebarDocumentController) {
-        rowStatesCancellable = documentController.$rowStates
-            .sink { [weak self] rowStates in
-                self?.handleRowStatesChanged(rowStates)
-            }
+        documentController.onRowStatesChanged = { [weak self] rowStates in
+            self?.handleRowStatesChanged(rowStates)
+        }
     }
 
     private func handleRowStatesChanged(_ rowStates: [UUID: SidebarRowState]) {
@@ -59,13 +65,13 @@ final class SidebarGroupStateController: ObservableObject {
     // MARK: - Favorites Persistence
 
     func applyWorkspaceState(_ state: ReaderFavoriteWorkspaceState) {
-        recomputeCancellable = nil
+        suppressRecompute = true
         sortMode = state.groupSortMode
         fileSortMode = state.fileSortMode
         pinnedGroupIDs = state.pinnedGroupIDs
         collapsedGroupIDs = state.collapsedGroupIDs
+        suppressRecompute = false
         recomputeGrouping()
-        subscribeToArrangementChanges()
     }
 
     struct WorkspaceStateSnapshot {
@@ -108,16 +114,9 @@ final class SidebarGroupStateController: ObservableObject {
 
     // MARK: - Private
 
-    private func subscribeToArrangementChanges() {
-        recomputeCancellable = Publishers.CombineLatest3(
-            $sortMode,
-            $fileSortMode,
-            $pinnedGroupIDs
-        )
-        .dropFirst()
-        .sink { [weak self] sortMode, fileSortMode, pinnedGroupIDs in
-            self?.recomputeGrouping(sortMode: sortMode, fileSortMode: fileSortMode, pinnedGroupIDs: pinnedGroupIDs)
-        }
+    private func recomputeGroupingIfNeeded() {
+        guard !suppressRecompute else { return }
+        recomputeGrouping()
     }
 
     private func recomputeGrouping() {

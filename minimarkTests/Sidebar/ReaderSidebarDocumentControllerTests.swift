@@ -4,7 +4,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 import Testing
 @testable import minimark
 
@@ -385,17 +385,18 @@ struct ReaderSidebarDocumentControllerTests {
         let unselectedDocument = harness.controller.documents[1]
         harness.controller.selectDocument(selectedDocument.id)
 
-        var changeCount = 0
-        let cancellable = harness.controller.objectWillChange.sink {
-            changeCount += 1
+        var changeDetected = false
+        withObservationTracking {
+            _ = harness.controller.rowStates
+        } onChange: {
+            changeDetected = true
         }
-        defer { cancellable.cancel() }
 
         unselectedDocument.readerStore.handleObservedFileChange()
         await Task.yield()
 
         #expect(unselectedDocument.readerStore.lastExternalChangeAt != nil)
-        #expect(changeCount > 0)
+        #expect(changeDetected)
     }
 
     @Test @MainActor func sidebarControllerShowsFileSelectionWhenOverThreshold() throws {

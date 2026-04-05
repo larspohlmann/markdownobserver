@@ -88,7 +88,7 @@ struct SidebarRowStateDerivationTests {
         // Simulate an external change notification on the store
         store.noteObservedExternalChange()
 
-        // Allow the RunLoop.main receive to process the objectWillChange → updateRowStateIfNeeded
+        // Allow the RunLoop.main receive to process the observation change -> updateRowStateIfNeeded
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
         let updatedState = harness.controller.rowStates[docID]

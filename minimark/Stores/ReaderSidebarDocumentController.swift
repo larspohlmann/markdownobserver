@@ -1,8 +1,10 @@
 import Foundation
 import Combine
+import Observation
 
 @MainActor
-final class ReaderSidebarDocumentController: ObservableObject {
+@Observable
+final class ReaderSidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
@@ -12,27 +14,28 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
     }
 
-    @Published private(set) var documents: [Document]
-    @Published var selectedDocumentID: UUID
-    @Published private(set) var selectedWindowTitle: String
-    @Published private(set) var selectedFileURL: URL?
-    @Published private(set) var selectedHasUnacknowledgedExternalChange: Bool
-    @Published private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
-    @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    @Published private(set) var isFolderWatchInitialScanInProgress: Bool
-    @Published private(set) var didFolderWatchInitialScanFail: Bool
-    @Published private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
-    @Published private(set) var scannedFileCount: Int?
-    @Published private(set) var rowStates: [UUID: SidebarRowState] = [:]
+    private(set) var documents: [Document]
+    var selectedDocumentID: UUID
+    private(set) var selectedWindowTitle: String
+    private(set) var selectedFileURL: URL?
+    private(set) var selectedHasUnacknowledgedExternalChange: Bool
+    private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+    private(set) var isFolderWatchInitialScanInProgress: Bool
+    private(set) var didFolderWatchInitialScanFail: Bool
+    private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
+    private(set) var scannedFileCount: Int?
+    private(set) var rowStates: [UUID: SidebarRowState] = [:]
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
     private let selectedStoreProjection = ReaderSidebarSelectedStoreProjection()
     private var storeConfigurator: ((ReaderStore) -> Void)?
+    var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
     private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
-    lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
+    @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
     init(
         settingsStore: ReaderSettingsStore,
@@ -483,7 +486,9 @@ final class ReaderSidebarDocumentController: ObservableObject {
         for document in documents {
             states[document.id] = deriveRowState(from: document)
         }
+        guard states != rowStates else { return }
         rowStates = states
+        onRowStatesChanged?(states)
     }
 
     private func synchronizeDocumentChangeObservers() {
@@ -509,6 +514,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         let newState = deriveRowState(from: document)
         if rowStates[documentID] != newState {
             rowStates[documentID] = newState
+            onRowStatesChanged?(rowStates)
         }
     }
 

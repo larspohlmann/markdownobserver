@@ -1,20 +1,17 @@
 import XCTest
-import Combine
+import Observation
 @testable import minimark
 
 @MainActor
 final class WindowAppearanceControllerTests: XCTestCase {
     private var settingsStore: TestReaderSettingsStore!
-    private var cancellables: Set<AnyCancellable>!
 
     override func setUp() {
         super.setUp()
         settingsStore = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
-        cancellables = []
     }
 
     override func tearDown() {
-        cancellables = nil
         settingsStore = nil
         super.tearDown()
     }
@@ -66,18 +63,21 @@ final class WindowAppearanceControllerTests: XCTestCase {
         XCTAssertEqual(controller.effectiveSyntaxTheme, .dracula)
     }
 
-    // MARK: - Coalesced objectWillChange
+    // MARK: - Observation tracking
 
-    func testSingleSettingsChangeProducesOneObjectWillChange() {
+    func testSettingsChangeTriggersObservation() {
         let controller = WindowAppearanceController(settingsStore: settingsStore)
-        var changeCount = 0
-        let cancellable = controller.objectWillChange.sink { _ in changeCount += 1 }
+        var changeDetected = false
+        withObservationTracking {
+            _ = controller.effectiveTheme
+        } onChange: {
+            changeDetected = true
+        }
 
         settingsStore.updateTheme(.newspaper)
         drainMainQueue()
 
-        XCTAssertEqual(changeCount, 1)
-        _ = cancellable
+        XCTAssertTrue(changeDetected)
     }
 
     // MARK: - Lock

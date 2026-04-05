@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SidebarScanProgressView: View {
-    @ObservedObject var controller: ReaderSidebarDocumentController
+    var controller: ReaderSidebarDocumentController
 
     var body: some View {
         if let session = controller.activeFolderWatchSession {
