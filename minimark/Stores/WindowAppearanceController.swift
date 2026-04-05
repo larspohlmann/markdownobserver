@@ -3,9 +3,10 @@ import Foundation
 import Synchronization
 
 @MainActor
-final class WindowAppearanceController: ObservableObject {
-    @Published private(set) var isLocked = false
-    @Published private(set) var effectiveAppearance: LockedAppearance
+@Observable
+final class WindowAppearanceController {
+    private(set) var isLocked = false
+    private(set) var effectiveAppearance: LockedAppearance
 
     var effectiveTheme: ReaderThemeKind { effectiveAppearance.readerTheme }
     var effectiveFontSize: Double { effectiveAppearance.baseFontSize }
