@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 struct ReaderSettingsView: View {
