@@ -370,6 +370,94 @@ struct ReaderSidebarGroupingTests {
         let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
         #expect(state == .deletedExternalChange)
     }
+
+    // MARK: - Indicator Aggregation from Pre-Computed States
+
+    @Test @MainActor func aggregatedIndicatorFromStatesReturnsNoneWhenAllNone() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.none, .none, .none]
+        )
+        #expect(result == .none)
+    }
+
+    @Test @MainActor func aggregatedIndicatorFromStatesReturnsExternalChangeWhenPresent() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.none, .externalChange, .none]
+        )
+        #expect(result == .externalChange)
+    }
+
+    @Test @MainActor func aggregatedIndicatorFromStatesReturnsDeletedWhenPresent() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.none, .deletedExternalChange]
+        )
+        #expect(result == .deletedExternalChange)
+    }
+
+    @Test @MainActor func aggregatedIndicatorFromStatesDeletedTakesPriority() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.externalChange, .deletedExternalChange, .none]
+        )
+        #expect(result == .deletedExternalChange)
+    }
+
+    @Test @MainActor func aggregatedIndicatorFromStatesHandlesEmptyArray() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(from: [])
+        #expect(result == .none)
+    }
+
+    @Test @MainActor func groupUsesPrecomputedIndicatorStatesWhenProvided() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src", "tests"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let srcPath = harness.directoryPath(for: "src")
+        let testsPath = harness.directoryPath(for: "tests")
+
+        let precomputed: [String: ReaderDocumentIndicatorState] = [
+            srcPath: .externalChange,
+            testsPath: .none
+        ]
+
+        let grouping = ReaderSidebarGrouping.group(
+            harness.documents,
+            precomputedIndicatorStates: precomputed
+        )
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+
+        let srcGroup = try #require(groups.first { $0.id == srcPath })
+        let testsGroup = try #require(groups.first { $0.id == testsPath })
+        #expect(srcGroup.indicatorState == .externalChange)
+        #expect(testsGroup.indicatorState == .none)
+    }
+
+    @Test @MainActor func groupFallsBackToLiveComputationWhenNoPrecomputedStates() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src", "tests"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        harness.documentsInSubdirectory("src").first!.readerStore
+            .testSetHasUnacknowledgedExternalChange(true)
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents)
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+
+        let srcPath = harness.directoryPath(for: "src")
+        let srcGroup = try #require(groups.first { $0.id == srcPath })
+        #expect(srcGroup.indicatorState == .externalChange)
+    }
 }
 
 // MARK: - Test Harness
