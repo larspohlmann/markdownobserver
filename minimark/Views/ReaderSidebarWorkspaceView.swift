@@ -244,7 +244,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         allDocuments: [ReaderSidebarDocumentController.Document],
         currentDate: Date
     ) -> some View {
-        let rowState = controller.rowStates.first(where: { $0.id == document.id })
+        let rowState = controller.rowStates[document.id]
             ?? controller.deriveRowState(from: document)
 
         return ReaderSidebarDocumentRow(

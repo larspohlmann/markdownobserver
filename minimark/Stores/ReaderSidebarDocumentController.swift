@@ -20,7 +20,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var didFolderWatchInitialScanFail: Bool
     @Published private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
     @Published private(set) var scannedFileCount: Int?
-    @Published private(set) var rowStates: [SidebarRowState] = []
+    @Published private(set) var rowStates: [UUID: SidebarRowState] = [:]
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
@@ -465,6 +465,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
             id: document.id,
             title: store.fileDisplayName.isEmpty ? "Untitled" : store.fileDisplayName,
             lastModified: store.fileLastModifiedAt,
+            sortDate: store.fileLastModifiedAt ?? store.lastExternalChangeAt ?? store.lastRefreshAt,
             isFileMissing: store.isCurrentFileMissing,
             indicatorState: ReaderDocumentIndicatorState(
                 hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
@@ -474,7 +475,11 @@ final class ReaderSidebarDocumentController: ObservableObject {
     }
 
     private func rebuildAllRowStates() {
-        rowStates = documents.map { deriveRowState(from: $0) }
+        var states: [UUID: SidebarRowState] = [:]
+        for document in documents {
+            states[document.id] = deriveRowState(from: document)
+        }
+        rowStates = states
     }
 
     private func synchronizeDocumentChangeObservers() {
@@ -498,9 +503,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
     private func updateRowStateIfNeeded(for documentID: UUID) {
         guard let document = documents.first(where: { $0.id == documentID }) else { return }
         let newState = deriveRowState(from: document)
-        guard let index = rowStates.firstIndex(where: { $0.id == documentID }) else { return }
-        if rowStates[index] != newState {
-            rowStates[index] = newState
+        if rowStates[documentID] != newState {
+            rowStates[documentID] = newState
         }
     }
 
