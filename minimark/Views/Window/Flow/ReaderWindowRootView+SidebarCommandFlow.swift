@@ -154,7 +154,7 @@ extension ReaderWindowRootView {
                     origin: .folderWatchInitialBatchAutoOpen,
                     folderWatchSession: session,
                     slotStrategy: .alwaysAppend,
-                    materializationStrategy: .deferThenMaterializeSelected
+                    materializationStrategy: .deferOnly
                 ))
                 sidebarDocumentController.selectDocumentWithNewestModificationDate()
                 refreshWindowPresentation()

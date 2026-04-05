@@ -989,7 +989,7 @@ struct ReaderSidebarDocumentControllerTests {
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
             slotStrategy: .alwaysAppend,
-            materializationStrategy: .deferThenMaterializeSelected
+            materializationStrategy: .deferOnly
         ))
 
         // Re-select newest after discovery (this is what the fix adds).
@@ -1048,7 +1048,7 @@ struct ReaderSidebarDocumentControllerTests {
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session,
             slotStrategy: .alwaysAppend,
-            materializationStrategy: .deferThenMaterializeSelected
+            materializationStrategy: .deferOnly
         ))
 
         // Re-select newest after discovery.
