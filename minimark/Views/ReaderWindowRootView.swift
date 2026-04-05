@@ -180,6 +180,10 @@ struct ReaderWindowRootView: View {
                     return
                 }
 
+                if isSidebarVisible, let favoriteWidth = activeFavoriteWorkspaceState?.sidebarWidth {
+                    sidebarWidth = favoriteWidth
+                }
+
                 let delta = isSidebarVisible
                     ? sidebarWidth
                     : -lastAppliedSidebarDelta
