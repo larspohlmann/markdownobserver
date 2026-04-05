@@ -31,14 +31,14 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     var body: some View {
         Group {
             if controller.documents.count > 1 {
-                SidebarSplitView(
-                    sidebarWidth: sidebarWidth,
-                    sidebarPlacement: sidebarPlacement,
-                    onSidebarWidthChanged: onSidebarWidthChanged
-                ) {
-                    sidebarColumn
-                } detail: {
-                    detailColumn
+                HSplitView {
+                    if sidebarPlacement == .left {
+                        sidebarColumn
+                        detailColumn
+                    } else {
+                        detailColumn
+                        sidebarColumn
+                    }
                 }
             } else {
                 detail(controller.selectedReaderStore)
@@ -205,6 +205,16 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
             SidebarScanProgressView(controller: controller)
         }
+        .frame(
+            minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
+            maxWidth: .infinity,
+            maxHeight: .infinity
+        )
+        .background(SidebarWidthBridge(
+            targetWidth: sidebarWidth,
+            placement: sidebarPlacement,
+            onSidebarWidthChanged: onSidebarWidthChanged
+        ))
         .accessibilityIdentifier("sidebar-column")
     }
 
@@ -255,6 +265,11 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var detailColumn: some View {
         detail(controller.selectedReaderStore)
+            .frame(
+                minWidth: ReaderSidebarWorkspaceMetrics.detailMinimumWidth,
+                maxWidth: .infinity,
+                maxHeight: .infinity
+            )
     }
 
     private var sidebarGroupSortMenu: some View {

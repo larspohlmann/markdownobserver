@@ -1,178 +1,71 @@
 import AppKit
 import SwiftUI
 
-struct SidebarSplitView<Sidebar: View, Detail: View>: NSViewControllerRepresentable {
-    let sidebarWidth: CGFloat
-    let sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement
+/// Bridges to AppKit to set NSSplitView holding priorities and divider position,
+/// and reports the sidebar width on drag end. Attaches as a hidden background
+/// on the sidebar column inside an HSplitView.
+struct SidebarWidthBridge: NSViewRepresentable {
+    let targetWidth: CGFloat
+    let placement: ReaderMultiFileDisplayMode.SidebarPlacement
     let onSidebarWidthChanged: (CGFloat) -> Void
-    private let sidebar: Sidebar
-    private let detail: Detail
 
-    init(
-        sidebarWidth: CGFloat,
-        sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement,
-        onSidebarWidthChanged: @escaping (CGFloat) -> Void,
-        @ViewBuilder sidebar: () -> Sidebar,
-        @ViewBuilder detail: () -> Detail
-    ) {
-        self.sidebarWidth = sidebarWidth
-        self.sidebarPlacement = sidebarPlacement
-        self.onSidebarWidthChanged = onSidebarWidthChanged
-        self.sidebar = sidebar()
-        self.detail = detail()
+    func makeNSView(context: Context) -> SidebarWidthBridgeView {
+        let view = SidebarWidthBridgeView()
+        view.isHidden = true
+        view.targetWidth = targetWidth
+        view.placement = placement
+        view.onSidebarWidthChanged = onSidebarWidthChanged
+        return view
     }
 
-    func makeNSViewController(context: Context) -> SidebarSplitViewController {
-        SidebarSplitViewController(
-            sidebar: AnyView(sidebar),
-            detail: AnyView(detail),
-            sidebarWidth: sidebarWidth,
-            sidebarPlacement: sidebarPlacement,
-            onSidebarWidthChanged: onSidebarWidthChanged
-        )
-    }
-
-    func updateNSViewController(_ controller: SidebarSplitViewController, context: Context) {
-        controller.update(
-            sidebar: AnyView(sidebar),
-            detail: AnyView(detail),
-            sidebarWidth: sidebarWidth,
-            sidebarPlacement: sidebarPlacement,
-            onSidebarWidthChanged: onSidebarWidthChanged
-        )
+    func updateNSView(_ nsView: SidebarWidthBridgeView, context: Context) {
+        nsView.onSidebarWidthChanged = onSidebarWidthChanged
+        nsView.updateIfNeeded(targetWidth: targetWidth, placement: placement)
     }
 }
 
-// MARK: - SidebarSplitViewController
+// MARK: - SidebarWidthBridgeView
 
-@MainActor
-final class SidebarSplitViewController: NSSplitViewController {
-    private static let sidebarMinWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth
+final class SidebarWidthBridgeView: NSView {
     private static let sidebarHoldingPriority: NSLayoutConstraint.Priority = .defaultHigh
+    private static let widthEpsilon: CGFloat = 1
     private static let dividerHitZone: CGFloat = 6
 
-    private let sidebarHostingController: NSHostingController<AnyView>
-    private let detailHostingController: NSHostingController<AnyView>
-    private var sidebarItem: NSSplitViewItem
-    private var detailItem: NSSplitViewItem
-
-    private var currentSidebarWidth: CGFloat
-    private var currentPlacement: ReaderMultiFileDisplayMode.SidebarPlacement
-    private var onSidebarWidthChanged: (CGFloat) -> Void
-
+    var targetWidth: CGFloat = 0
+    var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
+    var onSidebarWidthChanged: ((CGFloat) -> Void)?
+    private var lastAppliedWidth: CGFloat = 0
+    private var lastAppliedPlacement: ReaderMultiFileDisplayMode.SidebarPlacement?
     private var mouseDownMonitor: Any?
     private var mouseUpMonitor: Any?
     private var isDraggingDivider = false
 
-    init(
-        sidebar: AnyView,
-        detail: AnyView,
-        sidebarWidth: CGFloat,
-        sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement,
-        onSidebarWidthChanged: @escaping (CGFloat) -> Void
-    ) {
-        sidebarHostingController = NSHostingController(rootView: sidebar)
-        sidebarHostingController.sizingOptions = []
-        detailHostingController = NSHostingController(rootView: detail)
-        detailHostingController.sizingOptions = []
-        sidebarItem = NSSplitViewItem(viewController: sidebarHostingController)
-        detailItem = NSSplitViewItem(viewController: detailHostingController)
-        self.currentSidebarWidth = sidebarWidth
-        self.currentPlacement = sidebarPlacement
-        self.onSidebarWidthChanged = onSidebarWidthChanged
+    private var sidebarSubviewIndex: Int { placement == .left ? 0 : 1 }
 
-        super.init(nibName: nil, bundle: nil)
-
-        splitView.isVertical = true
-        splitView.dividerStyle = .thin
-
-        sidebarItem.minimumThickness = Self.sidebarMinWidth
-        sidebarItem.holdingPriority = Self.sidebarHoldingPriority
-        detailItem.minimumThickness = ReaderSidebarWorkspaceMetrics.detailMinimumWidth
-        detailItem.holdingPriority = .defaultLow
-
-        if sidebarPlacement == .left {
-            addSplitViewItem(sidebarItem)
-            addSplitViewItem(detailItem)
-        } else {
-            addSplitViewItem(detailItem)
-            addSplitViewItem(sidebarItem)
-        }
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        applySidebarWidth(currentSidebarWidth)
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        removeMouseMonitors()
+        guard window != nil else { return }
         installMouseMonitors()
+        applyPosition()
     }
 
-    override func viewWillDisappear() {
-        super.viewWillDisappear()
+    deinit {
         removeMouseMonitors()
     }
 
-    func update(
-        sidebar: AnyView,
-        detail: AnyView,
-        sidebarWidth: CGFloat,
-        sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement,
-        onSidebarWidthChanged: @escaping (CGFloat) -> Void
-    ) {
-        sidebarHostingController.rootView = sidebar
-        detailHostingController.rootView = detail
-        self.onSidebarWidthChanged = onSidebarWidthChanged
-
-        if sidebarPlacement != currentPlacement {
-            currentPlacement = sidebarPlacement
-            reorderItems(for: sidebarPlacement)
-        }
-
-        if !isDraggingDivider, abs(sidebarWidth - currentSidebarWidth) > 1 {
-            currentSidebarWidth = sidebarWidth
-            applySidebarWidth(sidebarWidth)
+    func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
+        let widthChanged = abs(targetWidth - newWidth) > Self.widthEpsilon
+        let placementChanged = placement != newPlacement
+        if widthChanged { targetWidth = newWidth }
+        if placementChanged { placement = newPlacement }
+        if widthChanged || placementChanged {
+            lastAppliedWidth = 0
+            applyPosition()
         }
     }
 
-    // MARK: - Divider width management
-
-    private func applySidebarWidth(_ width: CGFloat) {
-        guard view.window != nil,
-              splitView.arrangedSubviews.count > 1 else { return }
-
-        let position: CGFloat
-        if currentPlacement == .left {
-            position = width
-        } else {
-            position = splitView.bounds.width - width - splitView.dividerThickness
-        }
-
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        splitView.setPosition(position, ofDividerAt: 0)
-        CATransaction.commit()
-    }
-
-    private func reorderItems(for placement: ReaderMultiFileDisplayMode.SidebarPlacement) {
-        removeSplitViewItem(sidebarItem)
-        removeSplitViewItem(detailItem)
-
-        if placement == .left {
-            addSplitViewItem(sidebarItem)
-            addSplitViewItem(detailItem)
-        } else {
-            addSplitViewItem(detailItem)
-            addSplitViewItem(sidebarItem)
-        }
-
-        applySidebarWidth(currentSidebarWidth)
-    }
-
-    // MARK: - Mouse monitoring for divider drag
+    // MARK: - Mouse monitoring
 
     private func installMouseMonitors() {
         mouseDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
@@ -193,15 +86,15 @@ final class SidebarSplitViewController: NSSplitViewController {
     }
 
     private func handleMouseDown(_ event: NSEvent) {
-        guard splitView.arrangedSubviews.count > 1,
-              event.window === view.window else { return }
+        guard let splitView = ancestorSplitView(),
+              splitView.subviews.count > 1,
+              event.window === self.window else { return }
 
-        let sidebarIndex = currentPlacement == .left ? 0 : 1
-        let sidebarFrame = splitView.arrangedSubviews[sidebarIndex].frame
-        let location = splitView.convert(event.locationInWindow, from: nil)
+        let sidebarFrame = splitView.subviews[sidebarSubviewIndex].frame
+        let locationInSplitView = splitView.convert(event.locationInWindow, from: nil)
 
-        let dividerX = currentPlacement == .left ? sidebarFrame.maxX : sidebarFrame.minX
-        if abs(location.x - dividerX) <= Self.dividerHitZone + splitView.dividerThickness {
+        let dividerX = placement == .left ? sidebarFrame.maxX : sidebarFrame.minX
+        if abs(locationInSplitView.x - dividerX) <= Self.dividerHitZone + splitView.dividerThickness {
             isDraggingDivider = true
         }
     }
@@ -210,12 +103,53 @@ final class SidebarSplitViewController: NSSplitViewController {
         guard isDraggingDivider else { return }
         isDraggingDivider = false
 
-        let sidebarIndex = currentPlacement == .left ? 0 : 1
-        guard splitView.arrangedSubviews.count > 1 else { return }
-        let finalWidth = splitView.arrangedSubviews[sidebarIndex].frame.width
-        if finalWidth > 0, abs(finalWidth - currentSidebarWidth) > 1 {
-            currentSidebarWidth = finalWidth
-            onSidebarWidthChanged(finalWidth)
+        if let splitView = ancestorSplitView(), splitView.subviews.count > 1 {
+            let finalWidth = splitView.subviews[sidebarSubviewIndex].frame.width
+            if finalWidth > 0 {
+                targetWidth = finalWidth
+                lastAppliedWidth = finalWidth
+                onSidebarWidthChanged?(finalWidth)
+            }
         }
+    }
+
+    // MARK: - Position application
+
+    private func applyPosition() {
+        guard let splitView = ancestorSplitView(),
+              splitView.arrangedSubviews.count > 1,
+              splitView.delegate as? NSSplitViewController == nil else {
+            return
+        }
+        guard abs(lastAppliedWidth - targetWidth) > Self.widthEpsilon
+                || lastAppliedPlacement != placement else {
+            return
+        }
+        lastAppliedWidth = targetWidth
+        lastAppliedPlacement = placement
+
+        let detailIndex = placement == .left ? 1 : 0
+        splitView.setHoldingPriority(Self.sidebarHoldingPriority, forSubviewAt: sidebarSubviewIndex)
+        splitView.setHoldingPriority(.defaultLow, forSubviewAt: detailIndex)
+
+        let position: CGFloat
+        if placement == .left {
+            position = targetWidth
+        } else {
+            position = splitView.bounds.width - targetWidth - splitView.dividerThickness
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        splitView.setPosition(position, ofDividerAt: 0)
+        CATransaction.commit()
+    }
+
+    private func ancestorSplitView() -> NSSplitView? {
+        var current = superview
+        while let view = current {
+            if let split = view as? NSSplitView { return split }
+            current = view.superview
+        }
+        return nil
     }
 }
