@@ -21,8 +21,8 @@ extension ReaderWindowRootView {
         persistFinalWorkspaceStateIfNeeded()
         activeFavoriteID = nil
         activeFavoriteWorkspaceState = nil
-        sidebarPinnedGroupIDs = []
-        sidebarCollapsedGroupIDs = []
+        groupStateController.pinnedGroupIDs = []
+        groupStateController.collapsedGroupIDs = []
         sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
         sidebarDocumentController.stopFolderWatch()
         refreshWindowPresentation()

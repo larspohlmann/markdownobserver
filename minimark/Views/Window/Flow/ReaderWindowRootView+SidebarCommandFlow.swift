@@ -59,10 +59,11 @@ extension ReaderWindowRootView {
         guard let session = sharedFolderWatchSession else {
             return
         }
+        let groupSnapshot = groupStateController.workspaceStateSnapshot()
         var workspaceState = ReaderFavoriteWorkspaceState.from(
             settings: settingsStore.currentSettings,
-            pinnedGroupIDs: sidebarPinnedGroupIDs,
-            collapsedGroupIDs: sidebarCollapsedGroupIDs,
+            pinnedGroupIDs: groupSnapshot.pinnedGroupIDs,
+            collapsedGroupIDs: groupSnapshot.collapsedGroupIDs,
             sidebarWidth: sidebarWidth
         )
         workspaceState.lockedAppearance = appearanceController.lockedAppearance
@@ -105,8 +106,7 @@ extension ReaderWindowRootView {
         // Set active favorite and restore workspace state
         activeFavoriteID = entry.id
         activeFavoriteWorkspaceState = entry.workspaceState
-        sidebarPinnedGroupIDs = entry.workspaceState.pinnedGroupIDs
-        sidebarCollapsedGroupIDs = entry.workspaceState.collapsedGroupIDs
+        groupStateController.applyWorkspaceState(entry.workspaceState)
         sidebarWidth = entry.workspaceState.sidebarWidth
 
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
@@ -227,8 +227,8 @@ extension ReaderWindowRootView {
                 persistFinalWorkspaceStateIfNeeded()
                 activeFavoriteID = nil
                 activeFavoriteWorkspaceState = nil
-                sidebarPinnedGroupIDs = []
-                sidebarCollapsedGroupIDs = []
+                groupStateController.pinnedGroupIDs = []
+                groupStateController.collapsedGroupIDs = []
                 sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
                 Task { @MainActor [appearanceController] in
                     if appearanceController.isLocked {
