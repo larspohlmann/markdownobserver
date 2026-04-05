@@ -3,9 +3,13 @@ import Combine
 
 @MainActor
 final class ReaderSidebarDocumentController: ObservableObject {
-    struct Document: Identifiable {
+    struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
+
+        static func == (lhs: Document, rhs: Document) -> Bool {
+            lhs.id == rhs.id
+        }
     }
 
     @Published private(set) var documents: [Document]

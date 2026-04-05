@@ -1,11 +1,11 @@
 import Foundation
 
 @MainActor
-enum ReaderSidebarGrouping {
+enum ReaderSidebarGrouping: Equatable {
     case flat([ReaderSidebarDocumentController.Document])
     case grouped([Group])
 
-    struct Group: Identifiable {
+    struct Group: Identifiable, Equatable {
         let id: String
         let displayName: String
         let directoryURL: URL?
