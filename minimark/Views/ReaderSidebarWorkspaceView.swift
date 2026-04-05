@@ -228,16 +228,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         currentDate: Date
     ) -> some View {
         let rowState = controller.rowStates.first(where: { $0.id == document.id })
-            ?? SidebarRowState(
-                id: document.id,
-                title: document.readerStore.fileDisplayName.isEmpty ? "Untitled" : document.readerStore.fileDisplayName,
-                lastModified: document.readerStore.fileLastModifiedAt,
-                isFileMissing: document.readerStore.isCurrentFileMissing,
-                indicatorState: ReaderDocumentIndicatorState(
-                    hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
-                    isCurrentFileMissing: document.readerStore.isCurrentFileMissing
-                )
-            )
+            ?? controller.deriveRowState(from: document)
 
         return ReaderSidebarDocumentRow(
             state: rowState,

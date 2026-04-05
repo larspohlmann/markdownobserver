@@ -459,7 +459,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         Document(id: UUID(), readerStore: makeReaderStore())
     }
 
-    private func deriveRowState(from document: Document) -> SidebarRowState {
+    func deriveRowState(from document: Document) -> SidebarRowState {
         let store = document.readerStore
         return SidebarRowState(
             id: document.id,
