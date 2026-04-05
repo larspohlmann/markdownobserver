@@ -466,7 +466,6 @@ struct ReaderWindowRootView: View {
             sharedFolderWatchSession: sharedFolderWatchSession,
             canStopSharedFolderWatch: canStopSharedFolderWatch,
             pendingFolderWatchURL: pendingFolderWatchURL,
-            isSharedFolderWatchAFavorite: isSharedFolderWatchAFavorite,
             callbacks: ContentViewCallbacks(
                 onRequestFileOpen: { [self] request in
                     fileOpenCoordinator.open(request)

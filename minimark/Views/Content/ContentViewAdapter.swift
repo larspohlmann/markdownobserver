@@ -15,16 +15,22 @@ struct ContentViewAdapter: View {
     let sharedFolderWatchSession: ReaderFolderWatchSession?
     let canStopSharedFolderWatch: Bool
     let pendingFolderWatchURL: URL?
-    let isSharedFolderWatchAFavorite: Bool
 
     let callbacks: ContentViewCallbacks
 
     @Binding var isFolderWatchOptionsPresented: Bool
-    let pendingFolderWatchOpenMode: Binding<ReaderFolderWatchOpenMode>
-    let pendingFolderWatchScope: Binding<ReaderFolderWatchScope>
-    let pendingFolderWatchExcludedSubdirectoryPaths: Binding<[String]>
+    @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
+    @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
+    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
     var body: some View {
+        let favorites = settingsStore.currentSettings.favoriteWatchedFolders
+        let isCurrentWatchAFavorite: Bool = {
+            guard let session = sharedFolderWatchSession else { return false }
+            let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+            return favorites.contains { $0.matches(folderPath: normalizedPath, options: session.options) }
+        }()
+
         ContentView(
             readerStore: readerStore,
             folderWatchState: ContentViewFolderWatchState(
@@ -33,8 +39,8 @@ struct ContentViewAdapter: View {
                 isFolderWatchInitialScanFailed: sidebarDocumentController.didFolderWatchInitialScanFail,
                 canStopFolderWatch: canStopSharedFolderWatch,
                 pendingFolderWatchURL: pendingFolderWatchURL,
-                isCurrentWatchAFavorite: isSharedFolderWatchAFavorite,
-                favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                favoriteWatchedFolders: favorites,
                 recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
                 recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
                 isAppearanceLocked: appearanceController.isLocked,
@@ -42,9 +48,9 @@ struct ContentViewAdapter: View {
             ),
             callbacks: callbacks,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
-            pendingFolderWatchOpenMode: pendingFolderWatchOpenMode,
-            pendingFolderWatchScope: pendingFolderWatchScope,
-            pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPaths
+            pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
+            pendingFolderWatchScope: $pendingFolderWatchScope,
+            pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
         )
     }
 }
