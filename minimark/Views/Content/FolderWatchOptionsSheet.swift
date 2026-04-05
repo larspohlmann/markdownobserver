@@ -1004,15 +1004,18 @@ private struct FolderWatchTreeNodeRow: View {
 
                 Spacer()
 
-                Toggle(isOn: Binding(
-                    get: { self.exclusionState.isActive },
-                    set: { self.setExclusion(active: $0) }
-                )) {
-                    EmptyView()
+                Button {
+                    setExclusion(active: exclusion.isEffectivelyExcluded)
+                } label: {
+                    Toggle(isOn: .constant(exclusion.isActive)) {
+                        EmptyView()
+                    }
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .labelsHidden()
+                    .allowsHitTesting(false)
                 }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .labelsHidden()
+                .buttonStyle(.plain)
                 .disabled(!exclusion.canToggle)
                 .help(exclusion.isByAncestor ? "Exclusion inherited from a parent folder" : "Toggle to include or exclude this folder")
                 .accessibilityLabel("\(node.name)")
