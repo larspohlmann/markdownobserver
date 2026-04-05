@@ -7,6 +7,7 @@ final class SidebarGroupStateController: ObservableObject {
     // MARK: - Mutable Inputs
 
     @Published var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst
+    @Published var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst
     @Published var pinnedGroupIDs: Set<String> = []
     @Published var collapsedGroupIDs: Set<String> = []
 
@@ -40,6 +41,7 @@ final class SidebarGroupStateController: ObservableObject {
     func applyWorkspaceState(_ state: ReaderFavoriteWorkspaceState) {
         recomputeCancellable = nil
         sortMode = state.groupSortMode
+        fileSortMode = state.fileSortMode
         pinnedGroupIDs = state.pinnedGroupIDs
         collapsedGroupIDs = state.collapsedGroupIDs
         recomputeGrouping()
@@ -48,6 +50,7 @@ final class SidebarGroupStateController: ObservableObject {
 
     struct WorkspaceStateSnapshot {
         let sortMode: ReaderSidebarSortMode
+        let fileSortMode: ReaderSidebarSortMode
         let pinnedGroupIDs: Set<String>
         let collapsedGroupIDs: Set<String>
     }
@@ -55,6 +58,7 @@ final class SidebarGroupStateController: ObservableObject {
     func workspaceStateSnapshot() -> WorkspaceStateSnapshot {
         WorkspaceStateSnapshot(
             sortMode: sortMode,
+            fileSortMode: fileSortMode,
             pinnedGroupIDs: pinnedGroupIDs,
             collapsedGroupIDs: collapsedGroupIDs
         )
@@ -85,28 +89,46 @@ final class SidebarGroupStateController: ObservableObject {
     // MARK: - Private
 
     private func subscribeToArrangementChanges() {
-        recomputeCancellable = Publishers.CombineLatest(
+        recomputeCancellable = Publishers.CombineLatest3(
             $sortMode,
+            $fileSortMode,
             $pinnedGroupIDs
         )
         .dropFirst()
-        .sink { [weak self] sortMode, pinnedGroupIDs in
-            self?.recomputeGrouping(sortMode: sortMode, pinnedGroupIDs: pinnedGroupIDs)
+        .sink { [weak self] sortMode, fileSortMode, pinnedGroupIDs in
+            self?.recomputeGrouping(sortMode: sortMode, fileSortMode: fileSortMode, pinnedGroupIDs: pinnedGroupIDs)
         }
     }
 
     private func recomputeGrouping() {
-        recomputeGrouping(sortMode: sortMode, pinnedGroupIDs: pinnedGroupIDs)
+        recomputeGrouping(sortMode: sortMode, fileSortMode: fileSortMode, pinnedGroupIDs: pinnedGroupIDs)
     }
 
     private func recomputeGrouping(
         sortMode: ReaderSidebarSortMode,
+        fileSortMode: ReaderSidebarSortMode,
         pinnedGroupIDs: Set<String>
     ) {
+        let sortedDocuments = fileSortMode.sorted(documents) { document in
+            ReaderSidebarSortDescriptor(
+                displayName: document.readerStore.fileDisplayName,
+                lastChangedAt: document.readerStore.fileLastModifiedAt
+                    ?? document.readerStore.lastExternalChangeAt
+                    ?? document.readerStore.lastRefreshAt
+            )
+        }
+
+        let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
+        if sortMode == .openOrder {
+            directoryOrderSourceDocuments = documents
+        } else {
+            directoryOrderSourceDocuments = sortedDocuments
+        }
+
         computedGrouping = ReaderSidebarGrouping.group(
-            documents,
+            sortedDocuments,
             sortMode: sortMode,
-            directoryOrderSourceDocuments: documents,
+            directoryOrderSourceDocuments: directoryOrderSourceDocuments,
             pinnedGroupIDs: pinnedGroupIDs,
             precomputedIndicatorStates: groupIndicatorStates
         )

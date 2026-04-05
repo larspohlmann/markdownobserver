@@ -66,6 +66,8 @@ extension ReaderWindowRootView {
             collapsedGroupIDs: groupSnapshot.collapsedGroupIDs,
             sidebarWidth: sidebarWidth
         )
+        workspaceState.fileSortMode = groupSnapshot.fileSortMode
+        workspaceState.groupSortMode = groupSnapshot.sortMode
         workspaceState.lockedAppearance = appearanceController.lockedAppearance
         settingsStore.addFavoriteWatchedFolder(
             name: name,

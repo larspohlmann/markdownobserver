@@ -94,22 +94,6 @@ struct ReaderWindowRootView: View {
         )
     }
 
-    private var fileSortModeBinding: Binding<ReaderSidebarSortMode> {
-        Binding(
-            get: {
-                activeFavoriteWorkspaceState?.fileSortMode
-                    ?? settingsStore.currentSettings.sidebarSortMode
-            },
-            set: { newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.fileSortMode = newValue
-                } else {
-                    settingsStore.updateSidebarSortMode(newValue)
-                }
-            }
-        )
-    }
-
     private var pendingFolderWatchExcludedSubdirectoryPathsBinding: Binding<[String]> {
         Binding(
             get: {
@@ -261,11 +245,19 @@ struct ReaderWindowRootView: View {
                     settingsStore.updateSidebarGroupSortMode(newValue)
                 }
             }
+            .onChange(of: groupStateController.fileSortMode) { _, newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.fileSortMode = newValue
+                } else {
+                    settingsStore.updateSidebarSortMode(newValue)
+                }
+            }
             .onChange(of: sidebarDocumentController.documents.map(\.id)) { _, _ in
                 groupStateController.updateDocuments(sidebarDocumentController.documents)
             }
             .onAppear {
                 groupStateController.sortMode = settingsStore.currentSettings.sidebarGroupSortMode
+                groupStateController.fileSortMode = settingsStore.currentSettings.sidebarSortMode
                 groupStateController.updateDocuments(sidebarDocumentController.documents)
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
@@ -416,7 +408,6 @@ struct ReaderWindowRootView: View {
             settingsStore: settingsStore,
             groupState: groupStateController,
             sidebarPlacement: sidebarPlacement,
-            fileSortMode: fileSortModeBinding,
             sidebarWidth: sidebarWidth,
             onSidebarWidthChanged: { newWidth in
                 sidebarWidth = newWidth

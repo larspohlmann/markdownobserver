@@ -15,6 +15,24 @@ enum ReaderSidebarGrouping: Equatable {
         let isPinned: Bool
     }
 
+    var firstDocumentID: UUID? {
+        switch self {
+        case .flat(let documents):
+            return documents.first?.id
+        case .grouped(let groups):
+            return groups.first?.documents.first?.id
+        }
+    }
+
+    var allDocumentIDs: [UUID] {
+        switch self {
+        case .flat(let documents):
+            return documents.map(\.id)
+        case .grouped(let groups):
+            return groups.flatMap { $0.documents.map(\.id) }
+        }
+    }
+
     static func group(
         _ documents: [ReaderSidebarDocumentController.Document],
         sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,

@@ -12,7 +12,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     @ObservedObject var settingsStore: ReaderSettingsStore
     @ObservedObject var groupState: SidebarGroupStateController
     let sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement
-    @Binding var fileSortMode: ReaderSidebarSortMode
     let sidebarWidth: CGFloat
     let onSidebarWidthChanged: (CGFloat) -> Void
     let detail: (ReaderStore) -> Detail
@@ -55,7 +54,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             let validIDs = Set(documentIDs)
             let filteredSelection = selectedDocumentIDs.intersection(validIDs)
             if filteredSelection.isEmpty {
-                if let firstDocumentID = displayedDocuments.first?.id {
+                if let firstDocumentID = groupState.computedGrouping.firstDocumentID {
                     selectedDocumentIDs = [firstDocumentID]
                     scheduleControllerSelection(firstDocumentID)
                 }
@@ -76,7 +75,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             return
         }
 
-        if let nextSelectedDocumentID = displayedDocuments.first(where: { selection.contains($0.id) })?.id {
+        if let nextSelectedDocumentID = groupState.computedGrouping.allDocumentIDs.first(where: { selection.contains($0) }) {
             scheduleControllerSelection(nextSelectedDocumentID)
         }
     }
@@ -87,25 +86,12 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
-        fileSortMode.sorted(controller.documents) { document in
-            ReaderSidebarSortDescriptor(
-                displayName: document.readerStore.fileDisplayName,
-                lastChangedAt: document.readerStore.fileLastModifiedAt
-                    ?? document.readerStore.lastExternalChangeAt
-                    ?? document.readerStore.lastRefreshAt
-            )
-        }
-    }
-
     private var watchedDocumentIDs: Set<UUID> {
         controller.watchedDocumentIDs()
     }
 
     private var sidebarColumn: some View {
-        let sortedDocuments = displayedDocuments
-
-        return ZStack(alignment: .bottom) {
+        ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 sidebarToolbar
 
@@ -115,7 +101,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     groupState: groupState,
                     controller: controller,
                     settingsStore: settingsStore,
-                    sortedDocuments: sortedDocuments,
                     selectedDocumentIDs: $selectedDocumentIDs,
                     watchedDocumentIDs: watchedDocumentIDs,
                     onUpdateSelection: { updateSelection($0) },
@@ -217,9 +202,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         Menu {
             ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
                 Button {
-                    fileSortMode = mode
+                    groupState.fileSortMode = mode
                 } label: {
-                    if mode == fileSortMode {
+                    if mode == groupState.fileSortMode {
                         Label(mode.displayName, systemImage: "checkmark")
                     } else {
                         Text(mode.displayName)
@@ -230,7 +215,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             HStack(spacing: 3) {
                 Image(systemName: "doc")
                     .font(.system(size: 9, weight: .medium))
-                Text(fileSortMode.footerLabel)
+                Text(groupState.fileSortMode.footerLabel)
                     .font(.system(size: 10, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -245,9 +230,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .help("Sort files by \(fileSortMode.displayName)")
+        .help("Sort files by \(groupState.fileSortMode.displayName)")
         .accessibilityLabel("Sidebar file sorting")
-        .accessibilityValue(fileSortMode.displayName)
+        .accessibilityValue(groupState.fileSortMode.displayName)
     }
 
     private var sidebarPlacementButton: some View {
@@ -576,7 +561,6 @@ private struct SidebarGroupListContent: View {
     @ObservedObject var groupState: SidebarGroupStateController
     @ObservedObject var controller: ReaderSidebarDocumentController
     let settingsStore: ReaderSettingsStore
-    let sortedDocuments: [ReaderSidebarDocumentController.Document]
     @Binding var selectedDocumentIDs: Set<UUID>
     let watchedDocumentIDs: Set<UUID>
     let onUpdateSelection: (Set<UUID>) -> Void
@@ -599,14 +583,14 @@ private struct SidebarGroupListContent: View {
                 switch groupState.computedGrouping {
                 case .flat(let documents):
                     ForEach(documents) { document in
-                        documentRow(for: document, allDocuments: sortedDocuments, currentDate: context.date)
+                        documentRow(for: document, allDocuments: controller.documents, currentDate: context.date)
                             .tag(document.id)
                     }
                 case .grouped(let groups):
                     ForEach(groups) { group in
                         DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
                             ForEach(group.documents) { document in
-                                documentRow(for: document, allDocuments: sortedDocuments, currentDate: context.date)
+                                documentRow(for: document, allDocuments: controller.documents, currentDate: context.date)
                                     .tag(document.id)
                             }
                         } label: {
