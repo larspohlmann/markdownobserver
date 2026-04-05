@@ -15,7 +15,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     @Binding var pinnedGroupIDs: Set<String>
     @Binding var fileSortMode: ReaderSidebarSortMode
     @Binding var groupSortMode: ReaderSidebarSortMode
-    @Binding var sidebarWidth: CGFloat
+    let sidebarWidth: CGFloat
+    let onSidebarWidthChanged: (CGFloat) -> Void
     let detail: (ReaderStore) -> Detail
     let onToggleSidebarPlacement: () -> Void
     let onOpenInDefaultApp: (Set<UUID>) -> Void
@@ -33,9 +34,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 SidebarSplitView(
                     sidebarWidth: sidebarWidth,
                     sidebarPlacement: sidebarPlacement,
-                    onSidebarWidthChanged: { newWidth in
-                        sidebarWidth = newWidth
-                    }
+                    onSidebarWidthChanged: onSidebarWidthChanged
                 ) {
                     sidebarColumn
                 } detail: {
