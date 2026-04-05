@@ -150,7 +150,7 @@ struct SidebarGroupStateControllerTests {
         controller.pinnedGroupIDs = ["/a"]
         controller.collapsedGroupIDs = ["/b"]
 
-        let snapshot = controller.workspaceStateSnapshot()
+        let snapshot = controller.persistenceSnapshot
         #expect(snapshot.sortMode == .nameAscending)
         #expect(snapshot.pinnedGroupIDs == ["/a"])
         #expect(snapshot.collapsedGroupIDs == ["/b"])

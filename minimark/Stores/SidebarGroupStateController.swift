@@ -74,14 +74,14 @@ final class SidebarGroupStateController {
         recomputeGrouping()
     }
 
-    struct WorkspaceStateSnapshot {
+    struct WorkspaceStateSnapshot: Equatable {
         let sortMode: ReaderSidebarSortMode
         let fileSortMode: ReaderSidebarSortMode
         let pinnedGroupIDs: Set<String>
         let collapsedGroupIDs: Set<String>
     }
 
-    func workspaceStateSnapshot() -> WorkspaceStateSnapshot {
+    var persistenceSnapshot: WorkspaceStateSnapshot {
         WorkspaceStateSnapshot(
             sortMode: sortMode,
             fileSortMode: fileSortMode,
