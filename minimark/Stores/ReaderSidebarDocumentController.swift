@@ -36,6 +36,11 @@ final class ReaderSidebarDocumentController {
     @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
+    deinit {
+        selectedStoreObservationTask?.cancel()
+        for task in documentObservationTasks.values { task.cancel() }
+    }
+
     init(
         settingsStore: ReaderSettingsStore,
         makeReaderStore: (() -> ReaderStore)? = nil,
@@ -464,16 +469,12 @@ final class ReaderSidebarDocumentController {
         selectedStoreObservationTask?.cancel()
         selectedStoreObservationTask = Task { [weak self] in
             while !Task.isCancelled {
-                let changed = await withCheckedContinuation { continuation in
-                    withObservationTracking {
-                        _ = store.windowTitle
-                        _ = store.fileURL
-                        _ = store.hasUnacknowledgedExternalChange
-                    } onChange: {
-                        continuation.resume(returning: true)
-                    }
+                let cancelled = await Self.awaitObservationChange {
+                    _ = store.windowTitle
+                    _ = store.fileURL
+                    _ = store.hasUnacknowledgedExternalChange
                 }
-                guard changed, !Task.isCancelled else { break }
+                if cancelled { break }
                 guard let self,
                       self.selectedStoreBindingGeneration == bindingGeneration else { break }
                 self.selectedWindowTitle = store.windowTitle
@@ -524,19 +525,15 @@ final class ReaderSidebarDocumentController {
             documentObservationTasks[document.id] = Task { [weak self] in
                 let store = document.readerStore
                 while !Task.isCancelled {
-                    let changed = await withCheckedContinuation { continuation in
-                        withObservationTracking {
-                            _ = store.fileDisplayName
-                            _ = store.fileLastModifiedAt
-                            _ = store.lastExternalChangeAt
-                            _ = store.lastRefreshAt
-                            _ = store.isCurrentFileMissing
-                            _ = store.hasUnacknowledgedExternalChange
-                        } onChange: {
-                            continuation.resume(returning: true)
-                        }
+                    let cancelled = await Self.awaitObservationChange {
+                        _ = store.fileDisplayName
+                        _ = store.fileLastModifiedAt
+                        _ = store.lastExternalChangeAt
+                        _ = store.lastRefreshAt
+                        _ = store.isCurrentFileMissing
+                        _ = store.hasUnacknowledgedExternalChange
                     }
-                    guard changed, !Task.isCancelled else { break }
+                    if cancelled { break }
                     self?.updateRowStateIfNeeded(for: document.id)
                 }
             }
@@ -576,6 +573,51 @@ final class ReaderSidebarDocumentController {
     private func configureFolderWatchController() {
         folderWatchController.delegate = self
         synchronizeFolderWatchState()
+    }
+
+    // MARK: - Observation helpers
+
+    /// Suspends until any property accessed inside `tracking` changes, or the enclosing Task is cancelled.
+    /// Returns `true` if the wait was terminated by cancellation rather than a property change.
+    private static func awaitObservationChange(
+        tracking: @escaping @MainActor () -> Void
+    ) async -> Bool {
+        let box = ObservationContinuationBox()
+        return await withTaskCancellationHandler {
+            await withUnsafeContinuation { continuation in
+                box.store(continuation)
+                if Task.isCancelled {
+                    box.resume(returning: true)
+                    return
+                }
+                withObservationTracking {
+                    tracking()
+                } onChange: {
+                    box.resume(returning: false)
+                }
+            }
+        } onCancel: {
+            box.resume(returning: true)
+        }
+    }
+
+    private final class ObservationContinuationBox: @unchecked Sendable {
+        private var continuation: UnsafeContinuation<Bool, Never>?
+        private let lock = NSLock()
+
+        func store(_ continuation: UnsafeContinuation<Bool, Never>) {
+            lock.lock()
+            self.continuation = continuation
+            lock.unlock()
+        }
+
+        func resume(returning value: Bool) {
+            lock.lock()
+            let c = continuation
+            continuation = nil
+            lock.unlock()
+            c?.resume(returning: value)
+        }
     }
 
     private func synchronizeFolderWatchState() {
