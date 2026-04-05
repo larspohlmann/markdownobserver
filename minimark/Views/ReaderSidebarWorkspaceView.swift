@@ -55,15 +55,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             let validIDs = Set(documentIDs)
             let filteredSelection = selectedDocumentIDs.intersection(validIDs)
             if filteredSelection.isEmpty {
-                let sortedDocs = fileSortMode.sorted(controller.documents) { document in
-                    ReaderSidebarSortDescriptor(
-                        displayName: document.readerStore.fileDisplayName,
-                        lastChangedAt: document.readerStore.fileLastModifiedAt
-                            ?? document.readerStore.lastExternalChangeAt
-                            ?? document.readerStore.lastRefreshAt
-                    )
-                }
-                if let firstDocumentID = sortedDocs.first?.id {
+                if let firstDocumentID = displayedDocuments.first?.id {
                     selectedDocumentIDs = [firstDocumentID]
                     scheduleControllerSelection(firstDocumentID)
                 }
@@ -84,15 +76,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             return
         }
 
-        let sortedDocuments = fileSortMode.sorted(controller.documents) { document in
-            ReaderSidebarSortDescriptor(
-                displayName: document.readerStore.fileDisplayName,
-                lastChangedAt: document.readerStore.fileLastModifiedAt
-                    ?? document.readerStore.lastExternalChangeAt
-                    ?? document.readerStore.lastRefreshAt
-            )
-        }
-        if let nextSelectedDocumentID = sortedDocuments.first(where: { selection.contains($0.id) })?.id {
+        if let nextSelectedDocumentID = displayedDocuments.first(where: { selection.contains($0.id) })?.id {
             scheduleControllerSelection(nextSelectedDocumentID)
         }
     }
@@ -103,12 +87,8 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
     }
 
-    private var watchedDocumentIDs: Set<UUID> {
-        controller.watchedDocumentIDs()
-    }
-
-    private var sidebarColumn: some View {
-        let sortedDocuments = fileSortMode.sorted(controller.documents) { document in
+    private var displayedDocuments: [ReaderSidebarDocumentController.Document] {
+        fileSortMode.sorted(controller.documents) { document in
             ReaderSidebarSortDescriptor(
                 displayName: document.readerStore.fileDisplayName,
                 lastChangedAt: document.readerStore.fileLastModifiedAt
@@ -116,6 +96,14 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     ?? document.readerStore.lastRefreshAt
             )
         }
+    }
+
+    private var watchedDocumentIDs: Set<UUID> {
+        controller.watchedDocumentIDs()
+    }
+
+    private var sidebarColumn: some View {
+        let sortedDocuments = displayedDocuments
 
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {

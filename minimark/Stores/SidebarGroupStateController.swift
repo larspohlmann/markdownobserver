@@ -23,14 +23,7 @@ final class SidebarGroupStateController: ObservableObject {
     // MARK: - Init
 
     init() {
-        recomputeCancellable = Publishers.CombineLatest(
-            $sortMode,
-            $pinnedGroupIDs
-        )
-        .dropFirst()
-        .sink { [weak self] sortMode, pinnedGroupIDs in
-            self?.recomputeGrouping(sortMode: sortMode, pinnedGroupIDs: pinnedGroupIDs)
-        }
+        subscribeToArrangementChanges()
     }
 
     // MARK: - Document Updates
@@ -45,9 +38,12 @@ final class SidebarGroupStateController: ObservableObject {
     // MARK: - Favorites Persistence
 
     func applyWorkspaceState(_ state: ReaderFavoriteWorkspaceState) {
+        recomputeCancellable = nil
         sortMode = state.groupSortMode
         pinnedGroupIDs = state.pinnedGroupIDs
         collapsedGroupIDs = state.collapsedGroupIDs
+        recomputeGrouping()
+        subscribeToArrangementChanges()
     }
 
     struct WorkspaceStateSnapshot {
@@ -87,6 +83,17 @@ final class SidebarGroupStateController: ObservableObject {
     }
 
     // MARK: - Private
+
+    private func subscribeToArrangementChanges() {
+        recomputeCancellable = Publishers.CombineLatest(
+            $sortMode,
+            $pinnedGroupIDs
+        )
+        .dropFirst()
+        .sink { [weak self] sortMode, pinnedGroupIDs in
+            self?.recomputeGrouping(sortMode: sortMode, pinnedGroupIDs: pinnedGroupIDs)
+        }
+    }
 
     private func recomputeGrouping() {
         recomputeGrouping(sortMode: sortMode, pinnedGroupIDs: pinnedGroupIDs)
