@@ -4,9 +4,13 @@ import Foundation
 
 @MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
+    let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
     let onOpenAdditionalDocument: (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
 
     func configure(_ store: ReaderStore) {
+        if let lockedAppearance = lockedAppearanceProvider() {
+            store.setAppearanceOverride(lockedAppearance)
+        }
         store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, folderWatchSession, origin in
             onOpenAdditionalDocument(
                 event.fileURL,
@@ -39,17 +43,15 @@ final class ReaderWindowCoordinator: ObservableObject {
     }
 
     func configureStoreCallbacks(
+        lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil },
         onOpenAdditionalDocument: @escaping (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
     ) {
         sidebarDocumentController.setStoreConfigurator { store in
             ReaderWindowStoreCallbackConfigurator(
+                lockedAppearanceProvider: lockedAppearanceProvider,
                 onOpenAdditionalDocument: onOpenAdditionalDocument
             ).configure(store)
         }
-
-        ReaderWindowStoreCallbackConfigurator(
-            onOpenAdditionalDocument: onOpenAdditionalDocument
-        ).configure(sidebarDocumentController.selectedReaderStore)
     }
 
     func sharedFolderWatchState() -> (session: ReaderFolderWatchSession?, canStop: Bool) {
