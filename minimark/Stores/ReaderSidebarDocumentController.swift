@@ -20,6 +20,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
     @Published private(set) var didFolderWatchInitialScanFail: Bool
     @Published private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
     @Published private(set) var scannedFileCount: Int?
+    @Published private(set) var rowStates: [SidebarRowState] = []
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
@@ -458,6 +459,24 @@ final class ReaderSidebarDocumentController: ObservableObject {
         Document(id: UUID(), readerStore: makeReaderStore())
     }
 
+    private func deriveRowState(from document: Document) -> SidebarRowState {
+        let store = document.readerStore
+        return SidebarRowState(
+            id: document.id,
+            title: store.fileDisplayName.isEmpty ? "Untitled" : store.fileDisplayName,
+            lastModified: store.fileLastModifiedAt,
+            isFileMissing: store.isCurrentFileMissing,
+            indicatorState: ReaderDocumentIndicatorState(
+                hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: store.isCurrentFileMissing
+            )
+        )
+    }
+
+    private func rebuildAllRowStates() {
+        rowStates = documents.map { deriveRowState(from: $0) }
+    }
+
     private func synchronizeDocumentChangeObservers() {
         let currentDocumentIDs = Set(documents.map(\.id))
 
@@ -466,9 +485,22 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         for document in documents where documentChangeCancellables[document.id] == nil {
-            documentChangeCancellables[document.id] = document.readerStore.objectWillChange.sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
+            documentChangeCancellables[document.id] = document.readerStore.objectWillChange
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    self?.updateRowStateIfNeeded(for: document.id)
+                }
+        }
+
+        rebuildAllRowStates()
+    }
+
+    private func updateRowStateIfNeeded(for documentID: UUID) {
+        guard let document = documents.first(where: { $0.id == documentID }) else { return }
+        let newState = deriveRowState(from: document)
+        guard let index = rowStates.firstIndex(where: { $0.id == documentID }) else { return }
+        if rowStates[index] != newState {
+            rowStates[index] = newState
         }
     }
 

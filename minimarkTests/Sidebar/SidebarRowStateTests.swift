@@ -41,3 +41,32 @@ struct SidebarRowStateTests {
         #expect(a != b)
     }
 }
+
+@Suite(.serialized)
+struct SidebarRowStateDerivationTests {
+    @Test @MainActor func controllerDerivesSidebarRowStateFromDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        #expect(harness.controller.rowStates.count == 1)
+
+        let state = harness.controller.rowStates[0]
+        #expect(state.id == harness.controller.documents[0].id)
+        #expect(state.isFileMissing == false)
+        #expect(state.indicatorState == .none)
+    }
+
+    @Test @MainActor func controllerUpdatesRowStatesWhenDocumentsChange() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .manual
+        ))
+
+        #expect(harness.controller.documents.count == 2)
+        #expect(harness.controller.rowStates.count == 2)
+    }
+}
