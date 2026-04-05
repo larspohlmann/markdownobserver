@@ -261,8 +261,10 @@ struct ReaderWindowRootView: View {
                 )
             }
             .onAppear {
-                groupStateController.sortMode = settingsStore.currentSettings.sidebarGroupSortMode
-                groupStateController.fileSortMode = settingsStore.currentSettings.sidebarSortMode
+                groupStateController.configureSortModes(
+                    sortMode: settingsStore.currentSettings.sidebarGroupSortMode,
+                    fileSortMode: settingsStore.currentSettings.sidebarSortMode
+                )
                 groupStateController.updateDocuments(
                     sidebarDocumentController.documents,
                     rowStates: sidebarDocumentController.rowStates

@@ -485,6 +485,7 @@ final class ReaderSidebarDocumentController {
         for document in documents {
             states[document.id] = deriveRowState(from: document)
         }
+        guard states != rowStates else { return }
         rowStates = states
         onRowStatesChanged?(states)
     }

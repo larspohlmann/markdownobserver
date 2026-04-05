@@ -26,6 +26,13 @@ final class SidebarGroupStateController {
 
     init() {}
 
+    func configureSortModes(sortMode: ReaderSidebarSortMode, fileSortMode: ReaderSidebarSortMode) {
+        suppressRecompute = true
+        self.sortMode = sortMode
+        self.fileSortMode = fileSortMode
+        suppressRecompute = false
+    }
+
     // MARK: - Document Updates
 
     func updateDocuments(
@@ -34,7 +41,9 @@ final class SidebarGroupStateController {
     ) {
         self.documents = documents
         self.lastRowStates = rowStates
+        suppressRecompute = true
         pruneStaleGroupIDs()
+        suppressRecompute = false
         rebuildGroupIndicatorStates()
         recomputeGrouping()
     }
