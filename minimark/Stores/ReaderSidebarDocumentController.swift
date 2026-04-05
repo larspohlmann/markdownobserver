@@ -34,7 +34,7 @@ final class ReaderSidebarDocumentController {
     var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
     private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
-    lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
+    @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
     init(
         settingsStore: ReaderSettingsStore,

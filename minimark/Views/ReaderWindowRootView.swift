@@ -8,11 +8,11 @@ struct ReaderWindowRootView: View {
     }
 
     let seed: ReaderWindowSeed?
-    @ObservedObject var settingsStore: ReaderSettingsStore
+    var settingsStore: ReaderSettingsStore
     let multiFileDisplayMode: ReaderMultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
-    @StateObject var sidebarDocumentController: ReaderSidebarDocumentController
+    @State var sidebarDocumentController: ReaderSidebarDocumentController
     @State private var hasOpenedInitialFile = false
     @State var hostWindow: NSWindow?
     @State var isFolderWatchOptionsPresented = false
@@ -22,14 +22,14 @@ struct ReaderWindowRootView: View {
     @State private var uiTestWatchFlowTask: Task<Void, Never>?
     @State private var hasAppliedUITestLaunchConfiguration = false
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
-    @StateObject var groupStateController = SidebarGroupStateController()
+    @State var groupStateController = SidebarGroupStateController()
     @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     @State private var lastAppliedSidebarDelta: CGFloat = 0
     @State var activeFavoriteID: UUID?
     @State var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
-    @StateObject var windowCoordinator: ReaderWindowCoordinator
-    @StateObject var appearanceController: WindowAppearanceController
-    @StateObject var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+    @State var windowCoordinator: ReaderWindowCoordinator
+    @State var appearanceController: WindowAppearanceController
+    @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
@@ -43,14 +43,14 @@ struct ReaderWindowRootView: View {
         self.settingsStore = settingsStore
         self.multiFileDisplayMode = multiFileDisplayMode
         let sidebarDocumentController = ReaderSidebarDocumentController(settingsStore: settingsStore)
-        _sidebarDocumentController = StateObject(wrappedValue: sidebarDocumentController)
-        _windowCoordinator = StateObject(
+        _sidebarDocumentController = State(wrappedValue: sidebarDocumentController)
+        _windowCoordinator = State(
             wrappedValue: ReaderWindowCoordinator(
                 settingsStore: settingsStore,
                 sidebarDocumentController: sidebarDocumentController
             )
         )
-        _appearanceController = StateObject(
+        _appearanceController = State(
             wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
         )
     }
@@ -116,8 +116,10 @@ struct ReaderWindowRootView: View {
     }
 
     private func windowLifecycleBaseView<Content: View>(_ view: Content) -> some View {
-        view
-            .sheet(item: $folderWatchWarningCoordinator.activeFlow, onDismiss: {
+        @Bindable var warningCoordinator = folderWatchWarningCoordinator
+        @Bindable var sidebarController = sidebarDocumentController
+        return view
+            .sheet(item: $warningCoordinator.activeFlow, onDismiss: {
                 dismissFolderWatchAutoOpenWarning()
             }) { flow in
                 FolderWatchAutoOpenWarningFlowSheet(
@@ -130,7 +132,7 @@ struct ReaderWindowRootView: View {
                     }
                 )
             }
-            .sheet(item: $sidebarDocumentController.pendingFileSelectionRequest, onDismiss: {
+            .sheet(item: $sidebarController.pendingFileSelectionRequest, onDismiss: {
                 sidebarDocumentController.dismissPendingFileSelectionRequest()
             }) { request in
                 FolderWatchFileSelectionSheetWrapper(

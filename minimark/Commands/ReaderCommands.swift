@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ReaderCommands: Commands {
-    @ObservedObject var settingsStore: ReaderSettingsStore
+    var settingsStore: ReaderSettingsStore
     let multiFileDisplayMode: ReaderMultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow

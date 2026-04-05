@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import Testing
 @testable import minimark
 
@@ -77,17 +77,16 @@ struct SidebarGroupStateControllerTests {
         let controller = SidebarGroupStateController()
         controller.updateDocuments(harness.documents)
 
-        var groupingEmissionCount = 0
-        let cancellable = controller.$computedGrouping
-            .dropFirst()
-            .sink { _ in
-                groupingEmissionCount += 1
-            }
-        defer { cancellable.cancel() }
+        var groupingChanged = false
+        withObservationTracking {
+            _ = controller.computedGrouping
+        } onChange: {
+            groupingChanged = true
+        }
 
         controller.collapsedGroupIDs.insert("src")
 
-        #expect(groupingEmissionCount == 0)
+        #expect(!groupingChanged)
     }
 
     @Test @MainActor func groupIndicatorStatesReflectDocumentState() throws {
