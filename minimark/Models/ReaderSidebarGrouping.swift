@@ -1,11 +1,11 @@
 import Foundation
 
 @MainActor
-enum ReaderSidebarGrouping {
+enum ReaderSidebarGrouping: Equatable {
     case flat([ReaderSidebarDocumentController.Document])
     case grouped([Group])
 
-    struct Group: Identifiable {
+    struct Group: Identifiable, Equatable {
         let id: String
         let displayName: String
         let directoryURL: URL?
@@ -15,11 +15,30 @@ enum ReaderSidebarGrouping {
         let isPinned: Bool
     }
 
+    var firstDocumentID: UUID? {
+        switch self {
+        case .flat(let documents):
+            return documents.first?.id
+        case .grouped(let groups):
+            return groups.first?.documents.first?.id
+        }
+    }
+
+    var allDocumentIDs: [UUID] {
+        switch self {
+        case .flat(let documents):
+            return documents.map(\.id)
+        case .grouped(let groups):
+            return groups.flatMap { $0.documents.map(\.id) }
+        }
+    }
+
     static func group(
         _ documents: [ReaderSidebarDocumentController.Document],
         sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
         directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]? = nil,
-        pinnedGroupIDs: Set<String> = []
+        pinnedGroupIDs: Set<String> = [],
+        precomputedIndicatorStates: [String: ReaderDocumentIndicatorState]? = nil
     ) -> ReaderSidebarGrouping {
         let grouped = Dictionary(grouping: documents) { document -> String in
             directoryURL(for: document)?.path(percentEncoded: false) ?? ""
@@ -42,7 +61,8 @@ enum ReaderSidebarGrouping {
                 return nil
             }
             let dirURL = docs.first.flatMap { directoryURL(for: $0) }
-            let indicator = aggregatedIndicatorState(for: docs)
+            let indicator = precomputedIndicatorStates?[directoryPath]
+                ?? aggregatedIndicatorState(for: docs)
             let newestDate = newestModificationDate(for: docs)
             return Group(
                 id: directoryPath,
@@ -78,6 +98,25 @@ enum ReaderSidebarGrouping {
                 hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
                 isCurrentFileMissing: document.readerStore.isCurrentFileMissing
             )
+            switch state {
+            case .deletedExternalChange:
+                return .deletedExternalChange
+            case .externalChange:
+                hasExternalChange = true
+            case .none:
+                break
+            }
+        }
+
+        return hasExternalChange ? .externalChange : .none
+    }
+
+    static func aggregatedIndicatorState(
+        from states: [ReaderDocumentIndicatorState]
+    ) -> ReaderDocumentIndicatorState {
+        var hasExternalChange = false
+
+        for state in states {
             switch state {
             case .deletedExternalChange:
                 return .deletedExternalChange

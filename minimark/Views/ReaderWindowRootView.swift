@@ -22,8 +22,7 @@ struct ReaderWindowRootView: View {
     @State private var uiTestWatchFlowTask: Task<Void, Never>?
     @State private var hasAppliedUITestLaunchConfiguration = false
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
-    @State var sidebarPinnedGroupIDs: Set<String> = []
-    @State var sidebarCollapsedGroupIDs: Set<String> = []
+    @StateObject var groupStateController = SidebarGroupStateController()
     @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     @State private var lastAppliedSidebarDelta: CGFloat = 0
     @State var activeFavoriteID: UUID?
@@ -90,38 +89,6 @@ struct ReaderWindowRootView: View {
             set: { newValue in
                 updatePendingFolderWatchRequest { request in
                     request.options.scope = newValue
-                }
-            }
-        )
-    }
-
-    private var fileSortModeBinding: Binding<ReaderSidebarSortMode> {
-        Binding(
-            get: {
-                activeFavoriteWorkspaceState?.fileSortMode
-                    ?? settingsStore.currentSettings.sidebarSortMode
-            },
-            set: { newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.fileSortMode = newValue
-                } else {
-                    settingsStore.updateSidebarSortMode(newValue)
-                }
-            }
-        )
-    }
-
-    private var groupSortModeBinding: Binding<ReaderSidebarSortMode> {
-        Binding(
-            get: {
-                activeFavoriteWorkspaceState?.groupSortMode
-                    ?? settingsStore.currentSettings.sidebarGroupSortMode
-            },
-            set: { newValue in
-                if activeFavoriteWorkspaceState != nil {
-                    activeFavoriteWorkspaceState?.groupSortMode = newValue
-                } else {
-                    settingsStore.updateSidebarGroupSortMode(newValue)
                 }
             }
         )
@@ -261,15 +228,44 @@ struct ReaderWindowRootView: View {
             .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
                 handleFolderWatchOptionsPresentationChange(isPresented)
             }
-            .onChange(of: sidebarPinnedGroupIDs) { _, newValue in
+            .onChange(of: groupStateController.pinnedGroupIDs) { _, newValue in
                 if activeFavoriteWorkspaceState != nil {
                     activeFavoriteWorkspaceState?.pinnedGroupIDs = newValue
                 }
             }
-            .onChange(of: sidebarCollapsedGroupIDs) { _, newValue in
+            .onChange(of: groupStateController.collapsedGroupIDs) { _, newValue in
                 if activeFavoriteWorkspaceState != nil {
                     activeFavoriteWorkspaceState?.collapsedGroupIDs = newValue
                 }
+            }
+            .onChange(of: groupStateController.sortMode) { _, newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.groupSortMode = newValue
+                } else {
+                    settingsStore.updateSidebarGroupSortMode(newValue)
+                }
+            }
+            .onChange(of: groupStateController.fileSortMode) { _, newValue in
+                if activeFavoriteWorkspaceState != nil {
+                    activeFavoriteWorkspaceState?.fileSortMode = newValue
+                } else {
+                    settingsStore.updateSidebarSortMode(newValue)
+                }
+            }
+            .onChange(of: sidebarDocumentController.documents.map(\.id)) { _, _ in
+                groupStateController.updateDocuments(
+                    sidebarDocumentController.documents,
+                    rowStates: sidebarDocumentController.rowStates
+                )
+            }
+            .onAppear {
+                groupStateController.sortMode = settingsStore.currentSettings.sidebarGroupSortMode
+                groupStateController.fileSortMode = settingsStore.currentSettings.sidebarSortMode
+                groupStateController.updateDocuments(
+                    sidebarDocumentController.documents,
+                    rowStates: sidebarDocumentController.rowStates
+                )
+                groupStateController.observeRowStates(from: sidebarDocumentController)
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()
@@ -417,11 +413,8 @@ struct ReaderWindowRootView: View {
         ReaderSidebarWorkspaceView(
             controller: sidebarDocumentController,
             settingsStore: settingsStore,
+            groupState: groupStateController,
             sidebarPlacement: sidebarPlacement,
-            collapsedGroupIDs: $sidebarCollapsedGroupIDs,
-            pinnedGroupIDs: $sidebarPinnedGroupIDs,
-            fileSortMode: fileSortModeBinding,
-            groupSortMode: groupSortModeBinding,
             sidebarWidth: sidebarWidth,
             onSidebarWidthChanged: { newWidth in
                 sidebarWidth = newWidth

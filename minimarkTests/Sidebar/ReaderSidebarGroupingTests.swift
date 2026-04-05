@@ -370,73 +370,93 @@ struct ReaderSidebarGroupingTests {
         let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
         #expect(state == .deletedExternalChange)
     }
-}
 
-// MARK: - Test Harness
+    // MARK: - Indicator Aggregation from Pre-Computed States
 
-@MainActor
-private struct ReaderSidebarGroupingTestHarness {
-    let temporaryDirectoryURL: URL
-    let documents: [ReaderSidebarDocumentController.Document]
+    @Test @MainActor func aggregatedIndicatorFromStatesReturnsNoneWhenAllNone() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.none, .none, .none]
+        )
+        #expect(result == .none)
+    }
 
-    init(subdirectories: [String], filesPerSubdirectory: Int) throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("minimark-grouping-tests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        temporaryDirectoryURL = directory
+    @Test @MainActor func aggregatedIndicatorFromStatesReturnsExternalChangeWhenPresent() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.none, .externalChange, .none]
+        )
+        #expect(result == .externalChange)
+    }
 
-        let settingsStore = ReaderSettingsStore(
-            storage: TestSettingsKeyValueStorage(),
-            storageKey: "reader.settings.grouping.tests.\(UUID().uuidString)"
+    @Test @MainActor func aggregatedIndicatorFromStatesReturnsDeletedWhenPresent() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.none, .deletedExternalChange]
+        )
+        #expect(result == .deletedExternalChange)
+    }
+
+    @Test @MainActor func aggregatedIndicatorFromStatesDeletedTakesPriority() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+            from: [.externalChange, .deletedExternalChange, .none]
+        )
+        #expect(result == .deletedExternalChange)
+    }
+
+    @Test @MainActor func aggregatedIndicatorFromStatesHandlesEmptyArray() {
+        let result = ReaderSidebarGrouping.aggregatedIndicatorState(from: [])
+        #expect(result == .none)
+    }
+
+    @Test @MainActor func groupUsesPrecomputedIndicatorStatesWhenProvided() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src", "tests"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let srcPath = harness.directoryPath(for: "src")
+        let testsPath = harness.directoryPath(for: "tests")
+
+        let precomputed: [String: ReaderDocumentIndicatorState] = [
+            srcPath: .externalChange,
+            testsPath: .none
+        ]
+
+        let grouping = ReaderSidebarGrouping.group(
+            harness.documents,
+            precomputedIndicatorStates: precomputed
         )
 
-        var allDocuments: [ReaderSidebarDocumentController.Document] = []
-
-        for subdirectory in subdirectories {
-            let subURL = directory.appendingPathComponent(subdirectory, isDirectory: true)
-            try FileManager.default.createDirectory(at: subURL, withIntermediateDirectories: true)
-
-            for i in 0..<filesPerSubdirectory {
-                let fileURL = subURL.appendingPathComponent("file\(i).md")
-                try "# File \(i)".write(to: fileURL, atomically: true, encoding: .utf8)
-
-                let store = ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: TestFileWatcher(),
-                    folderWatcher: TestFolderWatcher(),
-                    settingsStore: settingsStore,
-                    securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
-                    requestWatchedFolderReauthorization: { _ in nil }
-                )
-                store.testSetFileURL(fileURL)
-                store.testSetFileDisplayName(fileURL.lastPathComponent)
-
-                allDocuments.append(
-                    ReaderSidebarDocumentController.Document(id: UUID(), readerStore: store)
-                )
-            }
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
         }
 
-        documents = allDocuments
+        let srcGroup = try #require(groups.first { $0.id == srcPath })
+        let testsGroup = try #require(groups.first { $0.id == testsPath })
+        #expect(srcGroup.indicatorState == .externalChange)
+        #expect(testsGroup.indicatorState == .none)
     }
 
-    func documentsInSubdirectory(_ name: String) -> [ReaderSidebarDocumentController.Document] {
-        let subURL = temporaryDirectoryURL.appendingPathComponent(name, isDirectory: true)
-        return documents.filter { doc in
-            doc.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)
+    @Test @MainActor func groupFallsBackToLiveComputationWhenNoPrecomputedStates() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src", "tests"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        harness.documentsInSubdirectory("src").first!.readerStore
+            .testSetHasUnacknowledgedExternalChange(true)
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents)
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
         }
-    }
 
-    func directoryPath(for subdirectory: String) -> String {
-        temporaryDirectoryURL.appendingPathComponent(subdirectory, isDirectory: true).path(percentEncoded: false)
-    }
-
-    func cleanup() {
-        try? FileManager.default.removeItem(at: temporaryDirectoryURL)
+        let srcPath = harness.directoryPath(for: "src")
+        let srcGroup = try #require(groups.first { $0.id == srcPath })
+        #expect(srcGroup.indicatorState == .externalChange)
     }
 }
+
