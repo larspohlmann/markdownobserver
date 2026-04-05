@@ -421,6 +421,7 @@ struct FolderWatchOptionsSheet: View {
                     },
                     set: { newValue in
                         excludedSubdirectoryPaths = newValue
+                        viewModel.excludedSubdirectoryPaths = newValue
                     }
                 ),
                 onCancel: {
@@ -1004,21 +1005,15 @@ private struct FolderWatchTreeNodeRow: View {
 
                 Spacer()
 
-                Button {
-                    setExclusion(active: exclusion.isEffectivelyExcluded)
-                } label: {
-                    Capsule()
-                        .fill(exclusion.isActive ? Color.green : Color(nsColor: .separatorColor))
-                        .frame(width: 26, height: 15)
-                        .overlay(alignment: exclusion.isActive ? .trailing : .leading) {
-                            Circle()
-                                .fill(.white)
-                                .shadow(color: .black.opacity(0.15), radius: 0.5, y: 0.5)
-                                .padding(2)
-                        }
-                        .animation(.easeInOut(duration: 0.15), value: exclusion.isActive)
+                Toggle(isOn: Binding(
+                    get: { self.exclusionState.isActive },
+                    set: { self.setExclusion(active: $0) }
+                )) {
+                    EmptyView()
                 }
-                .buttonStyle(.plain)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
                 .disabled(!exclusion.canToggle)
                 .help(exclusion.isByAncestor ? "Exclusion inherited from a parent folder" : "Toggle to include or exclude this folder")
                 .accessibilityLabel("\(node.name)")
