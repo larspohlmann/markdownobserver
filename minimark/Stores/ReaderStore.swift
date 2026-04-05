@@ -238,7 +238,7 @@ final class ReaderStore {
         document.documentLoadState = .ready
     }
 
-    private var loadingOverlayHoldGeneration: UInt = 0
+    @ObservationIgnored private var loadingOverlayHoldGeneration: UInt = 0
 
     func holdLoadingOverlayBriefly() {
         // After file I/O completes the settler sets .ready immediately,

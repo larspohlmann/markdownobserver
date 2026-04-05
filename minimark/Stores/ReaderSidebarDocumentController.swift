@@ -30,9 +30,9 @@ final class ReaderSidebarDocumentController {
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
     @ObservationIgnored private var selectedStoreObservationTask: Task<Void, Never>?
-    private var storeConfigurator: ((ReaderStore) -> Void)?
-    var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
-    private var selectedStoreBindingGeneration: UInt = 0
+    @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
+    @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
+    @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
     @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
