@@ -144,7 +144,7 @@ struct SidebarGroupStateControllerTests {
         #expect(controller.collapsedGroupIDs == ["/path/b"])
     }
 
-    @Test @MainActor func workspaceStateSnapshotCapturesCurrentState() throws {
+    @Test @MainActor func persistenceSnapshotCapturesCurrentState() throws {
         let controller = SidebarGroupStateController()
         controller.sortMode = .nameAscending
         controller.pinnedGroupIDs = ["/a"]

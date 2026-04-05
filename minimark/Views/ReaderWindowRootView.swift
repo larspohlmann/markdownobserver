@@ -232,11 +232,19 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: groupStateController.persistenceSnapshot) { oldSnapshot, newSnapshot in
                 if var state = activeFavoriteWorkspaceState {
-                    state.pinnedGroupIDs = newSnapshot.pinnedGroupIDs
-                    state.collapsedGroupIDs = newSnapshot.collapsedGroupIDs
-                    state.groupSortMode = newSnapshot.sortMode
-                    state.fileSortMode = newSnapshot.fileSortMode
-                    activeFavoriteWorkspaceState = state
+                    let needsUpdate =
+                        state.pinnedGroupIDs != newSnapshot.pinnedGroupIDs ||
+                        state.collapsedGroupIDs != newSnapshot.collapsedGroupIDs ||
+                        state.groupSortMode != newSnapshot.sortMode ||
+                        state.fileSortMode != newSnapshot.fileSortMode
+
+                    if needsUpdate {
+                        state.pinnedGroupIDs = newSnapshot.pinnedGroupIDs
+                        state.collapsedGroupIDs = newSnapshot.collapsedGroupIDs
+                        state.groupSortMode = newSnapshot.sortMode
+                        state.fileSortMode = newSnapshot.fileSortMode
+                        activeFavoriteWorkspaceState = state
+                    }
                 } else {
                     if oldSnapshot.sortMode != newSnapshot.sortMode {
                         settingsStore.updateSidebarGroupSortMode(newSnapshot.sortMode)
