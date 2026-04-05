@@ -29,7 +29,7 @@ final class ReaderSidebarDocumentController {
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
-    private let selectedStoreProjection = ReaderSidebarSelectedStoreProjection()
+    @ObservationIgnored private var selectedStoreObservationTask: Task<Void, Never>?
     private var storeConfigurator: ((ReaderStore) -> Void)?
     var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     private var selectedStoreBindingGeneration: UInt = 0
@@ -455,9 +455,31 @@ final class ReaderSidebarDocumentController {
     private func bindSelectedStore() {
         selectedStoreBindingGeneration &+= 1
         let bindingGeneration = selectedStoreBindingGeneration
+        let store = selectedReaderStore
 
-        selectedStoreProjection.bind(to: selectedReaderStore) { [weak self] state in
-            self?.scheduleSelectedStoreProjection(state, bindingGeneration: bindingGeneration)
+        selectedWindowTitle = store.windowTitle
+        selectedFileURL = store.fileURL
+        selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
+
+        selectedStoreObservationTask?.cancel()
+        selectedStoreObservationTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let changed = await withCheckedContinuation { continuation in
+                    withObservationTracking {
+                        _ = store.windowTitle
+                        _ = store.fileURL
+                        _ = store.hasUnacknowledgedExternalChange
+                    } onChange: {
+                        continuation.resume(returning: true)
+                    }
+                }
+                guard changed, !Task.isCancelled else { break }
+                guard let self,
+                      self.selectedStoreBindingGeneration == bindingGeneration else { break }
+                self.selectedWindowTitle = store.windowTitle
+                self.selectedFileURL = store.fileURL
+                self.selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
+            }
         }
     }
 
@@ -549,26 +571,6 @@ final class ReaderSidebarDocumentController {
         }
 
         return activeFolderWatchSession
-    }
-
-    private func applySelectedStoreProjection(_ state: ReaderSidebarSelectedStoreProjection.State) {
-        selectedWindowTitle = state.windowTitle
-        selectedFileURL = state.fileURL
-        selectedHasUnacknowledgedExternalChange = state.hasUnacknowledgedExternalChange
-    }
-
-    private func scheduleSelectedStoreProjection(
-        _ state: ReaderSidebarSelectedStoreProjection.State,
-        bindingGeneration: UInt
-    ) {
-        Task { @MainActor [weak self] in
-            guard let self,
-                  self.selectedStoreBindingGeneration == bindingGeneration else {
-                return
-            }
-
-            self.applySelectedStoreProjection(state)
-        }
     }
 
     private func configureFolderWatchController() {
