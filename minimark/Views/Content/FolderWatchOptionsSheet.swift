@@ -1006,11 +1006,7 @@ private struct FolderWatchTreeNodeRow: View {
 
                 Toggle(isOn: Binding(
                     get: { self.exclusionState.isActive },
-                    set: { newValue in
-                        if newValue != self.exclusionState.isActive {
-                            self.toggleExclusion()
-                        }
-                    }
+                    set: { self.setExclusion(active: $0) }
                 )) {
                     EmptyView()
                 }
@@ -1056,15 +1052,20 @@ private struct FolderWatchTreeNodeRow: View {
         }
     }
 
-    private func toggleExclusion() {
+    private func setExclusion(active: Bool) {
         guard exclusionState.canToggle else {
             return
         }
 
-        excludedSubdirectoryPaths = FolderWatchExclusionLogic.toggleExclusion(
-            for: node.path,
-            in: excludedSubdirectoryPaths
-        )
+        if active {
+            excludedSubdirectoryPaths = FolderWatchExclusionLogic.includePath(
+                node.path, in: excludedSubdirectoryPaths
+            )
+        } else {
+            excludedSubdirectoryPaths = FolderWatchExclusionLogic.excludePath(
+                node.path, in: excludedSubdirectoryPaths
+            )
+        }
     }
 }
 
@@ -1109,6 +1110,35 @@ enum FolderWatchExclusionLogic {
         }
 
         return Array(next).sorted()
+    }
+
+    static func excludePath(_ nodePath: String, in excludedPaths: [String]) -> [String] {
+        var set = Set(excludedPaths)
+        guard !set.contains(nodePath) else {
+            return excludedPaths
+        }
+
+        let prefix = nodePath.hasSuffix("/") ? nodePath : nodePath + "/"
+        set = set.filter { !$0.hasPrefix(prefix) }
+        set.insert(nodePath)
+        return Array(set).sorted()
+    }
+
+    static func includePath(_ nodePath: String, in excludedPaths: [String]) -> [String] {
+        var set = Set(excludedPaths)
+        guard set.contains(nodePath) else {
+            return excludedPaths
+        }
+
+        let prefix = nodePath.hasSuffix("/") ? nodePath : nodePath + "/"
+        set = set.filter { path in
+            guard path != nodePath else {
+                return false
+            }
+
+            return !path.hasPrefix(prefix)
+        }
+        return Array(set).sorted()
     }
 
     static func isExcludedByAncestor(nodePath: String, excludedSet: Set<String>) -> Bool {

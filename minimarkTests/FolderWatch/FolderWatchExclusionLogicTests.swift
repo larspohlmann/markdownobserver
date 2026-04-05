@@ -68,6 +68,48 @@ struct FolderWatchExclusionLogicTests {
         #expect(restored == original)
     }
 
+    // MARK: - excludePath (idempotent)
+
+    @Test func excludePathAddsToExcluded() {
+        let result = FolderWatchExclusionLogic.excludePath("/root/sub1", in: [])
+        #expect(result == ["/root/sub1"])
+    }
+
+    @Test func excludePathIsIdempotent() {
+        let original = ["/root/sub1"]
+        let result = FolderWatchExclusionLogic.excludePath("/root/sub1", in: original)
+        #expect(result == original)
+    }
+
+    @Test func excludePathCleansDescendants() {
+        let result = FolderWatchExclusionLogic.excludePath(
+            "/root/sub1",
+            in: ["/root/sub1/child1", "/root/sub1/child2"]
+        )
+        #expect(result == ["/root/sub1"])
+    }
+
+    // MARK: - includePath (idempotent)
+
+    @Test func includePathRemovesFromExcluded() {
+        let result = FolderWatchExclusionLogic.includePath("/root/sub1", in: ["/root/sub1"])
+        #expect(result == [])
+    }
+
+    @Test func includePathIsIdempotent() {
+        let original: [String] = []
+        let result = FolderWatchExclusionLogic.includePath("/root/sub1", in: original)
+        #expect(result == original)
+    }
+
+    @Test func includePathCleansDescendants() {
+        let result = FolderWatchExclusionLogic.includePath(
+            "/root/sub1",
+            in: ["/root/sub1", "/root/sub1/child1"]
+        )
+        #expect(result == [])
+    }
+
     // MARK: - exclusionState
 
     @Test func exclusionStateNoneWhenNoExclusions() {
