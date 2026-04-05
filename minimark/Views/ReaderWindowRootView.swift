@@ -325,7 +325,9 @@ struct ReaderWindowRootView: View {
     }
 
     private func configureStoreCallbacks() {
-        windowCoordinator.configureStoreCallbacks { [self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
+        windowCoordinator.configureStoreCallbacks(
+            lockedAppearanceProvider: { [appearanceController] in appearanceController.lockedAppearance }
+        ) { [self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
             let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
             if ReaderWindowRegistry.shared.focusDocumentIfAlreadyOpen(at: normalizedFileURL) {
                 return

@@ -826,4 +826,64 @@ struct ReaderSidebarDocumentControllerTests {
         // Newest file (doc-04) should be selected
         #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "doc-04.md")
     }
+
+    // MARK: - Locked appearance propagation (#152)
+
+    @Test @MainActor func coordinatorPropagatesLockedAppearanceToNewDocuments() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let lockedAppearance = LockedAppearance(readerTheme: .newspaper, baseFontSize: 22, syntaxTheme: .nord)
+
+        // Wire up the coordinator the same way the real app does
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+        coordinator.configureStoreCallbacks(
+            lockedAppearanceProvider: { lockedAppearance },
+            onOpenAdditionalDocument: { _, _, _, _ in }
+        )
+
+        // Defer a new file (deferred documents don't render, so needsAppearanceRender stays true)
+        let fileCoordinator = FileOpenCoordinator(controller: harness.controller)
+        fileCoordinator.open(FileOpenRequest(
+            fileURLs: [harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            slotStrategy: .alwaysAppend,
+            materializationStrategy: .deferOnly
+        ))
+
+        // The newly created document should have the locked appearance applied
+        let newDocument = harness.controller.document(for: harness.secondaryFileURL)
+        #expect(newDocument != nil)
+        #expect(newDocument?.readerStore.needsAppearanceRender == true)
+    }
+
+    @Test @MainActor func coordinatorDoesNotApplyAppearanceWhenUnlocked() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        // No locked appearance
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+        coordinator.configureStoreCallbacks(
+            lockedAppearanceProvider: { nil },
+            onOpenAdditionalDocument: { _, _, _, _ in }
+        )
+
+        let fileCoordinator = FileOpenCoordinator(controller: harness.controller)
+        fileCoordinator.open(FileOpenRequest(
+            fileURLs: [harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            slotStrategy: .alwaysAppend,
+            materializationStrategy: .deferOnly
+        ))
+
+        let newDocument = harness.controller.document(for: harness.secondaryFileURL)
+        #expect(newDocument != nil)
+        #expect(newDocument?.readerStore.needsAppearanceRender == false)
+    }
 }
