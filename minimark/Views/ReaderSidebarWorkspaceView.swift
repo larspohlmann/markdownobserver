@@ -698,7 +698,6 @@ private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
                     .background(.quaternary.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                     .rotationEffect(configuration.isExpanded ? .degrees(90) : .zero)
-                    .animation(.easeInOut(duration: 0.15), value: configuration.isExpanded)
 
                 configuration.label
             }
