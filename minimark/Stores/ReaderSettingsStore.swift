@@ -181,7 +181,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
-@MainActor final class ReaderSettingsStore: ObservableObject, ReaderSettingsStoring {
+@MainActor @Observable final class ReaderSettingsStore: ReaderSettingsStoring {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ReaderSettingsStore"
@@ -190,8 +190,6 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     typealias BookmarkResolution = (url: URL, isStale: Bool)
     typealias BookmarkResolver = (Data) throws -> BookmarkResolution
     typealias BookmarkCreator = (URL) throws -> Data
-
-    let objectWillChange = ObservableObjectPublisher()
 
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> {
         subject.eraseToAnyPublisher()
@@ -329,7 +327,6 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         guard updated != current else {
             return
         }
-        objectWillChange.send()
         subject.send(updated)
         if coalescePersistence {
             schedulePersist()
