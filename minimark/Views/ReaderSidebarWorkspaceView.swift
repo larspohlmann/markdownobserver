@@ -175,14 +175,14 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 switch grouping {
                 case .flat(let documents):
                     ForEach(documents) { document in
-                        documentRow(for: document, allDocuments: sortedDocuments)
+                        documentRow(for: document, allDocuments: sortedDocuments, currentDate: Date())
                             .tag(document.id)
                     }
                 case .grouped(let groups):
                     ForEach(groups) { group in
                         DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
                             ForEach(group.documents) { document in
-                                documentRow(for: document, allDocuments: sortedDocuments)
+                                documentRow(for: document, allDocuments: sortedDocuments, currentDate: Date())
                                     .tag(document.id)
                             }
                         } label: {
@@ -293,10 +293,25 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private func documentRow(
         for document: ReaderSidebarDocumentController.Document,
-        allDocuments: [ReaderSidebarDocumentController.Document]
+        allDocuments: [ReaderSidebarDocumentController.Document],
+        currentDate: Date
     ) -> some View {
-        ReaderSidebarDocumentRow(
-            documentID: document.id,
+        let rowState = controller.rowStates.first(where: { $0.id == document.id })
+            ?? SidebarRowState(
+                id: document.id,
+                title: document.readerStore.fileDisplayName.isEmpty ? "Untitled" : document.readerStore.fileDisplayName,
+                lastModified: document.readerStore.fileLastModifiedAt,
+                isFileMissing: document.readerStore.isCurrentFileMissing,
+                indicatorState: ReaderDocumentIndicatorState(
+                    hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
+                    isCurrentFileMissing: document.readerStore.isCurrentFileMissing
+                )
+            )
+
+        return ReaderSidebarDocumentRow(
+            state: rowState,
+            currentDate: currentDate,
+            settings: settingsStore.currentSettings,
             documents: allDocuments,
             readerStore: document.readerStore,
             watchedDocumentIDs: watchedDocumentIDs,
@@ -437,9 +452,11 @@ private struct ReaderSidebarDocumentRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
 
-    let documentID: UUID
+    let state: SidebarRowState
+    let currentDate: Date
+    let settings: ReaderSettings
     let documents: [ReaderSidebarDocumentController.Document]
-    @ObservedObject var readerStore: ReaderStore
+    let readerStore: ReaderStore
     let watchedDocumentIDs: Set<UUID>
     let selectedDocumentIDs: Set<UUID>
     let canClose: Bool
@@ -452,11 +469,11 @@ private struct ReaderSidebarDocumentRow: View {
     let onCloseAll: () -> Void
 
     private var effectiveDocumentIDs: Set<UUID> {
-        if selectedDocumentIDs.contains(documentID), selectedDocumentIDs.count > 1 {
+        if selectedDocumentIDs.contains(state.id), selectedDocumentIDs.count > 1 {
             return selectedDocumentIDs
         }
 
-        return [documentID]
+        return [state.id]
     }
 
     private var effectiveDocuments: [ReaderSidebarDocumentController.Document] {
@@ -516,18 +533,15 @@ private struct ReaderSidebarDocumentRow: View {
     }
 
     private var changedIndicatorColor: Color {
-        indicatorState.color(for: readerStore.currentSettings, colorScheme: colorScheme)
+        indicatorState.color(for: settings, colorScheme: colorScheme)
     }
 
     private var indicatorState: ReaderDocumentIndicatorState {
-        ReaderDocumentIndicatorState(
-            hasUnacknowledgedExternalChange: readerStore.hasUnacknowledgedExternalChange,
-            isCurrentFileMissing: readerStore.isCurrentFileMissing
-        )
+        state.indicatorState
     }
 
     private var isSelected: Bool {
-        selectedDocumentIDs.contains(documentID)
+        selectedDocumentIDs.contains(state.id)
     }
 
     private var lastChangedTextColor: Color {
@@ -546,13 +560,11 @@ private struct ReaderSidebarDocumentRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                TimelineView(.periodic(from: .now, by: 20)) { context in
-                    Text(lastChangedText(relativeTo: context.date))
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundStyle(lastChangedTextColor)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+                Text(lastChangedText)
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(lastChangedTextColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             Spacer(minLength: 8)
@@ -566,7 +578,7 @@ private struct ReaderSidebarDocumentRow: View {
 
             if canClose {
                 Button {
-                    onClose([documentID])
+                    onClose([state.id])
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 13))
@@ -634,25 +646,21 @@ private struct ReaderSidebarDocumentRow: View {
     }
 
     private var title: String {
-        if readerStore.fileDisplayName.isEmpty {
-            return "Untitled"
-        }
-
-        return readerStore.fileDisplayName
+        state.title
     }
 
-    private func lastChangedText(relativeTo now: Date) -> String {
-        if readerStore.isCurrentFileMissing {
+    private var lastChangedText: String {
+        if state.isFileMissing {
             return "File deleted externally"
         }
 
-        guard let fileLastModifiedAt = readerStore.fileLastModifiedAt else {
+        guard let fileLastModifiedAt = state.lastModified else {
             return "No change timestamp"
         }
 
         return ReaderStatusFormatting.relativeText(
             for: fileLastModifiedAt,
-            relativeTo: now
+            relativeTo: currentDate
         )
     }
 }
