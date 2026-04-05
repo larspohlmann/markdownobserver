@@ -2,13 +2,13 @@ import AppKit
 import SwiftUI
 
 /// Bridges to AppKit to set the NSSplitView divider position and holding priorities.
-/// HSplitView ignores `idealWidth` for restored widths, so this applies the correct
-/// position programmatically on first appearance and whenever width or placement changes.
+/// Monitors mouse events to detect divider drags: on mouse-down near the divider,
+/// `onDividerDragActive(true)` is called so the parent can lift its `maxWidth` constraint.
+/// On mouse-up, the final width is reported via `onDividerDragged` and the constraint
+/// is re-engaged via `onDividerDragActive(false)`.
 ///
-/// Also monitors mouse events to detect divider drags: when the user clicks near the
-/// divider, `onDividerDragActive` is called with `true` to lift the `maxWidth` constraint,
-/// allowing the sidebar to resize. On mouse up, it's called with `false` and the new
-/// sidebar width is reported via `onDividerDragged`.
+/// The `isDraggingDivider` toggle causes exactly 2 SwiftUI re-renders per drag (start + end).
+/// No per-pixel updates occur — width is only reported on mouse-up.
 struct SidebarDividerPositionSetter: NSViewRepresentable {
     let targetWidth: CGFloat
     let placement: ReaderMultiFileDisplayMode.SidebarPlacement
@@ -33,8 +33,6 @@ struct SidebarDividerPositionSetter: NSViewRepresentable {
 }
 
 final class SidebarPositionHelperView: NSView {
-    /// High holding priority so the sidebar strongly resists proportional
-    /// resizing when the window expands or shrinks.
     private static let sidebarHoldingPriority: NSLayoutConstraint.Priority = .defaultHigh
     private static let widthEpsilon: CGFloat = 1
     private static let dividerHitZone: CGFloat = 6
@@ -73,6 +71,19 @@ final class SidebarPositionHelperView: NSView {
         onDividerDragActive?(false)
     }
 
+    func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
+        let widthChanged = abs(targetWidth - newWidth) > Self.widthEpsilon
+        let placementChanged = placement != newPlacement
+        if widthChanged { targetWidth = newWidth }
+        if placementChanged { placement = newPlacement }
+        if widthChanged || placementChanged {
+            lastAppliedWidth = 0
+            applyPosition()
+        }
+    }
+
+    // MARK: - Mouse monitoring
+
     private func installMouseMonitors() {
         mouseDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             self?.handleMouseDown(event)
@@ -99,7 +110,6 @@ final class SidebarPositionHelperView: NSView {
         let sidebarFrame = splitView.subviews[sidebarSubviewIndex].frame
         let locationInSplitView = splitView.convert(event.locationInWindow, from: nil)
 
-        // Check if click is near the divider edge
         let dividerX = placement == .left ? sidebarFrame.maxX : sidebarFrame.minX
         if abs(locationInSplitView.x - dividerX) <= Self.dividerHitZone + splitView.dividerThickness {
             isDraggingDivider = true
@@ -111,7 +121,6 @@ final class SidebarPositionHelperView: NSView {
         guard isDraggingDivider else { return }
         isDraggingDivider = false
 
-        // Read the final sidebar width from NSSplitView
         if let splitView = ancestorSplitView(), splitView.subviews.count > 1 {
             let finalWidth = splitView.subviews[sidebarSubviewIndex].frame.width
             if finalWidth > 0 {
@@ -121,20 +130,10 @@ final class SidebarPositionHelperView: NSView {
             }
         }
 
-        // Re-engage the maxWidth constraint
         onDividerDragActive?(false)
     }
 
-    func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
-        let widthChanged = abs(targetWidth - newWidth) > Self.widthEpsilon
-        let placementChanged = placement != newPlacement
-        if widthChanged { targetWidth = newWidth }
-        if placementChanged { placement = newPlacement }
-        if widthChanged || placementChanged {
-            lastAppliedWidth = 0
-            applyPosition()
-        }
-    }
+    // MARK: - Position application
 
     private func applyPosition() {
         guard let splitView = ancestorSplitView(),

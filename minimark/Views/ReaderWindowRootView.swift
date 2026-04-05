@@ -271,12 +271,6 @@ struct ReaderWindowRootView: View {
                     activeFavoriteWorkspaceState?.collapsedGroupIDs = newValue
                 }
             }
-            .onChange(of: sidebarWidth) { _, newWidth in
-                if activeFavoriteWorkspaceState != nil,
-                   sidebarDocumentController.documents.count > 1 {
-                    activeFavoriteWorkspaceState?.sidebarWidth = newWidth
-                }
-            }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()
             }
@@ -426,7 +420,14 @@ struct ReaderWindowRootView: View {
             pinnedGroupIDs: $sidebarPinnedGroupIDs,
             fileSortMode: fileSortModeBinding,
             groupSortMode: groupSortModeBinding,
-            sidebarWidth: $sidebarWidth,
+            sidebarWidth: sidebarWidth,
+            onSidebarWidthChanged: { newWidth in
+                sidebarWidth = newWidth
+                if activeFavoriteWorkspaceState != nil,
+                   sidebarDocumentController.documents.count > 1 {
+                    activeFavoriteWorkspaceState?.sidebarWidth = newWidth
+                }
+            },
             detail: { store in
                 contentView(for: store)
             },
