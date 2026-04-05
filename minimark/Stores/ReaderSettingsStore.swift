@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Observation
 import OSLog
 
 nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
@@ -195,9 +196,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         subject.eraseToAnyPublisher()
     }
 
-    var currentSettings: ReaderSettings {
-        subject.value
-    }
+    private(set) var currentSettings: ReaderSettings
 
     private let storage: ReaderSettingsKeyValueStoring
     private let storageKey: String
@@ -247,6 +246,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         }
 
         self.subject = CurrentValueSubject(initialSettings)
+        self.currentSettings = initialSettings
     }
 
     func updateAppAppearance(_ appearance: AppAppearance) {
@@ -327,6 +327,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         guard updated != current else {
             return
         }
+        currentSettings = updated
         subject.send(updated)
         if coalescePersistence {
             schedulePersist()

@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Observation
 
 @MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
