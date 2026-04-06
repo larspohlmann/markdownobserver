@@ -5,22 +5,25 @@ struct ChangeNavigationPill: View {
     let totalCount: Int
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
 
     private enum Metrics {
-        static let pillWidth: CGFloat = 44
-        static let buttonSize: CGFloat = 32
-        static let buttonCornerRadius: CGFloat = 8
-        static let iconSize: CGFloat = 12
-        static let pillCornerRadius: CGFloat = 12
+        static let pillHeight: CGFloat = 30
         static let pillInset: CGFloat = 8
-        static let groupSpacing: CGFloat = 4
+        static let horizontalPadding: CGFloat = 10
+        static let controlHeight: CGFloat = 28
+        static let iconSize: CGFloat = 11
+    }
+
+    private var pillBorder: Color {
+        Color.primary.opacity(isHovering ? 0.16 : 0.08)
     }
 
     var body: some View {
-        VStack(spacing: Metrics.groupSpacing) {
+        HStack(spacing: 6) {
             navigationButton(
-                symbolName: "arrow.up",
+                symbolName: "chevron.up",
                 label: "Previous change",
                 direction: .previous
             )
@@ -34,17 +37,17 @@ struct ChangeNavigationPill: View {
                 .monospacedDigit()
 
             navigationButton(
-                symbolName: "arrow.down",
+                symbolName: "chevron.down",
                 label: "Next change",
                 direction: .next
             )
         }
-        .padding(.vertical, Metrics.groupSpacing + 4)
-        .frame(width: Metrics.pillWidth)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous))
+        .padding(.horizontal, Metrics.horizontalPadding)
+        .frame(minHeight: Metrics.pillHeight)
+        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: Metrics.pillCornerRadius, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isHovering ? 0.16 : 0.08), lineWidth: 1)
+            Capsule(style: .continuous)
+                .strokeBorder(pillBorder, lineWidth: 1)
         }
         .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 16 : 6, y: 2)
         .onHover { hovering in
@@ -66,19 +69,11 @@ struct ChangeNavigationPill: View {
         } label: {
             Image(systemName: symbolName)
                 .font(.system(size: Metrics.iconSize, weight: .semibold))
-                .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
-                .background(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .fill(Color.primary.opacity(0.06))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous))
+                .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primary)
+        .foregroundStyle(.primary.opacity(0.55))
         .help(label)
         .accessibilityLabel(label)
         .accessibilityHint("Jumps to a changed region in the current preview")
