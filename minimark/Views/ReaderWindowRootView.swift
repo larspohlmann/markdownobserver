@@ -513,6 +513,8 @@ struct ReaderWindowRootView: View {
                             .foregroundStyle(.secondary)
                     }
                     .help(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+                    .accessibilityLabel(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+                    .accessibilityIdentifier("sidebar-placement-toggle")
                 }
             }
         }

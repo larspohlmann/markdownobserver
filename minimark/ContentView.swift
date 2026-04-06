@@ -518,7 +518,11 @@ struct ContentView: View {
     }
 
     private var overlayTopInset: CGFloat {
-        ReaderTopBarMetrics.mainBarHeight
+        var height = ReaderTopBarMetrics.mainBarHeight
+        if readerStore.isSourceEditing {
+            height += ReaderTopBarMetrics.sourceEditingBarHeight
+        }
+        return height
     }
 
     @ViewBuilder

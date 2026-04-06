@@ -26,6 +26,7 @@ struct PointingHandCursor: ViewModifier {
 
 enum ReaderTopBarMetrics {
     static let mainBarHeight: CGFloat = 44
+    static let sourceEditingBarHeight: CGFloat = 22
 }
 
 struct ReaderTopBar: View {
