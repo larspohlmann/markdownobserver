@@ -372,7 +372,7 @@ enum ReaderCSSThemeGenerator {
           padding: 0.45em 0.65em;
           border: 1px solid var(--reader-border);
           vertical-align: top;
-          min-width: 4em;
+          min-width: 8ch;
           word-break: keep-all;
         }
 
