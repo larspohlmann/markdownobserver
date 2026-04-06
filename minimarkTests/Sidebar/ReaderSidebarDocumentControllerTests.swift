@@ -1057,4 +1057,51 @@ struct ReaderSidebarDocumentControllerTests {
         // gamma.md should now be selected (newest overall).
         #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "gamma.md")
     }
+
+    @Test @MainActor func liveAutoOpenedFileShowsExternalChangeIndicator() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual
+        ))
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        )
+
+        harness.folderWatchControllerWatcher.emitChangedMarkdownEvents([
+            ReaderFolderWatchChangeEvent(fileURL: harness.secondaryFileURL, kind: .added)
+        ])
+
+        await Task.yield()
+
+        let autoOpenedDoc = harness.controller.documents.first {
+            $0.readerStore.fileURL?.lastPathComponent == "zeta.md"
+        }
+        #expect(autoOpenedDoc != nil)
+        #expect(autoOpenedDoc?.readerStore.hasUnacknowledgedExternalChange == true)
+    }
+
+    @Test @MainActor func initialBatchAutoOpenDoesNotSetExternalChangeIndicator() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        harness.folderWatchControllerWatcher.markdownFilesToReturn = [
+            harness.primaryFileURL,
+            harness.secondaryFileURL
+        ]
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        )
+
+        for document in harness.controller.documents {
+            #expect(!document.readerStore.hasUnacknowledgedExternalChange)
+        }
+    }
 }

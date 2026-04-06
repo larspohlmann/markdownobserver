@@ -773,6 +773,12 @@ final class TestFolderWatchControllerDelegate: ReaderFolderWatchControllerDelega
         handledEvents.append(contentsOf: events)
     }
 
+    private(set) var liveAutoOpenedURLs: [URL] = []
+
+    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
+        liveAutoOpenedURLs.append(contentsOf: urls)
+    }
+
     func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
         selectNewestDocumentCallCount += 1
     }

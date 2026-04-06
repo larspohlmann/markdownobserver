@@ -852,6 +852,42 @@ struct FolderWatchCoordinationTests {
         #expect(delegate.handledEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
     }
 
+    @Test @MainActor func liveAutoOpenNotifiesDelegateWithAutoOpenedFileURLs() async throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/watched-live-indicator", isDirectory: true)
+        let watcher = TestFolderWatcher()
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.folder-watch.live-indicator.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+        let delegate = TestFolderWatchControllerDelegate()
+        controller.delegate = delegate
+
+        try controller.startWatching(
+            folderURL: folderURL,
+            options: ReaderFolderWatchOptions(
+                openMode: .watchChangesOnly,
+                scope: .selectedFolderOnly
+            )
+        )
+
+        let newFileURL = folderURL.appendingPathComponent("new-file.md")
+        watcher.emitChangedMarkdownEvents([
+            ReaderFolderWatchChangeEvent(fileURL: newFileURL, kind: .added)
+        ])
+
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(delegate.liveAutoOpenedURLs.count == 1)
+        #expect(delegate.liveAutoOpenedURLs.first?.lastPathComponent == "new-file.md")
+    }
+
     @Test @MainActor func focusNotificationTargetFallsBackToWatchedFolderWindow() {
         ReaderWindowRegistry.shared.resetForTesting()
         defer { ReaderWindowRegistry.shared.resetForTesting() }
