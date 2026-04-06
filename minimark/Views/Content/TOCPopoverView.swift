@@ -5,12 +5,12 @@ struct TOCPopoverView: View {
     let onSelect: (TOCHeading) -> Void
 
     private enum Metrics {
-        static let popoverMinWidth: CGFloat = 260
-        static let popoverMaxWidth: CGFloat = 400
-        static let popoverMaxHeight: CGFloat = 500
-        static let rowHorizontalPadding: CGFloat = 12
-        static let rowVerticalPadding: CGFloat = 5
-        static let indentPerLevel: CGFloat = 16
+        static let popoverMinWidth: CGFloat = 320
+        static let popoverMaxWidth: CGFloat = 480
+        static let popoverMaxHeight: CGFloat = 600
+        static let rowHorizontalPadding: CGFloat = 14
+        static let rowVerticalPadding: CGFloat = 6
+        static let indentPerLevel: CGFloat = 18
     }
 
     var body: some View {
@@ -37,7 +37,6 @@ struct TOCPopoverView: View {
             .padding(.vertical, 8)
         }
         .font(.system(size: 13))
-        .foregroundStyle(Color(nsColor: .labelColor))
         .frame(minWidth: Metrics.popoverMinWidth, maxWidth: Metrics.popoverMaxWidth, maxHeight: Metrics.popoverMaxHeight)
     }
 

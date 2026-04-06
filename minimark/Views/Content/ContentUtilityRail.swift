@@ -134,7 +134,7 @@ struct ContentUtilityRail: View {
         .help("Table of Contents")
         .accessibilityLabel("Table of Contents")
         .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
-        .popover(isPresented: isTOCVisible, arrowEdge: .leading) {
+        .popover(isPresented: isTOCVisible, attachmentAnchor: .point(.top), arrowEdge: .leading) {
             TOCPopoverView(
                 headings: tocHeadings,
                 onSelect: { heading in
