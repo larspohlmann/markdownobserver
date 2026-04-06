@@ -14,6 +14,7 @@ struct FolderWatchToolbarButton: View {
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onEditFavoriteWatchedFolders: () -> Void
     let onClearRecentWatchedFolders: () -> Void
+    var compact: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isMenuPresented = false
@@ -21,9 +22,14 @@ struct FolderWatchToolbarButton: View {
     private enum Metrics {
         static let watchButtonMinWidth: CGFloat = 120
         static let controlHeight: CGFloat = 28
+        static let compactControlHeight: CGFloat = 22
     }
 
     private var isActive: Bool { activeFolderWatch != nil }
+
+    private var resolvedControlHeight: CGFloat {
+        compact ? Metrics.compactControlHeight : Metrics.controlHeight
+    }
 
     private var activeButtonColor: Color {
         colorScheme == .dark
@@ -62,7 +68,7 @@ struct FolderWatchToolbarButton: View {
             } label: {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
-                    .frame(width: 22, height: Metrics.controlHeight)
+                    .frame(width: 22, height: resolvedControlHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -100,18 +106,18 @@ struct FolderWatchToolbarButton: View {
     }
 
     private var mainButtonLabel: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: compact ? 4 : 6) {
             Image(systemName: "binoculars.fill")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: compact ? 10 : 12, weight: .semibold))
                 .foregroundColor(Color(nsColor: .secondaryLabelColor))
 
             Text(isActive ? "Watching" : "Watch Folder")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: compact ? 10 : 11, weight: .semibold, design: .rounded))
         }
-        .frame(minWidth: Metrics.watchButtonMinWidth, alignment: .leading)
-        .frame(height: Metrics.controlHeight)
-        .padding(.leading, 10)
-        .padding(.trailing, 6)
+        .frame(minWidth: compact ? 100 : Metrics.watchButtonMinWidth, alignment: .leading)
+        .frame(height: resolvedControlHeight)
+        .padding(.leading, compact ? 8 : 10)
+        .padding(.trailing, compact ? 4 : 6)
         .contentShape(Rectangle())
     }
 
