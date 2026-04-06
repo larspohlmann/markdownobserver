@@ -2,6 +2,62 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] - 2026-04-06
+
+### Added
+- Added Table of Contents overlay for quick section navigation.
+- Added native titlebar integration for watch button and sidebar toggle.
+- Added Amber Terminal, Green Terminal, and Green Terminal (Static) themes with CRT effects.
+- Added Newspaper, Focus, Commodore 64, and Game Boy themes.
+- Added per-favorite locked appearance for themes and font size.
+- Added per-favorite workspace state preserving sidebar width, sort mode, and group state.
+- Added deferred document loading for large watched folders.
+- Added loading spinner overlay for deferred document materialization.
+- Added diff baseline lookback setting with presets in Settings UI.
+- Added sidebar footer with scan progress and file count.
+- Added two-phase folder scan startup for faster initial responsiveness.
+- Added animated sidebar group expand/collapse.
+- Added floating content utility rail and change-navigation pill overlays.
+- Added auto-discovery of new files when opening favorites.
+- Added custom rounded checkbox design.
+- Added window width adjustment when sidebar appears or hides.
+
+### Changed
+- Restyled change-navigation pill to match watching pill.
+- Moved actions dropdown from content utility rail to topbar.
+- Changed default window aspect ratio from golden ratio to US Letter.
+- Migrated ReaderStore and ReaderWindowRootView to @Observable.
+- Migrated sidebar group state to dedicated controller for fast expand/sort/pin.
+- Refactored codebase through multi-phase coupling reduction, god object splits, and value type extractions.
+- Introduced FileOpenCoordinator to fix multi-file drop race condition.
+
+### Fixed
+- Fixed table cells shrinking below readable width.
+- Fixed change indicator not showing for live auto-opened files.
+- Fixed auto-select of newest file when opening a favorite.
+- Fixed sidebar width not restoring from favorite when sidebar re-appears.
+- Fixed stale toggle binding in folder exclusion dialog.
+- Fixed locked appearance not propagating to new documents in favorites.
+- Fixed UI freezes when changing theme or font size settings.
+- Fixed sidebar header toolbar clipping at narrow widths.
+- Fixed change navigation counter starting at wrong value before first jump.
+- Fixed diff baseline tracker not seeding on auto-open.
+- Fixed favorites intermittently losing locked theme on reopen.
+- Fixed scanning progress bar not visible when opening favorites.
+- Fixed sidebar width changing during window resize.
+- Fixed sidebar width growing on each favorite reopen.
+- Fixed deferred documents not showing change indicator on external change.
+- Fixed content utility rail visible when no file is open.
+
+### Performance
+- Extracted ContentViewAdapter to narrow observation scope.
+- Batched favorites persistence onChange cascade.
+- Fixed sidebar resize sluggishness with many files.
+- Fixed 80-second scan delay when opening favorites.
+
+### Chore
+- Automated App Store screenshot capture with real-project content and theme switching.
+
 ## [1.1.0] - 2026-03-31
 
 ### Added
