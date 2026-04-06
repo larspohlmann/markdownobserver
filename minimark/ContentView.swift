@@ -326,6 +326,13 @@ struct ContentView: View {
                 navigate: requestChangedRegionNavigation
             )
         )
+        .focusedValue(
+            \.readerToggleTOC,
+            ReaderToggleTOCAction(
+                canToggle: !readerStore.tocHeadings.isEmpty,
+                toggle: { readerStore.toggleTOC() }
+            )
+        )
         .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
             handleFolderWatchOptionsPresentationChange(isPresented)
         }
