@@ -410,10 +410,27 @@ struct MarkdownWebView: NSViewRepresentable {
             lastTOCScrollRequestID = request.requestID
 
             if !request.heading.elementID.isEmpty {
-                scrollToFragment(request.heading.elementID, in: webView)
+                scrollToHeadingElement(request.heading.elementID, in: webView)
             } else if let sourceLine = request.heading.sourceLine {
                 scrollToSourceLine(sourceLine, in: webView)
             }
+        }
+
+        private func scrollToHeadingElement(_ elementID: String, in webView: WKWebView) {
+            // Use the same 56pt top offset as changed-region navigation
+            // so the heading isn't hidden behind the watch-folder pill overlay.
+            let idLiteral = javaScriptStringLiteral(elementID)
+            let script = """
+            (() => {
+              const el = document.getElementById(\(idLiteral));
+              if (!el) return false;
+              const rect = el.getBoundingClientRect();
+              const scrollTop = window.scrollY + rect.top - 56;
+              window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+              return true;
+            })();
+            """
+            webView.evaluateJavaScript(script)
         }
 
         private func scrollToSourceLine(_ line: Int, in webView: WKWebView) {
