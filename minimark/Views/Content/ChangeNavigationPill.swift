@@ -10,7 +10,6 @@ struct ChangeNavigationPill: View {
 
     private enum Metrics {
         static let pillHeight: CGFloat = 30
-        static let pillInset: CGFloat = 8
         static let horizontalPadding: CGFloat = 10
         static let controlHeight: CGFloat = 28
         static let iconSize: CGFloat = 11
@@ -55,8 +54,7 @@ struct ChangeNavigationPill: View {
                 isHovering = hovering
             }
         }
-        .padding(.top, Metrics.pillInset)
-        .padding(.leading, Metrics.pillInset)
+        .fixedSize()
     }
 
     private func navigationButton(

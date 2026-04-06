@@ -531,33 +531,36 @@ struct ContentView: View {
                     tocOverlay(buttonAnchor: anchor)
                 }
             }
-            .overlay(alignment: .topLeading) {
-                if canNavigateChangedRegions {
-                    ChangeNavigationPill(
-                        currentIndex: currentChangedRegionIndex,
-                        totalCount: readerStore.changedRegions.count,
-                        onNavigate: requestChangedRegionNavigation
-                    )
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
-                }
-            }
             .overlay(alignment: .top) {
-                if let activeWatch = folderWatchState.activeFolderWatch {
-                    WatchPill(
-                        activeFolderWatch: activeWatch,
-                        isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
-                        canStop: folderWatchState.canStopFolderWatch,
-                        onStop: callbacks.onStopFolderWatch,
-                        onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
-                        onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
-                        onRevealInFinder: {
-                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                        },
-                        isAppearanceLocked: folderWatchState.isAppearanceLocked,
-                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock
-                    )
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                HStack(spacing: 8) {
+                    if canNavigateChangedRegions {
+                        ChangeNavigationPill(
+                            currentIndex: currentChangedRegionIndex,
+                            totalCount: readerStore.changedRegions.count,
+                            onNavigate: requestChangedRegionNavigation
+                        )
+                    }
+
+                    if let activeWatch = folderWatchState.activeFolderWatch {
+                        WatchPill(
+                            activeFolderWatch: activeWatch,
+                            isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
+                            canStop: folderWatchState.canStopFolderWatch,
+                            onStop: callbacks.onStopFolderWatch,
+                            onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
+                            onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
+                            onRevealInFinder: {
+                                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                            },
+                            isAppearanceLocked: folderWatchState.isAppearanceLocked,
+                            onToggleAppearanceLock: callbacks.onToggleAppearanceLock
+                        )
+                    }
                 }
+                .padding(.top, 8)
+                .padding(.leading, 8)
+                .padding(.trailing, 70)
+                .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
     }
 
