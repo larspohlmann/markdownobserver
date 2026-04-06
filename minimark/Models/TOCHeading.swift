@@ -5,24 +5,25 @@ struct TOCHeading: Equatable, Sendable {
     let level: Int
     let title: String
     let sourceLine: Int?
+    let index: Int
 
     static func fromJavaScriptPayload(_ payload: [[String: Any]]) -> [TOCHeading] {
-        payload.compactMap { entry in
+        var result: [TOCHeading] = []
+        for (index, entry) in payload.enumerated() {
             guard let elementID = entry["id"] as? String,
                   let level = entry["level"] as? Int,
                   let title = entry["title"] as? String else {
-                return nil
+                continue
             }
             let sourceLine = entry["sourceLine"] as? Int
-            return TOCHeading(elementID: elementID, level: level, title: title, sourceLine: sourceLine)
+            result.append(TOCHeading(elementID: elementID, level: level, title: title, sourceLine: sourceLine, index: index))
         }
+        return result
     }
 }
 
 extension TOCHeading: Identifiable {
-    var id: String {
-        "\(elementID)-\(level)-\(sourceLine ?? 0)"
-    }
+    var id: Int { index }
 }
 
 struct TOCScrollRequest: Equatable {

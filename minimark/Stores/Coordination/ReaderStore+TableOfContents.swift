@@ -11,10 +11,6 @@ extension ReaderStore {
         isTOCVisible.toggle()
     }
 
-    func hideTOC() {
-        isTOCVisible = false
-    }
-
     func scrollToTOCHeading(_ heading: TOCHeading) {
         tocScrollRequestCounter += 1
         tocScrollRequest = TOCScrollRequest(heading: heading, requestID: tocScrollRequestCounter)
