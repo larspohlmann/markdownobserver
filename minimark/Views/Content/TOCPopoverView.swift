@@ -62,18 +62,3 @@ struct TOCPopoverView: View {
         }
     }
 }
-
-// MARK: - Arrow Shape
-
-struct ArrowRight: Shape {
-    let size: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        Path { p in
-            p.move(to: CGPoint(x: 0, y: 0))
-            p.addLine(to: CGPoint(x: size, y: rect.midY))
-            p.addLine(to: CGPoint(x: 0, y: rect.maxY))
-            p.closeSubpath()
-        }
-    }
-}

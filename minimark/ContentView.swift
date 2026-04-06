@@ -583,45 +583,30 @@ struct ContentView: View {
 
     @ViewBuilder
     private func tocOverlay(buttonAnchor: Anchor<CGRect>) -> some View {
-        let arrowSize: CGFloat = 8
-        let gap: CGFloat = 4
+        let gap: CGFloat = 8
         let tocColorScheme: ColorScheme = currentReaderTheme.hasLightBackground ? .light : .dark
 
         GeometryReader { proxy in
             let buttonFrame = proxy[buttonAnchor]
-            let panelTrailing = buttonFrame.minX - gap - arrowSize
+            let panelTrailing = buttonFrame.minX - gap
 
             ZStack(alignment: .topLeading) {
-                // Dismiss background
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture { readerStore.isTOCVisible = false }
 
-                HStack(alignment: .top, spacing: 0) {
-                    // Panel
-                    TOCPopoverView(
-                        headings: readerStore.tocHeadings,
-                        onSelect: { heading in
-                            handleTOCHeadingSelection(heading)
-                        }
-                    )
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                TOCPopoverView(
+                    headings: readerStore.tocHeadings,
+                    onSelect: { heading in
+                        handleTOCHeadingSelection(heading)
                     }
-                    .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
-
-                    // Arrow pointing right toward the button
-                    ArrowRight(size: arrowSize)
-                        .fill(.regularMaterial)
-                        .overlay {
-                            ArrowRight(size: arrowSize)
-                                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
-                        }
-                        .frame(width: arrowSize, height: arrowSize * 2)
-                        .padding(.top, buttonFrame.height / 2 - arrowSize)
+                )
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
                 }
+                .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
                 .colorScheme(tocColorScheme)
                 .frame(maxWidth: panelTrailing, alignment: .trailing)
                 .offset(y: buttonFrame.minY)

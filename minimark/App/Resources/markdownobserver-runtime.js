@@ -1,6 +1,7 @@
 (function () {
   var payload = decodePayload("__MINIMARK_PAYLOAD_BASE64__");
   var runtimeCSSBase64 = "__MINIMARK_CSS_BASE64__";
+  var overlayTopInset = 56;
 
   function decodeBase64UTF8(base64Value) {
     var binary = atob(base64Value);
@@ -1065,7 +1066,7 @@
 
     var maxScrollTop = Math.max(0, scrollContainer.scrollHeight - window.innerHeight);
     var rootDocumentTop = getRootDocumentTop(root);
-    return clampMarkerTop(rootDocumentTop + row.top - 56, maxScrollTop);
+    return clampMarkerTop(rootDocumentTop + row.top - overlayTopInset, maxScrollTop);
   }
 
   function scrollToChangedRegion(row, root) {
@@ -1101,8 +1102,7 @@
       return -1;
     }
 
-    var alignmentOffset = 56;
-    var probeTop = currentTop + alignmentOffset;
+    var probeTop = currentTop + overlayTopInset;
     var selectedIndex = -1;
 
     for (var i = 0; i < markers.length; i += 1) {
@@ -1702,6 +1702,8 @@
     renderMarkdown(scrollAnchorProgress);
     return true;
   };
+
+  window.__minimarkOverlayTopInset = overlayTopInset;
 
   window.__minimarkExtractHeadings = function () {
     extractHeadings();

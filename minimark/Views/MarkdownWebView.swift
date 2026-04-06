@@ -417,15 +417,14 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         private func scrollToHeadingElement(_ elementID: String, in webView: WKWebView) {
-            // Use the same 56pt top offset as changed-region navigation
-            // so the heading isn't hidden behind the watch-folder pill overlay.
             let idLiteral = javaScriptStringLiteral(elementID)
             let script = """
             (() => {
               const el = document.getElementById(\(idLiteral));
               if (!el) return false;
+              const inset = window.__minimarkOverlayTopInset || 0;
               const rect = el.getBoundingClientRect();
-              const scrollTop = window.scrollY + rect.top - 56;
+              const scrollTop = window.scrollY + rect.top - inset;
               window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
               return true;
             })();
