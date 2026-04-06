@@ -526,14 +526,9 @@ struct ContentView: View {
                 contentUtilityRail
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
-            .overlay {
-                if readerStore.isTOCVisible {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { readerStore.isTOCVisible = false }
-                        .overlay(alignment: .topTrailing) {
-                            tocOverlayPanel
-                        }
+            .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
+                if readerStore.isTOCVisible, let anchor {
+                    tocOverlay(buttonAnchor: anchor)
                 }
             }
             .overlay(alignment: .topLeading) {
@@ -586,30 +581,52 @@ struct ContentView: View {
         )
     }
 
-    private var tocOverlayPanel: some View {
-        // The rail is 44pt wide with 18pt trailing inset.
-        // Position the TOC panel to the left of the rail, top-aligned with where the TOC button sits.
-        let railOffset: CGFloat = 18 + 44 + 8 // trailing inset + rail width + gap
+    @ViewBuilder
+    private func tocOverlay(buttonAnchor: Anchor<CGRect>) -> some View {
+        let arrowSize: CGFloat = 8
+        let gap: CGFloat = 4
+        let tocColorScheme: ColorScheme = currentReaderTheme.hasLightBackground ? .light : .dark
 
-        return HStack(spacing: 0) {
-            Spacer(minLength: 0)
+        GeometryReader { proxy in
+            let buttonFrame = proxy[buttonAnchor]
+            let panelTrailing = buttonFrame.minX - gap - arrowSize
 
-            TOCPopoverView(
-                headings: readerStore.tocHeadings,
-                onSelect: { heading in
-                    handleTOCHeadingSelection(heading)
+            ZStack(alignment: .topLeading) {
+                // Dismiss background
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { readerStore.isTOCVisible = false }
+
+                HStack(alignment: .top, spacing: 0) {
+                    // Panel
+                    TOCPopoverView(
+                        headings: readerStore.tocHeadings,
+                        onSelect: { heading in
+                            handleTOCHeadingSelection(heading)
+                        }
+                    )
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
+
+                    // Arrow pointing right toward the button
+                    ArrowRight(size: arrowSize)
+                        .fill(.regularMaterial)
+                        .overlay {
+                            ArrowRight(size: arrowSize)
+                                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                        }
+                        .frame(width: arrowSize, height: arrowSize * 2)
+                        .padding(.top, buttonFrame.height / 2 - arrowSize)
                 }
-            )
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                .colorScheme(tocColorScheme)
+                .frame(maxWidth: panelTrailing, alignment: .trailing)
+                .offset(y: buttonFrame.minY)
             }
-            .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
-            .colorScheme(currentReaderTheme.hasLightBackground ? .light : .dark)
-            .padding(.trailing, railOffset)
         }
-        .padding(.top, 8)
     }
 
     private func handleTOCHeadingSelection(_ heading: TOCHeading) {

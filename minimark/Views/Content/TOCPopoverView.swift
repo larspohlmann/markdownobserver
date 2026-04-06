@@ -24,6 +24,7 @@ struct TOCPopoverView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .font(headingFont(for: heading.level))
+                            .foregroundStyle(headingForegroundStyle(for: heading.level))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.leading, Metrics.rowHorizontalPadding + CGFloat(heading.level - 1) * Metrics.indentPerLevel)
                             .padding(.trailing, Metrics.rowHorizontalPadding)
@@ -36,16 +37,43 @@ struct TOCPopoverView: View {
             }
             .padding(.vertical, 8)
         }
-        .font(.system(size: 13))
         .frame(minWidth: Metrics.popoverMinWidth, maxWidth: Metrics.popoverMaxWidth, maxHeight: Metrics.popoverMaxHeight)
     }
 
     private func headingFont(for level: Int) -> Font {
         switch level {
         case 1:
+            return .system(size: 14, weight: .bold)
+        case 2:
             return .system(size: 13, weight: .semibold)
         default:
-            return .system(size: 13)
+            return .system(size: 12, weight: .regular)
+        }
+    }
+
+    private func headingForegroundStyle(for level: Int) -> some ShapeStyle {
+        switch level {
+        case 1:
+            return AnyShapeStyle(.primary)
+        case 2:
+            return AnyShapeStyle(.primary.opacity(0.85))
+        default:
+            return AnyShapeStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - Arrow Shape
+
+struct ArrowRight: Shape {
+    let size: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        Path { p in
+            p.move(to: CGPoint(x: 0, y: 0))
+            p.addLine(to: CGPoint(x: size, y: rect.midY))
+            p.addLine(to: CGPoint(x: 0, y: rect.maxY))
+            p.closeSubpath()
         }
     }
 }

@@ -133,6 +133,7 @@ struct ContentUtilityRail: View {
         .help("Table of Contents")
         .accessibilityLabel("Table of Contents")
         .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
+        .anchorPreference(key: TOCButtonAnchorKey.self, value: .bounds) { $0 }
     }
 
     // MARK: - Separator
@@ -142,6 +143,15 @@ struct ContentUtilityRail: View {
             .fill(Color.primary.opacity(0.10))
             .frame(width: Metrics.separatorWidth, height: 1)
             .padding(.vertical, 2)
+    }
+}
+
+// MARK: - TOC Button Anchor
+
+struct TOCButtonAnchorKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
     }
 }
 
