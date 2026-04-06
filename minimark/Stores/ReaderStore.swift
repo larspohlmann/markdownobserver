@@ -42,6 +42,10 @@ final class ReaderStore {
     var windowTitle: String { document.windowTitle }
     var decoratedWindowTitle: String { document.decoratedWindowTitle }
 
+    // MARK: - Table of Contents
+    var tocHeadings: [TOCHeading] = []
+    var isTOCVisible: Bool = false
+
     private let renderer: MarkdownRendering
     private let differ: ChangedRegionDiffering
     let fileWatcher: FileChangeWatching
