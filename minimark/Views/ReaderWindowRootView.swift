@@ -30,6 +30,7 @@ struct ReaderWindowRootView: View {
     @State var windowCoordinator: ReaderWindowCoordinator
     @State var appearanceController: WindowAppearanceController
     @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+    @State private var isTitlebarEditingFavorites = false
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
@@ -151,6 +152,21 @@ struct ReaderWindowRootView: View {
                         ))
                         refreshWindowPresentation()
                     }
+                )
+            }
+            .sheet(isPresented: $isTitlebarEditingFavorites) {
+                EditFavoritesSheet(
+                    favorites: settingsStore.currentSettings.favoriteWatchedFolders,
+                    onRename: { id, newName in
+                        settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
+                    },
+                    onDelete: { id in
+                        settingsStore.removeFavoriteWatchedFolder(id: id)
+                    },
+                    onReorder: { orderedIDs in
+                        settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
+                    },
+                    onDismiss: { isTitlebarEditingFavorites = false }
                 )
             }
             .background(
@@ -459,6 +475,46 @@ struct ReaderWindowRootView: View {
                 closeAllSidebarDocuments()
             }
         )
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                FolderWatchToolbarButton(
+                    activeFolderWatch: sharedFolderWatchSession,
+                    isInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
+                    didInitialScanFail: sidebarDocumentController.didFolderWatchInitialScanFail,
+                    favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                    recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+                    onActivate: {
+                        promptForFolderWatch()
+                    },
+                    onStartFavoriteWatch: { favorite in
+                        startFavoriteWatch(favorite)
+                    },
+                    onStartRecentFolderWatch: { recent in
+                        startRecentFolderWatch(recent)
+                    },
+                    onEditFavoriteWatchedFolders: {
+                        isTitlebarEditingFavorites = true
+                    },
+                    onClearRecentWatchedFolders: {
+                        clearRecentWatchedFolders()
+                    },
+                    compact: true
+                )
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                if sidebarDocumentController.documents.count > 1 {
+                    Button(action: {
+                        toggleSidebarPlacement()
+                    }) {
+                        Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .help(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+                }
+            }
+        }
     }
 
     private func contentView(for store: ReaderStore) -> some View {
@@ -547,6 +603,16 @@ struct ReaderWindowRootView: View {
         }
 
         flushQueuedFolderWatchOpens()
+    }
+
+    private func promptForFolderWatch() {
+        guard let folderURL = MarkdownOpenPanel.pickFolder(
+            title: "Choose Folder to Watch",
+            message: "Select a folder, then choose watch options."
+        ) else {
+            return
+        }
+        prepareFolderWatchOptions(for: folderURL)
     }
 
     private func applyUITestLaunchConfigurationIfNeeded() {
