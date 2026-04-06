@@ -15,9 +15,26 @@ enum Commodore64Theme {
     static let customCSS: String = """
     /* ── Commodore 64 Theme ── */
 
-    /* Monospace font override */
+    /* Press Start 2P — OFL-licensed pixel font (Google Fonts) */
+    @font-face {
+        font-family: 'Press Start 2P';
+        src: url('Contents/Resources/PressStart2P-Regular.ttf') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    /* Blocky pixel font — disable anti-aliasing for pixel-crisp look */
     html, body, .markdown-body, .markdown-body * {
-        font-family: 'Courier New', Menlo, 'Courier', monospace !important;
+        font-family: 'Press Start 2P', 'Monaco', 'Menlo', monospace !important;
+        -webkit-font-smoothing: none;
+        font-smooth: never;
+        line-height: 2.0;
+    }
+
+    /* Bright body text for readability */
+    .markdown-body {
+        color: #C8C8FF;
     }
 
     /* Headings in white like C64 system messages */
@@ -28,9 +45,10 @@ enum Commodore64Theme {
     .markdown-body h5,
     .markdown-body h6 {
         color: #FFFFFF;
+        text-transform: uppercase;
     }
 
-    /* Links in white */
+    /* Links in bright white */
     .markdown-body a {
         color: #FFFFFF;
     }
@@ -40,10 +58,47 @@ enum Commodore64Theme {
         border: 1px solid #504694;
     }
 
+    /* Scanlines overlay — very subtle for pixel font */
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 3px,
+            rgba(0, 0, 0, 0.06) 3px,
+            rgba(0, 0, 0, 0.06) 6px
+        );
+        pointer-events: none;
+        z-index: 1000;
+    }
+
+    /* Screen curvature vignette */
+    body::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+            ellipse at center,
+            transparent 65%,
+            rgba(0, 0, 0, 0.3) 100%
+        );
+        pointer-events: none;
+        z-index: 1001;
+    }
+
     /* Horizontal rules */
     .markdown-body hr {
         border: none;
         border-top: 1px solid #7069C4;
+        box-shadow: 0 0 6px rgba(112, 105, 196, 0.2);
     }
 
     /* Blockquote border */

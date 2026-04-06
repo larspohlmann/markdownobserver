@@ -216,7 +216,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
             return ReaderTheme(
                 kind: .commodore64,
                 backgroundHex: "#40318D",
-                foregroundHex: "#A0A0FF",
+                foregroundHex: "#C8C8FF",
                 secondaryForegroundHex: "#7069C4",
                 codeBackgroundHex: "#352879",
                 borderHex: "#504694",
