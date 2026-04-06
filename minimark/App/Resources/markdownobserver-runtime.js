@@ -1637,6 +1637,25 @@
     window.scrollTo(0, target);
   }
 
+  function extractHeadings() {
+    try {
+      var headings = document.querySelectorAll("h1, h2, h3");
+      var result = [];
+      for (var i = 0; i < headings.length; i += 1) {
+        var el = headings[i];
+        result.push({
+          id: el.id || "",
+          level: parseInt(el.tagName.charAt(1), 10),
+          title: (el.textContent || "").trim(),
+          sourceLine: parseInt(el.getAttribute("data-src-line-start"), 10) || null
+        });
+      }
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
+        window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+      }
+    } catch (_) {}
+  }
+
   function renderMarkdown(scrollAnchorProgress) {
     var root = document.getElementById("reader-root");
     var gutter = document.getElementById("reader-change-gutter");
@@ -1668,12 +1687,18 @@
           autoExpandMeta.setAttribute("content", "done");
         }
       }
+      extractHeadings();
     });
   }
 
   window.__minimarkUpdateRenderedMarkdown = function (payloadBase64Value, scrollAnchorProgress) {
     payload = decodePayload(payloadBase64Value);
     renderMarkdown(scrollAnchorProgress);
+    return true;
+  };
+
+  window.__minimarkExtractHeadings = function () {
+    extractHeadings();
     return true;
   };
 
