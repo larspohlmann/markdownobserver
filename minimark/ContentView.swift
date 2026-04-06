@@ -102,9 +102,6 @@ struct ContentView: View {
         VStack(spacing: 0) {
             ReaderTopBar(
                 readerStore: readerStore,
-                activeFolderWatch: folderWatchState.activeFolderWatch,
-                isFolderWatchInitialScanInProgress: folderWatchState.isFolderWatchInitialScanInProgress,
-                didFolderWatchInitialScanFail: folderWatchState.isFolderWatchInitialScanFailed,
                 canStopFolderWatch: folderWatchState.canStopFolderWatch,
                 apps: readerStore.openInApplications,
                 favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
