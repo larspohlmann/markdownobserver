@@ -500,6 +500,7 @@ struct ReaderWindowRootView: View {
                     },
                     compact: true
                 )
+                .padding(.trailing, 8)
             }
 
             ToolbarItem(placement: .primaryAction) {

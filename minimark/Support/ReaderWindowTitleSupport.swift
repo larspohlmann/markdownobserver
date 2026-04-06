@@ -49,10 +49,6 @@ struct ReaderWindowTitleFormatter {
             ? "* \(documentTitle)"
             : documentTitle
 
-        if let activeFolderWatch {
-            return "\(documentTitleWithPendingState) | \(activeFolderWatch.titleLabel)"
-        }
-
         return documentTitleWithPendingState
     }
 

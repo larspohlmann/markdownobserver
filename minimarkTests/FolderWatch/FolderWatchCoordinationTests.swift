@@ -610,7 +610,7 @@ struct FolderWatchCoordinationTests {
             hasUnacknowledgedExternalChange: true
         )
 
-        #expect(title == "* guide.md - MarkdownObserver | Watching folder: guides")
+        #expect(title == "* guide.md - MarkdownObserver")
     }
 
     @Test func documentIndicatorStateDistinguishesDeletedDocumentsFromOtherExternalChanges() {

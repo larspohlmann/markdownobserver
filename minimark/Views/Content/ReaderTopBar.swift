@@ -109,7 +109,7 @@ struct ReaderTopBar: View {
         }
         .background {
             Rectangle()
-                .fill(.regularMaterial)
+                .fill(.ultraThinMaterial)
         }
         .overlay(alignment: .bottom) {
             Divider()

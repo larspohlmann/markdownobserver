@@ -99,45 +99,11 @@ struct ContentView: View {
     }
 
     private var baseBody: some View {
-        VStack(spacing: 0) {
-            ReaderTopBar(
-                readerStore: readerStore,
-                canStopFolderWatch: folderWatchState.canStopFolderWatch,
-                apps: readerStore.openInApplications,
-                favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
-                recentWatchedFolders: folderWatchState.recentWatchedFolders,
-                recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
-                iconProvider: appIconImage(for:),
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
-                onOpenApp: { app in
-                    readerStore.openCurrentFileInApplication(app)
-                },
-                onRevealInFinder: {
-                    readerStore.revealCurrentFileInFinder()
-                },
-                onRequestFolderWatch: callbacks.onRequestFolderWatch,
-                onStopFolderWatch: callbacks.onStopFolderWatch,
-                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
-                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
-                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
-                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
-                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
-                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
-                onSaveSourceDraft: {
-                    readerStore.saveSourceDraft()
-                },
-                onDiscardSourceDraft: {
-                    readerStore.discardSourceDraft()
-                }
-            )
-            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
-
+        ZStack(alignment: .top) {
             VStack(spacing: 0) {
+                Spacer()
+                    .frame(height: ReaderTopBarMetrics.mainBarHeight)
+
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
                         fileName: readerStore.fileDisplayName,
@@ -188,6 +154,43 @@ struct ContentView: View {
             .onAppear {
                 handleSurfaceAppear()
             }
+
+            ReaderTopBar(
+                readerStore: readerStore,
+                canStopFolderWatch: folderWatchState.canStopFolderWatch,
+                apps: readerStore.openInApplications,
+                favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+                recentWatchedFolders: folderWatchState.recentWatchedFolders,
+                recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
+                iconProvider: appIconImage(for:),
+                onOpenFiles: { fileURLs in
+                    handlePickedFileURLs(fileURLs)
+                },
+                onOpenApp: { app in
+                    readerStore.openCurrentFileInApplication(app)
+                },
+                onRevealInFinder: {
+                    readerStore.revealCurrentFileInFinder()
+                },
+                onRequestFolderWatch: callbacks.onRequestFolderWatch,
+                onStopFolderWatch: callbacks.onStopFolderWatch,
+                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
+                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
+                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
+                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
+                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
+                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
+                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
+                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
+                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
+                onSaveSourceDraft: {
+                    readerStore.saveSourceDraft()
+                },
+                onDiscardSourceDraft: {
+                    readerStore.discardSourceDraft()
+                }
+            )
+            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
         }
         .overlay(alignment: .bottomLeading) {
             if isUITestModeEnabled {
