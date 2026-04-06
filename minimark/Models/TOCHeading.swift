@@ -25,3 +25,8 @@ extension TOCHeading: Identifiable {
         "\(elementID)-\(level)-\(sourceLine ?? 0)"
     }
 }
+
+struct TOCScrollRequest: Equatable {
+    let heading: TOCHeading
+    let requestID: Int
+}

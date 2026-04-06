@@ -45,6 +45,8 @@ final class ReaderStore {
     // MARK: - Table of Contents
     var tocHeadings: [TOCHeading] = []
     var isTOCVisible: Bool = false
+    var tocScrollRequest: TOCScrollRequest?
+    var tocScrollRequestCounter = 0
 
     private let renderer: MarkdownRendering
     private let differ: ChangedRegionDiffering

@@ -19,6 +19,7 @@ struct MarkdownWebView: NSViewRepresentable {
     var postLoadStatusScript: String?
     var changedRegionNavigationRequest: ChangedRegionNavigationRequest?
         var scrollSyncRequest: ScrollSyncRequest?
+    var tocScrollRequest: TOCScrollRequest?
     var supportsInPlaceContentUpdates: Bool = false
     var reloadAnchorProgress: Double?
     var onFatalCrash: () -> Void = {}
@@ -85,6 +86,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
         context.coordinator.handleChangedRegionNavigationIfNeeded(changedRegionNavigationRequest, in: webView)
         context.coordinator.handleScrollSyncRequestIfNeeded(scrollSyncRequest, in: webView)
+        context.coordinator.handleTOCScrollRequestIfNeeded(tocScrollRequest, in: webView)
         webView.setAccessibilityIdentifier(accessibilityIdentifier)
         webView.setAccessibilityValue(accessibilityValue)
         context.coordinator.prepareForRetryIfNeeded(reloadToken, in: webView)
@@ -130,6 +132,7 @@ struct MarkdownWebView: NSViewRepresentable {
         private var latestReloadRequestID = 0
         private var lastReloadToken: Int?
         private var lastChangedRegionNavigationRequestID: Int?
+        private var lastTOCScrollRequestID: Int?
         private var pendingChangedRegionNavigationRequest: ChangedRegionNavigationRequest?
         var onFatalCrash: () -> Void = {}
         var onPostLoadStatus: (String?) -> Void = { _ in }
@@ -400,6 +403,37 @@ struct MarkdownWebView: NSViewRepresentable {
                 in: webView,
                 hasCompletedFirstLoad: hasCompletedFirstLoad
             )
+        }
+
+        func handleTOCScrollRequestIfNeeded(_ request: TOCScrollRequest?, in webView: WKWebView) {
+            guard let request, request.requestID != lastTOCScrollRequestID else { return }
+            lastTOCScrollRequestID = request.requestID
+
+            if !request.heading.elementID.isEmpty {
+                scrollToFragment(request.heading.elementID, in: webView)
+            } else if let sourceLine = request.heading.sourceLine {
+                scrollToSourceLine(sourceLine, in: webView)
+            }
+        }
+
+        private func scrollToSourceLine(_ line: Int, in webView: WKWebView) {
+            let script = """
+            (() => {
+              const textarea = document.querySelector('.minimark-source-editor');
+              if (!textarea) return false;
+              const lines = textarea.value.substring(0, textarea.value.length).split('\\n');
+              let charIndex = 0;
+              for (let i = 0; i < Math.min(\(line) - 1, lines.length); i++) {
+                charIndex += lines[i].length + 1;
+              }
+              textarea.focus();
+              textarea.setSelectionRange(charIndex, charIndex);
+              const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+              textarea.scrollTop = Math.max(0, (\(line) - 3) * lineHeight);
+              return true;
+            })();
+            """
+            webView.evaluateJavaScript(script)
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

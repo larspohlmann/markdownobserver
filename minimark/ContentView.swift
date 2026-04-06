@@ -53,6 +53,7 @@ struct ContentView: View {
         let postLoadStatusScript: String?
         let changedRegionNavigationRequest: ChangedRegionNavigationRequest?
         let scrollSyncRequest: ScrollSyncRequest?
+        let tocScrollRequest: TOCScrollRequest?
         let supportsInPlaceContentUpdates: Bool
         let reloadAnchorProgress: Double?
         let minimumWidth: CGFloat?
@@ -572,7 +573,7 @@ struct ContentView: View {
     }
 
     private func handleTOCHeadingSelection(_ heading: TOCHeading) {
-        // Scroll dispatch will be implemented in Task 9
+        readerStore.scrollToTOCHeading(heading)
     }
 
     private var canNavigateChangedRegions: Bool {
@@ -660,6 +661,7 @@ struct ContentView: View {
                 postLoadStatusScript: nil,
                 changedRegionNavigationRequest: previewChangedRegionNavigationRequest,
                 scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: true,
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
@@ -699,6 +701,7 @@ struct ContentView: View {
                 postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
                 changedRegionNavigationRequest: nil,
                 scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: false,
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
@@ -895,6 +898,7 @@ private struct DocumentSurfaceHost: View {
                     postLoadStatusScript: configuration.postLoadStatusScript,
                     changedRegionNavigationRequest: configuration.changedRegionNavigationRequest,
                     scrollSyncRequest: configuration.scrollSyncRequest,
+                    tocScrollRequest: configuration.tocScrollRequest,
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
                     onFatalCrash: configuration.onFatalCrash,
