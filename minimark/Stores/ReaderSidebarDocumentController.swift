@@ -674,6 +674,14 @@ extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
         ))
     }
 
+    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
+        for url in urls {
+            if let doc = document(for: url) {
+                doc.readerStore.noteObservedExternalChange()
+            }
+        }
+    }
+
     func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
         selectDocumentWithNewestModificationDate()
     }

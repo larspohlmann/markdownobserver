@@ -6,5 +6,6 @@ protocol ReaderFolderWatchControllerDelegate: AnyObject {
     func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL]
     func folderWatchController(_ controller: ReaderFolderWatchController, handleEvents events: [ReaderFolderWatchChangeEvent], in session: ReaderFolderWatchSession, origin: ReaderOpenOrigin)
     func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController)
+    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL])
     func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController)
 }

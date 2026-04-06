@@ -261,6 +261,8 @@ final class ReaderFolderWatchController {
         )
         let plannedEvents = livePlan.autoOpenEvents
         dispatchOpenEvents(plannedEvents, session: session, origin: .folderWatchAutoOpen)
+
+        delegate?.folderWatchController(self, didLiveAutoOpenFileURLs: plannedEvents.map(\.fileURL))
     }
 
     private func eventsExcludingOpenDocuments(
