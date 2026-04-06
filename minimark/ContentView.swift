@@ -135,6 +135,7 @@ struct ContentView: View {
                     readerStore.discardSourceDraft()
                 }
             )
+            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
 
             VStack(spacing: 0) {
                 if readerStore.isCurrentFileMissing {
