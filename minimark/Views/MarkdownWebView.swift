@@ -7,6 +7,7 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let scrollSyncMessageName = "minimarkScrollSync"
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
+    private static let tocMessageName = "minimarkTOC"
     private static let scrollSyncObserverScript = ReaderJavaScriptLoader.scrollSyncObserverJavaScript
 
     let htmlDocument: String
@@ -24,6 +25,7 @@ struct MarkdownWebView: NSViewRepresentable {
     var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
     var onSourceEdit: (String) -> Void = { _ in }
+    var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
     var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
@@ -45,6 +47,7 @@ struct MarkdownWebView: NSViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: Self.scrollSyncMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditorDiagnosticMessageName)
+        configuration.userContentController.add(context.coordinator, name: Self.tocMessageName)
 
         let webView = DropAwareWKWebView(frame: .zero, configuration: configuration)
         #if DEBUG
@@ -74,6 +77,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.onPostLoadStatus = onPostLoadStatus
         context.coordinator.onScrollSyncObservation = onScrollSyncObservation
         context.coordinator.onSourceEdit = onSourceEdit
+        context.coordinator.onTOCHeadingsExtracted = onTOCHeadingsExtracted
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
@@ -131,6 +135,7 @@ struct MarkdownWebView: NSViewRepresentable {
         var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
         var onSourceEdit: (String) -> Void = { _ in }
+        var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
         var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
@@ -589,6 +594,13 @@ struct MarkdownWebView: NSViewRepresentable {
                 logDiagnostic(
                     "source editor event=\(eventName) meta=\(metaKey) ctrl=\(ctrlKey) shift=\(shiftKey) alt=\(altKey)"
                 )
+                return
+            }
+
+            if message.name == MarkdownWebView.tocMessageName,
+               let payload = message.body as? [[String: Any]] {
+                let headings = TOCHeading.fromJavaScriptPayload(payload)
+                onTOCHeadingsExtracted(headings)
                 return
             }
 
