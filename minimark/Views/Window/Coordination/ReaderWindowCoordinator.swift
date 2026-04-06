@@ -1,12 +1,16 @@
 import AppKit
-import Combine
 import Foundation
+import Observation
 
 @MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
+    let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
     let onOpenAdditionalDocument: (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
 
     func configure(_ store: ReaderStore) {
+        if let lockedAppearance = lockedAppearanceProvider() {
+            store.setAppearanceOverride(lockedAppearance)
+        }
         store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, folderWatchSession, origin in
             onOpenAdditionalDocument(
                 event.fileURL,
@@ -19,9 +23,8 @@ private struct ReaderWindowStoreCallbackConfigurator {
 }
 
 @MainActor
-final class ReaderWindowCoordinator: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
-
+@Observable
+final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private let folderWatchOpenCoordinator = ReaderFolderWatchOpenCoordinator()
@@ -39,17 +42,15 @@ final class ReaderWindowCoordinator: ObservableObject {
     }
 
     func configureStoreCallbacks(
+        lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil },
         onOpenAdditionalDocument: @escaping (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
     ) {
         sidebarDocumentController.setStoreConfigurator { store in
             ReaderWindowStoreCallbackConfigurator(
+                lockedAppearanceProvider: lockedAppearanceProvider,
                 onOpenAdditionalDocument: onOpenAdditionalDocument
             ).configure(store)
         }
-
-        ReaderWindowStoreCallbackConfigurator(
-            onOpenAdditionalDocument: onOpenAdditionalDocument
-        ).configure(sidebarDocumentController.selectedReaderStore)
     }
 
     func sharedFolderWatchState() -> (session: ReaderFolderWatchSession?, canStop: Bool) {

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ReaderCommands: Commands {
-    @ObservedObject var settingsStore: ReaderSettingsStore
+    var settingsStore: ReaderSettingsStore
     let multiFileDisplayMode: ReaderMultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
@@ -16,6 +16,7 @@ struct ReaderCommands: Commands {
     @FocusedValue(\.readerDocumentViewModeContext) private var documentViewModeContext
     @FocusedValue(\.readerChangedRegionNavigation) private var changedRegionNavigation
     @FocusedValue(\.readerSourceEditingContext) private var sourceEditingContext
+    @FocusedValue(\.readerToggleTOC) private var toggleTOC
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
@@ -123,6 +124,14 @@ struct ReaderCommands: Commands {
                 changedRegionNavigation?(.next)
             }
             .disabled(!(changedRegionNavigation?.canNavigate ?? false))
+
+            Divider()
+
+            Button("Table of Contents") {
+                toggleTOC?()
+            }
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+            .disabled(!(toggleTOC?.canToggle ?? false))
         }
 
         CommandGroup(replacing: .appInfo) {
@@ -203,27 +212,37 @@ struct ReaderCommands: Commands {
     }
 
     private func openRecentOpenedFile(_ entry: ReaderRecentOpenedFile) {
-        if postRecentRequest(
-            notificationName: ReaderCommandNotification.openRecentFile,
-            payloadKey: ReaderCommandNotification.recentFileEntryKey,
-            payload: entry
-        ) {
+        guard let targetWindowNumber else {
+            openWindow(value: ReaderWindowSeed(recentOpenedFile: entry))
             return
         }
 
-        openWindow(value: ReaderWindowSeed(recentOpenedFile: entry))
+        let payload = ReaderCommandNotification.Payload(
+            targetWindowNumber: targetWindowNumber,
+            recentFileEntry: entry
+        )
+        NotificationCenter.default.post(
+            name: ReaderCommandNotification.openRecentFile,
+            object: nil,
+            userInfo: payload.asUserInfo
+        )
     }
 
     private func startRecentWatchedFolder(_ entry: ReaderRecentWatchedFolder) {
-        if postRecentRequest(
-            notificationName: ReaderCommandNotification.prepareRecentWatchedFolder,
-            payloadKey: ReaderCommandNotification.recentWatchedFolderEntryKey,
-            payload: entry
-        ) {
+        guard let targetWindowNumber else {
+            openWindow(value: ReaderWindowSeed(recentWatchedFolder: entry))
             return
         }
 
-        openWindow(value: ReaderWindowSeed(recentWatchedFolder: entry))
+        let payload = ReaderCommandNotification.Payload(
+            targetWindowNumber: targetWindowNumber,
+            recentWatchedFolderEntry: entry
+        )
+        NotificationCenter.default.post(
+            name: ReaderCommandNotification.prepareRecentWatchedFolder,
+            object: nil,
+            userInfo: payload.asUserInfo
+        )
     }
 
     private func openPickedMarkdown(
@@ -259,26 +278,6 @@ struct ReaderCommands: Commands {
     private func openMarkdownInNewWindow(_ url: URL) {
         settingsStore.addRecentManuallyOpenedFile(url)
         openWindow(value: ReaderWindowSeed(fileURL: url))
-    }
-
-    private func postRecentRequest(
-        notificationName: Notification.Name,
-        payloadKey: String,
-        payload: Any
-    ) -> Bool {
-        guard let targetWindowNumber = targetWindowNumber else {
-            return false
-        }
-
-        NotificationCenter.default.post(
-            name: notificationName,
-            object: nil,
-            userInfo: [
-                ReaderCommandNotification.targetWindowNumberKey: targetWindowNumber,
-                payloadKey: payload
-            ]
-        )
-        return true
     }
 
     private var targetWindowNumber: Int? {

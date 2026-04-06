@@ -313,7 +313,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
     }
 }
 
-nonisolated struct SyntaxThemePreviewPalette: Sendable {
+nonisolated struct SyntaxThemePreviewPalette: Equatable, Sendable {
     let blockTextHex: String
     let blockBackgroundHex: String
     let blockBorderHex: String

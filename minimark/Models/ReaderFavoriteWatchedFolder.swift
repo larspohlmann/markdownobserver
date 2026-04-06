@@ -7,7 +7,9 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
     let options: ReaderFolderWatchOptions
     let bookmarkData: Data?
     let openDocumentRelativePaths: [String]
+    let allKnownRelativePaths: [String]
     let createdAt: Date
+    var workspaceState: ReaderFavoriteWorkspaceState
 
     nonisolated var folderURL: URL {
         URL(fileURLWithPath: folderPath)
@@ -29,7 +31,9 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         case options
         case bookmarkData
         case openDocumentRelativePaths
+        case allKnownRelativePaths
         case createdAt
+        case workspaceState
     }
 
     init(
@@ -38,6 +42,13 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         folderURL: URL,
         options: ReaderFolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
+        allKnownRelativePaths: [String] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        ),
         createdAt: Date = .now
     ) {
         self.id = id
@@ -50,11 +61,16 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
-        self.openDocumentRelativePaths = Self.scopedOpenDocumentRelativePaths(
+        let computedOpenPaths = Self.scopedOpenDocumentRelativePaths(
             from: openDocumentFileURLs,
             relativeTo: normalizedURL,
             options: options
         )
+        self.openDocumentRelativePaths = computedOpenPaths
+        self.allKnownRelativePaths = allKnownRelativePaths.isEmpty
+            ? computedOpenPaths
+            : allKnownRelativePaths
+        self.workspaceState = workspaceState
         self.createdAt = createdAt
     }
 
@@ -65,6 +81,13 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         options: ReaderFolderWatchOptions,
         bookmarkData: Data?,
         openDocumentRelativePaths: [String] = [],
+        allKnownRelativePaths: [String] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        ),
         createdAt: Date
     ) {
         self.id = id
@@ -80,6 +103,8 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             relativeTo: normalizedFolderURL,
             options: options
         )
+        self.allKnownRelativePaths = allKnownRelativePaths
+        self.workspaceState = workspaceState
         self.createdAt = createdAt
     }
 
@@ -104,7 +129,19 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
             options: options
         )
 
+        allKnownRelativePaths = try container.decodeIfPresent([String].self, forKey: .allKnownRelativePaths) ?? []
+
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+
+        workspaceState = try container.decodeIfPresent(
+            ReaderFavoriteWorkspaceState.self,
+            forKey: .workspaceState
+        ) ?? .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
     }
 
     func encode(to encoder: Encoder) throws {
@@ -115,7 +152,24 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         try container.encode(options, forKey: .options)
         try container.encodeIfPresent(bookmarkData, forKey: .bookmarkData)
         try container.encode(openDocumentRelativePaths, forKey: .openDocumentRelativePaths)
+        try container.encode(allKnownRelativePaths, forKey: .allKnownRelativePaths)
         try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(workspaceState, forKey: .workspaceState)
+    }
+
+    func newFileURLs(fromScanned scannedURLs: [URL], relativeTo folderURL: URL) -> [URL] {
+        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let folderPath = normalizedFolderURL.path
+        let folderPathWithSlash = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
+        let knownSet = Set(allKnownRelativePaths)
+
+        return scannedURLs.filter { url in
+            let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+            let filePath = normalizedURL.path
+            guard filePath.hasPrefix(folderPathWithSlash) else { return false }
+            let relativePath = String(filePath.dropFirst(folderPathWithSlash.count))
+            return !relativePath.isEmpty && !knownSet.contains(relativePath)
+        }
     }
 
     func resolvedOpenDocumentFileURLs(
@@ -283,6 +337,12 @@ nonisolated enum ReaderFavoriteHistory {
         folderURL: URL,
         options: ReaderFolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        ),
         into existingEntries: [ReaderFavoriteWatchedFolder]
     ) -> [ReaderFavoriteWatchedFolder] {
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
@@ -298,7 +358,8 @@ nonisolated enum ReaderFavoriteHistory {
             name: name,
             folderURL: folderURL,
             options: options,
-            openDocumentFileURLs: openDocumentFileURLs
+            openDocumentFileURLs: openDocumentFileURLs,
+            workspaceState: workspaceState
         )
         return existingEntries + [newEntry]
     }
@@ -324,6 +385,8 @@ nonisolated enum ReaderFavoriteHistory {
                 options: entry.options,
                 bookmarkData: entry.bookmarkData,
                 openDocumentRelativePaths: entry.openDocumentRelativePaths,
+                allKnownRelativePaths: entry.allKnownRelativePaths,
+                workspaceState: entry.workspaceState,
                 createdAt: entry.createdAt
             )
         }

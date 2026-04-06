@@ -17,7 +17,7 @@ extension ReaderStore {
             activateFileSecurityScope(for: accessibleURL, reason: "open")
             bindFolderWatchSessionIfNeeded(folderWatchSession)
             let readURL = effectiveAccessibleFileURL(for: normalizedURL, reason: "open")
-            currentOpenOrigin = origin
+            document.currentOpenOrigin = origin
 
             let loaded = try loadMarkdownFile(at: readURL)
 
@@ -52,14 +52,22 @@ extension ReaderStore {
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String
     ) {
+        let now = Date()
         settler.beginSettling(
             settler.makePendingContext(
                 origin: origin,
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
                 loadedMarkdown: loadedMarkdown,
-                now: Date()
+                now: now
             )
         )
+        if let initialDiffBaselineMarkdown {
+            _ = diffBaselineTracker.recordAndSelectBaseline(
+                markdown: initialDiffBaselineMarkdown,
+                for: normalizedURL,
+                at: now
+            )
+        }
         refreshOpenInApplications()
         recordRecentManualOpenIfNeeded(accessibleURL, origin: origin)
         notifyAutoLoadedFileIfNeeded(
@@ -94,6 +102,35 @@ extension ReaderStore {
             changeKind: initialDiffBaselineMarkdown == nil ? .added : .modified,
             watchedFolderURL: activeFolderWatchSession?.folderURL
         )
+    }
+
+    func materializeDeferredDocument(
+        origin: ReaderOpenOrigin? = nil,
+        folderWatchSession: ReaderFolderWatchSession? = nil,
+        initialDiffBaselineMarkdown: String? = nil
+    ) {
+        guard documentLoadState == .deferred || documentLoadState == .loading,
+              let url = fileURL else {
+            return
+        }
+
+        if documentLoadState == .deferred {
+            transitionToLoading()
+        }
+
+        openFile(
+            at: url,
+            origin: origin ?? document.currentOpenOrigin,
+            folderWatchSession: folderWatchSession ?? activeFolderWatchSession,
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+        )
+
+        // Safety: if openFile failed internally, clear the loading state
+        clearLoadingState()
+
+        if initialDiffBaselineMarkdown != nil {
+            noteObservedExternalChange()
+        }
     }
 
     func handleIncomingOpenURL(_ url: URL) {

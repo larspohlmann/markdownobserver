@@ -30,7 +30,7 @@ struct RenderingAndDiffTests {
             Issue.record("JavaScript exception: \(message)")
         }
 
-        context.evaluateScript(ReaderCSSFactory.inlineDiffRuntimeJavaScript)
+        context.evaluateScript(ReaderJavaScriptLoader.inlineDiffRuntimeJavaScript)
         context.setObject(previous, forKeyedSubscript: "__previous" as NSString)
         context.setObject(current, forKeyedSubscript: "__current" as NSString)
 
@@ -103,7 +103,7 @@ struct RenderingAndDiffTests {
             };
             """
         )
-        context.evaluateScript(ReaderCSSFactory.inlineDiffRuntimeJavaScript)
+        context.evaluateScript(ReaderJavaScriptLoader.inlineDiffRuntimeJavaScript)
         context.evaluateScript(functionSource)
         context.setObject(previous, forKeyedSubscript: "__previous" as NSString)
         context.setObject(current, forKeyedSubscript: "__current" as NSString)
@@ -345,7 +345,7 @@ struct RenderingAndDiffTests {
     @Test func readerCSSUsesFullAvailableDocumentWidth() {
         let factory = ReaderCSSFactory()
 
-        let css = factory.makeCSS(theme: .default, syntaxTheme: .default, baseFontSize: 16)
+        let css = factory.makeCSS(theme: ReaderThemeKind.blackOnWhite.themeDefinition, syntaxTheme: .default, baseFontSize: 16)
 
         #expect(css.contains("width: 100%;"))
         #expect(css.contains("margin: 0;"))

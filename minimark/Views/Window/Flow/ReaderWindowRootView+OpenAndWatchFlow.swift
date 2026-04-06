@@ -6,15 +6,22 @@ extension ReaderWindowRootView {
             return
         }
 
-        openDocumentInSelectedSlot(at: url, origin: .manual)
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: [url],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
+        applyWindowTitlePresentation()
     }
 
     func openDocumentInCurrentWindow(_ fileURL: URL) {
-        openDocumentInSelectedSlot(
-            at: fileURL,
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: [fileURL],
             origin: .manual,
-            folderWatchSession: sharedFolderWatchSession
-        )
+            folderWatchSession: sharedFolderWatchSession,
+            slotStrategy: .replaceSelectedSlot
+        ))
+        applyWindowTitlePresentation()
     }
 
     func applyInitialSeedIfNeeded() {
@@ -49,12 +56,14 @@ extension ReaderWindowRootView {
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        sidebarDocumentController.openDocumentInSelectedSlot(
-            at: fileURL,
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: [normalizedURL],
             origin: origin,
             folderWatchSession: folderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
+            initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedURL: $0] } ?? [:],
+            slotStrategy: .replaceSelectedSlot
+        ))
         applyWindowTitlePresentation()
     }
 

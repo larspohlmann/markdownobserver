@@ -1,24 +1,9 @@
 import Foundation
 import OSLog
 
-enum ReaderFolderWatchChangeKind: String, Equatable, Hashable, Codable, Sendable {
-    case added
-    case modified
-}
-
-struct ReaderFolderWatchChangeEvent: Equatable, Hashable, Codable, Sendable {
-    let fileURL: URL
-    let kind: ReaderFolderWatchChangeKind
-    let previousMarkdown: String?
-
-    init(fileURL: URL, kind: ReaderFolderWatchChangeKind, previousMarkdown: String? = nil) {
-        self.fileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        self.kind = kind
-        self.previousMarkdown = previousMarkdown
-    }
-}
-
 protocol FolderChangeWatching: AnyObject, Sendable {
+    var scanProgressStream: AsyncStream<FolderChangeWatcher.ScanProgress> { get }
+
     func startWatching(
         folderURL: URL,
         includeSubfolders: Bool,
@@ -33,6 +18,8 @@ protocol FolderChangeWatching: AnyObject, Sendable {
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
     ) throws -> [URL]
+
+    func cachedMarkdownFileURLs() -> [URL]?
 }
 
 extension FolderChangeWatching {
@@ -71,6 +58,12 @@ struct FolderChangeWatcherFailure: Equatable, Sendable {
 }
 
 final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
+    struct ScanProgress: Equatable, Sendable {
+        let completed: Int
+        let total: Int
+        var isFinished: Bool { completed == total }
+    }
+
     private static let adaptiveSafetyPollingIdleCyclesPerStep = 3
     private static let adaptiveSafetyPollingMaximumMultiplier = 4
     private static let adaptiveSafetyPollingMaximumUnsignaledSkips = 2
@@ -111,6 +104,8 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var lastReportedFailureByStage: [FolderChangeWatcherFailure.Stage: String] = [:]
     private var startupSequence: UInt64 = 0
     private var didCompleteStartup = false
+    private var scanProgressContinuation: AsyncStream<ScanProgress>.Continuation?
+    private var _scanProgressStream: AsyncStream<ScanProgress>?
 
     convenience init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
@@ -190,6 +185,10 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             unsignaledVerificationSkipCycles = 0
             hasPendingFileSystemSignal = true
 
+            let (stream, continuation) = AsyncStream.makeStream(of: ScanProgress.self)
+            _scanProgressStream = stream
+            scanProgressContinuation = continuation
+
             return nextSequence
         }
 
@@ -228,6 +227,9 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.unsignaledVerificationSkipCycles = 0
             self.hasPendingFileSystemSignal = false
             self.didCompleteStartup = false
+            self.scanProgressContinuation?.finish()
+            self.scanProgressContinuation = nil
+            self._scanProgressStream = nil
             self.startupSequence &+= 1
         }
 
@@ -250,7 +252,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
         let snapshot: [URL: FolderFileSnapshot]
         do {
-            snapshot = try snapshotDiffer.buildSnapshot(
+            snapshot = try snapshotDiffer.buildMetadataSnapshot(
                 folderURL: folderURL,
                 includeSubfolders: includeSubfolders,
                 excludedSubdirectoryURLs: excludedSubdirectoryURLs
@@ -277,6 +279,10 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         didCompleteStartup = true
         reconfigureTimerIfNeeded()
         scheduleVerification()
+        // populateContentPhase runs synchronously on `queue`, so the
+        // verifyChanges work item scheduled above cannot execute until
+        // content population is complete.
+        populateContentPhase(startupSequence: startupSequence)
     }
 
     func markdownFiles(
@@ -289,6 +295,17 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             includeSubfolders: includeSubfolders,
             excludedSubdirectoryURLs: excludedSubdirectoryURLs
         )
+    }
+
+    func cachedMarkdownFileURLs() -> [URL]? {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            guard didCompleteStartup else { return nil }
+            return lastSnapshot.keys.sorted(by: { $0.path < $1.path })
+        }
+        return queue.sync {
+            guard didCompleteStartup else { return nil }
+            return lastSnapshot.keys.sorted(by: { $0.path < $1.path })
+        }
     }
 
     var isUsingEventSourcesForTesting: Bool {
@@ -337,6 +354,64 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         }
 
         return queue.sync { didCompleteStartup }
+    }
+
+    var scanProgressStream: AsyncStream<ScanProgress> {
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+            return _scanProgressStream ?? emptyFinishedStream()
+        }
+        return queue.sync { _scanProgressStream ?? emptyFinishedStream() }
+    }
+
+    private func emptyFinishedStream() -> AsyncStream<ScanProgress> {
+        AsyncStream { continuation in
+            continuation.finish()
+        }
+    }
+
+    private func populateContentPhase(startupSequence: UInt64) {
+        let urls = Array(lastSnapshot.keys)
+        let total = urls.count
+
+        if total == 0 {
+            scanProgressContinuation?.yield(ScanProgress(completed: 0, total: 0))
+            scanProgressContinuation?.finish()
+            scanProgressContinuation = nil
+            return
+        }
+
+        let signpostID = Self.signposter.makeSignpostID()
+        let intervalState = Self.signposter.beginInterval("populateContentPhase", id: signpostID)
+        Self.signposter.emitEvent("contentScanStart", "files \(total)")
+
+        var completed = 0
+        var lastYieldTime = CFAbsoluteTimeGetCurrent()
+
+        for url in urls {
+            guard startupSequence == self.startupSequence else {
+                scanProgressContinuation?.finish()
+                scanProgressContinuation = nil
+                return
+            }
+
+            if let existing = lastSnapshot[url], existing.markdown == nil {
+                lastSnapshot[url] = existing.withContent(from: url)
+            }
+            completed += 1
+
+            let now = CFAbsoluteTimeGetCurrent()
+            let isLast = completed == total
+            if isLast || (now - lastYieldTime) >= 0.25 {
+                scanProgressContinuation?.yield(ScanProgress(completed: completed, total: total))
+                lastYieldTime = now
+            }
+        }
+
+        Self.signposter.endInterval("populateContentPhase", intervalState)
+        Self.signposter.emitEvent("contentScanEnd", "files \(total)")
+
+        scanProgressContinuation?.finish()
+        scanProgressContinuation = nil
     }
 
     private func scheduleVerification() {

@@ -5,9 +5,50 @@ enum ReaderCommandNotification {
     static let openRecentFile = Notification.Name("minimark.openRecentFile")
     static let prepareRecentWatchedFolder = Notification.Name("minimark.prepareRecentWatchedFolder")
 
-    static let targetWindowNumberKey = "targetWindowNumber"
-    static let recentFileEntryKey = "recentFileEntry"
-    static let recentWatchedFolderEntryKey = "recentWatchedFolderEntry"
+    struct Payload {
+        let targetWindowNumber: Int
+        let recentFileEntry: ReaderRecentOpenedFile?
+        let recentWatchedFolderEntry: ReaderRecentWatchedFolder?
+
+        init(targetWindowNumber: Int, recentFileEntry: ReaderRecentOpenedFile) {
+            self.targetWindowNumber = targetWindowNumber
+            self.recentFileEntry = recentFileEntry
+            self.recentWatchedFolderEntry = nil
+        }
+
+        init(targetWindowNumber: Int, recentWatchedFolderEntry: ReaderRecentWatchedFolder) {
+            self.targetWindowNumber = targetWindowNumber
+            self.recentFileEntry = nil
+            self.recentWatchedFolderEntry = recentWatchedFolderEntry
+        }
+
+        init?(notification: Notification) {
+            guard let userInfo = notification.userInfo,
+                  let targetWindowNumber = userInfo[Keys.targetWindowNumber] as? Int else {
+                return nil
+            }
+            self.targetWindowNumber = targetWindowNumber
+            self.recentFileEntry = userInfo[Keys.recentFileEntry] as? ReaderRecentOpenedFile
+            self.recentWatchedFolderEntry = userInfo[Keys.recentWatchedFolderEntry] as? ReaderRecentWatchedFolder
+        }
+
+        var asUserInfo: [String: Any] {
+            var info: [String: Any] = [Keys.targetWindowNumber: targetWindowNumber]
+            if let recentFileEntry {
+                info[Keys.recentFileEntry] = recentFileEntry
+            }
+            if let recentWatchedFolderEntry {
+                info[Keys.recentWatchedFolderEntry] = recentWatchedFolderEntry
+            }
+            return info
+        }
+
+        private enum Keys {
+            static let targetWindowNumber = "targetWindowNumber"
+            static let recentFileEntry = "recentFileEntry"
+            static let recentWatchedFolderEntry = "recentWatchedFolderEntry"
+        }
+    }
 }
 
 enum ReaderChangedRegionNavigationDirection: String, Sendable {
@@ -116,6 +157,16 @@ struct ReaderSourceEditingContext {
     }
 }
 
+struct ReaderToggleTOCAction {
+    let canToggle: Bool
+    let toggle: () -> Void
+
+    func callAsFunction() {
+        guard canToggle else { return }
+        toggle()
+    }
+}
+
 private struct ReaderOpenDocumentInCurrentWindowActionKey: FocusedValueKey {
     typealias Value = ReaderOpenDocumentInCurrentWindowAction
 }
@@ -154,6 +205,10 @@ private struct ReaderChangedRegionNavigationActionKey: FocusedValueKey {
 
 private struct ReaderSourceEditingContextKey: FocusedValueKey {
     typealias Value = ReaderSourceEditingContext
+}
+
+private struct ReaderToggleTOCActionKey: FocusedValueKey {
+    typealias Value = ReaderToggleTOCAction
 }
 
 extension FocusedValues {
@@ -205,5 +260,10 @@ extension FocusedValues {
     var readerSourceEditingContext: ReaderSourceEditingContext? {
         get { self[ReaderSourceEditingContextKey.self] }
         set { self[ReaderSourceEditingContextKey.self] = newValue }
+    }
+
+    var readerToggleTOC: ReaderToggleTOCAction? {
+        get { self[ReaderToggleTOCActionKey.self] }
+        set { self[ReaderToggleTOCActionKey.self] = newValue }
     }
 }

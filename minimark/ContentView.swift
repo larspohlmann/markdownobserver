@@ -53,6 +53,7 @@ struct ContentView: View {
         let postLoadStatusScript: String?
         let changedRegionNavigationRequest: ChangedRegionNavigationRequest?
         let scrollSyncRequest: ScrollSyncRequest?
+        let tocScrollRequest: TOCScrollRequest?
         let supportsInPlaceContentUpdates: Bool
         let reloadAnchorProgress: Double?
         let minimumWidth: CGFloat?
@@ -60,6 +61,7 @@ struct ContentView: View {
         let onPostLoadStatus: (String?) -> Void
         let onScrollSyncObservation: (ScrollSyncObservation) -> Void
         let onSourceEdit: (String) -> Void
+        let onTOCHeadingsExtracted: ([TOCHeading]) -> Void
         let onDroppedFileURLs: ([URL]) -> Void
         let onDropTargetedChange: (DropTargetingUpdate) -> Void
         let canAcceptDroppedFileURLs: ([URL]) -> Bool
@@ -71,38 +73,13 @@ struct ContentView: View {
         category: "ContentView"
     )
 
-    @ObservedObject var readerStore: ReaderStore
-    let openAdditionalDocument: (URL) -> Void
-    let openAdditionalDocumentsInCurrentWindow: ([URL]) -> Void
-    let openDocumentInCurrentWindow: (URL) -> Void
-    let activeFolderWatch: ReaderFolderWatchSession?
-    let isFolderWatchInitialScanInProgress: Bool
-    let isFolderWatchInitialScanFailed: Bool
-    let canStopFolderWatch: Bool
+    var readerStore: ReaderStore
+    let folderWatchState: ContentViewFolderWatchState
+    let callbacks: ContentViewCallbacks
     @Binding var isFolderWatchOptionsPresented: Bool
-    let pendingFolderWatchURL: URL?
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
-    let isCurrentWatchAFavorite: Bool
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let onRequestFolderWatch: (URL) -> Void
-    let onConfirmFolderWatch: (ReaderFolderWatchOptions) -> Void
-    let onCancelFolderWatch: () -> Void
-    let onStopFolderWatch: () -> Void
-    let onSaveFolderWatchAsFavorite: (String) -> Void
-    let onRemoveCurrentWatchFromFavorites: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
-    let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
-    let onRemoveFavoriteWatchedFolder: (UUID) -> Void
-    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
 
     @StateObject private var splitScrollCoordinator = SplitScrollCoordinator()
     @State private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
@@ -113,6 +90,7 @@ struct ContentView: View {
     @State private var sourceReloadToken = 0
     @State private var changedRegionNavigationRequestID = 0
     @State private var lastChangedRegionNavigationDirection: ReaderChangedRegionNavigationDirection?
+    @State private var currentChangedRegionIndex: Int?
     @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
     @State private var cachedSourceHTMLDocument = ""
 
@@ -121,57 +99,12 @@ struct ContentView: View {
     }
 
     private var baseBody: some View {
-        VStack(spacing: 0) {
-            ReaderTopBar(
-                readerStore: readerStore,
-                documentViewMode: readerStore.documentViewMode,
-                showSourceEditingControls: showSourceEditingControls,
-                activeFolderWatch: activeFolderWatch,
-                isFolderWatchInitialScanInProgress: isFolderWatchInitialScanInProgress,
-                didFolderWatchInitialScanFail: isFolderWatchInitialScanFailed,
-                folderWatchHighlightColor: folderWatchHighlightColor,
-                canNavigateChangedRegions: canNavigateChangedRegions,
-                canStopFolderWatch: canStopFolderWatch,
-                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                favoriteWatchedFolders: favoriteWatchedFolders,
-                recentWatchedFolders: recentWatchedFolders,
-                recentManuallyOpenedFiles: recentManuallyOpenedFiles,
-                onNavigateChangedRegion: requestChangedRegionNavigation,
-                onSetDocumentViewMode: { mode in
-                    readerStore.setDocumentViewMode(mode)
-                },
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
-                onRequestFolderWatch: onRequestFolderWatch,
-                onStopFolderWatch: onStopFolderWatch,
-                onSaveFolderWatchAsFavorite: onSaveFolderWatchAsFavorite,
-                onRemoveCurrentWatchFromFavorites: onRemoveCurrentWatchFromFavorites,
-                onStartFavoriteWatch: onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-                onRenameFavoriteWatchedFolder: onRenameFavoriteWatchedFolder,
-                onRemoveFavoriteWatchedFolder: onRemoveFavoriteWatchedFolder,
-                onReorderFavoriteWatchedFolders: onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-                onStartRecentFolderWatch: onStartRecentFolderWatch,
-                onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles,
-                onStartSourceEditing: {
-                    readerStore.startEditingSource()
-                },
-                onSaveSourceDraft: {
-                    readerStore.saveSourceDraft()
-                },
-                onDiscardSourceDraft: {
-                    readerStore.discardSourceDraft()
-                }
-            )
-
+        ZStack(alignment: .top) {
             VStack(spacing: 0) {
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
                         fileName: readerStore.fileDisplayName,
-                        message: readerStore.lastError
+                        message: readerStore.lastError?.message
                     )
                 } else if readerStore.needsImageDirectoryAccess {
                     ImageAccessWarningBar {
@@ -179,7 +112,7 @@ struct ContentView: View {
                     }
                 }
 
-                documentSurfaceLayout
+                documentSurfaceWithOverlays
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
@@ -197,6 +130,9 @@ struct ContentView: View {
             .onChange(of: readerStore.fileURL?.standardizedFileURL.path) { _, _ in
                 handleFileIdentityChange()
             }
+            .onChange(of: readerStore.changedRegions) { _, _ in
+                currentChangedRegionIndex = nil
+            }
             .onChange(of: previewMode) { _, newValue in
                 handlePreviewModeChange(newValue)
             }
@@ -209,12 +145,49 @@ struct ContentView: View {
             .onChange(of: sourceHTMLInputs) { _, _ in
                 handleSourceHTMLInputsChange()
             }
-            .onChange(of: activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
+            .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
                 clearDropTargetState()
             }
             .onAppear {
                 handleSurfaceAppear()
             }
+
+            ReaderTopBar(
+                readerStore: readerStore,
+                canStopFolderWatch: folderWatchState.canStopFolderWatch,
+                apps: readerStore.openInApplications,
+                favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+                recentWatchedFolders: folderWatchState.recentWatchedFolders,
+                recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
+                iconProvider: appIconImage(for:),
+                onOpenFiles: { fileURLs in
+                    handlePickedFileURLs(fileURLs)
+                },
+                onOpenApp: { app in
+                    readerStore.openCurrentFileInApplication(app)
+                },
+                onRevealInFinder: {
+                    readerStore.revealCurrentFileInFinder()
+                },
+                onRequestFolderWatch: callbacks.onRequestFolderWatch,
+                onStopFolderWatch: callbacks.onStopFolderWatch,
+                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
+                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
+                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
+                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
+                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
+                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
+                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
+                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
+                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
+                onSaveSourceDraft: {
+                    readerStore.saveSourceDraft()
+                },
+                onDiscardSourceDraft: {
+                    readerStore.discardSourceDraft()
+                }
+            )
+            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
         }
         .overlay(alignment: .bottomLeading) {
             if isUITestModeEnabled {
@@ -240,49 +213,79 @@ struct ContentView: View {
         .focusedValue(
             \.readerOpenDocumentInCurrentWindow,
             ReaderOpenDocumentInCurrentWindowAction { fileURL in
-                openDocumentReplacingCurrentWindow(fileURL)
+                let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+                let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
+                if readerStore.hasUnsavedDraftChanges, currentURL != normalizedURL {
+                    readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
+                    return
+                }
+                callbacks.onRequestFileOpen(FileOpenRequest(
+                    fileURLs: [fileURL],
+                    origin: .manual,
+                    slotStrategy: .replaceSelectedSlot
+                ))
             }
         )
         .focusedValue(
             \.readerOpenDocument,
             ReaderOpenDocumentAction { fileURL in
                 if readerStore.fileURL == nil {
-                    readerStore.openFile(at: fileURL)
+                    callbacks.onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .replaceSelectedSlot
+                    ))
                 } else {
-                    openAdditionalDocument(fileURL)
+                    callbacks.onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .alwaysAppend
+                    ))
                 }
             }
         )
         .focusedValue(
             \.readerOpenAdditionalDocument,
             ReaderOpenAdditionalDocumentAction { fileURL in
-                openAdditionalDocument(fileURL)
+                if readerStore.fileURL == nil {
+                    callbacks.onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .replaceSelectedSlot
+                    ))
+                } else {
+                    callbacks.onRequestFileOpen(FileOpenRequest(
+                        fileURLs: [fileURL],
+                        origin: .manual,
+                        slotStrategy: .alwaysAppend
+                    ))
+                }
             }
         )
         .focusedValue(
             \.readerWatchFolder,
             ReaderWatchFolderAction { folderURL in
-                onRequestFolderWatch(folderURL)
+                callbacks.onRequestFolderWatch(folderURL)
             }
         )
         .focusedValue(
             \.readerStartRecentFolderWatch,
             ReaderStartRecentFolderWatchAction { entry in
-                onStartRecentFolderWatch(entry)
+                callbacks.onStartRecentFolderWatch(entry)
             }
         )
         .focusedValue(
             \.readerStopFolderWatch,
             ReaderStopFolderWatchAction {
-                guard canStopFolderWatch else {
+                guard folderWatchState.canStopFolderWatch else {
                     return
                 }
-                onStopFolderWatch()
+                callbacks.onStopFolderWatch()
             }
         )
         .focusedValue(
             \.readerHasActiveFolderWatch,
-            canStopFolderWatch
+            folderWatchState.canStopFolderWatch
         )
         .focusedValue(
             \.readerDocumentViewModeContext,
@@ -321,22 +324,30 @@ struct ContentView: View {
                 navigate: requestChangedRegionNavigation
             )
         )
+        .focusedValue(
+            \.readerToggleTOC,
+            ReaderToggleTOCAction(
+                canToggle: !readerStore.tocHeadings.isEmpty,
+                toggle: { readerStore.toggleTOC() }
+            )
+        )
         .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
             handleFolderWatchOptionsPresentationChange(isPresented)
         }
         .sheet(isPresented: $isFolderWatchOptionsPresented) {
             FolderWatchOptionsSheet(
-                folderURL: pendingFolderWatchURL,
+                folderURL: folderWatchState.pendingFolderWatchURL,
                 openMode: $pendingFolderWatchOpenMode,
                 scope: $pendingFolderWatchScope,
                 excludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths,
-                onCancel: onCancelFolderWatch,
-                onConfirm: onConfirmFolderWatch
+                onCancel: callbacks.onCancelFolderWatch,
+                onConfirm: callbacks.onConfirmFolderWatch
             )
         }
     }
 
     private func handleFileIdentityChange() {
+        currentChangedRegionIndex = nil
         if previewMode == .nativeFallback {
             previewReloadToken += 1
             previewMode = .web
@@ -398,7 +409,7 @@ struct ContentView: View {
             return
         }
 
-        onCancelFolderWatch()
+        callbacks.onCancelFolderWatch()
     }
 
     private func promptForImageDirectoryAccess() {
@@ -425,11 +436,11 @@ struct ContentView: View {
 
     private func handleDroppedFileURLs(_ fileURLs: [URL]) {
         if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
-            guard activeFolderWatch == nil else {
+            guard folderWatchState.activeFolderWatch == nil else {
                 return
             }
 
-            onRequestFolderWatch(droppedFolderURL)
+            callbacks.onRequestFolderWatch(droppedFolderURL)
             return
         }
 
@@ -438,48 +449,45 @@ struct ContentView: View {
             return
         }
 
-        if readerStore.fileURL == nil {
-            openDocumentInCurrentWindow(markdownURLs[0])
-            let additionalURLs = Array(markdownURLs.dropFirst())
-            if !additionalURLs.isEmpty {
-                openAdditionalDocumentsInCurrentWindow(additionalURLs)
-            }
-            return
-        }
-
-        openAdditionalDocumentsInCurrentWindow(markdownURLs)
+        let slotStrategy: FileOpenRequest.SlotStrategy =
+            readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: markdownURLs,
+            origin: .manual,
+            slotStrategy: slotStrategy
+        ))
     }
 
     private func handlePickedFileURLs(_ fileURLs: [URL]) {
         let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
-        guard let firstURL = markdownURLs.first else {
+        guard !markdownURLs.isEmpty else {
             return
         }
 
-        guard openDocumentReplacingCurrentWindow(firstURL) else {
-            return
-        }
-
-        let additionalURLs = Array(markdownURLs.dropFirst())
-        guard !additionalURLs.isEmpty else {
-            return
-        }
-
-        openAdditionalDocumentsInCurrentWindow(additionalURLs)
-    }
-
-    @discardableResult
-    private func openDocumentReplacingCurrentWindow(_ fileURL: URL) -> Bool {
-        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
         let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
         if readerStore.hasUnsavedDraftChanges,
            currentURL != normalizedIncomingURL {
             readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
-            return false
+            return
         }
 
-        openDocumentInCurrentWindow(fileURL)
-        return true
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: [markdownURLs[0]],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
+
+        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
+        guard !additionalMarkdownURLs.isEmpty else {
+            return
+        }
+
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: additionalMarkdownURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        ))
     }
 
     private var previewAccessibilityValue: String {
@@ -496,10 +504,130 @@ struct ContentView: View {
         DocumentSurfaceLayoutView(
             documentViewMode: readerStore.documentViewMode,
             showsLoadingOverlay: shouldShowDocumentLoadingOverlay,
+            loadingOverlayHeadline: loadingOverlayHeadline,
+            loadingOverlaySubtitle: loadingOverlaySubtitle,
             currentReaderTheme: currentReaderTheme,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
         )
+    }
+
+    private var overlayColorScheme: ColorScheme? {
+        guard readerStore.fileURL != nil else { return nil }
+        return currentReaderTheme.hasLightBackground ? .light : .dark
+    }
+
+    private var overlayTopInset: CGFloat {
+        var height = ReaderTopBarMetrics.mainBarHeight
+        if readerStore.isSourceEditing {
+            height += ReaderTopBarMetrics.sourceEditingBarHeight
+        }
+        return height
+    }
+
+    @ViewBuilder
+    private var documentSurfaceWithOverlays: some View {
+        documentSurfaceLayout
+            .overlay(alignment: .topTrailing) {
+                contentUtilityRail
+                    .padding(.top, overlayTopInset + 8)
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+            }
+            .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
+                if readerStore.isTOCVisible, let anchor {
+                    tocOverlay(buttonAnchor: anchor)
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if canNavigateChangedRegions {
+                    ChangeNavigationPill(
+                        currentIndex: currentChangedRegionIndex,
+                        totalCount: readerStore.changedRegions.count,
+                        onNavigate: requestChangedRegionNavigation
+                    )
+                    .padding(.top, overlayTopInset + 8)
+                    .padding(.leading, 8)
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                }
+            }
+            .overlay(alignment: .top) {
+                if let activeWatch = folderWatchState.activeFolderWatch {
+                    WatchPill(
+                        activeFolderWatch: activeWatch,
+                        isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
+                        canStop: folderWatchState.canStopFolderWatch,
+                        onStop: callbacks.onStopFolderWatch,
+                        onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
+                        onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
+                        onRevealInFinder: {
+                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                        },
+                        isAppearanceLocked: folderWatchState.isAppearanceLocked,
+                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock
+                    )
+                    .padding(.top, overlayTopInset + 8)
+                    .padding(.leading, canNavigateChangedRegions ? 150 : 60)
+                    .padding(.trailing, 70)
+                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                }
+            }
+    }
+
+    private var contentUtilityRail: some View {
+        ContentUtilityRail(
+            hasFile: readerStore.fileURL != nil,
+            documentViewMode: readerStore.documentViewMode,
+            showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
+            canStartSourceEditing: readerStore.canStartSourceEditing,
+            onSetDocumentViewMode: { mode in
+                readerStore.setDocumentViewMode(mode)
+            },
+            onStartSourceEditing: {
+                readerStore.startEditingSource()
+            },
+            hasTOCHeadings: !readerStore.tocHeadings.isEmpty,
+            isTOCVisible: Binding(
+                get: { readerStore.isTOCVisible },
+                set: { readerStore.isTOCVisible = $0 }
+            )
+        )
+    }
+
+    @ViewBuilder
+    private func tocOverlay(buttonAnchor: Anchor<CGRect>) -> some View {
+        let gap: CGFloat = 8
+        let tocColorScheme: ColorScheme = currentReaderTheme.hasLightBackground ? .light : .dark
+
+        GeometryReader { proxy in
+            let buttonFrame = proxy[buttonAnchor]
+            let panelTrailing = buttonFrame.minX - gap
+
+            ZStack(alignment: .topLeading) {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { readerStore.isTOCVisible = false }
+
+                TOCPopoverView(
+                    headings: readerStore.tocHeadings,
+                    onSelect: { heading in
+                        handleTOCHeadingSelection(heading)
+                    }
+                )
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
+                .colorScheme(tocColorScheme)
+                .frame(maxWidth: panelTrailing, alignment: .trailing)
+                .offset(y: buttonFrame.minY)
+            }
+        }
+    }
+
+    private func handleTOCHeadingSelection(_ heading: TOCHeading) {
+        readerStore.scrollToTOCHeading(heading)
     }
 
     private var canNavigateChangedRegions: Bool {
@@ -520,15 +648,29 @@ struct ContentView: View {
     }
 
     private var currentReaderTheme: ReaderTheme {
-        ReaderTheme.theme(for: readerStore.currentSettings.readerTheme)
-    }
-
-    private var folderWatchHighlightColor: Color {
-        Color.folderWatchHighlight(for: readerStore.currentSettings, colorScheme: colorScheme)
+        ReaderTheme.theme(for: folderWatchState.effectiveReaderTheme)
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
-        readerStore.documentLoadState == .settlingAutoOpen
+        readerStore.documentLoadState == .loading || readerStore.documentLoadState == .settlingAutoOpen
+    }
+
+    private var loadingOverlayHeadline: String {
+        switch readerStore.documentLoadState {
+        case .settlingAutoOpen:
+            return "Waiting for file contents\u{2026}"
+        case .ready, .loading, .deferred:
+            return "Loading document\u{2026}"
+        }
+    }
+
+    private var loadingOverlaySubtitle: String? {
+        switch readerStore.documentLoadState {
+        case .settlingAutoOpen:
+            return "The new watched document will appear as soon as writing finishes."
+        case .ready, .loading, .deferred:
+            return nil
+        }
     }
 
     private var isDragTargeted: Bool {
@@ -573,6 +715,7 @@ struct ContentView: View {
                 postLoadStatusScript: nil,
                 changedRegionNavigationRequest: previewChangedRegionNavigationRequest,
                 scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: true,
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
@@ -586,6 +729,9 @@ struct ContentView: View {
                     handleScrollSyncObservation(observation, from: surface)
                 },
                 onSourceEdit: { _ in },
+                onTOCHeadingsExtracted: { headings in
+                    readerStore.updateTOCHeadings(headings)
+                },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
                     updateDropTargetState(for: surface, update: update)
@@ -609,6 +755,7 @@ struct ContentView: View {
                 postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
                 changedRegionNavigationRequest: nil,
                 scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: false,
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
@@ -623,6 +770,9 @@ struct ContentView: View {
                 },
                 onSourceEdit: { markdown in
                     readerStore.updateSourceDraft(markdown)
+                },
+                onTOCHeadingsExtracted: { headings in
+                    readerStore.updateTOCHeadings(headings)
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
@@ -660,6 +810,17 @@ struct ContentView: View {
     private func requestChangedRegionNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
         guard canNavigateChangedRegions else {
             return
+        }
+
+        let count = readerStore.changedRegions.count
+        if let current = currentChangedRegionIndex {
+            if direction == .next {
+                currentChangedRegionIndex = current >= count - 1 ? 0 : current + 1
+            } else {
+                currentChangedRegionIndex = current <= 0 ? count - 1 : current - 1
+            }
+        } else {
+            currentChangedRegionIndex = direction == .next ? 0 : count - 1
         }
 
         lastChangedRegionNavigationDirection = direction
@@ -738,7 +899,7 @@ struct ContentView: View {
     }
 
     private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
-        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || activeFolderWatch == nil
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || folderWatchState.activeFolderWatch == nil
     }
 
     private func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
@@ -791,12 +952,14 @@ private struct DocumentSurfaceHost: View {
                     postLoadStatusScript: configuration.postLoadStatusScript,
                     changedRegionNavigationRequest: configuration.changedRegionNavigationRequest,
                     scrollSyncRequest: configuration.scrollSyncRequest,
+                    tocScrollRequest: configuration.tocScrollRequest,
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
                     onFatalCrash: configuration.onFatalCrash,
                     onPostLoadStatus: configuration.onPostLoadStatus,
                     onScrollSyncObservation: configuration.onScrollSyncObservation,
                     onSourceEdit: configuration.onSourceEdit,
+                    onTOCHeadingsExtracted: configuration.onTOCHeadingsExtracted,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
                     onDropTargetedChange: configuration.onDropTargetedChange,
                     canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs
@@ -862,13 +1025,19 @@ private struct FolderDropBlockedOverlayView: View {
 private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
     let documentViewMode: ReaderDocumentViewMode
     let showsLoadingOverlay: Bool
+    let loadingOverlayHeadline: String
+    let loadingOverlaySubtitle: String?
     let currentReaderTheme: ReaderTheme
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
 
     var body: some View {
         if showsLoadingOverlay {
-            DocumentLoadingOverlay(theme: currentReaderTheme)
+            DocumentLoadingOverlay(
+                theme: currentReaderTheme,
+                headline: loadingOverlayHeadline,
+                subtitle: loadingOverlaySubtitle
+            )
         } else {
             switch documentViewMode {
             case .preview:
@@ -945,38 +1114,60 @@ private final class SplitScrollCoordinator: ObservableObject {
 }
 
 #Preview {
-    ContentView(
-        readerStore: ReaderStore(),
-        openAdditionalDocument: { _ in },
-        openAdditionalDocumentsInCurrentWindow: { _ in },
-        openDocumentInCurrentWindow: { _ in },
-        activeFolderWatch: nil,
-        isFolderWatchInitialScanInProgress: false,
-        isFolderWatchInitialScanFailed: false,
-        canStopFolderWatch: false,
+    let settingsStore = ReaderSettingsStore()
+    let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+    let store = ReaderStore(
+        renderer: MarkdownRenderingService(),
+        differ: ChangedRegionDiffer(),
+        fileWatcher: FileChangeWatcher(),
+        folderWatcher: FolderChangeWatcher(),
+        settingsStore: settingsStore,
+        securityScope: SecurityScopedResourceAccess(),
+        fileActions: ReaderFileActionService(),
+        systemNotifier: ReaderSystemNotifier.shared,
+        folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+            minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        ),
+        settler: settler,
+        requestWatchedFolderReauthorization: { _ in nil }
+    )
+    return ContentView(
+        readerStore: store,
+        folderWatchState: ContentViewFolderWatchState(
+            activeFolderWatch: nil,
+            isFolderWatchInitialScanInProgress: false,
+            isFolderWatchInitialScanFailed: false,
+            canStopFolderWatch: false,
+            pendingFolderWatchURL: nil,
+            isCurrentWatchAFavorite: false,
+            favoriteWatchedFolders: [],
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [],
+            isAppearanceLocked: false,
+            effectiveReaderTheme: .blackOnWhite
+        ),
+        callbacks: ContentViewCallbacks(
+            onRequestFileOpen: { _ in },
+            onRequestFolderWatch: { _ in },
+            onConfirmFolderWatch: { _ in },
+            onCancelFolderWatch: {},
+            onStopFolderWatch: {},
+            onSaveFolderWatchAsFavorite: { _ in },
+            onRemoveCurrentWatchFromFavorites: {},
+            onToggleAppearanceLock: {},
+            onStartFavoriteWatch: { _ in },
+            onClearFavoriteWatchedFolders: {},
+            onRenameFavoriteWatchedFolder: { _, _ in },
+            onRemoveFavoriteWatchedFolder: { _ in },
+            onReorderFavoriteWatchedFolders: { _ in },
+            onStartRecentManuallyOpenedFile: { _ in },
+            onStartRecentFolderWatch: { _ in },
+            onClearRecentWatchedFolders: {},
+            onClearRecentManuallyOpenedFiles: {}
+        ),
         isFolderWatchOptionsPresented: .constant(false),
-        pendingFolderWatchURL: nil,
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
-        pendingFolderWatchExcludedSubdirectoryPaths: .constant([]),
-        isCurrentWatchAFavorite: false,
-        favoriteWatchedFolders: [],
-        recentWatchedFolders: [],
-        recentManuallyOpenedFiles: [],
-        onRequestFolderWatch: { _ in },
-        onConfirmFolderWatch: { _ in },
-        onCancelFolderWatch: {},
-        onStopFolderWatch: {},
-        onSaveFolderWatchAsFavorite: { _ in },
-        onRemoveCurrentWatchFromFavorites: {},
-        onStartFavoriteWatch: { _ in },
-        onClearFavoriteWatchedFolders: {},
-        onRenameFavoriteWatchedFolder: { _, _ in },
-        onRemoveFavoriteWatchedFolder: { _ in },
-        onReorderFavoriteWatchedFolders: { _ in },
-        onStartRecentManuallyOpenedFile: { _ in },
-        onStartRecentFolderWatch: { _ in },
-        onClearRecentWatchedFolders: {},
-        onClearRecentManuallyOpenedFiles: {}
+        pendingFolderWatchExcludedSubdirectoryPaths: .constant([])
     )
 }

@@ -18,7 +18,12 @@ extension ReaderWindowRootView {
 
     func stopFolderWatch() {
         dismissFolderWatchAutoOpenWarning()
-
+        persistFinalWorkspaceStateIfNeeded()
+        activeFavoriteID = nil
+        activeFavoriteWorkspaceState = nil
+        groupStateController.pinnedGroupIDs = []
+        groupStateController.collapsedGroupIDs = []
+        sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
         sidebarDocumentController.stopFolderWatch()
         refreshWindowPresentation()
         cancelFolderWatch()
@@ -49,7 +54,12 @@ extension ReaderWindowRootView {
         }
 
         dismissFolderWatchAutoOpenWarning()
-        openSidebarDocumentsBurst(at: selectedFileURLs, preferEmptySelection: false)
+        fileOpenCoordinator.open(FileOpenRequest(
+            fileURLs: selectedFileURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        ))
+        refreshWindowPresentation()
     }
 
     func isFolderWatchWarningPresentationAllowed() -> Bool {

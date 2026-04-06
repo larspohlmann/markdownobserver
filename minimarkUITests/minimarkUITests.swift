@@ -214,6 +214,55 @@ final class minimarkUITests: XCTestCase {
         XCTAssertTrue(sidebar.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
     }
 
+    // MARK: - Sidebar Width Stability
+
+    @MainActor
+    func testSidebarWidthRemainsStableWhenWindowIsResized() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
+        app.launch()
+
+        let sidebar = app.outlines.firstMatch
+        XCTAssertTrue(sidebar.waitForExistence(timeout: 8), "Sidebar should appear")
+
+        waitForCondition(timeout: 8) {
+            app.staticTexts["README.md"].exists
+        }
+
+        let window = app.windows.firstMatch
+
+        // Wait for sidebar layout to stabilize
+        waitForCondition(timeout: 3) {
+            sidebar.frame.width > 100
+        }
+
+        let initialSidebarWidth = sidebar.frame.width
+        let initialWindowWidth = window.frame.width
+
+        // Drag right edge of window 300px wider
+        let rightEdge = window.coordinate(withNormalizedOffset: CGVector(dx: 1.0, dy: 0.5))
+        let expandTarget = rightEdge.withOffset(CGVector(dx: 300, dy: 0))
+        rightEdge.click(forDuration: 0.1, thenDragTo: expandTarget)
+
+        // Wait for window to have expanded
+        waitForCondition(timeout: 3) {
+            window.frame.width > initialWindowWidth + 100
+        }
+
+        let expandedWindowWidth = window.frame.width
+        XCTAssertGreaterThan(
+            expandedWindowWidth, initialWindowWidth + 100,
+            "Window should have expanded (was \(initialWindowWidth), now \(expandedWindowWidth))"
+        )
+
+        let sidebarAfterExpand = sidebar.frame.width
+        XCTAssertEqual(
+            initialSidebarWidth, sidebarAfterExpand, accuracy: 5.0,
+            "Sidebar width must not change when window expands " +
+            "(was \(initialSidebarWidth), became \(sidebarAfterExpand))"
+        )
+    }
+
     // MARK: - Helpers
 
     private func makeTemporaryFolder() throws -> URL {

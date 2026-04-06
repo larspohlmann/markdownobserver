@@ -31,11 +31,6 @@ nonisolated enum ReaderFileRouting {
     nonisolated static func containsLikelyDirectoryPath(in urls: [URL]) -> Bool {
         urls.contains(where: \.hasDirectoryPath)
     }
-    
-    nonisolated static func plannedOpenFileURLs(from urls: [URL]) -> [URL] {
-        Array(Set(urls.map(normalizedFileURL)))
-            .sorted { $0.path < $1.path }
-    }
 
     private nonisolated static func isDirectoryURL(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true

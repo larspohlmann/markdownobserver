@@ -1,365 +1,7 @@
 import Foundation
 import Combine
-
-nonisolated struct ReaderRecentOpenedFile: Equatable, Hashable, Codable, Sendable, Identifiable {
-    static let maximumCount = 15
-
-    let filePath: String
-    let bookmarkData: Data?
-
-    nonisolated var id: String {
-        filePath
-    }
-
-    nonisolated var fileURL: URL {
-        URL(fileURLWithPath: filePath)
-    }
-
-    nonisolated var resolvedFileURL: URL {
-        guard let bookmarkData else {
-            return fileURL
-        }
-
-        var bookmarkIsStale = false
-        guard let resolvedURL = try? URL(
-            resolvingBookmarkData: bookmarkData,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &bookmarkIsStale
-        ) else {
-            return fileURL
-        }
-
-        return resolvedURL
-    }
-
-    nonisolated var displayName: String {
-        let name = fileURL.lastPathComponent
-        return name.isEmpty ? filePath : name
-    }
-
-    nonisolated var pathText: String {
-        filePath
-    }
-
-    init(fileURL: URL) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        filePath = normalizedURL.path
-        bookmarkData = try? fileURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
-    }
-
-    init(filePath: String, bookmarkData: Data?) {
-        self.filePath = filePath
-        self.bookmarkData = bookmarkData
-    }
-}
-
-nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
-    static let maximumCount = 15
-
-    let folderPath: String
-    let options: ReaderFolderWatchOptions
-    let bookmarkData: Data?
-
-    nonisolated var id: String {
-        folderPath
-    }
-
-    nonisolated var folderURL: URL {
-        URL(fileURLWithPath: folderPath)
-    }
-
-    nonisolated var displayName: String {
-        let name = folderURL.lastPathComponent
-        return name.isEmpty ? folderPath : name
-    }
-
-    nonisolated var pathText: String {
-        folderPath
-    }
-
-    nonisolated var resolvedFolderURL: URL {
-        guard let bookmarkData else {
-            return folderURL
-        }
-
-        var bookmarkIsStale = false
-        guard let resolvedURL = try? URL(
-            resolvingBookmarkData: bookmarkData,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &bookmarkIsStale
-        ) else {
-            return folderURL
-        }
-
-        return resolvedURL
-    }
-
-    init(folderURL: URL, options: ReaderFolderWatchOptions) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        folderPath = normalizedURL.path
-        self.options = options
-        bookmarkData = try? folderURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
-    }
-
-    init(folderPath: String, options: ReaderFolderWatchOptions, bookmarkData: Data?) {
-        self.folderPath = folderPath
-        self.options = options
-        self.bookmarkData = bookmarkData
-    }
-}
-
-nonisolated struct ReaderTrustedImageFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
-    static let maximumCount = 30
-
-    let folderPath: String
-    let bookmarkData: Data?
-
-    nonisolated var id: String {
-        folderPath
-    }
-
-    nonisolated var folderURL: URL {
-        URL(fileURLWithPath: folderPath)
-    }
-
-    init(folderURL: URL) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        folderPath = normalizedURL.path
-        bookmarkData = try? folderURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
-    }
-
-    init(folderPath: String, bookmarkData: Data?) {
-        self.folderPath = folderPath
-        self.bookmarkData = bookmarkData
-    }
-}
-
-nonisolated enum ReaderTrustedImageFolderHistory {
-    static func insertingUnique(
-        _ folderURL: URL,
-        into existingEntries: [ReaderTrustedImageFolder]
-    ) -> [ReaderTrustedImageFolder] {
-        let newEntry = ReaderTrustedImageFolder(folderURL: folderURL)
-        let deduplicated = existingEntries.filter { $0.folderPath != newEntry.folderPath }
-        return Array(([newEntry] + deduplicated).prefix(ReaderTrustedImageFolder.maximumCount))
-    }
-}
-
-nonisolated enum ReaderRecentHistory {
-    private struct MenuDisambiguationContext {
-        let siblingPathsByDisplayName: [String: [String]]
-        let parentComponentsByPath: [String: [String]]
-
-        func title(displayName: String, pathText: String) -> String {
-            let siblingPaths = siblingPathsByDisplayName[displayName] ?? []
-            guard siblingPaths.count > 1,
-                  let suffix = uniqueParentSuffix(
-                    for: pathText,
-                    among: siblingPaths,
-                    parentComponentsByPath: parentComponentsByPath
-                  ) else {
-                return displayName
-            }
-
-            return "\(displayName) (\(suffix))"
-        }
-    }
-
-    static func insertingUniqueFile(
-        _ fileURL: URL,
-        into existingEntries: [ReaderRecentOpenedFile]
-    ) -> [ReaderRecentOpenedFile] {
-        let newEntry = ReaderRecentOpenedFile(fileURL: fileURL)
-        let deduplicated = existingEntries.filter { $0.filePath != newEntry.filePath }
-        return Array(([newEntry] + deduplicated).prefix(ReaderRecentOpenedFile.maximumCount))
-    }
-
-    static func insertingUniqueWatchedFolder(
-        _ folderURL: URL,
-        options: ReaderFolderWatchOptions,
-        into existingEntries: [ReaderRecentWatchedFolder]
-    ) -> [ReaderRecentWatchedFolder] {
-        let newEntry = ReaderRecentWatchedFolder(folderURL: folderURL, options: options)
-        let deduplicated = existingEntries.filter { $0.folderPath != newEntry.folderPath }
-        return Array(([newEntry] + deduplicated).prefix(ReaderRecentWatchedFolder.maximumCount))
-    }
-
-    static func menuTitle(
-        for entry: ReaderRecentOpenedFile,
-        among entries: [ReaderRecentOpenedFile]
-    ) -> String {
-        menuTitle(
-            for: entry,
-            among: entries,
-            displayName: \ .displayName,
-            pathText: \ .pathText
-        )
-    }
-
-    static func menuTitles(for entries: [ReaderRecentOpenedFile]) -> [String: String] {
-        menuTitles(for: entries, keyPath: \.filePath, displayName: \.displayName, pathText: \.pathText)
-    }
-
-    static func menuTitle(
-        for entry: ReaderRecentWatchedFolder,
-        among entries: [ReaderRecentWatchedFolder]
-    ) -> String {
-        let baseTitle = menuTitle(
-            for: entry,
-            among: entries,
-            displayName: \ .displayName,
-            pathText: \ .pathText
-        )
-
-        let excludedCount = entry.options.excludedSubdirectoryPaths.count
-        guard entry.options.scope == .includeSubfolders, excludedCount > 0 else {
-            return baseTitle
-        }
-
-        let noun = excludedCount == 1 ? "folder" : "folders"
-        return "\(baseTitle) [\(excludedCount) filtered \(noun)]"
-    }
-
-    static func menuTitles(for entries: [ReaderRecentWatchedFolder]) -> [String: String] {
-        let baseTitlesByPath = menuTitles(
-            for: entries,
-            keyPath: \.folderPath,
-            displayName: \.displayName,
-            pathText: \.pathText
-        )
-
-        return Dictionary(entries.map { entry in
-            let excludedCount = entry.options.excludedSubdirectoryPaths.count
-            guard entry.options.scope == .includeSubfolders, excludedCount > 0 else {
-                return (entry.folderPath, baseTitlesByPath[entry.folderPath] ?? entry.displayName)
-            }
-
-            let noun = excludedCount == 1 ? "folder" : "folders"
-            let baseTitle = baseTitlesByPath[entry.folderPath] ?? entry.displayName
-            return (entry.folderPath, "\(baseTitle) [\(excludedCount) filtered \(noun)]")
-        }, uniquingKeysWith: { first, _ in first })
-    }
-
-    private static func menuTitle<Entry>(
-        for entry: Entry,
-        among entries: [Entry],
-        displayName: KeyPath<Entry, String>,
-        pathText: KeyPath<Entry, String>
-    ) -> String {
-        let context = buildMenuDisambiguationContext(
-            for: entries,
-            displayName: displayName,
-            pathText: pathText
-        )
-        return context.title(
-            displayName: entry[keyPath: displayName],
-            pathText: entry[keyPath: pathText]
-        )
-    }
-
-    private static func menuTitles<Entry>(
-        for entries: [Entry],
-        keyPath: KeyPath<Entry, String>,
-        displayName: KeyPath<Entry, String>,
-        pathText: KeyPath<Entry, String>
-    ) -> [String: String] {
-        let context = buildMenuDisambiguationContext(
-            for: entries,
-            displayName: displayName,
-            pathText: pathText
-        )
-
-        return Dictionary(entries.map { entry in
-            let key = entry[keyPath: keyPath]
-            let resolvedDisplayName = entry[keyPath: displayName]
-            return (
-                key,
-                context.title(
-                    displayName: resolvedDisplayName,
-                    pathText: entry[keyPath: pathText]
-                )
-            )
-        }, uniquingKeysWith: { first, _ in first })
-    }
-
-    private static func buildMenuDisambiguationContext<Entry>(
-        for entries: [Entry],
-        displayName: KeyPath<Entry, String>,
-        pathText: KeyPath<Entry, String>
-    ) -> MenuDisambiguationContext {
-        let siblingPathsByDisplayName = Dictionary(grouping: entries, by: { $0[keyPath: displayName] })
-            .mapValues { groupedEntries in
-                groupedEntries.map { $0[keyPath: pathText] }
-            }
-
-        let allPaths = siblingPathsByDisplayName.values.flatMap { $0 }
-        let parentComponentsByPath = Dictionary(allPaths.map { path in
-            (path, parentComponents(for: path))
-        }, uniquingKeysWith: { first, _ in first })
-
-        return MenuDisambiguationContext(
-            siblingPathsByDisplayName: siblingPathsByDisplayName,
-            parentComponentsByPath: parentComponentsByPath
-        )
-    }
-
-    private static func uniqueParentSuffix(
-        for path: String,
-        among siblingPaths: [String],
-        parentComponentsByPath: [String: [String]]
-    ) -> String? {
-        let siblingParentComponents = siblingPaths.map { parentComponentsByPath[$0] ?? parentComponents(for: $0) }
-        let targetParentComponents = parentComponentsByPath[path] ?? parentComponents(for: path)
-        guard !targetParentComponents.isEmpty else {
-            return nil
-        }
-
-        let maximumDepth = siblingParentComponents.map(\.count).max() ?? 0
-        for suffixLength in 1...maximumDepth {
-            let targetSuffix = suffix(parentComponents: targetParentComponents, count: suffixLength)
-            let siblingSuffixes = siblingParentComponents.map { suffix(parentComponents: $0, count: suffixLength) }
-
-            if siblingSuffixes.filter({ $0 == targetSuffix }).count == 1 {
-                return targetSuffix
-            }
-        }
-
-        return targetParentComponents.joined(separator: "/")
-    }
-
-    private static func parentComponents(for path: String) -> [String] {
-        URL(fileURLWithPath: path)
-            .deletingLastPathComponent()
-            .pathComponents
-            .filter { $0 != "/" && !$0.isEmpty }
-    }
-
-    private static func suffix(parentComponents: [String], count: Int) -> String {
-        let suffixCount = min(count, parentComponents.count)
-        return parentComponents.suffix(suffixCount).joined(separator: "/")
-    }
-}
-
-protocol ReaderSettingsKeyValueStoring: AnyObject {
-    func data(forKey defaultName: String) -> Data?
-    func set(_ value: Any?, forKey defaultName: String)
-}
-
-extension UserDefaults: ReaderSettingsKeyValueStoring {}
+import Observation
+import OSLog
 
 nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var appAppearance: AppAppearance
@@ -375,6 +17,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var recentWatchedFolders: [ReaderRecentWatchedFolder]
     var recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     var trustedImageFolders: [ReaderTrustedImageFolder]
+    var diffBaselineLookback: DiffBaselineLookback
 
     init(
         appAppearance: AppAppearance,
@@ -389,7 +32,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         favoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = [],
         recentWatchedFolders: [ReaderRecentWatchedFolder],
         recentManuallyOpenedFiles: [ReaderRecentOpenedFile],
-        trustedImageFolders: [ReaderTrustedImageFolder] = []
+        trustedImageFolders: [ReaderTrustedImageFolder] = [],
+        diffBaselineLookback: DiffBaselineLookback = .twoMinutes
     ) {
         self.appAppearance = appAppearance
         self.readerTheme = readerTheme
@@ -404,6 +48,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         self.recentWatchedFolders = recentWatchedFolders
         self.recentManuallyOpenedFiles = recentManuallyOpenedFiles
         self.trustedImageFolders = trustedImageFolders
+        self.diffBaselineLookback = diffBaselineLookback
     }
 
     enum CodingKeys: String, CodingKey {
@@ -420,6 +65,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         case recentWatchedFolders
         case recentManuallyOpenedFiles
         case trustedImageFolders
+        case diffBaselineLookback
     }
 
     static let `default` = ReaderSettings(
@@ -435,7 +81,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         favoriteWatchedFolders: [],
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
-        trustedImageFolders: []
+        trustedImageFolders: [],
+        diffBaselineLookback: .twoMinutes
     )
 
     init(from decoder: Decoder) throws {
@@ -449,10 +96,37 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         multiFileDisplayMode = try container.decode(ReaderMultiFileDisplayMode.self, forKey: .multiFileDisplayMode)
         sidebarSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarSortMode) ?? .openOrder
         sidebarGroupSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarGroupSortMode) ?? .lastChangedNewestFirst
-        favoriteWatchedFolders = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
+        let decodedFavorites = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
         recentWatchedFolders = try container.decodeIfPresent([ReaderRecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
         recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
         trustedImageFolders = try container.decodeIfPresent([ReaderTrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
+        diffBaselineLookback = try container.decodeIfPresent(DiffBaselineLookback.self, forKey: .diffBaselineLookback) ?? .twoMinutes
+
+        // Migrate legacy favorites: replace hardcoded-default workspace state with decoded global settings
+        let legacyDefaultState = ReaderFavoriteWorkspaceState.from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
+        let globalWorkspaceState = ReaderFavoriteWorkspaceState(
+            fileSortMode: sidebarSortMode,
+            groupSortMode: sidebarGroupSortMode,
+            sidebarPosition: multiFileDisplayMode,
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: []
+        )
+        if legacyDefaultState != globalWorkspaceState {
+            favoriteWatchedFolders = decodedFavorites.map { favorite in
+                guard favorite.workspaceState == legacyDefaultState else { return favorite }
+                var patched = favorite
+                patched.workspaceState = globalWorkspaceState
+                return patched
+            }
+        } else {
+            favoriteWatchedFolders = decodedFavorites
+        }
     }
 }
 
@@ -466,15 +140,20 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateTheme(_ kind: ReaderThemeKind)
     func updateSyntaxTheme(_ kind: SyntaxThemeKind)
     func updateBaseFontSize(_ value: Double)
+    func increaseFontSize(step: Double)
+    func decreaseFontSize(step: Double)
+    func resetFontSize()
     func updateNotificationsEnabled(_ isEnabled: Bool)
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
     func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode)
+    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback)
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
         options: ReaderFolderWatchOptions,
-        openDocumentFileURLs: [URL]
+        openDocumentFileURLs: [URL],
+        workspaceState: ReaderFavoriteWorkspaceState
     )
     func removeFavoriteWatchedFolder(id: UUID)
     func renameFavoriteWatchedFolder(id: UUID, newName: String)
@@ -483,6 +162,12 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         folderURL: URL,
         openDocumentFileURLs: [URL]
     )
+    func updateFavoriteWatchedFolderKnownDocuments(
+        id: UUID,
+        folderURL: URL,
+        knownDocumentFileURLs: [URL]
+    )
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState)
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
@@ -497,20 +182,21 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
-@MainActor final class ReaderSettingsStore: ObservableObject, ReaderSettingsStoring {
+@MainActor @Observable final class ReaderSettingsStore: ReaderSettingsStoring {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "ReaderSettingsStore"
+    )
+
     typealias BookmarkResolution = (url: URL, isStale: Bool)
     typealias BookmarkResolver = (Data) throws -> BookmarkResolution
     typealias BookmarkCreator = (URL) throws -> Data
-
-    let objectWillChange = ObservableObjectPublisher()
 
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> {
         subject.eraseToAnyPublisher()
     }
 
-    var currentSettings: ReaderSettings {
-        subject.value
-    }
+    private(set) var currentSettings: ReaderSettings
 
     private let storage: ReaderSettingsKeyValueStoring
     private let storageKey: String
@@ -560,6 +246,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         }
 
         self.subject = CurrentValueSubject(initialSettings)
+        self.currentSettings = initialSettings
     }
 
     func updateAppAppearance(_ appearance: AppAppearance) {
@@ -586,6 +273,20 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         }
     }
 
+    func increaseFontSize(step: Double = 1.0) {
+        let next = currentSettings.baseFontSize + step
+        updateBaseFontSize(next)
+    }
+
+    func decreaseFontSize(step: Double = 1.0) {
+        let next = currentSettings.baseFontSize - step
+        updateBaseFontSize(next)
+    }
+
+    func resetFontSize() {
+        updateBaseFontSize(ReaderSettings.default.baseFontSize)
+    }
+
     func updateNotificationsEnabled(_ isEnabled: Bool) {
         updateSettings(coalescePersistence: true) { settings in
             settings.notificationsEnabled = isEnabled
@@ -610,6 +311,12 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         }
     }
 
+    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) {
+        updateSettings(coalescePersistence: true) { settings in
+            settings.diffBaselineLookback = lookback
+        }
+    }
+
     func updateSettings(
         coalescePersistence: Bool = false,
         _ mutate: (inout ReaderSettings) -> Void
@@ -620,7 +327,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         guard updated != current else {
             return
         }
-        objectWillChange.send()
+        currentSettings = updated
         subject.send(updated)
         if coalescePersistence {
             schedulePersist()
@@ -663,7 +370,14 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     }
 
     private func persist() {
-        guard let data = try? encoder.encode(subject.value) else {
+        let data: Data
+        do {
+            data = try encoder.encode(subject.value)
+        } catch {
+            let nsError = error as NSError
+            Self.logger.error(
+                "settings persist encode failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
+            )
             return
         }
         lastPersistAt = Date()

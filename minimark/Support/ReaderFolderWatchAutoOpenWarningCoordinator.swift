@@ -1,12 +1,13 @@
-import Combine
 import Foundation
+import Observation
 
 @MainActor
-final class ReaderFolderWatchAutoOpenWarningCoordinator: ObservableObject {
-    @Published var activeFlow: FolderWatchAutoOpenWarningFlow?
+@Observable
+final class ReaderFolderWatchAutoOpenWarningCoordinator {
+    var activeFlow: FolderWatchAutoOpenWarningFlow?
 
     private var queuedWarning: ReaderFolderWatchAutoOpenWarning?
-    private var presentationTask: Task<Void, Never>?
+    private nonisolated(unsafe) var presentationTask: Task<Void, Never>?
 
     deinit {
         presentationTask?.cancel()

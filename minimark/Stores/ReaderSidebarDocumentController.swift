@@ -1,30 +1,45 @@
 import Foundation
-import Combine
+import Observation
 
 @MainActor
-final class ReaderSidebarDocumentController: ObservableObject {
-    struct Document: Identifiable {
+@Observable
+final class ReaderSidebarDocumentController {
+    struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
+
+        static func == (lhs: Document, rhs: Document) -> Bool {
+            lhs.id == rhs.id
+        }
     }
 
-    @Published private(set) var documents: [Document]
-    @Published var selectedDocumentID: UUID
-    @Published private(set) var selectedWindowTitle: String
-    @Published private(set) var selectedFileURL: URL?
-    @Published private(set) var selectedHasUnacknowledgedExternalChange: Bool
-    @Published private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    @Published var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
-    @Published private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    @Published private(set) var isFolderWatchInitialScanInProgress: Bool
-    @Published private(set) var didFolderWatchInitialScanFail: Bool
+    private(set) var documents: [Document]
+    var selectedDocumentID: UUID
+    private(set) var selectedWindowTitle: String
+    private(set) var selectedFileURL: URL?
+    private(set) var selectedHasUnacknowledgedExternalChange: Bool
+    private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+    private(set) var isFolderWatchInitialScanInProgress: Bool
+    private(set) var didFolderWatchInitialScanFail: Bool
+    private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
+    private(set) var scannedFileCount: Int?
+    private(set) var rowStates: [UUID: SidebarRowState] = [:]
 
     private let makeReaderStore: () -> ReaderStore
     private let folderWatchController: ReaderFolderWatchController
-    private let selectedStoreProjection = ReaderSidebarSelectedStoreProjection()
-    private var storeConfigurator: ((ReaderStore) -> Void)?
-    private var selectedStoreBindingGeneration: UInt = 0
-    private var documentChangeCancellables: [UUID: AnyCancellable] = [:]
+    @ObservationIgnored private var selectedStoreObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
+    @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
+    @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
+    @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
+    @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
+
+    deinit {
+        selectedStoreObservationTask?.cancel()
+        for task in documentObservationTasks.values { task.cancel() }
+    }
 
     init(
         settingsStore: ReaderSettingsStore,
@@ -32,10 +47,41 @@ final class ReaderSidebarDocumentController: ObservableObject {
         makeFolderWatchController: (() -> ReaderFolderWatchController)? = nil
     ) {
         let resolvedMakeReaderStore = makeReaderStore ?? {
-            ReaderStore(settingsStore: settingsStore)
+            let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+            let store = ReaderStore(
+                renderer: MarkdownRenderingService(),
+                differ: ChangedRegionDiffer(),
+                fileWatcher: FileChangeWatcher(),
+                folderWatcher: FolderChangeWatcher(),
+                settingsStore: settingsStore,
+                securityScope: SecurityScopedResourceAccess(),
+                fileActions: ReaderFileActionService(),
+                systemNotifier: ReaderSystemNotifier.shared,
+                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                    minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+                ),
+                settler: settler,
+                requestWatchedFolderReauthorization: { folderURL in
+                    MarkdownOpenPanel.pickFolder(
+                        directoryURL: folderURL,
+                        title: "Reauthorize Watched Folder",
+                        message: "MarkdownObserver needs write access to this watched folder to save auto-opened documents.",
+                        prompt: "Grant Access"
+                    )
+                }
+            )
+            return store
         }
         self.makeReaderStore = resolvedMakeReaderStore
-        self.folderWatchController = makeFolderWatchController?() ?? ReaderFolderWatchController(settingsStore: settingsStore)
+        self.folderWatchController = makeFolderWatchController?() ?? ReaderFolderWatchController(
+            folderWatcher: FolderChangeWatcher(),
+            settingsStore: settingsStore,
+            securityScope: SecurityScopedResourceAccess(),
+            systemNotifier: ReaderSystemNotifier.shared,
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+            )
+        )
 
         let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore())
         documents = [initialDocument]
@@ -47,6 +93,8 @@ final class ReaderSidebarDocumentController: ObservableObject {
         activeFolderWatchSession = nil
         isFolderWatchInitialScanInProgress = false
         didFolderWatchInitialScanFail = false
+        contentScanProgress = nil
+        scannedFileCount = nil
         synchronizeDocumentChangeObservers()
         configureFolderWatchController()
         bindSelectedStore()
@@ -82,112 +130,15 @@ final class ReaderSidebarDocumentController: ObservableObject {
         }
 
         selectedDocumentID = documentID
-        bindSelectedStore()
-    }
+        let store = selectedReaderStore
 
-    func openDocumentInSelectedSlot(
-        at fileURL: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        if let existingDocument = document(for: normalizedFileURL) {
-            selectDocument(existingDocument.id)
-            return
-        }
-
-        let document = selectedDocument ?? documents[0]
-        let effectiveFolderWatchSession = resolvedFolderWatchSession(
-            for: normalizedFileURL,
-            requestedSession: folderWatchSession
-        )
-        document.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-        selectedDocumentID = document.id
-        bindSelectedStore()
-    }
-
-    func openAdditionalDocument(
-        at fileURL: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil,
-        preferEmptySelection: Bool = true
-    ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        if let existingDocument = document(for: normalizedFileURL) {
-            selectDocument(existingDocument.id)
-            return
-        }
-
-        let targetDocument: Document
-        let shouldAppendDocument: Bool
-        if preferEmptySelection,
-           let selectedDocument,
-           selectedDocument.readerStore.fileURL == nil,
-           documents.count == 1 {
-            targetDocument = selectedDocument
-            shouldAppendDocument = false
-        } else {
-            let document = makeDocument()
-            if let storeConfigurator {
-                storeConfigurator(document.readerStore)
+        if store.isDeferredDocument {
+            scheduleLoadWithOverlay(on: store) {
+                store.materializeDeferredDocument()
             }
-            targetDocument = document
-            shouldAppendDocument = true
-        }
-
-        let effectiveFolderWatchSession = resolvedFolderWatchSession(
-            for: normalizedFileURL,
-            requestedSession: folderWatchSession
-        )
-
-        targetDocument.readerStore.openFile(
-            at: normalizedFileURL,
-            origin: origin,
-            folderWatchSession: effectiveFolderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-
-        guard targetDocument.readerStore.fileURL != nil else {
             bindSelectedStore()
-            return
-        }
-
-        if shouldAppendDocument {
-            documents.append(targetDocument)
-            synchronizeDocumentChangeObservers()
-        }
-
-        selectedDocumentID = targetDocument.id
-        bindSelectedStore()
-    }
-
-    func openDocumentsBurst(
-        at fileURLs: [URL],
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
-        initialDiffBaselineMarkdownByURL: [URL: String] = [:],
-        preferEmptySelection: Bool = true
-    ) {
-        let plannedURLs = ReaderFileRouting.plannedOpenFileURLs(from: fileURLs)
-        guard !plannedURLs.isEmpty else {
-            return
-        }
-
-        for (index, fileURL) in plannedURLs.enumerated() {
-            openAdditionalDocument(
-                at: fileURL,
-                origin: origin,
-                folderWatchSession: folderWatchSession,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdownByURL[fileURL],
-                preferEmptySelection: preferEmptySelection && index == 0
-            )
+        } else {
+            bindSelectedStore()
         }
     }
 
@@ -199,6 +150,150 @@ final class ReaderSidebarDocumentController: ObservableObject {
 
         selectDocument(existingDocument.id)
         return true
+    }
+
+    func selectDocumentWithNewestModificationDate() {
+        let newest = documents
+            .filter { $0.readerStore.fileURL != nil }
+            .max(by: {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) < ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            })
+        if let newest {
+            selectDocument(newest.id)
+        }
+    }
+
+    func materializeNewestDeferredDocuments(
+        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+    ) {
+        let deferredDocs = documents
+            .filter { $0.readerStore.isDeferredDocument }
+            .sorted {
+                ($0.readerStore.fileLastModifiedAt ?? .distantPast) > ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+            }
+
+        for document in deferredDocs.prefix(count) {
+            document.readerStore.materializeDeferredDocument()
+        }
+
+        selectDocumentWithNewestModificationDate()
+    }
+
+    func executePlan(_ plan: FileOpenPlan) {
+        guard !plan.assignments.isEmpty else { return }
+
+        var didAppendDocuments = false
+
+        for assignment in plan.assignments {
+            // assignment.fileURL is already normalized by FileOpenCoordinator.deduplicateAndSort
+            let fileURL = assignment.fileURL
+
+            if let existingDocument = document(for: fileURL) {
+                if existingDocument.readerStore.isDeferredDocument, assignment.loadMode == .loadFully {
+                    let store = existingDocument.readerStore
+                    let effectiveSession = resolvedFolderWatchSession(
+                        for: fileURL,
+                        requestedSession: plan.folderWatchSession
+                    )
+                    scheduleLoadWithOverlay(on: store) {
+                        store.materializeDeferredDocument(
+                            origin: plan.origin,
+                            folderWatchSession: effectiveSession,
+                            initialDiffBaselineMarkdown: assignment.initialDiffBaselineMarkdown
+                        )
+                    }
+                }
+                selectDocument(existingDocument.id)
+                continue
+            }
+
+            let effectiveFolderWatchSession = resolvedFolderWatchSession(
+                for: fileURL,
+                requestedSession: plan.folderWatchSession
+            )
+
+            let targetDocument: Document
+            let shouldAppendDocument: Bool
+
+            switch assignment.target {
+            case .reuseExisting(let documentID):
+                if let existing = documents.first(where: { $0.id == documentID }) {
+                    targetDocument = existing
+                    shouldAppendDocument = false
+                } else {
+                    let document = makeDocument()
+                    if let storeConfigurator {
+                        storeConfigurator(document.readerStore)
+                    }
+                    targetDocument = document
+                    shouldAppendDocument = true
+                }
+
+            case .createNew:
+                let document = makeDocument()
+                if let storeConfigurator {
+                    storeConfigurator(document.readerStore)
+                }
+                targetDocument = document
+                shouldAppendDocument = true
+            }
+
+            switch assignment.loadMode {
+            case .deferOnly:
+                targetDocument.readerStore.deferFile(
+                    at: fileURL,
+                    origin: plan.origin,
+                    folderWatchSession: effectiveFolderWatchSession
+                )
+            case .loadFully:
+                targetDocument.readerStore.openFile(
+                    at: fileURL,
+                    origin: plan.origin,
+                    folderWatchSession: effectiveFolderWatchSession,
+                    initialDiffBaselineMarkdown: assignment.initialDiffBaselineMarkdown
+                )
+            }
+
+            guard targetDocument.readerStore.fileURL != nil else {
+                continue
+            }
+
+            if shouldAppendDocument {
+                documents.append(targetDocument)
+                didAppendDocuments = true
+            }
+
+            selectedDocumentID = targetDocument.id
+        }
+
+        if didAppendDocuments {
+            synchronizeDocumentChangeObservers()
+        }
+
+        // In screenshot mode, override selection to a specific document by filename
+        if let targetFile = ProcessInfo.processInfo.environment["MINIMARK_SCREENSHOT_SELECT_FILE"],
+           let match = documents.first(where: { $0.readerStore.fileURL?.lastPathComponent == targetFile }) {
+            selectedDocumentID = match.id
+        }
+
+        applyMaterializationStrategy(plan.materializationStrategy)
+        bindSelectedStore()
+    }
+
+    private func applyMaterializationStrategy(_ strategy: FileOpenRequest.MaterializationStrategy) {
+        switch strategy {
+        case .loadAll, .deferOnly:
+            break
+        case .deferThenMaterializeNewest(let count):
+            materializeNewestDeferredDocuments(count: count)
+        case .deferThenMaterializeSelected:
+            if selectedReaderStore.isDeferredDocument {
+                let store = selectedReaderStore
+                scheduleLoadWithOverlay(on: store) {
+                    store.materializeDeferredDocument()
+                }
+            }
+        }
     }
 
     func closeDocument(_ documentID: UUID) {
@@ -299,6 +394,10 @@ final class ReaderSidebarDocumentController: ObservableObject {
         )
     }
 
+    func scanCurrentMarkdownFiles(completion: @escaping @MainActor ([URL]) -> Void) {
+        folderWatchController.scanCurrentMarkdownFiles(completion: completion)
+    }
+
     func stopFolderWatch() {
         folderWatchController.stopWatching()
     }
@@ -344,7 +443,7 @@ final class ReaderSidebarDocumentController: ObservableObject {
         })
     }
 
-    private func document(for fileURL: URL) -> Document? {
+    func document(for fileURL: URL) -> Document? {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         return documents.first(where: { document in
             guard let fileURL = document.readerStore.fileURL else {
@@ -355,12 +454,39 @@ final class ReaderSidebarDocumentController: ObservableObject {
         })
     }
 
+    private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
+        store.transitionToLoading()
+        Task { @MainActor in
+            await Task.yield()
+            load()
+            store.holdLoadingOverlayBriefly()
+        }
+    }
+
     private func bindSelectedStore() {
         selectedStoreBindingGeneration &+= 1
         let bindingGeneration = selectedStoreBindingGeneration
+        let store = selectedReaderStore
 
-        selectedStoreProjection.bind(to: selectedReaderStore) { [weak self] state in
-            self?.scheduleSelectedStoreProjection(state, bindingGeneration: bindingGeneration)
+        selectedWindowTitle = store.windowTitle
+        selectedFileURL = store.fileURL
+        selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
+
+        selectedStoreObservationTask?.cancel()
+        selectedStoreObservationTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let cancelled = await Self.awaitObservationChange {
+                    _ = store.windowTitle
+                    _ = store.fileURL
+                    _ = store.hasUnacknowledgedExternalChange
+                }
+                if cancelled { break }
+                guard let self,
+                      self.selectedStoreBindingGeneration == bindingGeneration else { break }
+                self.selectedWindowTitle = store.windowTitle
+                self.selectedFileURL = store.fileURL
+                self.selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
+            }
         }
     }
 
@@ -368,17 +494,66 @@ final class ReaderSidebarDocumentController: ObservableObject {
         Document(id: UUID(), readerStore: makeReaderStore())
     }
 
+    func deriveRowState(from document: Document) -> SidebarRowState {
+        let store = document.readerStore
+        return SidebarRowState(
+            id: document.id,
+            title: store.fileDisplayName.isEmpty ? "Untitled" : store.fileDisplayName,
+            lastModified: store.fileLastModifiedAt,
+            sortDate: store.fileLastModifiedAt ?? store.lastExternalChangeAt ?? store.lastRefreshAt,
+            isFileMissing: store.isCurrentFileMissing,
+            indicatorState: ReaderDocumentIndicatorState(
+                hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: store.isCurrentFileMissing
+            )
+        )
+    }
+
+    private func rebuildAllRowStates() {
+        var states: [UUID: SidebarRowState] = [:]
+        for document in documents {
+            states[document.id] = deriveRowState(from: document)
+        }
+        guard states != rowStates else { return }
+        rowStates = states
+        onRowStatesChanged?(states)
+    }
+
     private func synchronizeDocumentChangeObservers() {
         let currentDocumentIDs = Set(documents.map(\.id))
 
-        for documentID in documentChangeCancellables.keys where !currentDocumentIDs.contains(documentID) {
-            documentChangeCancellables[documentID] = nil
+        for documentID in documentObservationTasks.keys where !currentDocumentIDs.contains(documentID) {
+            documentObservationTasks[documentID]?.cancel()
+            documentObservationTasks[documentID] = nil
         }
 
-        for document in documents where documentChangeCancellables[document.id] == nil {
-            documentChangeCancellables[document.id] = document.readerStore.objectWillChange.sink { [weak self] _ in
-                self?.objectWillChange.send()
+        for document in documents where documentObservationTasks[document.id] == nil {
+            documentObservationTasks[document.id] = Task { [weak self] in
+                let store = document.readerStore
+                while !Task.isCancelled {
+                    let cancelled = await Self.awaitObservationChange {
+                        _ = store.fileDisplayName
+                        _ = store.fileLastModifiedAt
+                        _ = store.lastExternalChangeAt
+                        _ = store.lastRefreshAt
+                        _ = store.isCurrentFileMissing
+                        _ = store.hasUnacknowledgedExternalChange
+                    }
+                    if cancelled { break }
+                    self?.updateRowStateIfNeeded(for: document.id)
+                }
             }
+        }
+
+        rebuildAllRowStates()
+    }
+
+    private func updateRowStateIfNeeded(for documentID: UUID) {
+        guard let document = documents.first(where: { $0.id == documentID }) else { return }
+        let newState = deriveRowState(from: document)
+        if rowStates[documentID] != newState {
+            rowStates[documentID] = newState
+            onRowStatesChanged?(rowStates)
         }
     }
 
@@ -401,54 +576,54 @@ final class ReaderSidebarDocumentController: ObservableObject {
         return activeFolderWatchSession
     }
 
-    private func applySelectedStoreProjection(_ state: ReaderSidebarSelectedStoreProjection.State) {
-        selectedWindowTitle = state.windowTitle
-        selectedFileURL = state.fileURL
-        selectedHasUnacknowledgedExternalChange = state.hasUnacknowledgedExternalChange
-    }
-
-    private func scheduleSelectedStoreProjection(
-        _ state: ReaderSidebarSelectedStoreProjection.State,
-        bindingGeneration: UInt
-    ) {
-        Task { @MainActor [weak self] in
-            guard let self,
-                  self.selectedStoreBindingGeneration == bindingGeneration else {
-                return
-            }
-
-            self.applySelectedStoreProjection(state)
-        }
-    }
-
     private func configureFolderWatchController() {
-        folderWatchController.currentDocumentFileURLProvider = { [weak self] in
-            self?.selectedReaderStore.fileURL
-        }
-        folderWatchController.openDocumentFileURLsProvider = { [weak self] in
-            self?.documents.compactMap { $0.readerStore.fileURL } ?? []
-        }
-        folderWatchController.openEventsHandler = { [weak self] events, session, origin in
-            self?.openDocumentsBurst(
-                at: events.map(\.fileURL),
-                origin: origin,
-                folderWatchSession: session,
-                initialDiffBaselineMarkdownByURL: Dictionary(
-                    uniqueKeysWithValues: events.compactMap { event in
-                        guard let previousMarkdown = event.previousMarkdown else {
-                            return nil
-                        }
-
-                        return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
-                    }
-                ),
-                preferEmptySelection: true
-            )
-        }
-        folderWatchController.onStateChange = { [weak self] in
-            self?.synchronizeFolderWatchState()
-        }
+        folderWatchController.delegate = self
         synchronizeFolderWatchState()
+    }
+
+    // MARK: - Observation helpers
+
+    /// Suspends until any property accessed inside `tracking` changes, or the enclosing Task is cancelled.
+    /// Returns `true` if the wait was terminated by cancellation rather than a property change.
+    private static func awaitObservationChange(
+        tracking: @escaping @MainActor () -> Void
+    ) async -> Bool {
+        let box = ObservationContinuationBox()
+        return await withTaskCancellationHandler {
+            await withUnsafeContinuation { continuation in
+                box.store(continuation)
+                if Task.isCancelled {
+                    box.resume(returning: true)
+                    return
+                }
+                withObservationTracking {
+                    tracking()
+                } onChange: {
+                    box.resume(returning: false)
+                }
+            }
+        } onCancel: {
+            box.resume(returning: true)
+        }
+    }
+
+    private final class ObservationContinuationBox: @unchecked Sendable {
+        private var continuation: UnsafeContinuation<Bool, Never>?
+        private let lock = NSLock()
+
+        func store(_ continuation: UnsafeContinuation<Bool, Never>) {
+            lock.lock()
+            self.continuation = continuation
+            lock.unlock()
+        }
+
+        func resume(returning value: Bool) {
+            lock.lock()
+            let c = continuation
+            continuation = nil
+            lock.unlock()
+            c?.resume(returning: value)
+        }
     }
 
     private func synchronizeFolderWatchState() {
@@ -457,5 +632,67 @@ final class ReaderSidebarDocumentController: ObservableObject {
         pendingFileSelectionRequest = folderWatchController.pendingFileSelectionRequest
         isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
         didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
+        contentScanProgress = folderWatchController.contentScanProgress
+        scannedFileCount = folderWatchController.scannedFileCount
+    }
+}
+
+extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
+    func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
+        selectedReaderStore.fileURL
+    }
+
+    func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
+        documents.compactMap { document in
+            document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
+        }
+    }
+
+    func folderWatchController(
+        _ controller: ReaderFolderWatchController,
+        handleEvents events: [ReaderFolderWatchChangeEvent],
+        in session: ReaderFolderWatchSession,
+        origin: ReaderOpenOrigin
+    ) {
+        let coordinator = fileOpenCoordinator
+        let diffBaselineByURL: [URL: String] = Dictionary(
+            uniqueKeysWithValues: events.compactMap { event in
+                guard let previousMarkdown = event.previousMarkdown else {
+                    return nil
+                }
+                return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
+            }
+        )
+
+        // For initial batch auto-open, the folder-watch planner sends defer
+        // and load events separately, managing materialization itself via
+        // folderWatchControllerShouldSelectNewestDocument. Use .deferOnly so the planner stays in control.
+        let materializationStrategy: FileOpenRequest.MaterializationStrategy =
+            origin == .folderWatchInitialBatchAutoOpen ? .deferOnly : .loadAll
+
+        coordinator.open(FileOpenRequest(
+            fileURLs: events.map(\.fileURL),
+            origin: origin,
+            folderWatchSession: session,
+            initialDiffBaselineMarkdownByURL: diffBaselineByURL,
+            slotStrategy: .reuseEmptySlotForFirst,
+            materializationStrategy: materializationStrategy
+        ))
+    }
+
+    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
+        for url in urls {
+            if let doc = document(for: url) {
+                doc.readerStore.noteObservedExternalChange()
+            }
+        }
+    }
+
+    func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
+        selectDocumentWithNewestModificationDate()
+    }
+
+    func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController) {
+        synchronizeFolderWatchState()
     }
 }

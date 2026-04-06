@@ -35,5 +35,8 @@ Config/Signing.local.xcconfig
 
 CLAUDE.md
 plans/
+docs/superpowers/
 
 .playwright-mcp/
+.worktrees/
+.superpowers/

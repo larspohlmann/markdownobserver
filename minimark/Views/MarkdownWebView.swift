@@ -3,119 +3,12 @@ import WebKit
 import AppKit
 import OSLog
 
-struct ChangedRegionNavigationRequest: Equatable {
-    let id: Int
-    let direction: ReaderChangedRegionNavigationDirection
-}
-
-struct ScrollSyncRequest: Equatable {
-        let id: Int
-        let progress: Double
-}
-
-struct ScrollSyncObservation: Equatable {
-        let progress: Double
-        let isProgrammatic: Bool
-}
-
-struct DropTargetingUpdate: Equatable {
-    let isTargeted: Bool
-    let droppedFileURLs: [URL]
-    let containsDirectoryHint: Bool
-    let canDrop: Bool
-}
-
 struct MarkdownWebView: NSViewRepresentable {
-        private static let scrollSyncMessageName = "minimarkScrollSync"
+    private static let scrollSyncMessageName = "minimarkScrollSync"
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
-        private static let scrollSyncObserverScript = """
-        (() => {
-            if (window.__minimarkScrollSyncInstalled) {
-                return;
-            }
-            window.__minimarkScrollSyncInstalled = true;
-            window.__minimarkScrollSyncSuppressionToken = null;
-
-            function activeScrollTarget() {
-                const sourceEditor = document.querySelector('.minimark-source-editor');
-                if (sourceEditor) {
-                    return {
-                        kind: 'element',
-                        element: sourceEditor,
-                        viewportHeight: sourceEditor.clientHeight || 0
-                    };
-                }
-
-                const element = document.scrollingElement || document.documentElement || document.body;
-                if (!element) {
-                    return null;
-                }
-
-                return {
-                    kind: 'page',
-                    element,
-                    viewportHeight: window.innerHeight || element.clientHeight || 0
-                };
-            }
-
-            function currentScrollPayload() {
-                const target = activeScrollTarget();
-                if (!target || !target.element) {
-                    return null;
-                }
-
-                const element = target.element;
-                const maxY = Math.max(0, element.scrollHeight - target.viewportHeight);
-                const rawOffsetY = target.kind === 'page'
-                    ? (window.scrollY || element.scrollTop || 0)
-                    : (element.scrollTop || 0);
-                const offsetY = Math.max(0, Math.min(rawOffsetY, maxY));
-                const progress = maxY > 0 ? Math.min(Math.max(offsetY / maxY, 0), 1) : 0;
-                return {
-                    offsetY,
-                    maxY,
-                    progress,
-                    targetKind: target.kind,
-                    suppressionToken: window.__minimarkScrollSyncSuppressionToken
-                };
-            }
-
-            let scheduledState = { value: false };
-            function publishScrollState() {
-                scheduledState.value = false;
-                const payload = currentScrollPayload();
-                if (!payload) {
-                    return;
-                }
-
-                try {
-                    window.webkit.messageHandlers.minimarkScrollSync.postMessage(payload);
-                } catch (_) {}
-            }
-
-            function schedulePublish() {
-                if (scheduledState.value) {
-                    return;
-                }
-                scheduledState.value = true;
-                window.requestAnimationFrame(publishScrollState);
-            }
-
-            window.addEventListener('scroll', schedulePublish, { passive: true, capture: true });
-            window.addEventListener('resize', schedulePublish, { passive: true });
-            window.addEventListener('load', schedulePublish);
-            const mutationObserver = new MutationObserver(schedulePublish);
-            mutationObserver.observe(document.documentElement, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ['class', 'style']
-            });
-
-            setTimeout(schedulePublish, 0);
-        })();
-        """
+    private static let tocMessageName = "minimarkTOC"
+    private static let scrollSyncObserverScript = ReaderJavaScriptLoader.scrollSyncObserverJavaScript
 
     let htmlDocument: String
     let documentIdentity: String?
@@ -126,12 +19,14 @@ struct MarkdownWebView: NSViewRepresentable {
     var postLoadStatusScript: String?
     var changedRegionNavigationRequest: ChangedRegionNavigationRequest?
         var scrollSyncRequest: ScrollSyncRequest?
+    var tocScrollRequest: TOCScrollRequest?
     var supportsInPlaceContentUpdates: Bool = false
     var reloadAnchorProgress: Double?
     var onFatalCrash: () -> Void = {}
     var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
     var onSourceEdit: (String) -> Void = { _ in }
+    var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
     var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
@@ -153,6 +48,7 @@ struct MarkdownWebView: NSViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: Self.scrollSyncMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditorDiagnosticMessageName)
+        configuration.userContentController.add(context.coordinator, name: Self.tocMessageName)
 
         let webView = DropAwareWKWebView(frame: .zero, configuration: configuration)
         #if DEBUG
@@ -182,6 +78,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.onPostLoadStatus = onPostLoadStatus
         context.coordinator.onScrollSyncObservation = onScrollSyncObservation
         context.coordinator.onSourceEdit = onSourceEdit
+        context.coordinator.onTOCHeadingsExtracted = onTOCHeadingsExtracted
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
@@ -189,6 +86,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
         context.coordinator.handleChangedRegionNavigationIfNeeded(changedRegionNavigationRequest, in: webView)
         context.coordinator.handleScrollSyncRequestIfNeeded(scrollSyncRequest, in: webView)
+        context.coordinator.handleTOCScrollRequestIfNeeded(tocScrollRequest, in: webView)
         webView.setAccessibilityIdentifier(accessibilityIdentifier)
         webView.setAccessibilityValue(accessibilityValue)
         context.coordinator.prepareForRetryIfNeeded(reloadToken, in: webView)
@@ -214,25 +112,6 @@ struct MarkdownWebView: NSViewRepresentable {
             return environment["MINIMARK_VERBOSE_WEB_LOGS"] == "1"
         }()
 
-        private struct ScrollSnapshot {
-            let offsetY: Double
-            let maxOffsetY: Double
-
-            var progress: Double {
-                guard maxOffsetY > 0 else {
-                    return 0
-                }
-                return min(max(offsetY / maxOffsetY, 0), 1)
-            }
-
-            var wasNearBottom: Bool {
-                guard maxOffsetY > 0 else {
-                    return false
-                }
-                return (maxOffsetY - offsetY) <= 2
-            }
-        }
-
         private enum LinkAction {
             case allow
             case cancel
@@ -243,30 +122,24 @@ struct MarkdownWebView: NSViewRepresentable {
         private weak var webView: WKWebView?
         private weak var containerView: MarkdownWebContainerView?
         private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "minimark", category: "MarkdownWebView")
+        let crashRecovery = WebViewCrashRecoveryHandler()
+        let scrollSync = WebViewScrollSyncController()
         var lastHTMLDocument: String?
         var diagnosticName: String = "reader-web"
         var postLoadStatusScript: String?
         private var lastDocumentIdentity: String?
-        private var lastTerminationAt: Date?
-        private var rapidTerminationCount = 0
-        private var isCrashRecoveryLocked = false
         private var hasCompletedFirstLoad = false
         private var latestReloadRequestID = 0
-        private var pendingScrollSnapshot: ScrollSnapshot?
-        private var lastObservedScrollSnapshot: ScrollSnapshot?
-        private var isRestoringReloadScroll = false
-        private var pendingReloadAnchorProgress: Double?
-        private var restoreWorkItem: DispatchWorkItem?
         private var lastReloadToken: Int?
         private var lastChangedRegionNavigationRequestID: Int?
+        private var lastTOCScrollRequestID: Int?
         private var pendingChangedRegionNavigationRequest: ChangedRegionNavigationRequest?
-        private var lastScrollSyncRequestID: Int?
-        private var lastAppliedScrollSyncRequestID: Int?
-        private var pendingScrollSyncRequest: ScrollSyncRequest?
+        private var pendingTOCScrollRequest: TOCScrollRequest?
         var onFatalCrash: () -> Void = {}
         var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
         var onSourceEdit: (String) -> Void = { _ in }
+        var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
         var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
@@ -276,6 +149,8 @@ struct MarkdownWebView: NSViewRepresentable {
         func attach(_ webView: WKWebView, containerView: MarkdownWebContainerView) {
             self.webView = webView
             self.containerView = containerView
+            scrollSync.containerView = containerView
+            scrollSync.logger = logger
         }
 
         func prepareForDocumentChangeIfNeeded(_ identity: String?) -> Bool {
@@ -285,15 +160,11 @@ struct MarkdownWebView: NSViewRepresentable {
 
             lastDocumentIdentity = identity
             hasCompletedFirstLoad = false
-            isCrashRecoveryLocked = false
-            cancelPendingRestore()
+            crashRecovery.resetState()
+            scrollSync.cancelPendingRestore()
             pendingChangedRegionNavigationRequest = nil
-            pendingScrollSyncRequest = nil
-            lastScrollSyncRequestID = nil
-            lastAppliedScrollSyncRequestID = nil
-            lastObservedScrollSnapshot = nil
-            isRestoringReloadScroll = false
-            pendingReloadAnchorProgress = nil
+            pendingTOCScrollRequest = nil
+            scrollSync.resetForDocumentChange()
             logDebug("document change detected")
             return true
         }
@@ -304,18 +175,12 @@ struct MarkdownWebView: NSViewRepresentable {
             }
 
             lastReloadToken = reloadToken
-            isCrashRecoveryLocked = false
-            rapidTerminationCount = 0
-            lastTerminationAt = nil
+            crashRecovery.unlock()
             hasCompletedFirstLoad = false
-            cancelPendingRestore()
+            scrollSync.cancelPendingRestore()
             pendingChangedRegionNavigationRequest = nil
-            pendingScrollSyncRequest = nil
-            lastScrollSyncRequestID = nil
-            lastAppliedScrollSyncRequestID = nil
-            lastObservedScrollSnapshot = nil
-            isRestoringReloadScroll = false
-            pendingReloadAnchorProgress = nil
+            pendingTOCScrollRequest = nil
+            scrollSync.resetForDocumentChange()
             logInfo("reload requested by retry token")
 
             if let lastHTMLDocument {
@@ -324,24 +189,23 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         func loadHTMLDocument(_ htmlDocument: String, in webView: WKWebView) {
-            guard !isCrashRecoveryLocked else {
+            guard !crashRecovery.isCrashRecoveryLocked else {
                 logInfo("load skipped because crash recovery is locked")
                 return
             }
 
             latestReloadRequestID += 1
             let requestID = latestReloadRequestID
-            cancelPendingRestore()
+            scrollSync.cancelPendingRestore()
             logDebug("loading HTML document")
 
             guard hasCompletedFirstLoad else {
-                pendingScrollSnapshot = nil
-                containerView?.hideReloadSnapshotOverlay()
+                scrollSync.cancelPendingRestore()
                 webView.loadHTMLString(htmlDocument, baseURL: Bundle.main.bundleURL)
                 return
             }
 
-            captureScrollSnapshot(in: webView) { [weak self, weak webView] snapshot in
+            scrollSync.captureScrollSnapshot(in: webView) { [weak self, weak webView] snapshot in
                 guard
                     let self,
                     let webView,
@@ -350,9 +214,11 @@ struct MarkdownWebView: NSViewRepresentable {
                     return
                 }
 
-                self.pendingScrollSnapshot = snapshot ?? self.lastObservedScrollSnapshot
-                self.pendingReloadAnchorProgress = self.reloadAnchorProgress
-                self.isRestoringReloadScroll = self.pendingScrollSnapshot != nil || self.pendingReloadAnchorProgress != nil
+                self.scrollSync.prepareForReloadRestore(
+                    snapshot: snapshot,
+                    fallbackSnapshot: self.scrollSync.lastObservedScrollSnapshot,
+                    reloadAnchorProgress: self.reloadAnchorProgress
+                )
                 self.captureVisibleSnapshot(in: webView) { [weak self, weak webView] image in
                     guard
                         let self,
@@ -362,7 +228,7 @@ struct MarkdownWebView: NSViewRepresentable {
                         return
                     }
 
-                    if self.isRestoringReloadScroll,
+                    if self.scrollSync.isRestoringReloadScroll,
                        let image,
                        let containerView = self.containerView {
                         containerView.showReloadSnapshotOverlay(image)
@@ -383,6 +249,8 @@ struct MarkdownWebView: NSViewRepresentable {
                 return false
             }
 
+            let themeJSBase64 = extractRuntimeThemeJSBase64(from: htmlDocument)
+
             let anchorProgressLiteral: String
             if let reloadAnchorProgress {
                 anchorProgressLiteral = String(min(max(reloadAnchorProgress, 0), 1))
@@ -390,7 +258,14 @@ struct MarkdownWebView: NSViewRepresentable {
                 anchorProgressLiteral = "null"
             }
 
-            isRestoringReloadScroll = reloadAnchorProgress != nil
+            let themeJSLiteral: String
+            if let themeJSBase64 {
+                themeJSLiteral = javaScriptStringLiteral(themeJSBase64)
+            } else {
+                themeJSLiteral = "null"
+            }
+
+            scrollSync.setRestoringReloadScroll(reloadAnchorProgress != nil)
             let script = """
             (() => {
                             if (typeof window.__minimarkApplyRuntimeCSS === 'function') {
@@ -398,6 +273,26 @@ struct MarkdownWebView: NSViewRepresentable {
                                     \(javaScriptStringLiteral(cssBase64))
                                 );
                             }
+              var themeJSBase64 = \(themeJSLiteral);
+              var previousThemeJSBase64 = Object.prototype.hasOwnProperty.call(window, '__minimarkLastThemeJSBase64')
+                ? window.__minimarkLastThemeJSBase64
+                : null;
+              var shouldRefreshThemeJS = previousThemeJSBase64 !== themeJSBase64;
+              if (shouldRefreshThemeJS && typeof window.__minimarkThemeCleanup === 'function') {
+                window.__minimarkThemeCleanup();
+                delete window.__minimarkThemeCleanup;
+              }
+              if (shouldRefreshThemeJS) {
+                if (themeJSBase64) {
+                  try {
+                    var binary = atob(themeJSBase64);
+                    var bytes = Uint8Array.from(binary, function(c) { return c.charCodeAt(0); });
+                    var themeJS = new TextDecoder().decode(bytes);
+                    new Function(themeJS)();
+                  } catch(e) { console.error('Theme JS error:', e); }
+                }
+                window.__minimarkLastThemeJSBase64 = themeJSBase64;
+              }
               if (typeof window.__minimarkUpdateRenderedMarkdown !== 'function') {
                 return false;
               }
@@ -412,7 +307,7 @@ struct MarkdownWebView: NSViewRepresentable {
 
                 let didUpdate = (result as? Bool) == true
                 if !didUpdate || self.reloadAnchorProgress == nil {
-                    self.isRestoringReloadScroll = false
+                    self.scrollSync.setRestoringReloadScroll(false)
                 }
             }
 
@@ -432,34 +327,28 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-            guard !isCrashRecoveryLocked else {
-                logInfo("web content process terminated while recovery lock was active")
-                return
-            }
-
-            let now = Date()
-            if let lastTerminationAt, now.timeIntervalSince(lastTerminationAt) < 5 {
-                rapidTerminationCount += 1
-            } else {
-                rapidTerminationCount = 1
-            }
-            self.lastTerminationAt = now
-            logInfo("web content process terminated; rapidCount=\(rapidTerminationCount)")
-
-            if rapidTerminationCount <= 1, let htmlDocument = lastHTMLDocument {
-                logInfo("retrying web content load after first termination")
-                loadHTMLDocument(htmlDocument, in: webView)
-                return
-            }
-
-            // Stop automatic reloads until the user changes document context.
-            isCrashRecoveryLocked = true
-            onFatalCrash()
-
-            loadFallbackMessage(
-                "Web content process stopped repeatedly while rendering markdown. " +
-                    "Try reopening the file."
+            let action = crashRecovery.handleTermination(
+                logger: logger,
+                diagnosticName: diagnosticName
             )
+
+            switch action {
+            case .alreadyLocked:
+                break
+
+            case .recover:
+                if let htmlDocument = lastHTMLDocument {
+                    logInfo("retrying web content load after first termination")
+                    loadHTMLDocument(htmlDocument, in: webView)
+                }
+
+            case .lockedOut:
+                onFatalCrash()
+                loadFallbackMessage(
+                    "Web content process stopped repeatedly while rendering markdown. " +
+                        "Try reopening the file."
+                )
+            }
         }
 
         func webView(
@@ -467,8 +356,8 @@ struct MarkdownWebView: NSViewRepresentable {
             didFail navigation: WKNavigation!,
             withError error: any Error
         ) {
-            cancelPendingRestore()
-            isCrashRecoveryLocked = true
+            scrollSync.cancelPendingRestore()
+            crashRecovery.lock()
             logError("navigation failed: \(error.localizedDescription)")
             onFatalCrash()
             loadFallbackMessage("Failed to render markdown: \(error.localizedDescription)")
@@ -479,8 +368,8 @@ struct MarkdownWebView: NSViewRepresentable {
             didFailProvisionalNavigation navigation: WKNavigation!,
             withError error: any Error
         ) {
-            cancelPendingRestore()
-            isCrashRecoveryLocked = true
+            scrollSync.cancelPendingRestore()
+            crashRecovery.lock()
             logError("provisional navigation failed: \(error.localizedDescription)")
             onFatalCrash()
             loadFallbackMessage("Failed to load markdown preview: \(error.localizedDescription)")
@@ -512,22 +401,67 @@ struct MarkdownWebView: NSViewRepresentable {
             _ request: ScrollSyncRequest?,
             in webView: WKWebView
         ) {
-            guard let request else {
-                return
-            }
+            scrollSync.handleScrollSyncRequestIfNeeded(
+                request,
+                in: webView,
+                hasCompletedFirstLoad: hasCompletedFirstLoad
+            )
+        }
 
-            guard lastScrollSyncRequestID != request.id else {
-                return
-            }
-
-            lastScrollSyncRequestID = request.id
+        func handleTOCScrollRequestIfNeeded(_ request: TOCScrollRequest?, in webView: WKWebView) {
+            guard let request, request.requestID != lastTOCScrollRequestID else { return }
+            lastTOCScrollRequestID = request.requestID
 
             guard hasCompletedFirstLoad else {
-                pendingScrollSyncRequest = request
+                pendingTOCScrollRequest = request
                 return
             }
 
-            performScrollSync(request, in: webView)
+            performTOCScroll(request, in: webView)
+        }
+
+        private func performTOCScroll(_ request: TOCScrollRequest, in webView: WKWebView) {
+            if !request.heading.elementID.isEmpty {
+                scrollToHeadingElement(request.heading.elementID, in: webView)
+            } else if let sourceLine = request.heading.sourceLine {
+                scrollToSourceLine(sourceLine, in: webView)
+            }
+        }
+
+        private func scrollToHeadingElement(_ elementID: String, in webView: WKWebView) {
+            let idLiteral = javaScriptStringLiteral(elementID)
+            let script = """
+            (() => {
+              const el = document.getElementById(\(idLiteral));
+              if (!el) return false;
+              const inset = window.__minimarkOverlayTopInset || 0;
+              const rect = el.getBoundingClientRect();
+              const scrollTop = window.scrollY + rect.top - inset;
+              window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+              return true;
+            })();
+            """
+            webView.evaluateJavaScript(script)
+        }
+
+        private func scrollToSourceLine(_ line: Int, in webView: WKWebView) {
+            let script = """
+            (() => {
+              const textarea = document.querySelector('.minimark-source-editor');
+              if (!textarea) return false;
+              const lines = textarea.value.split('\\n');
+              let charIndex = 0;
+              for (let i = 0; i < Math.min(\(line) - 1, lines.length); i++) {
+                charIndex += lines[i].length + 1;
+              }
+              textarea.focus();
+              textarea.setSelectionRange(charIndex, charIndex);
+              const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+              textarea.scrollTop = Math.max(0, (\(line) - 3) * lineHeight);
+              return true;
+            })();
+            """
+            webView.evaluateJavaScript(script)
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -535,35 +469,30 @@ struct MarkdownWebView: NSViewRepresentable {
             runPostLoadStatusProbe(in: webView)
             hasCompletedFirstLoad = true
 
-            if let pendingChangedRegionNavigationRequest {
-                self.pendingChangedRegionNavigationRequest = nil
-                pendingScrollSnapshot = nil
-                pendingReloadAnchorProgress = nil
-                isRestoringReloadScroll = false
-                performChangedRegionNavigation(pendingChangedRegionNavigationRequest, in: webView)
-                return
+            var hadPendingChangedRegionNavigation = false
+            if let request = pendingChangedRegionNavigationRequest {
+                pendingChangedRegionNavigationRequest = nil
+                hadPendingChangedRegionNavigation = true
+                performChangedRegionNavigation(request, in: webView)
             }
 
-            if let pendingScrollSyncRequest {
-                self.pendingScrollSyncRequest = nil
-                pendingScrollSnapshot = nil
-                pendingReloadAnchorProgress = nil
-                isRestoringReloadScroll = false
-                performScrollSync(pendingScrollSyncRequest, in: webView)
-                return
+            if !hadPendingChangedRegionNavigation, let request = pendingTOCScrollRequest {
+                pendingTOCScrollRequest = nil
+                performTOCScroll(request, in: webView)
             }
 
-            if let pendingReloadAnchorProgress {
-                self.pendingReloadAnchorProgress = nil
-                restoreScrollProgress(in: webView, to: pendingReloadAnchorProgress, attempt: 0)
-                return
+            var hadPendingScrollSync = false
+            if !hadPendingChangedRegionNavigation, let request = scrollSync.pendingScrollSyncRequest {
+                hadPendingScrollSync = true
+                scrollSync.consumePendingScrollSyncRequest()
+                scrollSync.performScrollSync(request, in: webView)
             }
 
-            guard let snapshot = pendingScrollSnapshot else {
-                isRestoringReloadScroll = false
-                return
-            }
-            restoreScrollPosition(in: webView, using: snapshot, attempt: 0)
+            _ = scrollSync.restoreAfterNavigationIfNeeded(
+                in: webView,
+                hadPendingChangedRegionNavigation: hadPendingChangedRegionNavigation,
+                hadPendingScrollSync: hadPendingScrollSync
+            )
         }
 
         func webView(
@@ -589,8 +518,7 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         private func loadFallbackMessage(_ message: String) {
-            cancelPendingRestore()
-            containerView?.hideReloadSnapshotOverlay()
+            scrollSync.cancelPendingRestore()
             logError("loading fallback message: \(message)")
             let fallbackHTML = """
             <html>
@@ -736,65 +664,30 @@ struct MarkdownWebView: NSViewRepresentable {
                 return
             }
 
+            if message.name == MarkdownWebView.tocMessageName,
+               let payload = message.body as? [[String: Any]] {
+                let headings = TOCHeading.fromJavaScriptPayload(payload)
+                onTOCHeadingsExtracted(headings)
+                return
+            }
+
             guard message.name == MarkdownWebView.scrollSyncMessageName,
                   let payload = message.body as? [String: Any],
                   let progress = payload["progress"] as? Double else {
                 return
             }
 
-            if let offsetY = payload["offsetY"] as? Double,
-               let maxY = payload["maxY"] as? Double {
-                if !isRestoringReloadScroll {
-                    lastObservedScrollSnapshot = ScrollSnapshot(offsetY: offsetY, maxOffsetY: maxY)
-                }
-            }
-
-            if isRestoringReloadScroll {
-                return
-            }
-
+            let offsetY = payload["offsetY"] as? Double
+            let maxY = payload["maxY"] as? Double
             let suppressionToken = (payload["suppressionToken"] as? NSNumber)?.intValue
-            let isProgrammatic = suppressionToken != nil && suppressionToken == lastAppliedScrollSyncRequestID
-            onScrollSyncObservation(
-                ScrollSyncObservation(
-                    progress: min(max(progress, 0), 1),
-                    isProgrammatic: isProgrammatic
-                )
-            )
-        }
 
-        private func captureScrollSnapshot(
-            in webView: WKWebView,
-            completion: @escaping (ScrollSnapshot?) -> Void
-        ) {
-                        let script = """
-                        (() => {
-                            const sourceEditor = document.querySelector('.minimark-source-editor');
-                            if (sourceEditor) {
-                                const maxY = Math.max(0, sourceEditor.scrollHeight - sourceEditor.clientHeight);
-                                const y = Math.max(0, Math.min(sourceEditor.scrollTop || 0, maxY));
-                                return { y, maxY };
-                            }
-
-                            const element = document.scrollingElement || document.documentElement || document.body;
-                            if (!element) return null;
-                            const maxY = Math.max(0, element.scrollHeight - window.innerHeight);
-                            const y = Math.max(0, Math.min(window.scrollY || element.scrollTop || 0, maxY));
-                            return { y, maxY };
-                        })();
-                        """
-
-            webView.evaluateJavaScript(script) { result, _ in
-                guard
-                    let dict = result as? [String: Any],
-                    let y = dict["y"] as? Double,
-                    let maxY = dict["maxY"] as? Double
-                else {
-                    completion(nil)
-                    return
-                }
-
-                completion(ScrollSnapshot(offsetY: y, maxOffsetY: maxY))
+            if let observation = scrollSync.handleScrollObservationMessage(
+                offsetY: offsetY,
+                maxY: maxY,
+                progress: progress,
+                suppressionToken: suppressionToken
+            ) {
+                onScrollSyncObservation(observation)
             }
         }
 
@@ -815,6 +708,10 @@ struct MarkdownWebView: NSViewRepresentable {
             extractMetaContent(named: "minimark-runtime-css-base64", from: htmlDocument)
         }
 
+        private func extractRuntimeThemeJSBase64(from htmlDocument: String) -> String? {
+            extractMetaContent(named: "minimark-runtime-theme-js-base64", from: htmlDocument)
+        }
+
         private func extractMetaContent(named name: String, from htmlDocument: String) -> String? {
             let marker = #"<meta name=""# + name + #"" content=""#
             guard let markerRange = htmlDocument.range(of: marker) else {
@@ -827,205 +724,6 @@ struct MarkdownWebView: NSViewRepresentable {
             }
 
             return String(htmlDocument[payloadStart..<payloadEnd])
-        }
-
-                private func performScrollSync(
-                        _ request: ScrollSyncRequest,
-                        in webView: WKWebView
-                ) {
-                        lastAppliedScrollSyncRequestID = request.id
-                        let progress = min(max(request.progress, 0), 1)
-                        let script = """
-                        (() => {
-                            const token = \(request.id);
-                            const sourceEditor = document.querySelector('.minimark-source-editor');
-                            if (sourceEditor) {
-                                const maxY = Math.max(0, sourceEditor.scrollHeight - sourceEditor.clientHeight);
-                                const target = Math.max(0, Math.min(maxY, \(progress) * maxY));
-                                window.__minimarkScrollSyncSuppressionToken = token;
-                                sourceEditor.scrollTop = target;
-                                window.setTimeout(() => {
-                                    if (window.__minimarkScrollSyncSuppressionToken === token) {
-                                        window.__minimarkScrollSyncSuppressionToken = null;
-                                    }
-                                }, 120);
-                                return { target, maxY };
-                            }
-
-                            const element = document.scrollingElement || document.documentElement || document.body;
-                            if (!element) return null;
-                            const maxY = Math.max(0, element.scrollHeight - window.innerHeight);
-                            const target = Math.max(0, Math.min(maxY, \(progress) * maxY));
-                            window.__minimarkScrollSyncSuppressionToken = token;
-                            window.scrollTo(0, target);
-                            window.setTimeout(() => {
-                                if (window.__minimarkScrollSyncSuppressionToken === token) {
-                                    window.__minimarkScrollSyncSuppressionToken = null;
-                                }
-                            }, 120);
-                            return { target, maxY };
-                        })();
-                        """
-
-                        webView.evaluateJavaScript(script) { [weak self] _, error in
-                                guard let self else {
-                                        return
-                                }
-
-                                if let error {
-                                        self.logDebug("scroll sync failed: \(error.localizedDescription)")
-                                }
-                        }
-                }
-
-        private func restoreScrollPosition(
-            in webView: WKWebView,
-            using snapshot: ScrollSnapshot,
-            attempt: Int
-        ) {
-                        let script = """
-                        (() => {
-                            const preferred = \(snapshot.offsetY);
-                            const progress = \(snapshot.progress);
-                            const nearBottom = \(snapshot.wasNearBottom ? "true" : "false");
-                            const sourceEditor = document.querySelector('.minimark-source-editor');
-                            if (sourceEditor) {
-                                const maxY = Math.max(0, sourceEditor.scrollHeight - sourceEditor.clientHeight);
-                                let target = Math.min(Math.max(preferred, 0), maxY);
-                                if (nearBottom) {
-                                    target = maxY;
-                                } else if (preferred > maxY && progress > 0 && maxY > 0) {
-                                    target = Math.min(maxY, Math.max(0, progress * maxY));
-                                }
-
-                                sourceEditor.scrollTop = target;
-                                const actualY = sourceEditor.scrollTop || 0;
-                                return { target, actualY, maxY };
-                            }
-
-                            const element = document.scrollingElement || document.documentElement || document.body;
-                            if (!element) return null;
-                            const maxY = Math.max(0, element.scrollHeight - window.innerHeight);
-                            let target = Math.min(Math.max(preferred, 0), maxY);
-                            if (nearBottom) {
-                                target = maxY;
-                            } else if (preferred > maxY && progress > 0 && maxY > 0) {
-                                target = Math.min(maxY, Math.max(0, progress * maxY));
-                            }
-
-                            window.scrollTo(0, target);
-                            const actualY = window.scrollY || element.scrollTop || 0;
-                            return { target, actualY, maxY };
-                        })();
-                        """
-
-            webView.evaluateJavaScript(script) { [weak self, weak webView] result, _ in
-                guard
-                    let self,
-                    let webView,
-                    let dict = result as? [String: Any],
-                    let target = dict["target"] as? Double,
-                    let actualY = dict["actualY"] as? Double,
-                    let maxY = dict["maxY"] as? Double
-                else {
-                    self?.pendingScrollSnapshot = nil
-                    return
-                }
-
-                let remainingAttempts = 3
-                let shouldRetryForLateLayout = attempt < remainingAttempts && (
-                    abs(actualY - target) > 1.5 ||
-                        (snapshot.offsetY > 0 && maxY == 0)
-                )
-
-                guard shouldRetryForLateLayout else {
-                    self.lastObservedScrollSnapshot = ScrollSnapshot(offsetY: actualY, maxOffsetY: maxY)
-                    self.isRestoringReloadScroll = false
-                    self.pendingScrollSnapshot = nil
-                    self.containerView?.hideReloadSnapshotOverlay()
-                    return
-                }
-
-                let workItem = DispatchWorkItem { [weak self, weak webView] in
-                    guard let self, let webView else {
-                        return
-                    }
-                    self.restoreScrollPosition(in: webView, using: snapshot, attempt: attempt + 1)
-                }
-                self.restoreWorkItem = workItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: workItem)
-            }
-        }
-
-        private func restoreScrollProgress(
-            in webView: WKWebView,
-            to progress: Double,
-            attempt: Int
-        ) {
-            let clampedProgress = min(max(progress, 0), 1)
-            let script = """
-            (() => {
-              const sourceEditor = document.querySelector('.minimark-source-editor');
-              if (sourceEditor) {
-                const maxY = Math.max(0, sourceEditor.scrollHeight - sourceEditor.clientHeight);
-                const target = Math.max(0, Math.min(maxY, \(clampedProgress) * maxY));
-                sourceEditor.scrollTop = target;
-                const actualY = sourceEditor.scrollTop || 0;
-                return { target, actualY, maxY };
-              }
-
-              const element = document.scrollingElement || document.documentElement || document.body;
-              if (!element) return null;
-              const maxY = Math.max(0, element.scrollHeight - window.innerHeight);
-              const target = Math.max(0, Math.min(maxY, \(clampedProgress) * maxY));
-              window.scrollTo(0, target);
-              const actualY = window.scrollY || element.scrollTop || 0;
-              return { target, actualY, maxY };
-            })();
-            """
-
-            webView.evaluateJavaScript(script) { [weak self, weak webView] result, _ in
-                guard
-                    let self,
-                    let webView,
-                    let dict = result as? [String: Any],
-                    let target = dict["target"] as? Double,
-                    let actualY = dict["actualY"] as? Double,
-                    let maxY = dict["maxY"] as? Double
-                else {
-                    self?.containerView?.hideReloadSnapshotOverlay()
-                    self?.isRestoringReloadScroll = false
-                    return
-                }
-
-                let remainingAttempts = 3
-                let shouldRetryForLateLayout = attempt < remainingAttempts && abs(actualY - target) > 1.5
-
-                guard shouldRetryForLateLayout else {
-                    self.lastObservedScrollSnapshot = ScrollSnapshot(offsetY: actualY, maxOffsetY: maxY)
-                    self.isRestoringReloadScroll = false
-                    self.containerView?.hideReloadSnapshotOverlay()
-                    return
-                }
-
-                let workItem = DispatchWorkItem { [weak self, weak webView] in
-                    guard let self, let webView else {
-                        return
-                    }
-                    self.restoreScrollProgress(in: webView, to: clampedProgress, attempt: attempt + 1)
-                }
-                self.restoreWorkItem = workItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: workItem)
-            }
-        }
-
-        private func cancelPendingRestore() {
-            restoreWorkItem?.cancel()
-            restoreWorkItem = nil
-            pendingScrollSnapshot = nil
-            isRestoringReloadScroll = false
-            pendingReloadAnchorProgress = nil
-            containerView?.hideReloadSnapshotOverlay()
         }
 
         private func runPostLoadStatusProbe(in webView: WKWebView) {

@@ -1,6 +1,12 @@
 import Foundation
+import OSLog
 
 enum MarkdownSourceHTMLRenderer {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "MarkdownSourceHTMLRenderer"
+    )
+
     private struct Payload: Encodable {
         let markdown: String
         let isEditable: Bool
@@ -89,6 +95,47 @@ enum MarkdownSourceHTMLRenderer {
                         });
 
                         root.replaceChildren(textarea);
+
+                        var lastSourceHeadingsJSON = "";
+                        var sourceHeadingsDebounceTimer = null;
+
+                        function extractSourceHeadings(text) {
+                            try {
+                                var lines = text.split("\\n");
+                                var result = [];
+                                var inCodeFence = false;
+                                for (var i = 0; i < lines.length; i++) {
+                                    if (/^```|^~~~/.test(lines[i])) { inCodeFence = !inCodeFence; continue; }
+                                    if (inCodeFence) continue;
+                                    var match = lines[i].match(/^(#{1,3})\\s+(.+)/);
+                                    if (match) {
+                                        result.push({
+                                            id: "",
+                                            level: match[1].length,
+                                            title: match[2].replace(/\\s+$/, ""),
+                                            sourceLine: i + 1
+                                        });
+                                    }
+                                }
+                                var json = JSON.stringify(result);
+                                if (json !== lastSourceHeadingsJSON) {
+                                    lastSourceHeadingsJSON = json;
+                                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
+                                        window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+                                    }
+                                }
+                            } catch (_) {}
+                        }
+
+                        extractSourceHeadings(payload.markdown || "");
+
+                        textarea.addEventListener("input", function() {
+                            if (sourceHeadingsDebounceTimer) { clearTimeout(sourceHeadingsDebounceTimer); }
+                            sourceHeadingsDebounceTimer = setTimeout(function() {
+                                extractSourceHeadings(textarea.value);
+                            }, 200);
+                        });
+
                         window.__minimarkSourceBootstrapStatus = "ready";
                         requestAnimationFrame(function() {
                             const scrollX = window.scrollX || 0;
@@ -228,7 +275,14 @@ enum MarkdownSourceHTMLRenderer {
             isDark: isDarkTheme(theme)
         )
 
-        guard let data = try? JSONEncoder().encode(payload) else {
+        let data: Data
+        do {
+            data = try JSONEncoder().encode(payload)
+        } catch {
+            let nsError = error as NSError
+            logger.error(
+                "source HTML payload encode failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
+            )
             return ""
         }
 
@@ -292,15 +346,16 @@ enum MarkdownSourceHTMLRenderer {
         case .whiteOnBlack: return "rgba(125, 180, 255, 0.22)"
         case .darkGreyOnLightGrey: return "rgba(0, 79, 154, 0.18)"
         case .lightGreyOnDarkGrey: return "rgba(138, 185, 255, 0.22)"
+        case .amberTerminal: return "rgba(255, 176, 0, 0.22)"
+        case .greenTerminal, .greenTerminalStatic: return "rgba(0, 255, 65, 0.22)"
+        case .newspaper: return "rgba(26, 77, 143, 0.18)"
+        case .focus: return "rgba(44, 44, 44, 0.12)"
+        case .commodore64: return "rgba(160, 160, 255, 0.22)"
+        case .gameBoy: return "rgba(15, 56, 15, 0.22)"
         }
     }
 
     private static func isDarkTheme(_ theme: ReaderTheme) -> Bool {
-        switch theme.kind {
-        case .blackOnWhite, .darkGreyOnLightGrey:
-            return false
-        case .whiteOnBlack, .lightGreyOnDarkGrey:
-            return true
-        }
+        theme.kind.isDark
     }
 }

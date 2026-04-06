@@ -11,7 +11,7 @@ protocol MarkdownRendering {
         markdown: String,
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
-        readerTheme: ReaderTheme,
+        theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
         baseFontSize: Double
     ) throws -> RenderedMarkdown
@@ -36,7 +36,7 @@ struct MarkdownRenderingService: MarkdownRendering {
         markdown: String,
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
-        readerTheme: ReaderTheme,
+        theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
         baseFontSize: Double
     ) throws -> RenderedMarkdown {
@@ -46,11 +46,12 @@ struct MarkdownRenderingService: MarkdownRendering {
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions
         )
-        let css = cssFactory.makeCSS(theme: readerTheme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
+        let css = cssFactory.makeCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
         let htmlDocument = cssFactory.makeHTMLDocument(
             css: css,
             payloadBase64: payloadBase64,
-            runtimeAssets: runtimeAssets
+            runtimeAssets: runtimeAssets,
+            themeJavaScript: theme.customJavaScript
         )
 
         return RenderedMarkdown(

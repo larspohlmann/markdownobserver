@@ -16,7 +16,7 @@ RAW_DIR="$PROJECT_DIR/screenshots/raw"
 OUTPUT_DIR="$PROJECT_DIR/screenshots"
 BACKGROUND="$PROJECT_DIR/docs/assets/screenshot_bck.png"
 COMPOSITE_SCRIPT="$SCRIPT_DIR/composite.py"
-PLAN_FILE="$PROJECT_DIR/plans/folder-watch-favorites-and-info.md"
+PLAN_FILE="$PROJECT_DIR/plans/177-auto-open-change-indicator.md"
 
 # --- Parse arguments ---
 SKIP_BUILD=false
@@ -262,7 +262,7 @@ resize_window() {
 }
 
 shrink_window_height() {
-    # Reduce window height by 33% from its default size
+    # Reduce window height slightly from its default size
     osascript -e '
         tell application "System Events"
             tell process "MarkdownObserver"
@@ -272,7 +272,7 @@ shrink_window_height() {
                 set winSize to size of win
                 set currentWidth to item 1 of winSize
                 set currentHeight to item 2 of winSize
-                set newHeight to round (currentHeight * 0.67)
+                set newHeight to round (currentHeight * 0.94)
                 set size of win to {currentWidth, newHeight}
             end tell
         end tell
@@ -286,36 +286,8 @@ shrink_window_height() {
 open_folder_via_picker() {
     local folder_path="$1"
     echo "    Clicking Watch Folder button..."
-    # The button has accessibilityLabel "Watch folder" and accessibilityValue "Inactive"
-    osascript -l JavaScript -e '
-        const se = Application("System Events");
-        const proc = se.processes["MarkdownObserver"];
-        proc.frontmost = true;
-        delay(0.3);
-        const win = proc.windows[0];
-        function findWatchButton(el) {
-            try {
-                if (el.role() === "AXButton") {
-                    var d = el.description ? el.description() : "";
-                    var v = el.value ? el.value() : "";
-                    if (d === "Watch folder" || d.indexOf("Watch folder") !== -1 ||
-                        d === "Inactive" || v === "Inactive") {
-                        el.actions["AXPress"].perform();
-                        return "clicked: " + d;
-                    }
-                }
-            } catch(e) {}
-            try {
-                var kids = el.uiElements();
-                for (var i = 0; i < kids.length; i++) {
-                    var r = findWatchButton(kids[i]);
-                    if (r.indexOf("clicked") !== -1) return r;
-                }
-            } catch(e) {}
-            return "not_found";
-        }
-        findWatchButton(win);
-    ' 2>/dev/null || echo "not_found"
+    # The button has accessibilityIdentifier "folder-watch-toolbar-button" in the native NSToolbar
+    click_by_identifier "folder-watch-toolbar-button"
     sleep 1
 
     echo "    Navigating to folder via Cmd+Shift+G..."
@@ -325,12 +297,22 @@ open_folder_via_picker() {
                 set frontmost to true
                 delay 0.5
                 keystroke \"g\" using {command down, shift down}
-                delay 1
+                delay 1.5
                 keystroke \"$folder_path\"
                 delay 0.5
                 keystroke return
-                delay 1
-                keystroke return
+                delay 2
+                -- Click the Open button explicitly instead of pressing Return
+                try
+                    click button \"Open\" of sheet 1 of window 1
+                on error
+                    -- Fallback: try the front sheet/panel
+                    try
+                        click button \"Open\" of window 1
+                    on error
+                        keystroke return
+                    end try
+                end try
             end tell
         end tell
     " 2>/dev/null
@@ -664,42 +646,37 @@ import sys
 with open('$PLAN_FILE', 'r') as f:
     lines = f.readlines()
 
+# Modifications in the first few lines to showcase all 3 gutter types:
+# - Amber (edited): change the title
+# - Green (added): insert new lines after title
+# - Red (deleted): remove '## Problem' heading
 modified = []
 for i, line in enumerate(lines):
     # Line 0: Edit the title (amber gutter)
     if i == 0:
-        modified.append('# Plan: Folder Watch Favorites & Subfolder Configuration\n')
-        # Add new line after title (green gutter)
+        modified.append('# Fix #177: Show change indicator for auto-opened files\n')
+        # Insert new lines after title (green gutter — added)
         modified.append('\n')
-        modified.append('> **Status:** In Progress | **Priority:** High\n')
+        modified.append('> **Status:** Fixed | **Priority:** High\n')
         modified.append('\n')
         continue
 
-    # Line 1: blank line after original title - keep
+    # Line 1: keep blank line
     if i == 1:
         modified.append(line)
         continue
 
-    # Line 2: '## Overview' - delete this line (red gutter)
+    # Line 2: delete '## Problem' heading (red gutter — deleted)
     if i == 2:
         continue
 
-    # Line 3: blank line after Overview - delete (red gutter)
+    # Line 3: delete blank line after heading (red gutter — deleted)
     if i == 3:
         continue
 
-    # Line 4-5: Edit the description paragraph (amber gutter)
+    # Line 4: Edit the description (amber gutter — edited)
     if i == 4:
-        modified.append('Three related features for the folder watch system:\n')
-        continue
-
-    if i == 5:
-        modified.append('1. **Favorites** \u2014 Save and recall folder watch configurations as named favorites.\n')
-        continue
-
-    if i == 6:
-        modified.append('2. **Info popover** \u2014 Show subfolder configuration details in the status popover.\n')
-        modified.append('3. **Quick resume** \u2014 One-click resume for previously watched folders.\n')
+        modified.append('When a watched folder detects a new markdown file and the app auto-opens it, the sidebar now shows a green change indicator. Previously there was no visual cue.\n')
         continue
 
     # Keep remaining lines unchanged
@@ -733,6 +710,16 @@ click_by_identifier() {
                     return 'clicked: ' + targetId;
                 }
             } catch(e) {}
+            // At window level, also search toolbar items
+            if (depth === 0) {
+                try {
+                    var toolbars = el.toolbars();
+                    for (var t = 0; t < toolbars.length; t++) {
+                        var r = findById(toolbars[t], targetId, depth + 1);
+                        if (r) return r;
+                    }
+                } catch(e) {}
+            }
             try {
                 var kids = el.uiElements();
                 for (var i = 0; i < kids.length; i++) {
@@ -767,6 +754,16 @@ click_button_by_description() {
                     }
                 }
             } catch(e) {}
+            // At window level, also search toolbar
+            if (depth === 0) {
+                try {
+                    var toolbars = el.toolbars();
+                    for (var t = 0; t < toolbars.length; t++) {
+                        var r = findBtn(toolbars[t], target, depth + 1);
+                        if (r) return r;
+                    }
+                } catch(e) {}
+            }
             try {
                 var kids = el.uiElements();
                 for (var i = 0; i < kids.length; i++) {
@@ -885,8 +882,9 @@ clean_saved_state
 
 echo "    Launching app..."
 open --env MINIMARK_SCREENSHOT_OPEN_EXCLUSION="true" \
-    --env MINIMARK_SCREENSHOT_EXCLUDED_PATHS=".git" \
+    --env MINIMARK_SCREENSHOT_EXCLUDED_PATHS=".git,profiling" \
     --env MINIMARK_SCREENSHOT_EXPANDED_PATHS="minimark,scripts" \
+    --env MINIMARK_SCREENSHOT_SELECT_FILE="177-auto-open-change-indicator.md" \
     -a "$APP_PATH" \
     --args -minimark-ui-test
 sleep 2
@@ -965,9 +963,9 @@ echo "    Clicking Open Files..."
 click_by_identifier "file-selection-open-button"
 sleep 2
 
-echo "    Selecting plan file..."
-select_sidebar_document "folder-watch-favorites-and-info"
-sleep 2
+# The app auto-selects the plan file via MINIMARK_SCREENSHOT_SELECT_FILE env var
+echo "    Waiting for plan file to render..."
+sleep 3
 
 if [[ -z "$ONLY_SHOT" || "$ONLY_SHOT" == "3" ]]; then
     RAW_FILE="$RAW_DIR/screenshot_3_raw.png"
@@ -975,6 +973,29 @@ if [[ -z "$ONLY_SHOT" || "$ONLY_SHOT" == "3" ]]; then
     capture_window "$RAW_FILE"
     echo "    Saved: $RAW_FILE"
 fi
+
+# ========================================
+# Phase 3b: Table of Contents overlay (Screenshot 3b)
+# ========================================
+echo ""
+echo "--- Screenshot 3b: Table of Contents ---"
+
+sleep 2
+echo "    Opening TOC..."
+click_by_identifier "toc-button"
+sleep 2
+
+if [[ -z "$ONLY_SHOT" || "$ONLY_SHOT" == "3b" ]]; then
+    RAW_FILE="$RAW_DIR/screenshot_3b_raw.png"
+    echo "    Capturing screenshot 3b..."
+    capture_window "$RAW_FILE"
+    echo "    Saved: $RAW_FILE"
+fi
+
+# Close TOC before continuing
+echo "    Closing TOC..."
+click_by_identifier "toc-button"
+sleep 0.5
 
 # ========================================
 # Phase 4: External modification → gutters (Screenshot 4)
@@ -1118,6 +1139,128 @@ if [[ -z "$ONLY_SHOT" || "$ONLY_SHOT" == "6" ]]; then
     echo "    Saved: $RAW_FILE"
 fi
 
+# ========================================
+# Phase 7: Amber Terminal theme (Screenshot 7)
+# ========================================
+echo ""
+echo "--- Screenshot 7: Amber Terminal ---"
+
+# Open Settings with Cmd+,
+echo "    Opening Settings..."
+osascript -e '
+    tell application "System Events"
+        tell process "MarkdownObserver"
+            set frontmost to true
+            delay 0.3
+            keystroke "," using command down
+        end tell
+    end tell
+' 2>/dev/null
+sleep 1
+
+# Switch Reader theme: "Dark gray background / Light gray text" → "Amber Terminal" (Down 1)
+echo "    Switching Reader theme to Amber Terminal..."
+click_popup_by_value "Settings" "Dark gray background / Light gray text" "down" 1
+sleep 1
+
+# Close the Settings window and focus main window
+echo "    Closing Settings..."
+osascript -e '
+    tell application "System Events"
+        tell process "MarkdownObserver"
+            set frontmost to true
+            delay 0.3
+            repeat with w in windows
+                if title of w contains "Settings" then
+                    click button 1 of w
+                    exit repeat
+                end if
+            end repeat
+            delay 0.3
+            repeat with w in windows
+                if title of w does not contain "Settings" then
+                    perform action "AXRaise" of w
+                    exit repeat
+                end if
+            end repeat
+        end tell
+    end tell
+' 2>/dev/null
+sleep 1
+
+if [[ -z "$ONLY_SHOT" || "$ONLY_SHOT" == "7" ]]; then
+    RAW_FILE="$RAW_DIR/screenshot_7_raw.png"
+    echo "    Capturing screenshot 7..."
+    capture_window "$RAW_FILE"
+    echo "    Saved: $RAW_FILE"
+fi
+
+# ========================================
+# Phase 8: Newspaper theme (Screenshot 8)
+# ========================================
+echo ""
+echo "--- Screenshot 8: Newspaper ---"
+
+# Open Settings with Cmd+,
+echo "    Opening Settings..."
+osascript -e '
+    tell application "System Events"
+        tell process "MarkdownObserver"
+            set frontmost to true
+            delay 0.3
+            keystroke "," using command down
+        end tell
+    end tell
+' 2>/dev/null
+sleep 1
+
+# Switch App theme: Dark → Light (Up 1)
+echo "    Switching App theme to Light..."
+click_popup_by_value "Settings" "Dark" "up" 1
+sleep 0.5
+
+# Switch Reader theme: "Amber Terminal" → "Newspaper" (Down 3)
+echo "    Switching Reader theme to Newspaper..."
+click_popup_by_value "Settings" "Amber Terminal" "down" 3
+sleep 0.5
+
+# Switch Syntax theme: Monokai → GitHub (Down 1)
+echo "    Switching Syntax theme to GitHub..."
+click_popup_by_value "Settings" "Monokai" "down" 1
+sleep 1
+
+# Close the Settings window and focus main window
+echo "    Closing Settings..."
+osascript -e '
+    tell application "System Events"
+        tell process "MarkdownObserver"
+            set frontmost to true
+            delay 0.3
+            repeat with w in windows
+                if title of w contains "Settings" then
+                    click button 1 of w
+                    exit repeat
+                end if
+            end repeat
+            delay 0.3
+            repeat with w in windows
+                if title of w does not contain "Settings" then
+                    perform action "AXRaise" of w
+                    exit repeat
+                end if
+            end repeat
+        end tell
+    end tell
+' 2>/dev/null
+sleep 1
+
+if [[ -z "$ONLY_SHOT" || "$ONLY_SHOT" == "8" ]]; then
+    RAW_FILE="$RAW_DIR/screenshot_8_raw.png"
+    echo "    Capturing screenshot 8..."
+    capture_window "$RAW_FILE"
+    echo "    Saved: $RAW_FILE"
+fi
+
 # Restore theme settings back to light
 write_theme_settings "darkGreyOnLightGrey" "github" "light"
 
@@ -1132,17 +1275,20 @@ if [[ "$SKIP_COMPOSITE" == false ]]; then
     echo ""
     echo "Compositing final screenshots..."
 
-    # Presentation order: 3, 4, 6, 1, 2, 5
+    # Presentation order: 3, 3b, 4, 6, 7, 8, 1, 2, 5
     PUNCHLINES=""
     PUNCHLINES="${PUNCHLINES}1|Your AI agent writes markdown. See it rendered — live.|0|0|top\n"
-    PUNCHLINES="${PUNCHLINES}2|Instant diff. Know what your agent changed at a glance.|0|0|top\n"
-    PUNCHLINES="${PUNCHLINES}3|Your preferred theme. 10+ syntax highlighting options.|1|0|top\n"
-    PUNCHLINES="${PUNCHLINES}4|Monitor your project — exclude what doesn't matter.|0|0|top\n"
-    PUNCHLINES="${PUNCHLINES}5|Too many files? Pick which ones to open.|0|0|top\n"
-    PUNCHLINES="${PUNCHLINES}6|One click to resume watching.|0|0|top\n"
+    PUNCHLINES="${PUNCHLINES}2|Jump to any section. Table of Contents built in.|0|0|top\n"
+    PUNCHLINES="${PUNCHLINES}3|Instant diff. Know what your agent changed at a glance.|0|0|top\n"
+    PUNCHLINES="${PUNCHLINES}4|Your preferred theme. 10+ syntax highlighting options.|1|0|top\n"
+    PUNCHLINES="${PUNCHLINES}5|Terminal aesthetic. Amber on black.|1|0|top\n"
+    PUNCHLINES="${PUNCHLINES}6|Classic typography. Read like it's in print.|0|0|top\n"
+    PUNCHLINES="${PUNCHLINES}7|Monitor your project — exclude what doesn't matter.|0|0|top\n"
+    PUNCHLINES="${PUNCHLINES}8|Too many files? Pick which ones to open.|0|0|top\n"
+    PUNCHLINES="${PUNCHLINES}9|One click to resume watching.|0|0|top\n"
 
     # Map capture numbers to presentation order
-    CAPTURE_TO_PRESENTATION=("3:1" "4:2" "6:3" "1:4" "2:5" "5:6")
+    CAPTURE_TO_PRESENTATION=("3:1" "3b:2" "4:3" "6:4" "7:5" "8:6" "1:7" "2:8" "5:9")
 
     COMPOSITE_RAW_DIR="$RAW_DIR/composite"
     mkdir -p "$COMPOSITE_RAW_DIR"
@@ -1183,6 +1329,10 @@ cat > "$PROJECT_DIR/SCREENSHOTS.md" << 'SCREENSHOTS_EOF'
 
 ![Rendered markdown](screenshots/raw/screenshot_3_raw.png)
 
+## Jump to any section. Table of Contents built in.
+
+![Table of Contents](screenshots/raw/screenshot_3b_raw.png)
+
 ## Instant diff. Know what your agent changed at a glance.
 
 ![Change gutters](screenshots/raw/screenshot_4_raw.png)
@@ -1190,6 +1340,14 @@ cat > "$PROJECT_DIR/SCREENSHOTS.md" << 'SCREENSHOTS_EOF'
 ## Your preferred theme. 10+ syntax highlighting options.
 
 ![Dark mode](screenshots/raw/screenshot_6_raw.png)
+
+## Terminal aesthetic. Amber on black.
+
+![Amber Terminal](screenshots/raw/screenshot_7_raw.png)
+
+## Classic typography. Read like it's in print.
+
+![Newspaper](screenshots/raw/screenshot_8_raw.png)
 
 ## Monitor your project — exclude what doesn't matter.
 

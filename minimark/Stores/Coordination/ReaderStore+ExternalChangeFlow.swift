@@ -18,12 +18,18 @@ extension ReaderStore {
 
     func refreshFromExternalChange() {
         guard settingsStore.currentSettings.autoRefreshOnExternalChange,
-              !isSourceEditing else {
+              !isSourceEditing,
+              let fileURL else {
             return
         }
+        let baseline = diffBaselineTracker.recordAndSelectBaseline(
+            markdown: sourceMarkdown,
+            for: fileURL,
+            at: .now
+        )
         reloadCurrentFile(
             at: fileURL,
-            diffBaselineMarkdown: sourceMarkdown,
+            diffBaselineMarkdown: baseline,
             acknowledgeExternalChange: false
         )
     }

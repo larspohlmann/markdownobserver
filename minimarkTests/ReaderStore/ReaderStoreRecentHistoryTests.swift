@@ -13,22 +13,4 @@ struct ReaderStoreRecentHistoryTests {
 
         #expect(fixture.settings.recordedRecentManuallyOpenedFiles.map(\.filePath) == [fixture.primaryFileURL.path])
     }
-
-    @Test @MainActor func startWatchingFolderRecordsRecentWatchedFolderWithOptions() throws {
-        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
-        defer { fixture.cleanup() }
-
-        let options = ReaderFolderWatchOptions(
-            openMode: .openAllMarkdownFiles,
-            scope: .includeSubfolders,
-            excludedSubdirectoryPaths: [
-                fixture.temporaryDirectoryURL.appendingPathComponent("node_modules", isDirectory: true).path
-            ]
-        )
-
-        fixture.store.startWatchingFolder(folderURL: fixture.temporaryDirectoryURL, options: options)
-
-        #expect(fixture.settings.recordedRecentWatchedFolders.map(\.folderPath) == [fixture.temporaryDirectoryURL.path])
-        #expect(fixture.settings.recordedRecentWatchedFolders.first?.options == options)
-    }
 }
