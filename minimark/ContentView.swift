@@ -101,9 +101,6 @@ struct ContentView: View {
     private var baseBody: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
-                Spacer()
-                    .frame(height: ReaderTopBarMetrics.mainBarHeight)
-
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
                         fileName: readerStore.fileDisplayName,
