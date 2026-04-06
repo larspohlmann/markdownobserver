@@ -624,9 +624,7 @@ private struct SidebarGroupListContent: View {
 private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                configuration.isExpanded.toggle()
-            }
+            configuration.isExpanded.toggle()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "chevron.right")
@@ -651,7 +649,6 @@ private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
         if configuration.isExpanded {
             configuration.content
                 .padding(.leading, 12)
-                .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 }
