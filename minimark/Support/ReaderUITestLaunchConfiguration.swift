@@ -13,6 +13,7 @@ struct ReaderUITestLaunchConfiguration {
     static let screenshotExcludedPathsEnvironmentKey = "MINIMARK_SCREENSHOT_EXCLUDED_PATHS"
     static let screenshotExpandedPathsEnvironmentKey = "MINIMARK_SCREENSHOT_EXPANDED_PATHS"
     static let screenshotWindowSizeEnvironmentKey = "MINIMARK_SCREENSHOT_WINDOW_SIZE"
+    static let screenshotSelectFileEnvironmentKey = "MINIMARK_SCREENSHOT_SELECT_FILE"
 
     let isUITestModeEnabled: Bool
     let shouldPresentWatchFolderSheet: Bool

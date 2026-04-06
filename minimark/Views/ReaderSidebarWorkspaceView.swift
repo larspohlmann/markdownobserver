@@ -1,8 +1,8 @@
 import SwiftUI
 
 enum ReaderSidebarWorkspaceMetrics {
-    static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 160 : 220
-    static let sidebarIdealWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 160 : 250
+    static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 220
+    static let sidebarIdealWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 250
     static let detailMinimumWidth: CGFloat = 420
     static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
 }

@@ -270,6 +270,12 @@ final class ReaderSidebarDocumentController {
             synchronizeDocumentChangeObservers()
         }
 
+        // In screenshot mode, override selection to a specific document by filename
+        if let targetFile = ProcessInfo.processInfo.environment["MINIMARK_SCREENSHOT_SELECT_FILE"],
+           let match = documents.first(where: { $0.readerStore.fileURL?.lastPathComponent == targetFile }) {
+            selectedDocumentID = match.id
+        }
+
         applyMaterializationStrategy(plan.materializationStrategy)
         bindSelectedStore()
     }
