@@ -99,46 +99,7 @@ struct ContentView: View {
     }
 
     private var baseBody: some View {
-        VStack(spacing: 0) {
-            ReaderTopBar(
-                readerStore: readerStore,
-                activeFolderWatch: folderWatchState.activeFolderWatch,
-                isFolderWatchInitialScanInProgress: folderWatchState.isFolderWatchInitialScanInProgress,
-                didFolderWatchInitialScanFail: folderWatchState.isFolderWatchInitialScanFailed,
-                canStopFolderWatch: folderWatchState.canStopFolderWatch,
-                apps: readerStore.openInApplications,
-                favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
-                recentWatchedFolders: folderWatchState.recentWatchedFolders,
-                recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
-                iconProvider: appIconImage(for:),
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
-                onOpenApp: { app in
-                    readerStore.openCurrentFileInApplication(app)
-                },
-                onRevealInFinder: {
-                    readerStore.revealCurrentFileInFinder()
-                },
-                onRequestFolderWatch: callbacks.onRequestFolderWatch,
-                onStopFolderWatch: callbacks.onStopFolderWatch,
-                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
-                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
-                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
-                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
-                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
-                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
-                onSaveSourceDraft: {
-                    readerStore.saveSourceDraft()
-                },
-                onDiscardSourceDraft: {
-                    readerStore.discardSourceDraft()
-                }
-            )
-
+        ZStack(alignment: .top) {
             VStack(spacing: 0) {
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
@@ -190,6 +151,43 @@ struct ContentView: View {
             .onAppear {
                 handleSurfaceAppear()
             }
+
+            ReaderTopBar(
+                readerStore: readerStore,
+                canStopFolderWatch: folderWatchState.canStopFolderWatch,
+                apps: readerStore.openInApplications,
+                favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+                recentWatchedFolders: folderWatchState.recentWatchedFolders,
+                recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
+                iconProvider: appIconImage(for:),
+                onOpenFiles: { fileURLs in
+                    handlePickedFileURLs(fileURLs)
+                },
+                onOpenApp: { app in
+                    readerStore.openCurrentFileInApplication(app)
+                },
+                onRevealInFinder: {
+                    readerStore.revealCurrentFileInFinder()
+                },
+                onRequestFolderWatch: callbacks.onRequestFolderWatch,
+                onStopFolderWatch: callbacks.onStopFolderWatch,
+                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
+                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
+                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
+                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
+                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
+                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
+                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
+                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
+                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
+                onSaveSourceDraft: {
+                    readerStore.saveSourceDraft()
+                },
+                onDiscardSourceDraft: {
+                    readerStore.discardSourceDraft()
+                }
+            )
+            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
         }
         .overlay(alignment: .bottomLeading) {
             if isUITestModeEnabled {
@@ -519,11 +517,20 @@ struct ContentView: View {
         return currentReaderTheme.hasLightBackground ? .light : .dark
     }
 
+    private var overlayTopInset: CGFloat {
+        var height = ReaderTopBarMetrics.mainBarHeight
+        if readerStore.isSourceEditing {
+            height += ReaderTopBarMetrics.sourceEditingBarHeight
+        }
+        return height
+    }
+
     @ViewBuilder
     private var documentSurfaceWithOverlays: some View {
         documentSurfaceLayout
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
+                    .padding(.top, overlayTopInset + 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
@@ -538,7 +545,7 @@ struct ContentView: View {
                         totalCount: readerStore.changedRegions.count,
                         onNavigate: requestChangedRegionNavigation
                     )
-                    .padding(.top, 8)
+                    .padding(.top, overlayTopInset + 8)
                     .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -558,7 +565,7 @@ struct ContentView: View {
                         isAppearanceLocked: folderWatchState.isAppearanceLocked,
                         onToggleAppearanceLock: callbacks.onToggleAppearanceLock
                     )
-                    .padding(.top, 8)
+                    .padding(.top, overlayTopInset + 8)
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
                     .padding(.trailing, 70)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)

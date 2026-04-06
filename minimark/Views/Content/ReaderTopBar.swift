@@ -26,13 +26,11 @@ struct PointingHandCursor: ViewModifier {
 
 enum ReaderTopBarMetrics {
     static let mainBarHeight: CGFloat = 44
+    static let sourceEditingBarHeight: CGFloat = 22
 }
 
 struct ReaderTopBar: View {
     var readerStore: ReaderStore
-    let activeFolderWatch: ReaderFolderWatchSession?
-    let isFolderWatchInitialScanInProgress: Bool
-    let didFolderWatchInitialScanFail: Bool
     let canStopFolderWatch: Bool
     let apps: [ReaderExternalApplication]
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
@@ -59,7 +57,6 @@ struct ReaderTopBar: View {
     private enum Metrics {
         static let barHorizontalPadding: CGFloat = 12
         static let mainBarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
-        static let watchButtonToDocSpacing: CGFloat = 16
     }
 
     @State private var isEditingFavorites = false
@@ -69,21 +66,6 @@ struct ReaderTopBar: View {
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                FolderWatchToolbarButton(
-                    activeFolderWatch: activeFolderWatch,
-                    isInitialScanInProgress: isFolderWatchInitialScanInProgress,
-                    didInitialScanFail: didFolderWatchInitialScanFail,
-                    favoriteWatchedFolders: favoriteWatchedFolders,
-                    recentWatchedFolders: recentWatchedFolders,
-                    onActivate: handleFolderWatchToolbarButton,
-                    onStartFavoriteWatch: onStartFavoriteWatch,
-                    onStartRecentFolderWatch: onStartRecentFolderWatch,
-                    onEditFavoriteWatchedFolders: { isEditingFavorites = true },
-                    onClearRecentWatchedFolders: onClearRecentWatchedFolders
-                )
-
-                Spacer().frame(width: Metrics.watchButtonToDocSpacing)
-
                 BreadcrumbDocumentContext(
                     projection: projection,
                     onRevealInFinder: onRevealInFinder
@@ -128,7 +110,7 @@ struct ReaderTopBar: View {
         }
         .background {
             Rectangle()
-                .fill(.regularMaterial)
+                .fill(.ultraThinMaterial)
         }
         .overlay(alignment: .bottom) {
             Divider()
@@ -154,22 +136,4 @@ struct ReaderTopBar: View {
         }
     }
 
-    private func handleFolderWatchToolbarButton() {
-        promptForFolderWatch()
-    }
-
-    private func promptForFolderWatch() {
-        guard let folderURL = pickFolderToWatch() else {
-            return
-        }
-
-        onRequestFolderWatch(folderURL)
-    }
-
-    private func pickFolderToWatch() -> URL? {
-        MarkdownOpenPanel.pickFolder(
-            title: "Choose Folder to Watch",
-            message: "Select a folder, then choose watch options."
-        )
-    }
 }

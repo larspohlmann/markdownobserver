@@ -145,8 +145,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             sidebarFileSortMenu
 
             Spacer(minLength: 0)
-
-            sidebarPlacementButton
         }
         .padding(.horizontal, 12)
         .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
@@ -234,38 +232,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         .accessibilityLabel("Sidebar file sorting")
         .accessibilityValue(groupState.fileSortMode.displayName)
     }
-
-    private var sidebarPlacementButton: some View {
-        Button(action: onToggleSidebarPlacement) {
-            Image(systemName: toggleButtonImageName)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(width: 22, height: 22)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(toggleButtonTitle)
-        .accessibilityLabel(toggleButtonTitle)
-    }
-
-    private var toggleButtonTitle: String {
-        switch sidebarPlacement {
-        case .left:
-            return "Move Sidebar Right"
-        case .right:
-            return "Move Sidebar Left"
-        }
-    }
-
-    private var toggleButtonImageName: String {
-        switch sidebarPlacement {
-        case .left:
-            return "sidebar.right"
-        case .right:
-            return "sidebar.left"
-        }
-    }
-
 
 }
 
