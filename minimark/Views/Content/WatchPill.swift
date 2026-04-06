@@ -18,9 +18,7 @@ struct WatchPill: View {
     private enum Metrics {
         static let pillHeight: CGFloat = 30
         static let pillCornerRadius: CGFloat = 15
-        static let pillInset: CGFloat = 8
-        static let pillLeadingInset: CGFloat = 60
-        static let pillTrailingInset: CGFloat = 70
+        static let pillVerticalInset: CGFloat = 8
         static let horizontalPadding: CGFloat = 14
         static let buttonHeight: CGFloat = 22
         static let controlHeight: CGFloat = 28
@@ -167,9 +165,7 @@ struct WatchPill: View {
                 isHovering = hovering
             }
         }
-        .padding(.top, Metrics.pillInset)
-        .padding(.leading, Metrics.pillLeadingInset)
-        .padding(.trailing, Metrics.pillTrailingInset)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
     }
 }

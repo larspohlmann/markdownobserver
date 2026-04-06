@@ -538,6 +538,8 @@ struct ContentView: View {
                         totalCount: readerStore.changedRegions.count,
                         onNavigate: requestChangedRegionNavigation
                     )
+                    .padding(.top, 8)
+                    .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
             }
@@ -556,6 +558,9 @@ struct ContentView: View {
                         isAppearanceLocked: folderWatchState.isAppearanceLocked,
                         onToggleAppearanceLock: callbacks.onToggleAppearanceLock
                     )
+                    .padding(.top, 8)
+                    .padding(.leading, canNavigateChangedRegions ? 150 : 60)
+                    .padding(.trailing, 70)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
             }
