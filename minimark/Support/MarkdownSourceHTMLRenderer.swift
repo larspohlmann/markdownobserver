@@ -95,6 +95,47 @@ enum MarkdownSourceHTMLRenderer {
                         });
 
                         root.replaceChildren(textarea);
+
+                        var lastSourceHeadingsJSON = "";
+                        var sourceHeadingsDebounceTimer = null;
+
+                        function extractSourceHeadings(text) {
+                            try {
+                                var lines = text.split("\\n");
+                                var result = [];
+                                var inCodeFence = false;
+                                for (var i = 0; i < lines.length; i++) {
+                                    if (/^```|^~~~/.test(lines[i])) { inCodeFence = !inCodeFence; continue; }
+                                    if (inCodeFence) continue;
+                                    var match = lines[i].match(/^(#{1,3})\\s+(.+)/);
+                                    if (match) {
+                                        result.push({
+                                            id: "",
+                                            level: match[1].length,
+                                            title: match[2].replace(/\\s+$/, ""),
+                                            sourceLine: i + 1
+                                        });
+                                    }
+                                }
+                                var json = JSON.stringify(result);
+                                if (json !== lastSourceHeadingsJSON) {
+                                    lastSourceHeadingsJSON = json;
+                                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
+                                        window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+                                    }
+                                }
+                            } catch (_) {}
+                        }
+
+                        extractSourceHeadings(payload.markdown || "");
+
+                        textarea.addEventListener("input", function() {
+                            if (sourceHeadingsDebounceTimer) { clearTimeout(sourceHeadingsDebounceTimer); }
+                            sourceHeadingsDebounceTimer = setTimeout(function() {
+                                extractSourceHeadings(textarea.value);
+                            }, 200);
+                        });
+
                         window.__minimarkSourceBootstrapStatus = "ready";
                         requestAnimationFrame(function() {
                             const scrollX = window.scrollX || 0;

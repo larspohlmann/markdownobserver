@@ -53,6 +53,7 @@ struct ContentView: View {
         let postLoadStatusScript: String?
         let changedRegionNavigationRequest: ChangedRegionNavigationRequest?
         let scrollSyncRequest: ScrollSyncRequest?
+        let tocScrollRequest: TOCScrollRequest?
         let supportsInPlaceContentUpdates: Bool
         let reloadAnchorProgress: Double?
         let minimumWidth: CGFloat?
@@ -60,6 +61,7 @@ struct ContentView: View {
         let onPostLoadStatus: (String?) -> Void
         let onScrollSyncObservation: (ScrollSyncObservation) -> Void
         let onSourceEdit: (String) -> Void
+        let onTOCHeadingsExtracted: ([TOCHeading]) -> Void
         let onDroppedFileURLs: ([URL]) -> Void
         let onDropTargetedChange: (DropTargetingUpdate) -> Void
         let canAcceptDroppedFileURLs: ([URL]) -> Bool
@@ -324,6 +326,13 @@ struct ContentView: View {
                 navigate: requestChangedRegionNavigation
             )
         )
+        .focusedValue(
+            \.readerToggleTOC,
+            ReaderToggleTOCAction(
+                canToggle: !readerStore.tocHeadings.isEmpty,
+                toggle: { readerStore.toggleTOC() }
+            )
+        )
         .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
             handleFolderWatchOptionsPresentationChange(isPresented)
         }
@@ -517,6 +526,11 @@ struct ContentView: View {
                 contentUtilityRail
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
+            .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
+                if readerStore.isTOCVisible, let anchor {
+                    tocOverlay(buttonAnchor: anchor)
+                }
+            }
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
                     ChangeNavigationPill(
@@ -558,8 +572,50 @@ struct ContentView: View {
             },
             onStartSourceEditing: {
                 readerStore.startEditingSource()
-            }
+            },
+            hasTOCHeadings: !readerStore.tocHeadings.isEmpty,
+            isTOCVisible: Binding(
+                get: { readerStore.isTOCVisible },
+                set: { readerStore.isTOCVisible = $0 }
+            )
         )
+    }
+
+    @ViewBuilder
+    private func tocOverlay(buttonAnchor: Anchor<CGRect>) -> some View {
+        let gap: CGFloat = 8
+        let tocColorScheme: ColorScheme = currentReaderTheme.hasLightBackground ? .light : .dark
+
+        GeometryReader { proxy in
+            let buttonFrame = proxy[buttonAnchor]
+            let panelTrailing = buttonFrame.minX - gap
+
+            ZStack(alignment: .topLeading) {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { readerStore.isTOCVisible = false }
+
+                TOCPopoverView(
+                    headings: readerStore.tocHeadings,
+                    onSelect: { heading in
+                        handleTOCHeadingSelection(heading)
+                    }
+                )
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
+                .colorScheme(tocColorScheme)
+                .frame(maxWidth: panelTrailing, alignment: .trailing)
+                .offset(y: buttonFrame.minY)
+            }
+        }
+    }
+
+    private func handleTOCHeadingSelection(_ heading: TOCHeading) {
+        readerStore.scrollToTOCHeading(heading)
     }
 
     private var canNavigateChangedRegions: Bool {
@@ -647,6 +703,7 @@ struct ContentView: View {
                 postLoadStatusScript: nil,
                 changedRegionNavigationRequest: previewChangedRegionNavigationRequest,
                 scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: true,
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
@@ -660,6 +717,9 @@ struct ContentView: View {
                     handleScrollSyncObservation(observation, from: surface)
                 },
                 onSourceEdit: { _ in },
+                onTOCHeadingsExtracted: { headings in
+                    readerStore.updateTOCHeadings(headings)
+                },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
                     updateDropTargetState(for: surface, update: update)
@@ -683,6 +743,7 @@ struct ContentView: View {
                 postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
                 changedRegionNavigationRequest: nil,
                 scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: false,
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
@@ -697,6 +758,9 @@ struct ContentView: View {
                 },
                 onSourceEdit: { markdown in
                     readerStore.updateSourceDraft(markdown)
+                },
+                onTOCHeadingsExtracted: { headings in
+                    readerStore.updateTOCHeadings(headings)
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
@@ -876,12 +940,14 @@ private struct DocumentSurfaceHost: View {
                     postLoadStatusScript: configuration.postLoadStatusScript,
                     changedRegionNavigationRequest: configuration.changedRegionNavigationRequest,
                     scrollSyncRequest: configuration.scrollSyncRequest,
+                    tocScrollRequest: configuration.tocScrollRequest,
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
                     onFatalCrash: configuration.onFatalCrash,
                     onPostLoadStatus: configuration.onPostLoadStatus,
                     onScrollSyncObservation: configuration.onScrollSyncObservation,
                     onSourceEdit: configuration.onSourceEdit,
+                    onTOCHeadingsExtracted: configuration.onTOCHeadingsExtracted,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
                     onDropTargetedChange: configuration.onDropTargetedChange,
                     canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs

@@ -8,6 +8,8 @@ struct ContentUtilityRail: View {
     let canStartSourceEditing: Bool
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
+    let hasTOCHeadings: Bool
+    let isTOCVisible: Binding<Bool>
 
     @State private var isHovering = false
 
@@ -31,6 +33,11 @@ struct ContentUtilityRail: View {
                 if showEditButton {
                     groupSeparator
                     editGroup
+                }
+
+                if hasTOCHeadings {
+                    groupSeparator
+                    tocGroup
                 }
             }
             .padding(.vertical, Metrics.groupSpacing)
@@ -107,6 +114,28 @@ struct ContentUtilityRail: View {
         .accessibilityLabel("Edit source")
     }
 
+    // MARK: - TOC Group
+
+    private var tocGroup: some View {
+        Button {
+            isTOCVisible.wrappedValue.toggle()
+        } label: {
+            Image(systemName: "list.bullet.indent")
+                .font(.system(size: Metrics.iconSize, weight: .semibold))
+                .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
+                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
+                    fill: Color.primary.opacity(0.06),
+                    border: Color.primary.opacity(0.10)
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help("Table of Contents")
+        .accessibilityLabel("Table of Contents")
+        .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
+        .anchorPreference(key: TOCButtonAnchorKey.self, value: .bounds) { $0 }
+    }
+
     // MARK: - Separator
 
     private var groupSeparator: some View {
@@ -114,6 +143,15 @@ struct ContentUtilityRail: View {
             .fill(Color.primary.opacity(0.10))
             .frame(width: Metrics.separatorWidth, height: 1)
             .padding(.vertical, 2)
+    }
+}
+
+// MARK: - TOC Button Anchor
+
+struct TOCButtonAnchorKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
     }
 }
 

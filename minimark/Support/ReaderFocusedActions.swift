@@ -157,6 +157,16 @@ struct ReaderSourceEditingContext {
     }
 }
 
+struct ReaderToggleTOCAction {
+    let canToggle: Bool
+    let toggle: () -> Void
+
+    func callAsFunction() {
+        guard canToggle else { return }
+        toggle()
+    }
+}
+
 private struct ReaderOpenDocumentInCurrentWindowActionKey: FocusedValueKey {
     typealias Value = ReaderOpenDocumentInCurrentWindowAction
 }
@@ -195,6 +205,10 @@ private struct ReaderChangedRegionNavigationActionKey: FocusedValueKey {
 
 private struct ReaderSourceEditingContextKey: FocusedValueKey {
     typealias Value = ReaderSourceEditingContext
+}
+
+private struct ReaderToggleTOCActionKey: FocusedValueKey {
+    typealias Value = ReaderToggleTOCAction
 }
 
 extension FocusedValues {
@@ -246,5 +260,10 @@ extension FocusedValues {
     var readerSourceEditingContext: ReaderSourceEditingContext? {
         get { self[ReaderSourceEditingContextKey.self] }
         set { self[ReaderSourceEditingContextKey.self] = newValue }
+    }
+
+    var readerToggleTOC: ReaderToggleTOCAction? {
+        get { self[ReaderToggleTOCActionKey.self] }
+        set { self[ReaderToggleTOCActionKey.self] = newValue }
     }
 }

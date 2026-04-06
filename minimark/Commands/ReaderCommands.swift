@@ -16,6 +16,7 @@ struct ReaderCommands: Commands {
     @FocusedValue(\.readerDocumentViewModeContext) private var documentViewModeContext
     @FocusedValue(\.readerChangedRegionNavigation) private var changedRegionNavigation
     @FocusedValue(\.readerSourceEditingContext) private var sourceEditingContext
+    @FocusedValue(\.readerToggleTOC) private var toggleTOC
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
@@ -123,6 +124,14 @@ struct ReaderCommands: Commands {
                 changedRegionNavigation?(.next)
             }
             .disabled(!(changedRegionNavigation?.canNavigate ?? false))
+
+            Divider()
+
+            Button("Table of Contents") {
+                toggleTOC?()
+            }
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+            .disabled(!(toggleTOC?.canToggle ?? false))
         }
 
         CommandGroup(replacing: .appInfo) {

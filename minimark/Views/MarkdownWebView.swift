@@ -7,6 +7,7 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let scrollSyncMessageName = "minimarkScrollSync"
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
+    private static let tocMessageName = "minimarkTOC"
     private static let scrollSyncObserverScript = ReaderJavaScriptLoader.scrollSyncObserverJavaScript
 
     let htmlDocument: String
@@ -18,12 +19,14 @@ struct MarkdownWebView: NSViewRepresentable {
     var postLoadStatusScript: String?
     var changedRegionNavigationRequest: ChangedRegionNavigationRequest?
         var scrollSyncRequest: ScrollSyncRequest?
+    var tocScrollRequest: TOCScrollRequest?
     var supportsInPlaceContentUpdates: Bool = false
     var reloadAnchorProgress: Double?
     var onFatalCrash: () -> Void = {}
     var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
     var onSourceEdit: (String) -> Void = { _ in }
+    var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
     var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
@@ -45,6 +48,7 @@ struct MarkdownWebView: NSViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: Self.scrollSyncMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditorDiagnosticMessageName)
+        configuration.userContentController.add(context.coordinator, name: Self.tocMessageName)
 
         let webView = DropAwareWKWebView(frame: .zero, configuration: configuration)
         #if DEBUG
@@ -74,6 +78,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.onPostLoadStatus = onPostLoadStatus
         context.coordinator.onScrollSyncObservation = onScrollSyncObservation
         context.coordinator.onSourceEdit = onSourceEdit
+        context.coordinator.onTOCHeadingsExtracted = onTOCHeadingsExtracted
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
@@ -81,6 +86,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
         context.coordinator.handleChangedRegionNavigationIfNeeded(changedRegionNavigationRequest, in: webView)
         context.coordinator.handleScrollSyncRequestIfNeeded(scrollSyncRequest, in: webView)
+        context.coordinator.handleTOCScrollRequestIfNeeded(tocScrollRequest, in: webView)
         webView.setAccessibilityIdentifier(accessibilityIdentifier)
         webView.setAccessibilityValue(accessibilityValue)
         context.coordinator.prepareForRetryIfNeeded(reloadToken, in: webView)
@@ -126,11 +132,14 @@ struct MarkdownWebView: NSViewRepresentable {
         private var latestReloadRequestID = 0
         private var lastReloadToken: Int?
         private var lastChangedRegionNavigationRequestID: Int?
+        private var lastTOCScrollRequestID: Int?
         private var pendingChangedRegionNavigationRequest: ChangedRegionNavigationRequest?
+        private var pendingTOCScrollRequest: TOCScrollRequest?
         var onFatalCrash: () -> Void = {}
         var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
         var onSourceEdit: (String) -> Void = { _ in }
+        var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
         var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
@@ -154,6 +163,7 @@ struct MarkdownWebView: NSViewRepresentable {
             crashRecovery.resetState()
             scrollSync.cancelPendingRestore()
             pendingChangedRegionNavigationRequest = nil
+            pendingTOCScrollRequest = nil
             scrollSync.resetForDocumentChange()
             logDebug("document change detected")
             return true
@@ -169,6 +179,7 @@ struct MarkdownWebView: NSViewRepresentable {
             hasCompletedFirstLoad = false
             scrollSync.cancelPendingRestore()
             pendingChangedRegionNavigationRequest = nil
+            pendingTOCScrollRequest = nil
             scrollSync.resetForDocumentChange()
             logInfo("reload requested by retry token")
 
@@ -397,6 +408,62 @@ struct MarkdownWebView: NSViewRepresentable {
             )
         }
 
+        func handleTOCScrollRequestIfNeeded(_ request: TOCScrollRequest?, in webView: WKWebView) {
+            guard let request, request.requestID != lastTOCScrollRequestID else { return }
+            lastTOCScrollRequestID = request.requestID
+
+            guard hasCompletedFirstLoad else {
+                pendingTOCScrollRequest = request
+                return
+            }
+
+            performTOCScroll(request, in: webView)
+        }
+
+        private func performTOCScroll(_ request: TOCScrollRequest, in webView: WKWebView) {
+            if !request.heading.elementID.isEmpty {
+                scrollToHeadingElement(request.heading.elementID, in: webView)
+            } else if let sourceLine = request.heading.sourceLine {
+                scrollToSourceLine(sourceLine, in: webView)
+            }
+        }
+
+        private func scrollToHeadingElement(_ elementID: String, in webView: WKWebView) {
+            let idLiteral = javaScriptStringLiteral(elementID)
+            let script = """
+            (() => {
+              const el = document.getElementById(\(idLiteral));
+              if (!el) return false;
+              const inset = window.__minimarkOverlayTopInset || 0;
+              const rect = el.getBoundingClientRect();
+              const scrollTop = window.scrollY + rect.top - inset;
+              window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+              return true;
+            })();
+            """
+            webView.evaluateJavaScript(script)
+        }
+
+        private func scrollToSourceLine(_ line: Int, in webView: WKWebView) {
+            let script = """
+            (() => {
+              const textarea = document.querySelector('.minimark-source-editor');
+              if (!textarea) return false;
+              const lines = textarea.value.split('\\n');
+              let charIndex = 0;
+              for (let i = 0; i < Math.min(\(line) - 1, lines.length); i++) {
+                charIndex += lines[i].length + 1;
+              }
+              textarea.focus();
+              textarea.setSelectionRange(charIndex, charIndex);
+              const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+              textarea.scrollTop = Math.max(0, (\(line) - 3) * lineHeight);
+              return true;
+            })();
+            """
+            webView.evaluateJavaScript(script)
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             logDebug("navigation finished")
             runPostLoadStatusProbe(in: webView)
@@ -407,6 +474,11 @@ struct MarkdownWebView: NSViewRepresentable {
                 pendingChangedRegionNavigationRequest = nil
                 hadPendingChangedRegionNavigation = true
                 performChangedRegionNavigation(request, in: webView)
+            }
+
+            if !hadPendingChangedRegionNavigation, let request = pendingTOCScrollRequest {
+                pendingTOCScrollRequest = nil
+                performTOCScroll(request, in: webView)
             }
 
             var hadPendingScrollSync = false
@@ -589,6 +661,13 @@ struct MarkdownWebView: NSViewRepresentable {
                 logDiagnostic(
                     "source editor event=\(eventName) meta=\(metaKey) ctrl=\(ctrlKey) shift=\(shiftKey) alt=\(altKey)"
                 )
+                return
+            }
+
+            if message.name == MarkdownWebView.tocMessageName,
+               let payload = message.body as? [[String: Any]] {
+                let headings = TOCHeading.fromJavaScriptPayload(payload)
+                onTOCHeadingsExtracted(headings)
                 return
             }
 
