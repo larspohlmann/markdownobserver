@@ -134,6 +134,7 @@ struct MarkdownWebView: NSViewRepresentable {
         private var lastChangedRegionNavigationRequestID: Int?
         private var lastTOCScrollRequestID: Int?
         private var pendingChangedRegionNavigationRequest: ChangedRegionNavigationRequest?
+        private var pendingTOCScrollRequest: TOCScrollRequest?
         var onFatalCrash: () -> Void = {}
         var onPostLoadStatus: (String?) -> Void = { _ in }
         var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
@@ -162,6 +163,7 @@ struct MarkdownWebView: NSViewRepresentable {
             crashRecovery.resetState()
             scrollSync.cancelPendingRestore()
             pendingChangedRegionNavigationRequest = nil
+            pendingTOCScrollRequest = nil
             scrollSync.resetForDocumentChange()
             logDebug("document change detected")
             return true
@@ -177,6 +179,7 @@ struct MarkdownWebView: NSViewRepresentable {
             hasCompletedFirstLoad = false
             scrollSync.cancelPendingRestore()
             pendingChangedRegionNavigationRequest = nil
+            pendingTOCScrollRequest = nil
             scrollSync.resetForDocumentChange()
             logInfo("reload requested by retry token")
 
@@ -409,6 +412,15 @@ struct MarkdownWebView: NSViewRepresentable {
             guard let request, request.requestID != lastTOCScrollRequestID else { return }
             lastTOCScrollRequestID = request.requestID
 
+            guard hasCompletedFirstLoad else {
+                pendingTOCScrollRequest = request
+                return
+            }
+
+            performTOCScroll(request, in: webView)
+        }
+
+        private func performTOCScroll(_ request: TOCScrollRequest, in webView: WKWebView) {
             if !request.heading.elementID.isEmpty {
                 scrollToHeadingElement(request.heading.elementID, in: webView)
             } else if let sourceLine = request.heading.sourceLine {
@@ -462,6 +474,11 @@ struct MarkdownWebView: NSViewRepresentable {
                 pendingChangedRegionNavigationRequest = nil
                 hadPendingChangedRegionNavigation = true
                 performChangedRegionNavigation(request, in: webView)
+            }
+
+            if !hadPendingChangedRegionNavigation, let request = pendingTOCScrollRequest {
+                pendingTOCScrollRequest = nil
+                performTOCScroll(request, in: webView)
             }
 
             var hadPendingScrollSync = false

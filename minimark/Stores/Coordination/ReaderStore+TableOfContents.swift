@@ -4,6 +4,9 @@ extension ReaderStore {
     func updateTOCHeadings(_ headings: [TOCHeading]) {
         guard tocHeadings != headings else { return }
         tocHeadings = headings
+        if headings.isEmpty {
+            isTOCVisible = false
+        }
     }
 
     func toggleTOC() {
