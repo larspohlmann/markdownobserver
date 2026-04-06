@@ -8,10 +8,8 @@ struct ContentUtilityRail: View {
     let canStartSourceEditing: Bool
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
-    let tocHeadings: [TOCHeading]
+    let hasTOCHeadings: Bool
     let isTOCVisible: Binding<Bool>
-    let tocColorScheme: ColorScheme
-    let onSelectTOCHeading: (TOCHeading) -> Void
 
     @State private var isHovering = false
 
@@ -37,7 +35,7 @@ struct ContentUtilityRail: View {
                     editGroup
                 }
 
-                if !tocHeadings.isEmpty {
+                if hasTOCHeadings {
                     groupSeparator
                     tocGroup
                 }
@@ -135,15 +133,6 @@ struct ContentUtilityRail: View {
         .help("Table of Contents")
         .accessibilityLabel("Table of Contents")
         .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
-        .popover(isPresented: isTOCVisible, attachmentAnchor: .point(.top), arrowEdge: .leading) {
-            TOCPopoverView(
-                headings: tocHeadings,
-                onSelect: { heading in
-                    onSelectTOCHeading(heading)
-                }
-            )
-            .colorScheme(tocColorScheme)
-        }
     }
 
     // MARK: - Separator

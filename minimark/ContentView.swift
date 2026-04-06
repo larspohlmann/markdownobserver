@@ -526,6 +526,16 @@ struct ContentView: View {
                 contentUtilityRail
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
+            .overlay {
+                if readerStore.isTOCVisible {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { readerStore.isTOCVisible = false }
+                        .overlay(alignment: .topTrailing) {
+                            tocOverlayPanel
+                        }
+                }
+            }
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
                     ChangeNavigationPill(
@@ -568,16 +578,38 @@ struct ContentView: View {
             onStartSourceEditing: {
                 readerStore.startEditingSource()
             },
-            tocHeadings: readerStore.tocHeadings,
+            hasTOCHeadings: !readerStore.tocHeadings.isEmpty,
             isTOCVisible: Binding(
                 get: { readerStore.isTOCVisible },
                 set: { readerStore.isTOCVisible = $0 }
-            ),
-            tocColorScheme: currentReaderTheme.hasLightBackground ? .light : .dark,
-            onSelectTOCHeading: { heading in
-                handleTOCHeadingSelection(heading)
-            }
+            )
         )
+    }
+
+    private var tocOverlayPanel: some View {
+        // The rail is 44pt wide with 18pt trailing inset.
+        // Position the TOC panel to the left of the rail, top-aligned with where the TOC button sits.
+        let railOffset: CGFloat = 18 + 44 + 8 // trailing inset + rail width + gap
+
+        return HStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            TOCPopoverView(
+                headings: readerStore.tocHeadings,
+                onSelect: { heading in
+                    handleTOCHeadingSelection(heading)
+                }
+            )
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.25), radius: 16, y: 4)
+            .colorScheme(currentReaderTheme.hasLightBackground ? .light : .dark)
+            .padding(.trailing, railOffset)
+        }
+        .padding(.top, 8)
     }
 
     private func handleTOCHeadingSelection(_ heading: TOCHeading) {
