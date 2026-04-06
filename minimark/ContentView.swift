@@ -60,6 +60,7 @@ struct ContentView: View {
         let onPostLoadStatus: (String?) -> Void
         let onScrollSyncObservation: (ScrollSyncObservation) -> Void
         let onSourceEdit: (String) -> Void
+        let onTOCHeadingsExtracted: ([TOCHeading]) -> Void
         let onDroppedFileURLs: ([URL]) -> Void
         let onDropTargetedChange: (DropTargetingUpdate) -> Void
         let canAcceptDroppedFileURLs: ([URL]) -> Bool
@@ -660,6 +661,9 @@ struct ContentView: View {
                     handleScrollSyncObservation(observation, from: surface)
                 },
                 onSourceEdit: { _ in },
+                onTOCHeadingsExtracted: { headings in
+                    readerStore.updateTOCHeadings(headings)
+                },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
                     updateDropTargetState(for: surface, update: update)
@@ -697,6 +701,9 @@ struct ContentView: View {
                 },
                 onSourceEdit: { markdown in
                     readerStore.updateSourceDraft(markdown)
+                },
+                onTOCHeadingsExtracted: { headings in
+                    readerStore.updateTOCHeadings(headings)
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
@@ -882,6 +889,7 @@ private struct DocumentSurfaceHost: View {
                     onPostLoadStatus: configuration.onPostLoadStatus,
                     onScrollSyncObservation: configuration.onScrollSyncObservation,
                     onSourceEdit: configuration.onSourceEdit,
+                    onTOCHeadingsExtracted: configuration.onTOCHeadingsExtracted,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
                     onDropTargetedChange: configuration.onDropTargetedChange,
                     canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs

@@ -610,6 +610,8 @@ final class ReaderStore {
         document.unsavedChangedRegions = []
         document.isSourceEditing = false
         document.hasUnsavedDraftChanges = false
+        tocHeadings = []
+        isTOCVisible = false
     }
 
     func presentMissingDocument(at fileURL: URL, error: Error) {
