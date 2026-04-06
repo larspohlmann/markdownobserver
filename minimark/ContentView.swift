@@ -559,8 +559,20 @@ struct ContentView: View {
             },
             onStartSourceEditing: {
                 readerStore.startEditingSource()
+            },
+            tocHeadings: readerStore.tocHeadings,
+            isTOCVisible: Binding(
+                get: { readerStore.isTOCVisible },
+                set: { readerStore.isTOCVisible = $0 }
+            ),
+            onSelectTOCHeading: { heading in
+                handleTOCHeadingSelection(heading)
             }
         )
+    }
+
+    private func handleTOCHeadingSelection(_ heading: TOCHeading) {
+        // Scroll dispatch will be implemented in Task 9
     }
 
     private var canNavigateChangedRegions: Bool {

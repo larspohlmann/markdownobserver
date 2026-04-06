@@ -8,6 +8,9 @@ struct ContentUtilityRail: View {
     let canStartSourceEditing: Bool
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
+    let tocHeadings: [TOCHeading]
+    let isTOCVisible: Binding<Bool>
+    let onSelectTOCHeading: (TOCHeading) -> Void
 
     @State private var isHovering = false
 
@@ -31,6 +34,11 @@ struct ContentUtilityRail: View {
                 if showEditButton {
                     groupSeparator
                     editGroup
+                }
+
+                if !tocHeadings.isEmpty {
+                    groupSeparator
+                    tocGroup
                 }
             }
             .padding(.vertical, Metrics.groupSpacing)
@@ -105,6 +113,36 @@ struct ContentUtilityRail: View {
         .foregroundStyle(canStartSourceEditing ? .primary : .tertiary)
         .help("Edit Source")
         .accessibilityLabel("Edit source")
+    }
+
+    // MARK: - TOC Group
+
+    private var tocGroup: some View {
+        Button {
+            isTOCVisible.wrappedValue.toggle()
+        } label: {
+            Image(systemName: "list.bullet.indent")
+                .font(.system(size: Metrics.iconSize, weight: isTOCVisible.wrappedValue ? .bold : .semibold))
+                .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
+                .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
+                    fill: isTOCVisible.wrappedValue ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06),
+                    border: isTOCVisible.wrappedValue ? Color.primary.opacity(0.18) : Color.primary.opacity(0.10)
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isTOCVisible.wrappedValue ? .primary : .secondary)
+        .help("Table of Contents")
+        .accessibilityLabel("Table of Contents")
+        .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
+        .popover(isPresented: isTOCVisible, arrowEdge: .trailing) {
+            TOCPopoverView(
+                headings: tocHeadings,
+                onSelect: { heading in
+                    onSelectTOCHeading(heading)
+                    isTOCVisible.wrappedValue = false
+                }
+            )
+        }
     }
 
     // MARK: - Separator
