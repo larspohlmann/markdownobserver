@@ -573,6 +573,7 @@ struct ContentView: View {
                 get: { readerStore.isTOCVisible },
                 set: { readerStore.isTOCVisible = $0 }
             ),
+            tocColorScheme: currentReaderTheme.hasLightBackground ? .light : .dark,
             onSelectTOCHeading: { heading in
                 handleTOCHeadingSelection(heading)
             }

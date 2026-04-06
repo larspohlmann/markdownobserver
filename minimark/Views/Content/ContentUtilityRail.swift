@@ -10,6 +10,7 @@ struct ContentUtilityRail: View {
     let onStartSourceEditing: () -> Void
     let tocHeadings: [TOCHeading]
     let isTOCVisible: Binding<Bool>
+    let tocColorScheme: ColorScheme
     let onSelectTOCHeading: (TOCHeading) -> Void
 
     @State private var isHovering = false
@@ -141,6 +142,7 @@ struct ContentUtilityRail: View {
                     onSelectTOCHeading(heading)
                 }
             )
+            .colorScheme(tocColorScheme)
         }
     }
 
