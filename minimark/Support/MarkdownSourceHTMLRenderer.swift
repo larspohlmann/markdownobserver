@@ -96,6 +96,9 @@ enum MarkdownSourceHTMLRenderer {
 
                         root.replaceChildren(textarea);
 
+                        var lastSourceHeadingsJSON = "";
+                        var sourceHeadingsDebounceTimer = null;
+
                         function extractSourceHeadings(text) {
                             try {
                                 var lines = text.split("\\n");
@@ -114,8 +117,12 @@ enum MarkdownSourceHTMLRenderer {
                                         });
                                     }
                                 }
-                                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
-                                    window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+                                var json = JSON.stringify(result);
+                                if (json !== lastSourceHeadingsJSON) {
+                                    lastSourceHeadingsJSON = json;
+                                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
+                                        window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+                                    }
                                 }
                             } catch (_) {}
                         }
@@ -123,7 +130,10 @@ enum MarkdownSourceHTMLRenderer {
                         extractSourceHeadings(payload.markdown || "");
 
                         textarea.addEventListener("input", function() {
-                            extractSourceHeadings(textarea.value);
+                            if (sourceHeadingsDebounceTimer) { clearTimeout(sourceHeadingsDebounceTimer); }
+                            sourceHeadingsDebounceTimer = setTimeout(function() {
+                                extractSourceHeadings(textarea.value);
+                            }, 200);
                         });
 
                         window.__minimarkSourceBootstrapStatus = "ready";

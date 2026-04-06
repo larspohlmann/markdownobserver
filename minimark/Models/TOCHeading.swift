@@ -1,4 +1,3 @@
-// minimark/Models/TOCHeading.swift
 import Foundation
 
 struct TOCHeading: Equatable, Sendable {

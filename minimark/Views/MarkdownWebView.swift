@@ -421,7 +421,7 @@ struct MarkdownWebView: NSViewRepresentable {
             (() => {
               const textarea = document.querySelector('.minimark-source-editor');
               if (!textarea) return false;
-              const lines = textarea.value.substring(0, textarea.value.length).split('\\n');
+              const lines = textarea.value.split('\\n');
               let charIndex = 0;
               for (let i = 0; i < Math.min(\(line) - 1, lines.length); i++) {
                 charIndex += lines[i].length + 1;

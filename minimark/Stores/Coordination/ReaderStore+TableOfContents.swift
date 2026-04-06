@@ -1,4 +1,3 @@
-// minimark/Stores/Coordination/ReaderStore+TableOfContents.swift
 import Foundation
 
 extension ReaderStore {

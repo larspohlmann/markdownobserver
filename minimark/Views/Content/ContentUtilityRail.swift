@@ -139,7 +139,6 @@ struct ContentUtilityRail: View {
                 headings: tocHeadings,
                 onSelect: { heading in
                     onSelectTOCHeading(heading)
-                    isTOCVisible.wrappedValue = false
                 }
             )
         }

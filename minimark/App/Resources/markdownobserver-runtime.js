@@ -1637,6 +1637,8 @@
     window.scrollTo(0, target);
   }
 
+  var lastExtractedHeadingsJSON = "";
+
   function extractHeadings() {
     try {
       var headings = document.querySelectorAll("h1, h2, h3");
@@ -1650,8 +1652,12 @@
           sourceLine: parseInt(el.getAttribute("data-src-line-start"), 10) || null
         });
       }
-      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
-        window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+      var json = JSON.stringify(result);
+      if (json !== lastExtractedHeadingsJSON) {
+        lastExtractedHeadingsJSON = json;
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
+          window.webkit.messageHandlers.minimarkTOC.postMessage(result);
+        }
       }
     } catch (_) {}
   }
