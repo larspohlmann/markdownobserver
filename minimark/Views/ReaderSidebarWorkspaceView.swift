@@ -381,7 +381,7 @@ private struct ReaderSidebarDocumentRow: View {
                     .opacity(indicatorOpacity)
                     .animation(
                         isIndicatorPulsing
-                            ? .easeInOut(duration: 0.25).repeatCount(8, autoreverses: true)
+                            ? .easeInOut(duration: 0.25).repeatCount(4, autoreverses: true)
                             : .easeOut(duration: 0.18),
                         value: isIndicatorPulsing
                     )
@@ -569,7 +569,7 @@ private struct ReaderSidebarGroupHeader: View {
                             .opacity(indicatorOpacity)
                             .animation(
                                 isIndicatorPulsing
-                                    ? .easeInOut(duration: 0.25).repeatCount(8, autoreverses: true)
+                                    ? .easeInOut(duration: 0.25).repeatCount(4, autoreverses: true)
                                     : .easeOut(duration: 0.18),
                                 value: isIndicatorPulsing
                             )

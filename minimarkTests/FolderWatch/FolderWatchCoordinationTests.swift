@@ -643,7 +643,7 @@ struct FolderWatchCoordinationTests {
         )
     }
 
-    @Test func documentIndicatorColorsUseNativeSystemPalette() {
+    @Test func documentIndicatorColorsUseNativeSystemPalette() throws {
         let addedColor = ReaderDocumentIndicatorState.addedExternalChange.color(
             for: .default,
             colorScheme: .light
@@ -657,40 +657,27 @@ struct FolderWatchCoordinationTests {
             colorScheme: .dark
         )
 
-        let resolvedAdded = try? #require(NSColor(addedColor).usingColorSpace(.deviceRGB))
-        let resolvedExternal = try? #require(NSColor(externalColor).usingColorSpace(.deviceRGB))
-        let resolvedDeleted = try? #require(NSColor(deletedColor).usingColorSpace(.deviceRGB))
-        let expectedAdded = try? #require(NSColor.systemGreen.usingColorSpace(.deviceRGB))
-        let expectedExternal = try? #require(NSColor.systemYellow.usingColorSpace(.deviceRGB))
-        let expectedDeleted = try? #require(NSColor.systemRed.usingColorSpace(.deviceRGB))
+        let resolvedAdded = try #require(NSColor(addedColor).usingColorSpace(.deviceRGB))
+        let resolvedExternal = try #require(NSColor(externalColor).usingColorSpace(.deviceRGB))
+        let resolvedDeleted = try #require(NSColor(deletedColor).usingColorSpace(.deviceRGB))
+        let expectedAdded = try #require(NSColor.systemGreen.usingColorSpace(.deviceRGB))
+        let expectedExternal = try #require(NSColor.systemYellow.usingColorSpace(.deviceRGB))
+        let expectedDeleted = try #require(NSColor.systemRed.usingColorSpace(.deviceRGB))
 
-        #expect(resolvedAdded != nil)
-        #expect(resolvedExternal != nil)
-        #expect(resolvedDeleted != nil)
-        #expect(expectedAdded != nil)
-        #expect(expectedExternal != nil)
-        #expect(expectedDeleted != nil)
+        #expect(abs(resolvedAdded.redComponent - expectedAdded.redComponent) < 0.002)
+        #expect(abs(resolvedAdded.greenComponent - expectedAdded.greenComponent) < 0.002)
+        #expect(abs(resolvedAdded.blueComponent - expectedAdded.blueComponent) < 0.002)
+        #expect(abs(resolvedAdded.alphaComponent - expectedAdded.alphaComponent) < 0.002)
 
-        if let resolvedAdded, let expectedAdded {
-            #expect(abs(resolvedAdded.redComponent - expectedAdded.redComponent) < 0.002)
-            #expect(abs(resolvedAdded.greenComponent - expectedAdded.greenComponent) < 0.002)
-            #expect(abs(resolvedAdded.blueComponent - expectedAdded.blueComponent) < 0.002)
-            #expect(abs(resolvedAdded.alphaComponent - expectedAdded.alphaComponent) < 0.002)
-        }
+        #expect(abs(resolvedExternal.redComponent - expectedExternal.redComponent) < 0.002)
+        #expect(abs(resolvedExternal.greenComponent - expectedExternal.greenComponent) < 0.002)
+        #expect(abs(resolvedExternal.blueComponent - expectedExternal.blueComponent) < 0.002)
+        #expect(abs(resolvedExternal.alphaComponent - expectedExternal.alphaComponent) < 0.002)
 
-        if let resolvedExternal, let expectedExternal {
-            #expect(abs(resolvedExternal.redComponent - expectedExternal.redComponent) < 0.002)
-            #expect(abs(resolvedExternal.greenComponent - expectedExternal.greenComponent) < 0.002)
-            #expect(abs(resolvedExternal.blueComponent - expectedExternal.blueComponent) < 0.002)
-            #expect(abs(resolvedExternal.alphaComponent - expectedExternal.alphaComponent) < 0.002)
-        }
-
-        if let resolvedDeleted, let expectedDeleted {
-            #expect(abs(resolvedDeleted.redComponent - expectedDeleted.redComponent) < 0.002)
-            #expect(abs(resolvedDeleted.greenComponent - expectedDeleted.greenComponent) < 0.002)
-            #expect(abs(resolvedDeleted.blueComponent - expectedDeleted.blueComponent) < 0.002)
-            #expect(abs(resolvedDeleted.alphaComponent - expectedDeleted.alphaComponent) < 0.002)
-        }
+        #expect(abs(resolvedDeleted.redComponent - expectedDeleted.redComponent) < 0.002)
+        #expect(abs(resolvedDeleted.greenComponent - expectedDeleted.greenComponent) < 0.002)
+        #expect(abs(resolvedDeleted.blueComponent - expectedDeleted.blueComponent) < 0.002)
+        #expect(abs(resolvedDeleted.alphaComponent - expectedDeleted.alphaComponent) < 0.002)
     }
 
     @Test @MainActor func focusDocumentIfAlreadyOpenUsesRegisteredWindowFocusHandler() {
