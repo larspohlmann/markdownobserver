@@ -247,6 +247,7 @@ private struct ReaderSidebarDocumentRow: View {
     let readerStore: ReaderStore
     let watchedDocumentIDs: Set<UUID>
     let selectedDocumentIDs: Set<UUID>
+    let showsSelectionBackground: Bool
     let canClose: Bool
     let onOpenInDefaultApp: (Set<UUID>) -> Void
     let onOpenInApplication: (ReaderExternalApplication, Set<UUID>) -> Void
@@ -340,6 +341,10 @@ private struct ReaderSidebarDocumentRow: View {
         return colorScheme == .light ? Color.primary.opacity(0.62) : .secondary
     }
 
+    private var selectionBackgroundColor: Color {
+        Color(nsColor: .selectedContentBackgroundColor).opacity(colorScheme == .dark ? 0.55 : 0.65)
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -379,6 +384,11 @@ private struct ReaderSidebarDocumentRow: View {
                 .help("Close")
             }
         }
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(showsSelectionBackground && isSelected ? selectionBackgroundColor : .clear)
+        )
         .padding(.vertical, 2)
         .accessibilityIdentifier("sidebar-document-\(title)")
         .onHover { hovering in
@@ -603,14 +613,6 @@ private struct SidebarGroupListContent: View {
             }
         )
 
-        let content = AnyView(
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(group.documents) { document in
-                    groupedDocumentRow(for: document, allDocuments: controller.documents, currentDate: currentDate)
-                }
-            }
-        )
-
         return AnimatedSidebarGroupSection(
             groupDisplayName: group.displayName,
             isExpanded: groupState.isGroupExpanded(group.id),
@@ -620,7 +622,13 @@ private struct SidebarGroupListContent: View {
                 }
             },
             header: header,
-            content: content
+            content: {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(group.documents) { document in
+                        groupedDocumentRow(for: document, allDocuments: controller.documents, currentDate: currentDate)
+                    }
+                }
+            }
         )
     }
 
@@ -629,7 +637,12 @@ private struct SidebarGroupListContent: View {
         allDocuments: [ReaderSidebarDocumentController.Document],
         currentDate: Date
     ) -> some View {
-        documentRow(for: document, allDocuments: allDocuments, currentDate: currentDate)
+        documentRow(
+            for: document,
+            allDocuments: allDocuments,
+            currentDate: currentDate,
+            showsSelectionBackground: true
+        )
             .contentShape(Rectangle())
             .onTapGesture {
                 selectDocumentInGroupedSidebar(document.id)
@@ -637,7 +650,30 @@ private struct SidebarGroupListContent: View {
     }
 
     private func selectDocumentInGroupedSidebar(_ documentID: UUID) {
-        let isCommandSelection = NSApp.currentEvent?.modifierFlags.contains(.command) == true
+        let modifierFlags = NSApp.currentEvent?.modifierFlags ?? []
+        let isCommandSelection = modifierFlags.contains(.command)
+        let isShiftSelection = modifierFlags.contains(.shift)
+
+        if isShiftSelection {
+            let orderedDocumentIDs = groupState.computedGrouping.allDocumentIDs
+            let anchorID = selectedDocumentIDs.contains(controller.selectedDocumentID)
+                ? controller.selectedDocumentID
+                : documentID
+
+            guard
+                let anchorIndex = orderedDocumentIDs.firstIndex(of: anchorID),
+                let targetIndex = orderedDocumentIDs.firstIndex(of: documentID)
+            else {
+                onUpdateSelection([documentID])
+                return
+            }
+
+            let lowerBound = min(anchorIndex, targetIndex)
+            let upperBound = max(anchorIndex, targetIndex)
+            let rangeSelection = Set(orderedDocumentIDs[lowerBound...upperBound])
+            onUpdateSelection(rangeSelection)
+            return
+        }
 
         if isCommandSelection {
             var nextSelection = selectedDocumentIDs
@@ -661,7 +697,8 @@ private struct SidebarGroupListContent: View {
     private func documentRow(
         for document: ReaderSidebarDocumentController.Document,
         allDocuments: [ReaderSidebarDocumentController.Document],
-        currentDate: Date
+        currentDate: Date,
+        showsSelectionBackground: Bool = false
     ) -> some View {
         let rowState = controller.rowStates[document.id]
             ?? controller.deriveRowState(from: document)
@@ -674,6 +711,7 @@ private struct SidebarGroupListContent: View {
             readerStore: document.readerStore,
             watchedDocumentIDs: watchedDocumentIDs,
             selectedDocumentIDs: selectedDocumentIDs,
+            showsSelectionBackground: showsSelectionBackground,
             canClose: true,
             onOpenInDefaultApp: onOpenInDefaultApp,
             onOpenInApplication: { application, documentIDs in
@@ -690,12 +728,12 @@ private struct SidebarGroupListContent: View {
     }
 }
 
-private struct AnimatedSidebarGroupSection: View {
+private struct AnimatedSidebarGroupSection<Content: View>: View {
     let groupDisplayName: String
     let isExpanded: Bool
     let onToggleExpanded: (Bool) -> Void
     let header: ReaderSidebarGroupHeader
-    let content: AnyView
+    @ViewBuilder let content: () -> Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -727,7 +765,7 @@ private struct AnimatedSidebarGroupSection: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 if isExpanded {
-                    content
+                    content()
                         .padding(.leading, 28)
                         .padding(.trailing, 6)
                         .padding(.bottom, 2)

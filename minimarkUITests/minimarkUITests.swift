@@ -199,28 +199,28 @@ final class minimarkUITests: XCTestCase {
         let sidebar = app.descendants(matching: .any).matching(identifier: "sidebar-column").firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should appear with multiple documents")
 
+        let groupToggles = sidebar.buttons.matching(identifier: "sidebar-group-toggle")
         waitForCondition(timeout: 5) {
-            app.buttons.matching(identifier: "sidebar-group-toggle").count >= 3
+            groupToggles.count >= 3
         }
 
-        let groupToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
         XCTAssertGreaterThanOrEqual(groupToggles.count, 3, "Should have at least 3 folder groups")
 
         let groupPredicate = NSPredicate(
             format: "identifier == 'sidebar-group-toggle' AND (value CONTAINS[c] 'project' OR value CONTAINS[c] 'docs' OR value CONTAINS[c] 'plans')"
         )
-        let groupHeaders = app.buttons.matching(groupPredicate)
+        let groupHeaders = sidebar.buttons.matching(groupPredicate)
         XCTAssertGreaterThanOrEqual(groupHeaders.count, 2, "Should show disambiguated folder group headers")
 
         waitForCondition(timeout: 8) {
-            app.staticTexts["README.md"].exists
+            sidebar.staticTexts["README.md"].exists
         }
-        XCTAssertTrue(app.staticTexts["README.md"].exists, "README.md should be visible in sidebar")
+        XCTAssertTrue(sidebar.staticTexts["README.md"].exists, "README.md should be visible in sidebar")
 
         waitForCondition(timeout: 8) {
-            app.staticTexts["BUILDING.md"].exists
+            sidebar.staticTexts["BUILDING.md"].exists
         }
-        XCTAssertTrue(app.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
+        XCTAssertTrue(sidebar.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
     }
 
     @MainActor
@@ -232,7 +232,7 @@ final class minimarkUITests: XCTestCase {
         let sidebar = app.descendants(matching: .any).matching(identifier: "sidebar-column").firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should appear with multiple documents")
 
-        let customToggle = app.buttons.matching(identifier: "sidebar-group-toggle").firstMatch
+        let customToggle = sidebar.buttons.matching(identifier: "sidebar-group-toggle").firstMatch
         XCTAssertTrue(customToggle.waitForExistence(timeout: 5), "Grouped sidebar should expose custom group toggle buttons")
     }
 
