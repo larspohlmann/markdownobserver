@@ -36,4 +36,14 @@ struct ReaderOverlayInsetCalculatorTests {
         #expect(result.leadingOverlayTopPadding == 60)
         #expect(result.scrollTargetTopInset == 98)
     }
+
+    @Test func statusBannerTopPaddingMatchesTopBarInset() {
+        let padding = ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: 66)
+        #expect(padding == 66)
+    }
+
+    @Test func statusBannerTopPaddingClampsNegativeInset() {
+        let padding = ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: -10)
+        #expect(padding == 0)
+    }
 }

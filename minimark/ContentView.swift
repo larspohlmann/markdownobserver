@@ -113,11 +113,13 @@ struct ContentView: View {
                         message: readerStore.lastError?.message
                     )
                     .reportTopStatusBannerHeight()
+                    .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
                 } else if readerStore.needsImageDirectoryAccess {
                     ImageAccessWarningBar {
                         promptForImageDirectoryAccess()
                     }
                     .reportTopStatusBannerHeight()
+                    .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
                 }
 
                 documentSurfaceWithOverlays
