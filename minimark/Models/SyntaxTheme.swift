@@ -104,14 +104,6 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
         """
     }
 
-    var changeEditedHex: String {
-        syntaxPalette.changeEditedHex
-    }
-
-    var changeDeletedHex: String {
-        syntaxPalette.changeDeletedHex
-    }
-
     var previewPalette: SyntaxThemePreviewPalette {
         let palette = syntaxPalette
         return SyntaxThemePreviewPalette(
@@ -140,9 +132,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#AE81FF",
                 titleHex: "#A6E22E",
                 builtInHex: "#66D9EF",
-                changeAddedHex: "#A6E22E",
-                changeEditedHex: "#E6DB74",
-                changeDeletedHex: "#F92672"
+                markSignalHex: "#E6DB74"
             )
         case .github:
             return SyntaxPalette(
@@ -155,9 +145,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#005CC5",
                 titleHex: "#6F42C1",
                 builtInHex: "#E36209",
-                changeAddedHex: "#1A7F37",
-                changeEditedHex: "#9A6700",
-                changeDeletedHex: "#CF222E"
+                markSignalHex: "#9A6700"
             )
         case .githubDark:
             return SyntaxPalette(
@@ -170,9 +158,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#79C0FF",
                 titleHex: "#D2A8FF",
                 builtInHex: "#FFA657",
-                changeAddedHex: "#3FB950",
-                changeEditedHex: "#D29922",
-                changeDeletedHex: "#F85149"
+                markSignalHex: "#D29922"
             )
         case .oneLight:
             return SyntaxPalette(
@@ -185,9 +171,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#986801",
                 titleHex: "#4078F2",
                 builtInHex: "#C18401",
-                changeAddedHex: "#22863A",
-                changeEditedHex: "#9A6700",
-                changeDeletedHex: "#CF222E"
+                markSignalHex: "#9A6700"
             )
         case .oneDark:
             return SyntaxPalette(
@@ -200,9 +184,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#D19A66",
                 titleHex: "#61AFEF",
                 builtInHex: "#E5C07B",
-                changeAddedHex: "#98C379",
-                changeEditedHex: "#E5C07B",
-                changeDeletedHex: "#E06C75"
+                markSignalHex: "#E5C07B"
             )
         case .dracula:
             return SyntaxPalette(
@@ -215,9 +197,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#BD93F9",
                 titleHex: "#8BE9FD",
                 builtInHex: "#50FA7B",
-                changeAddedHex: "#50FA7B",
-                changeEditedHex: "#F1FA8C",
-                changeDeletedHex: "#FF5555"
+                markSignalHex: "#F1FA8C"
             )
         case .nord:
             return SyntaxPalette(
@@ -230,9 +210,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#B48EAD",
                 titleHex: "#88C0D0",
                 builtInHex: "#EBCB8B",
-                changeAddedHex: "#A3BE8C",
-                changeEditedHex: "#EBCB8B",
-                changeDeletedHex: "#BF616A"
+                markSignalHex: "#EBCB8B"
             )
         case .gruvboxLight:
             return SyntaxPalette(
@@ -245,9 +223,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#8F3F71",
                 titleHex: "#076678",
                 builtInHex: "#B57614",
-                changeAddedHex: "#79740E",
-                changeEditedHex: "#B57614",
-                changeDeletedHex: "#CC241D"
+                markSignalHex: "#B57614"
             )
         case .gruvboxDark:
             return SyntaxPalette(
@@ -260,9 +236,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#D3869B",
                 titleHex: "#83A598",
                 builtInHex: "#FABD2F",
-                changeAddedHex: "#B8BB26",
-                changeEditedHex: "#FABD2F",
-                changeDeletedHex: "#FB4934"
+                markSignalHex: "#FABD2F"
             )
         case .solarizedLight:
             return SyntaxPalette(
@@ -275,9 +249,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#D33682",
                 titleHex: "#268BD2",
                 builtInHex: "#B58900",
-                changeAddedHex: "#859900",
-                changeEditedHex: "#B58900",
-                changeDeletedHex: "#DC322F"
+                markSignalHex: "#B58900"
             )
         case .solarizedDark:
             return SyntaxPalette(
@@ -290,9 +262,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#D33682",
                 titleHex: "#268BD2",
                 builtInHex: "#B58900",
-                changeAddedHex: "#859900",
-                changeEditedHex: "#B58900",
-                changeDeletedHex: "#DC322F"
+                markSignalHex: "#B58900"
             )
         case .xcode:
             return SyntaxPalette(
@@ -305,9 +275,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 numberHex: "#1C00CF",
                 titleHex: "#1C00CF",
                 builtInHex: "#5D4FFF",
-                changeAddedHex: "#248A3D",
-                changeEditedHex: "#B57F00",
-                changeDeletedHex: "#D12F1B"
+                markSignalHex: "#B57F00"
             )
         }
     }
@@ -335,9 +303,6 @@ nonisolated private struct SyntaxPalette: Sendable {
     let numberHex: String
     let titleHex: String
     let builtInHex: String
-    let changeAddedHex: String
-    let changeEditedHex: String
-    let changeDeletedHex: String
     let markSignalHex: String
     let blockquoteAccentHex: String
     let blockquoteBackgroundHex: String
@@ -353,10 +318,7 @@ nonisolated private struct SyntaxPalette: Sendable {
         numberHex: String,
         titleHex: String,
         builtInHex: String,
-        changeAddedHex: String,
-        changeEditedHex: String,
-        changeDeletedHex: String,
-        markSignalHex: String? = nil,
+        markSignalHex: String,
         blockquoteAccentHex: String? = nil,
         blockquoteBackgroundHex: String? = nil,
         blockquoteForegroundHex: String? = nil
@@ -370,10 +332,7 @@ nonisolated private struct SyntaxPalette: Sendable {
         self.numberHex = numberHex
         self.titleHex = titleHex
         self.builtInHex = builtInHex
-        self.changeAddedHex = changeAddedHex
-        self.changeEditedHex = changeEditedHex
-        self.changeDeletedHex = changeDeletedHex
-        self.markSignalHex = markSignalHex ?? changeEditedHex
+        self.markSignalHex = markSignalHex
         self.blockquoteAccentHex = blockquoteAccentHex ?? blockBorderHex
         self.blockquoteBackgroundHex = blockquoteBackgroundHex ?? blockBackgroundHex
         self.blockquoteForegroundHex = blockquoteForegroundHex ?? blockTextHex
