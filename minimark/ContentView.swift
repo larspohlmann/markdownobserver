@@ -55,6 +55,7 @@ struct ContentView: View {
         let scrollSyncRequest: ScrollSyncRequest?
         let tocScrollRequest: TOCScrollRequest?
         let supportsInPlaceContentUpdates: Bool
+        let overlayTopInset: CGFloat
         let reloadAnchorProgress: Double?
         let minimumWidth: CGFloat?
         let onFatalCrash: () -> Void
@@ -93,6 +94,7 @@ struct ContentView: View {
     @State private var currentChangedRegionIndex: Int?
     @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
     @State private var cachedSourceHTMLDocument = ""
+    @State private var statusBannerHeight: CGFloat = 0
 
     var body: some View {
         interactionAwareView(baseBody)
@@ -101,15 +103,21 @@ struct ContentView: View {
     private var baseBody: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: 0)
+                    .preference(key: TopStatusBannerHeightPreferenceKey.self, value: 0)
+
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
                         fileName: readerStore.fileDisplayName,
                         message: readerStore.lastError?.message
                     )
+                    .reportTopStatusBannerHeight()
                 } else if readerStore.needsImageDirectoryAccess {
                     ImageAccessWarningBar {
                         promptForImageDirectoryAccess()
                     }
+                    .reportTopStatusBannerHeight()
                 }
 
                 documentSurfaceWithOverlays
@@ -147,6 +155,9 @@ struct ContentView: View {
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
                 clearDropTargetState()
+            }
+            .onPreferenceChange(TopStatusBannerHeightPreferenceKey.self) { height in
+                statusBannerHeight = max(0, height)
             }
             .onAppear {
                 handleSurfaceAppear()
@@ -525,12 +536,19 @@ struct ContentView: View {
         return height
     }
 
+    private var overlayInsets: ReaderOverlayInsetValues {
+        ReaderOverlayInsetCalculator.compute(
+            topBarInset: overlayTopInset,
+            statusBannerHeight: statusBannerHeight
+        )
+    }
+
     @ViewBuilder
     private var documentSurfaceWithOverlays: some View {
         documentSurfaceLayout
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
-                    .padding(.top, overlayTopInset + 8)
+                    .padding(.top, overlayInsets.railTopPadding)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
@@ -545,7 +563,7 @@ struct ContentView: View {
                         totalCount: readerStore.changedRegions.count,
                         onNavigate: requestChangedRegionNavigation
                     )
-                    .padding(.top, overlayTopInset + 8)
+                    .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -565,7 +583,7 @@ struct ContentView: View {
                         isAppearanceLocked: folderWatchState.isAppearanceLocked,
                         onToggleAppearanceLock: callbacks.onToggleAppearanceLock
                     )
-                    .padding(.top, overlayTopInset + 8)
+                    .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
                     .padding(.trailing, 70)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
@@ -717,6 +735,7 @@ struct ContentView: View {
                 scrollSyncRequest: splitScrollRequest(for: surface),
                 tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: true,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
                 onFatalCrash: {
@@ -757,6 +776,7 @@ struct ContentView: View {
                 scrollSyncRequest: splitScrollRequest(for: surface),
                 tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: false,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
                 onFatalCrash: {
@@ -986,6 +1006,27 @@ private struct DocumentSurfaceHost: View {
                 onRetryHighlighting: configuration.onRetryFallback
             )
         }
+    }
+}
+
+private struct TopStatusBannerHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private extension View {
+    func reportTopStatusBannerHeight() -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: TopStatusBannerHeightPreferenceKey.self,
+                    value: proxy.size.height
+                )
+            }
+        )
     }
 }
 
