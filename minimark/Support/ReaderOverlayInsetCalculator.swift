@@ -19,7 +19,8 @@ enum ReaderOverlayInsetCalculator {
     static func compute(topBarInset: CGFloat, statusBannerHeight: CGFloat) -> ReaderOverlayInsetValues {
         let safeTopBarInset = max(0, topBarInset)
         let safeStatusBannerHeight = max(0, statusBannerHeight)
-        let overlayBaseInset = safeTopBarInset + safeStatusBannerHeight + overlayBaseGap
+        let hasStatusBanner = safeStatusBannerHeight > 0
+        let overlayBaseInset = (hasStatusBanner ? 0 : safeTopBarInset) + overlayBaseGap
         let railTopPadding = overlayBaseInset
         let leadingOverlayTopPadding = overlayBaseInset + leadingOverlayAlignmentAdjustment
         let scrollTargetTopInset = leadingOverlayTopPadding + overlayControlHeight + scrollLandingGap

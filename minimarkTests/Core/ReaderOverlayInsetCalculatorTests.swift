@@ -21,9 +21,9 @@ struct ReaderOverlayInsetCalculatorTests {
             statusBannerHeight: 42
         )
 
-        #expect(result.railTopPadding == 116)
-        #expect(result.leadingOverlayTopPadding == 124)
-        #expect(result.scrollTargetTopInset == 162)
+        #expect(result.railTopPadding == 8)
+        #expect(result.leadingOverlayTopPadding == 16)
+        #expect(result.scrollTargetTopInset == 54)
     }
 
     @Test func clampsNegativeBannerHeightToZero() {
@@ -35,6 +35,17 @@ struct ReaderOverlayInsetCalculatorTests {
         #expect(result.railTopPadding == 52)
         #expect(result.leadingOverlayTopPadding == 60)
         #expect(result.scrollTargetTopInset == 98)
+    }
+
+    @Test func ignoresTopBarInsetWhenStatusBannerIsVisible() {
+        let result = ReaderOverlayInsetCalculator.compute(
+            topBarInset: 66,
+            statusBannerHeight: 20
+        )
+
+        #expect(result.railTopPadding == 8)
+        #expect(result.leadingOverlayTopPadding == 16)
+        #expect(result.scrollTargetTopInset == 54)
     }
 
     @Test func statusBannerTopPaddingMatchesTopBarInset() {
