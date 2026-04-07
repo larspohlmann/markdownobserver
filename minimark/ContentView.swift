@@ -94,7 +94,6 @@ struct ContentView: View {
     @State private var currentChangedRegionIndex: Int?
     @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
     @State private var cachedSourceHTMLDocument = ""
-    @State private var statusBannerHeight: CGFloat = 0
 
     var body: some View {
         interactionAwareView(baseBody)
@@ -103,22 +102,16 @@ struct ContentView: View {
     private var baseBody: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
-                Color.clear
-                    .frame(height: 0)
-                    .preference(key: TopStatusBannerHeightPreferenceKey.self, value: 0)
-
                 if readerStore.isCurrentFileMissing {
                     DeletedFileWarningBar(
                         fileName: readerStore.fileDisplayName,
                         message: readerStore.lastError?.message
                     )
-                    .reportTopStatusBannerHeight()
                     .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
                 } else if readerStore.needsImageDirectoryAccess {
                     ImageAccessWarningBar {
                         promptForImageDirectoryAccess()
                     }
-                    .reportTopStatusBannerHeight()
                     .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
                 }
 
@@ -157,9 +150,6 @@ struct ContentView: View {
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
                 clearDropTargetState()
-            }
-            .onPreferenceChange(TopStatusBannerHeightPreferenceKey.self) { height in
-                statusBannerHeight = max(0, height)
             }
             .onAppear {
                 handleSurfaceAppear()
@@ -538,10 +528,14 @@ struct ContentView: View {
         return height
     }
 
+    private var isStatusBannerVisible: Bool {
+        readerStore.isCurrentFileMissing || readerStore.needsImageDirectoryAccess
+    }
+
     private var overlayInsets: ReaderOverlayInsetValues {
         ReaderOverlayInsetCalculator.compute(
             topBarInset: overlayTopInset,
-            statusBannerHeight: statusBannerHeight
+            hasStatusBanner: isStatusBannerVisible
         )
     }
 
@@ -1009,27 +1003,6 @@ private struct DocumentSurfaceHost: View {
                 onRetryHighlighting: configuration.onRetryFallback
             )
         }
-    }
-}
-
-private struct TopStatusBannerHeightPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private extension View {
-    func reportTopStatusBannerHeight() -> some View {
-        background(
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: TopStatusBannerHeightPreferenceKey.self,
-                    value: proxy.size.height
-                )
-            }
-        )
     }
 }
 

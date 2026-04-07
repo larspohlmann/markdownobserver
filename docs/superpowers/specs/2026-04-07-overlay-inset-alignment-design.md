@@ -44,21 +44,22 @@ Introduce a small, centralized metric group for top-offset behavior (single sour
 `ContentView` computes:
 
 - `topBarInset` (existing `ReaderTopBarMetrics`-based value).
-- `statusBannerInset` (measured warning bar height; `0` when no warning bar).
-- `overlayBaseInset = topBarInset + statusBannerInset + overlayBaseGap`.
+- `isStatusBannerVisible` (derived from warning visibility state).
+- `statusBannerTopPadding = topBarInset` for the warning bar itself, so warning content sits below the top bar.
+- `overlayBaseInset = (isStatusBannerVisible ? 0 : topBarInset) + overlayBaseGap`.
 - `overlayRailTopPadding` and `overlayLeadingPillTopPadding` derived from the same base + alignment adjustment.
 - `scrollTargetTopInset = overlayLeadingPillTopPadding + overlayControlHeight + scrollLandingGap`.
 
 This keeps movement synchronized while preserving the requested visual alignment.
 
-### 2) Warning bar height is measured, not hardcoded
+### 2) Warning visibility is state-driven
 
-Warning bars can vary in height (text wrapping, accessibility sizes). Instead of constants, measure actual rendered warning bar height in `ContentView` using a lightweight preference-key pattern.
+Use explicit warning visibility (`readerStore.isCurrentFileMissing || readerStore.needsImageDirectoryAccess`) as the source of truth for whether overlay insets should drop top-bar contribution.
 
-- When `DeletedFileWarningBar` or `ImageAccessWarningBar` is visible, write its rendered height into `statusBannerInset`.
-- Otherwise, reset `statusBannerInset` to `0`.
+- Warning bar top placement uses `topBarInset` so it appears below the top bar.
+- Overlay inset mode switches immediately with warning visibility state.
 
-This prevents drift from assumptions and keeps overlay placement correct under dynamic type and localization changes.
+This avoids transient double-offset behavior while preserving stable warning placement.
 
 ### 3) Overlay placement uses shared computed paddings
 
@@ -93,7 +94,7 @@ The pushed value is `scrollTargetTopInset` from `ContentView`, so landing remain
 
 | File | Change |
 |------|--------|
-| `minimark/ContentView.swift` | Add shared top-inset metric computation, warning-bar height measurement, unified overlay paddings, and pass dynamic inset into `MarkdownWebView`. |
+| `minimark/ContentView.swift` | Add shared top-inset metric computation, state-driven warning visibility handling, unified overlay paddings, and pass dynamic inset into `MarkdownWebView`. |
 | `minimark/Views/MarkdownWebView.swift` | Add dynamic overlay inset input and JS bridge setter call. Use this inset in TOC heading scroll script as well. |
 | `minimark/App/Resources/markdownobserver-runtime.js` | Replace hardcoded inset behavior with mutable host-updated inset (with safe default), used by changed-region navigation math. |
 

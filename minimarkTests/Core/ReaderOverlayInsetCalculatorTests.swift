@@ -7,7 +7,7 @@ struct ReaderOverlayInsetCalculatorTests {
     @Test func computesInsetsForTopBarOnly() {
         let result = ReaderOverlayInsetCalculator.compute(
             topBarInset: 44,
-            statusBannerHeight: 0
+            hasStatusBanner: false
         )
 
         #expect(result.railTopPadding == 52)
@@ -18,7 +18,7 @@ struct ReaderOverlayInsetCalculatorTests {
     @Test func computesInsetsWhenSourceEditBarAndWarningBarAreVisible() {
         let result = ReaderOverlayInsetCalculator.compute(
             topBarInset: 66,
-            statusBannerHeight: 42
+            hasStatusBanner: true
         )
 
         #expect(result.railTopPadding == 8)
@@ -29,7 +29,7 @@ struct ReaderOverlayInsetCalculatorTests {
     @Test func clampsNegativeBannerHeightToZero() {
         let result = ReaderOverlayInsetCalculator.compute(
             topBarInset: 44,
-            statusBannerHeight: -12
+            hasStatusBanner: false
         )
 
         #expect(result.railTopPadding == 52)
@@ -40,7 +40,7 @@ struct ReaderOverlayInsetCalculatorTests {
     @Test func ignoresTopBarInsetWhenStatusBannerIsVisible() {
         let result = ReaderOverlayInsetCalculator.compute(
             topBarInset: 66,
-            statusBannerHeight: 20
+            hasStatusBanner: true
         )
 
         #expect(result.railTopPadding == 8)
