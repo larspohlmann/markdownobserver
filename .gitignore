@@ -34,6 +34,7 @@ Config/Signing.local.xcconfig
 .mcp.json
 
 CLAUDE.md
+AGENTS.md
 plans/
 docs/superpowers/
 

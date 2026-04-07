@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum ReaderSidebarWorkspaceMetrics {
@@ -540,53 +541,121 @@ private struct SidebarGroupListContent: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
-            List(
-                selection: Binding(
-                    get: { selectedDocumentIDs },
-                    set: { onUpdateSelection($0) }
-                )
-            ) {
-                switch groupState.computedGrouping {
-                case .flat(let documents):
-                    ForEach(documents) { document in
-                        documentRow(for: document, allDocuments: controller.documents, currentDate: context.date)
-                            .tag(document.id)
-                    }
-                case .grouped(let groups):
-                    ForEach(groups) { group in
-                        DisclosureGroup(isExpanded: isGroupExpanded(group.id)) {
-                            ForEach(group.documents) { document in
-                                documentRow(for: document, allDocuments: controller.documents, currentDate: context.date)
-                                    .tag(document.id)
-                            }
-                        } label: {
-                            ReaderSidebarGroupHeader(
-                                displayName: group.displayName,
-                                documentCount: group.documents.count,
-                                isPinned: group.isPinned,
-                                indicatorState: group.indicatorState,
-                                settings: settingsStore.currentSettings,
-                                onTogglePin: {
-                                    groupState.toggleGroupPin(group.id)
-                                },
-                                onCloseGroup: {
-                                    onCloseDocuments(Set(group.documents.map(\.id)))
-                                }
-                            )
-                        }
-                        .disclosureGroupStyle(SidebarGroupDisclosureStyle())
-                    }
-                }
+            switch groupState.computedGrouping {
+            case .flat(let documents):
+                flatSidebarList(documents: documents, currentDate: context.date)
+            case .grouped(let groups):
+                groupedSidebarList(groups: groups, currentDate: context.date)
             }
-            .listStyle(.sidebar)
         }
     }
 
-    private func isGroupExpanded(_ groupID: String) -> Binding<Bool> {
-        Binding(
-            get: { groupState.isGroupExpanded(groupID) },
-            set: { isExpanded in groupState.setGroupExpanded(groupID, isExpanded: isExpanded) }
+    @ViewBuilder
+    private func flatSidebarList(
+        documents: [ReaderSidebarDocumentController.Document],
+        currentDate: Date
+    ) -> some View {
+        List(
+            selection: Binding(
+                get: { selectedDocumentIDs },
+                set: { onUpdateSelection($0) }
+            )
+        ) {
+            ForEach(documents) { document in
+                documentRow(for: document, allDocuments: controller.documents, currentDate: currentDate)
+                    .tag(document.id)
+            }
+        }
+        .listStyle(.sidebar)
+    }
+
+    @ViewBuilder
+    private func groupedSidebarList(
+        groups: [ReaderSidebarGrouping.Group],
+        currentDate: Date
+    ) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 4) {
+                ForEach(groups) { group in
+                    groupedSection(for: group, currentDate: currentDate)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+        }
+    }
+
+    private func groupedSection(
+        for group: ReaderSidebarGrouping.Group,
+        currentDate: Date
+    ) -> some View {
+        let header = ReaderSidebarGroupHeader(
+            displayName: group.displayName,
+            documentCount: group.documents.count,
+            isPinned: group.isPinned,
+            indicatorState: group.indicatorState,
+            settings: settingsStore.currentSettings,
+            onTogglePin: {
+                groupState.toggleGroupPin(group.id)
+            },
+            onCloseGroup: {
+                onCloseDocuments(Set(group.documents.map(\.id)))
+            }
         )
+
+        let content = AnyView(
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(group.documents) { document in
+                    groupedDocumentRow(for: document, allDocuments: controller.documents, currentDate: currentDate)
+                }
+            }
+        )
+
+        return AnimatedSidebarGroupSection(
+            groupDisplayName: group.displayName,
+            isExpanded: groupState.isGroupExpanded(group.id),
+            onToggleExpanded: { nextExpandedState in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    groupState.setGroupExpanded(group.id, isExpanded: nextExpandedState)
+                }
+            },
+            header: header,
+            content: content
+        )
+    }
+
+    private func groupedDocumentRow(
+        for document: ReaderSidebarDocumentController.Document,
+        allDocuments: [ReaderSidebarDocumentController.Document],
+        currentDate: Date
+    ) -> some View {
+        documentRow(for: document, allDocuments: allDocuments, currentDate: currentDate)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectDocumentInGroupedSidebar(document.id)
+            }
+    }
+
+    private func selectDocumentInGroupedSidebar(_ documentID: UUID) {
+        let isCommandSelection = NSApp.currentEvent?.modifierFlags.contains(.command) == true
+
+        if isCommandSelection {
+            var nextSelection = selectedDocumentIDs
+            if nextSelection.contains(documentID) {
+                nextSelection.remove(documentID)
+            } else {
+                nextSelection.insert(documentID)
+            }
+
+            if nextSelection.isEmpty {
+                nextSelection = [documentID]
+            }
+
+            onUpdateSelection(nextSelection)
+            return
+        }
+
+        onUpdateSelection([documentID])
     }
 
     private func documentRow(
@@ -621,34 +690,52 @@ private struct SidebarGroupListContent: View {
     }
 }
 
-private struct SidebarGroupDisclosureStyle: DisclosureGroupStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button {
-            configuration.isExpanded.toggle()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16, height: 16)
-                    .background(.quaternary.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    .rotationEffect(configuration.isExpanded ? .degrees(90) : .zero)
+private struct AnimatedSidebarGroupSection: View {
+    let groupDisplayName: String
+    let isExpanded: Bool
+    let onToggleExpanded: (Bool) -> Void
+    let header: ReaderSidebarGroupHeader
+    let content: AnyView
 
-                configuration.label
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                onToggleExpanded(!isExpanded)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 16, height: 16)
+                        .background(.quaternary.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                        .rotationEffect(isExpanded ? .degrees(90) : .zero)
+
+                    header
+                }
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Color(nsColor: .labelColor).opacity(0.04))
+                )
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color(nsColor: .labelColor).opacity(0.04))
-            )
-        }
-        .buttonStyle(.plain)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("sidebar-group-toggle")
+            .accessibilityLabel(isExpanded ? "Collapse group" : "Expand group")
+            .accessibilityValue(groupDisplayName)
 
-        if configuration.isExpanded {
-            configuration.content
-                .padding(.leading, 12)
+            VStack(alignment: .leading, spacing: 0) {
+                if isExpanded {
+                    content
+                        .padding(.leading, 28)
+                        .padding(.trailing, 6)
+                        .padding(.bottom, 2)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .clipped()
         }
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
     }
 }
