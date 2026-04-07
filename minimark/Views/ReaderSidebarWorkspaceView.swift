@@ -239,6 +239,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 private struct ReaderSidebarDocumentRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
+    @State private var isIndicatorPulsing = false
+    @State private var lastHandledIndicatorPulseToken: Int = -1
+    @State private var indicatorPulseTask: Task<Void, Never>?
 
     let state: SidebarRowState
     let currentDate: Date
@@ -333,6 +336,14 @@ private struct ReaderSidebarDocumentRow: View {
         selectedDocumentIDs.contains(state.id)
     }
 
+    private var indicatorScale: CGFloat {
+        isIndicatorPulsing ? 1.3 : 1.0
+    }
+
+    private var indicatorOpacity: Double {
+        isIndicatorPulsing ? 0.45 : 1.0
+    }
+
     private var lastChangedTextColor: Color {
         if isSelected {
             return Color.primary.opacity(0.72)
@@ -366,6 +377,14 @@ private struct ReaderSidebarDocumentRow: View {
                 Circle()
                     .fill(changedIndicatorColor)
                     .frame(width: 7, height: 7)
+                    .scaleEffect(indicatorScale)
+                    .opacity(indicatorOpacity)
+                    .animation(
+                        isIndicatorPulsing
+                            ? .easeInOut(duration: 0.25).repeatCount(4, autoreverses: true)
+                            : .easeOut(duration: 0.18),
+                        value: isIndicatorPulsing
+                    )
                     .accessibilityHidden(true)
             }
 
@@ -393,6 +412,17 @@ private struct ReaderSidebarDocumentRow: View {
         .accessibilityIdentifier("sidebar-document-\(title)")
         .onHover { hovering in
             isHovered = hovering
+        }
+        .onAppear {
+            triggerIndicatorPulseIfNeeded(for: state.indicatorPulseToken)
+        }
+        .onChange(of: state.indicatorPulseToken) { _, newToken in
+            triggerIndicatorPulseIfNeeded(for: newToken)
+        }
+        .onDisappear {
+            indicatorPulseTask?.cancel()
+            indicatorPulseTask = nil
+            isIndicatorPulsing = false
         }
         .contextMenu {
             if hasAnyOpenFile {
@@ -461,15 +491,35 @@ private struct ReaderSidebarDocumentRow: View {
             relativeTo: currentDate
         )
     }
+
+    private func triggerIndicatorPulseIfNeeded(for token: Int) {
+        guard token > lastHandledIndicatorPulseToken else { return }
+        guard indicatorState.showsIndicator else { return }
+
+        lastHandledIndicatorPulseToken = token
+        indicatorPulseTask?.cancel()
+        indicatorPulseTask = Task { @MainActor in
+            isIndicatorPulsing = false
+            await Task.yield()
+            isIndicatorPulsing = true
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            isIndicatorPulsing = false
+        }
+    }
 }
 
 private struct ReaderSidebarGroupHeader: View {
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isIndicatorPulsing = false
+    @State private var lastHandledPulseToken: Int = -1
+    @State private var indicatorPulseTask: Task<Void, Never>?
 
     let displayName: String
     let documentCount: Int
     let isPinned: Bool
-    let indicatorState: ReaderDocumentIndicatorState
+    let indicatorStates: [ReaderDocumentIndicatorState]
+    let indicatorPulseToken: Int
     let settings: ReaderSettings
     let onTogglePin: () -> Void
     let onCloseGroup: () -> Void
@@ -480,6 +530,14 @@ private struct ReaderSidebarGroupHeader: View {
 
     private var closeGroupLabel: String {
         "Close all files in group \(displayName)"
+    }
+
+    private var indicatorScale: CGFloat {
+        isIndicatorPulsing ? 1.3 : 1.0
+    }
+
+    private var indicatorOpacity: Double {
+        isIndicatorPulsing ? 0.45 : 1.0
     }
 
     var body: some View {
@@ -501,11 +559,23 @@ private struct ReaderSidebarGroupHeader: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
 
-            if indicatorState.showsIndicator {
-                Circle()
-                    .fill(indicatorState.color(for: settings, colorScheme: colorScheme))
-                    .frame(width: 6, height: 6)
-                    .accessibilityHidden(true)
+            if !indicatorStates.isEmpty {
+                HStack(spacing: 3) {
+                    ForEach(Array(indicatorStates.enumerated()), id: \.offset) { _, indicatorState in
+                        Circle()
+                            .fill(indicatorState.color(for: settings, colorScheme: colorScheme))
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(indicatorScale)
+                            .opacity(indicatorOpacity)
+                            .animation(
+                                isIndicatorPulsing
+                                    ? .easeInOut(duration: 0.25).repeatCount(4, autoreverses: true)
+                                    : .easeOut(duration: 0.18),
+                                value: isIndicatorPulsing
+                            )
+                            .accessibilityHidden(true)
+                    }
+                }
             }
 
             Spacer(minLength: 4)
@@ -530,6 +600,33 @@ private struct ReaderSidebarGroupHeader: View {
             .help(closeGroupLabel)
             .accessibilityLabel(closeGroupLabel)
             .accessibilityHint("Closes every open file in this group")
+        }
+        .onAppear {
+            triggerIndicatorPulseIfNeeded(for: indicatorPulseToken)
+        }
+        .onChange(of: indicatorPulseToken) { _, newToken in
+            triggerIndicatorPulseIfNeeded(for: newToken)
+        }
+        .onDisappear {
+            indicatorPulseTask?.cancel()
+            indicatorPulseTask = nil
+            isIndicatorPulsing = false
+        }
+    }
+
+    private func triggerIndicatorPulseIfNeeded(for token: Int) {
+        guard token > lastHandledPulseToken else { return }
+        guard !indicatorStates.isEmpty else { return }
+
+        lastHandledPulseToken = token
+        indicatorPulseTask?.cancel()
+        indicatorPulseTask = Task { @MainActor in
+            isIndicatorPulsing = false
+            await Task.yield()
+            isIndicatorPulsing = true
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            isIndicatorPulsing = false
         }
     }
 }
@@ -603,7 +700,8 @@ private struct SidebarGroupListContent: View {
             displayName: group.displayName,
             documentCount: group.documents.count,
             isPinned: group.isPinned,
-            indicatorState: group.indicatorState,
+            indicatorStates: group.indicatorStates,
+            indicatorPulseToken: group.indicatorPulseToken,
             settings: settingsStore.currentSettings,
             onTogglePin: {
                 groupState.toggleGroupPin(group.id)

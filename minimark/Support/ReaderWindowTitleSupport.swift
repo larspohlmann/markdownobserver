@@ -3,16 +3,31 @@ import SwiftUI
 
 enum ReaderDocumentIndicatorState: Equatable, Sendable {
     case none
+    case addedExternalChange
     case externalChange
     case deletedExternalChange
 
-    init(hasUnacknowledgedExternalChange: Bool, isCurrentFileMissing: Bool) {
+    init(
+        hasUnacknowledgedExternalChange: Bool,
+        isCurrentFileMissing: Bool,
+        unacknowledgedExternalChangeKind: ReaderExternalChangeKind = .modified
+    ) {
         guard hasUnacknowledgedExternalChange else {
             self = .none
             return
         }
 
-        self = isCurrentFileMissing ? .deletedExternalChange : .externalChange
+        if isCurrentFileMissing {
+            self = .deletedExternalChange
+            return
+        }
+
+        switch unacknowledgedExternalChangeKind {
+        case .added:
+            self = .addedExternalChange
+        case .modified:
+            self = .externalChange
+        }
     }
 
     var showsIndicator: Bool {
@@ -22,9 +37,11 @@ enum ReaderDocumentIndicatorState: Equatable, Sendable {
     func color(for settings: ReaderSettings, colorScheme: ColorScheme) -> Color {
         switch self {
         case .deletedExternalChange:
-            return Color(hex: settings.syntaxTheme.changeDeletedHex) ?? .accentColor
+            return Color(nsColor: .systemRed)
+        case .addedExternalChange:
+            return Color(nsColor: .systemGreen)
         case .externalChange:
-            return Color.folderWatchHighlight(for: settings, colorScheme: colorScheme)
+            return Color(nsColor: .systemYellow)
         case .none:
             return .clear
         }

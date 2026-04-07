@@ -231,18 +231,18 @@ struct ReaderSidebarGroupingTests {
 
     // MARK: - Indicator Aggregation
 
-    @Test @MainActor func aggregatedIndicatorReturnsNoneWhenNoChanges() throws {
+    @Test @MainActor func indicatorsReturnEmptyWhenNoChanges() throws {
         let harness = try ReaderSidebarGroupingTestHarness(
             subdirectories: ["docs"],
             filesPerSubdirectory: 2
         )
         defer { harness.cleanup() }
 
-        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
-        #expect(state == .none)
+        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        #expect(states.isEmpty)
     }
 
-    @Test @MainActor func aggregatedIndicatorReturnsExternalChangeWhenAnyDocumentHasChange() throws {
+    @Test @MainActor func indicatorsReturnExternalChangeWhenAnyDocumentHasChange() throws {
         let harness = try ReaderSidebarGroupingTestHarness(
             subdirectories: ["docs"],
             filesPerSubdirectory: 2
@@ -250,12 +250,13 @@ struct ReaderSidebarGroupingTests {
         defer { harness.cleanup() }
 
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
 
-        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
-        #expect(state == .externalChange)
+        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        #expect(states == [.externalChange])
     }
 
-    @Test @MainActor func aggregatedIndicatorReturnsDeletedWhenAnyDocumentIsMissing() throws {
+    @Test @MainActor func indicatorsReturnDeletedWhenAnyDocumentIsMissing() throws {
         let harness = try ReaderSidebarGroupingTestHarness(
             subdirectories: ["docs"],
             filesPerSubdirectory: 2
@@ -263,10 +264,11 @@ struct ReaderSidebarGroupingTests {
         defer { harness.cleanup() }
 
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
         harness.documents[0].readerStore.testSetIsCurrentFileMissing(true)
 
-        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
-        #expect(state == .deletedExternalChange)
+        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        #expect(states == [.deletedExternalChange])
     }
 
     // MARK: - Group Pinning
@@ -355,55 +357,74 @@ struct ReaderSidebarGroupingTests {
         #expect(groups[1].displayName == "alpha")
     }
 
-    @Test @MainActor func aggregatedIndicatorDeletedTakesPriorityOverExternalChange() throws {
+    @Test @MainActor func indicatorsIncludeAllKindsWhenPresent() throws {
         let harness = try ReaderSidebarGroupingTestHarness(
             subdirectories: ["docs"],
             filesPerSubdirectory: 2
         )
         defer { harness.cleanup() }
 
-        // One doc has external change, another has deleted change
+        // One doc has modified change, another has deleted-added change.
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
         harness.documents[1].readerStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[1].readerStore.document.unacknowledgedExternalChangeKind = .added
         harness.documents[1].readerStore.testSetIsCurrentFileMissing(true)
 
-        let state = ReaderSidebarGrouping.aggregatedIndicatorState(for: harness.documents)
-        #expect(state == .deletedExternalChange)
+        let documentStates = harness.documents.map { document in
+            ReaderDocumentIndicatorState(
+                hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: document.readerStore.isCurrentFileMissing,
+                unacknowledgedExternalChangeKind: document.readerStore.document.unacknowledgedExternalChangeKind
+            )
+        }
+        #expect(documentStates.contains(.externalChange))
+        #expect(documentStates.contains(.deletedExternalChange))
+
+        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        #expect(states == [.externalChange, .deletedExternalChange])
     }
 
     // MARK: - Indicator Aggregation from Pre-Computed States
 
-    @Test @MainActor func aggregatedIndicatorFromStatesReturnsNoneWhenAllNone() {
-        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+    @Test @MainActor func indicatorsFromStatesReturnsEmptyWhenAllNone() {
+        let result = ReaderSidebarGrouping.indicators(
             from: [.none, .none, .none]
         )
-        #expect(result == .none)
+        #expect(result.isEmpty)
     }
 
-    @Test @MainActor func aggregatedIndicatorFromStatesReturnsExternalChangeWhenPresent() {
-        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+    @Test @MainActor func indicatorsFromStatesReturnsExternalChangeWhenPresent() {
+        let result = ReaderSidebarGrouping.indicators(
             from: [.none, .externalChange, .none]
         )
-        #expect(result == .externalChange)
+        #expect(result == [.externalChange])
     }
 
-    @Test @MainActor func aggregatedIndicatorFromStatesReturnsDeletedWhenPresent() {
-        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
+    @Test @MainActor func indicatorsFromStatesKeepsAddedAndModifiedDistinct() {
+        let result = ReaderSidebarGrouping.indicators(
+            from: [.none, .addedExternalChange, .none]
+        )
+        #expect(result == [.addedExternalChange])
+    }
+
+    @Test @MainActor func indicatorsFromStatesReturnsDeletedWhenPresent() {
+        let result = ReaderSidebarGrouping.indicators(
             from: [.none, .deletedExternalChange]
         )
-        #expect(result == .deletedExternalChange)
+        #expect(result == [.deletedExternalChange])
     }
 
-    @Test @MainActor func aggregatedIndicatorFromStatesDeletedTakesPriority() {
-        let result = ReaderSidebarGrouping.aggregatedIndicatorState(
-            from: [.externalChange, .deletedExternalChange, .none]
+    @Test @MainActor func indicatorsFromStatesReturnsAllKindsInStableOrder() {
+        let result = ReaderSidebarGrouping.indicators(
+            from: [.externalChange, .deletedExternalChange, .addedExternalChange, .none]
         )
-        #expect(result == .deletedExternalChange)
+        #expect(result == [.addedExternalChange, .externalChange, .deletedExternalChange])
     }
 
-    @Test @MainActor func aggregatedIndicatorFromStatesHandlesEmptyArray() {
-        let result = ReaderSidebarGrouping.aggregatedIndicatorState(from: [])
-        #expect(result == .none)
+    @Test @MainActor func indicatorsFromStatesHandlesEmptyArray() {
+        let result = ReaderSidebarGrouping.indicators(from: [])
+        #expect(result.isEmpty)
     }
 
     @Test @MainActor func groupUsesPrecomputedIndicatorStatesWhenProvided() throws {
@@ -416,14 +437,19 @@ struct ReaderSidebarGroupingTests {
         let srcPath = harness.directoryPath(for: "src")
         let testsPath = harness.directoryPath(for: "tests")
 
-        let precomputed: [String: ReaderDocumentIndicatorState] = [
-            srcPath: .externalChange,
-            testsPath: .none
+        let precomputed: [String: [ReaderDocumentIndicatorState]] = [
+            srcPath: [.addedExternalChange, .externalChange],
+            testsPath: []
+        ]
+        let pulseTokens: [String: Int] = [
+            srcPath: 2,
+            testsPath: 0
         ]
 
         let grouping = ReaderSidebarGrouping.group(
             harness.documents,
-            precomputedIndicatorStates: precomputed
+            precomputedIndicatorStates: precomputed,
+            precomputedIndicatorPulseTokens: pulseTokens
         )
 
         guard case .grouped(let groups) = grouping else {
@@ -433,8 +459,10 @@ struct ReaderSidebarGroupingTests {
 
         let srcGroup = try #require(groups.first { $0.id == srcPath })
         let testsGroup = try #require(groups.first { $0.id == testsPath })
-        #expect(srcGroup.indicatorState == .externalChange)
-        #expect(testsGroup.indicatorState == .none)
+        #expect(srcGroup.indicatorStates == [.addedExternalChange, .externalChange])
+        #expect(srcGroup.indicatorPulseToken == 2)
+        #expect(testsGroup.indicatorStates.isEmpty)
+        #expect(testsGroup.indicatorPulseToken == 0)
     }
 
     @Test @MainActor func groupFallsBackToLiveComputationWhenNoPrecomputedStates() throws {
@@ -446,6 +474,7 @@ struct ReaderSidebarGroupingTests {
 
         harness.documentsInSubdirectory("src").first!.readerStore
             .testSetHasUnacknowledgedExternalChange(true)
+        harness.documentsInSubdirectory("src").first!.readerStore.document.unacknowledgedExternalChangeKind = .modified
 
         let grouping = ReaderSidebarGrouping.group(harness.documents)
 
@@ -456,7 +485,31 @@ struct ReaderSidebarGroupingTests {
 
         let srcPath = harness.directoryPath(for: "src")
         let srcGroup = try #require(groups.first { $0.id == srcPath })
-        #expect(srcGroup.indicatorState == .externalChange)
+        #expect(srcGroup.indicatorStates == [.externalChange])
+        #expect(srcGroup.indicatorPulseToken == 0)
+    }
+
+    @Test @MainActor func groupFallsBackToAddedIndicatorWhenKindIsAdded() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src", "tests"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        harness.documentsInSubdirectory("src").first!.readerStore
+            .testSetHasUnacknowledgedExternalChange(true)
+        harness.documentsInSubdirectory("src").first!.readerStore.document.unacknowledgedExternalChangeKind = .added
+
+        let grouping = ReaderSidebarGrouping.group(harness.documents)
+
+        guard case .grouped(let groups) = grouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+
+        let srcPath = harness.directoryPath(for: "src")
+        let srcGroup = try #require(groups.first { $0.id == srcPath })
+        #expect(srcGroup.indicatorStates == [.addedExternalChange])
+        #expect(srcGroup.indicatorPulseToken == 0)
     }
 }
-

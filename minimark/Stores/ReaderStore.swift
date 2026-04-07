@@ -210,13 +210,15 @@ final class ReaderStore {
         folderWatchAutoOpenWarning = warning
     }
 
-    func noteObservedExternalChange() {
+    func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
         document.lastExternalChangeAt = Date()
         document.hasUnacknowledgedExternalChange = true
+        document.unacknowledgedExternalChangeKind = kind
     }
 
     func clearExternalChangeIndicator() {
         document.hasUnacknowledgedExternalChange = false
+        document.unacknowledgedExternalChangeKind = .modified
     }
 
     func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
@@ -301,6 +303,7 @@ final class ReaderStore {
             document.fileLastModifiedAt = documentIO.modificationDate(for: fileURL)
             document.pendingSavedDraftDiffBaselineMarkdown = document.changedRegions.isEmpty ? nil : diffBaselineMarkdown
             document.hasUnacknowledgedExternalChange = false
+            document.unacknowledgedExternalChangeKind = .modified
             document.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
             document.lastError = nil
@@ -581,6 +584,7 @@ final class ReaderStore {
         try renderCurrentMarkdownImmediately()
         if acknowledgeExternalChange {
             document.hasUnacknowledgedExternalChange = false
+            document.unacknowledgedExternalChangeKind = .modified
         }
         document.isCurrentFileMissing = false
         document.lastError = nil

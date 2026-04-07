@@ -7,4 +7,5 @@ struct SidebarRowState: Equatable, Identifiable {
     let sortDate: Date?
     let isFileMissing: Bool
     let indicatorState: ReaderDocumentIndicatorState
+    let indicatorPulseToken: Int
 }
