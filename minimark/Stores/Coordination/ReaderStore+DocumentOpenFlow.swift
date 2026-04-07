@@ -129,7 +129,7 @@ extension ReaderStore {
         clearLoadingState()
 
         if initialDiffBaselineMarkdown != nil {
-            noteObservedExternalChange()
+            noteObservedExternalChange(kind: .modified)
         }
     }
 

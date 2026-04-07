@@ -20,6 +20,7 @@ struct ReaderDocumentStateTests {
         #expect(state.lastExternalChangeAt == nil)
         #expect(state.fileLastModifiedAt == nil)
         #expect(state.hasUnacknowledgedExternalChange == false)
+        #expect(state.unacknowledgedExternalChangeKind == .modified)
         #expect(state.openInApplications.isEmpty)
         #expect(state.lastError == nil)
         #expect(state.isCurrentFileMissing == false)
@@ -155,6 +156,7 @@ struct ReaderDocumentStateTests {
         #expect(state.isSourceEditing == false)
         #expect(state.hasUnsavedDraftChanges == false)
         #expect(state.hasUnacknowledgedExternalChange == false)
+        #expect(state.unacknowledgedExternalChangeKind == .modified)
         #expect(state.lastExternalChangeAt == nil)
         #expect(state.isCurrentFileMissing == false)
     }

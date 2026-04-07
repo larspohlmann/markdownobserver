@@ -10,7 +10,8 @@ enum ReaderSidebarGrouping: Equatable {
         let displayName: String
         let directoryURL: URL?
         let documents: [ReaderSidebarDocumentController.Document]
-        let indicatorState: ReaderDocumentIndicatorState
+        let indicatorStates: [ReaderDocumentIndicatorState]
+        let indicatorPulseToken: Int
         let newestModificationDate: Date?
         let isPinned: Bool
     }
@@ -38,7 +39,8 @@ enum ReaderSidebarGrouping: Equatable {
         sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
         directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]? = nil,
         pinnedGroupIDs: Set<String> = [],
-        precomputedIndicatorStates: [String: ReaderDocumentIndicatorState]? = nil
+        precomputedIndicatorStates: [String: [ReaderDocumentIndicatorState]]? = nil,
+        precomputedIndicatorPulseTokens: [String: Int]? = nil
     ) -> ReaderSidebarGrouping {
         let grouped = Dictionary(grouping: documents) { document -> String in
             directoryURL(for: document)?.path(percentEncoded: false) ?? ""
@@ -61,15 +63,16 @@ enum ReaderSidebarGrouping: Equatable {
                 return nil
             }
             let dirURL = docs.first.flatMap { directoryURL(for: $0) }
-            let indicator = precomputedIndicatorStates?[directoryPath]
-                ?? aggregatedIndicatorState(for: docs)
+            let indicatorStates = precomputedIndicatorStates?[directoryPath]
+                ?? indicators(for: docs)
             let newestDate = newestModificationDate(for: docs)
             return Group(
                 id: directoryPath,
                 displayName: displayNames[directoryPath] ?? directoryPath,
                 directoryURL: dirURL,
                 documents: docs,
-                indicatorState: indicator,
+                indicatorStates: indicatorStates,
+                indicatorPulseToken: precomputedIndicatorPulseTokens?[directoryPath] ?? 0,
                 newestModificationDate: newestDate,
                 isPinned: pinnedGroupIDs.contains(directoryPath)
             )
@@ -88,46 +91,51 @@ enum ReaderSidebarGrouping: Equatable {
 
     // MARK: - Internal (exposed for testability)
 
-    static func aggregatedIndicatorState(
+    static func indicators(
         for documents: [ReaderSidebarDocumentController.Document]
-    ) -> ReaderDocumentIndicatorState {
-        var hasExternalChange = false
-
-        for document in documents {
-            let state = ReaderDocumentIndicatorState(
+    ) -> [ReaderDocumentIndicatorState] {
+        let states = documents.map { document in
+            ReaderDocumentIndicatorState(
                 hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
-                isCurrentFileMissing: document.readerStore.isCurrentFileMissing
+                isCurrentFileMissing: document.readerStore.isCurrentFileMissing,
+                unacknowledgedExternalChangeKind: document.readerStore.document.unacknowledgedExternalChangeKind
             )
-            switch state {
-            case .deletedExternalChange:
-                return .deletedExternalChange
-            case .externalChange:
-                hasExternalChange = true
-            case .none:
-                break
-            }
         }
 
-        return hasExternalChange ? .externalChange : .none
+        return indicators(from: states)
     }
 
-    static func aggregatedIndicatorState(
+    static func indicators(
         from states: [ReaderDocumentIndicatorState]
-    ) -> ReaderDocumentIndicatorState {
-        var hasExternalChange = false
+    ) -> [ReaderDocumentIndicatorState] {
+        var hasAdded = false
+        var hasModified = false
+        var hasDeleted = false
 
         for state in states {
             switch state {
-            case .deletedExternalChange:
-                return .deletedExternalChange
+            case .addedExternalChange:
+                hasAdded = true
             case .externalChange:
-                hasExternalChange = true
+                hasModified = true
+            case .deletedExternalChange:
+                hasDeleted = true
             case .none:
                 break
             }
         }
 
-        return hasExternalChange ? .externalChange : .none
+        var result: [ReaderDocumentIndicatorState] = []
+        if hasAdded {
+            result.append(.addedExternalChange)
+        }
+        if hasModified {
+            result.append(.externalChange)
+        }
+        if hasDeleted {
+            result.append(.deletedExternalChange)
+        }
+        return result
     }
 
     // MARK: - Private

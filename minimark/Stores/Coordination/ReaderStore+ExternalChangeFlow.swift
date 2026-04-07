@@ -43,7 +43,7 @@ extension ReaderStore {
             return
         }
 
-        noteObservedExternalChange()
+        noteObservedExternalChange(kind: .modified)
         if let fileURL,
            settingsStore.currentSettings.notificationsEnabled {
             systemNotifier.notifyExternalChange(

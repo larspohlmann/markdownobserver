@@ -11,7 +11,8 @@ struct SidebarRowStateTests {
             lastModified: Date(timeIntervalSince1970: 1000),
             sortDate: Date(timeIntervalSince1970: 1000),
             isFileMissing: false,
-            indicatorState: .none
+            indicatorState: .none,
+            indicatorPulseToken: 0
         )
 
         #expect(state.title == "README.md")
@@ -19,27 +20,35 @@ struct SidebarRowStateTests {
         #expect(state.sortDate == Date(timeIntervalSince1970: 1000))
         #expect(state.isFileMissing == false)
         #expect(state.indicatorState == .none)
+        #expect(state.indicatorPulseToken == 0)
     }
 
     @Test func equatableSkipsIdenticalState() {
         let id = UUID()
         let date = Date()
-        let a = SidebarRowState(id: id, title: "A.md", lastModified: date, sortDate: date, isFileMissing: false, indicatorState: .none)
-        let b = SidebarRowState(id: id, title: "A.md", lastModified: date, sortDate: date, isFileMissing: false, indicatorState: .none)
+        let a = SidebarRowState(id: id, title: "A.md", lastModified: date, sortDate: date, isFileMissing: false, indicatorState: .none, indicatorPulseToken: 0)
+        let b = SidebarRowState(id: id, title: "A.md", lastModified: date, sortDate: date, isFileMissing: false, indicatorState: .none, indicatorPulseToken: 0)
         #expect(a == b)
     }
 
     @Test func equatableDetectsChangedTitle() {
         let id = UUID()
-        let a = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .none)
-        let b = SidebarRowState(id: id, title: "B.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .none)
+        let a = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .none, indicatorPulseToken: 0)
+        let b = SidebarRowState(id: id, title: "B.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .none, indicatorPulseToken: 0)
         #expect(a != b)
     }
 
     @Test func equatableDetectsChangedIndicator() {
         let id = UUID()
-        let a = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .none)
-        let b = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .externalChange)
+        let a = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .none, indicatorPulseToken: 0)
+        let b = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .externalChange, indicatorPulseToken: 0)
+        #expect(a != b)
+    }
+
+    @Test func equatableDetectsChangedPulseToken() {
+        let id = UUID()
+        let a = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .externalChange, indicatorPulseToken: 0)
+        let b = SidebarRowState(id: id, title: "A.md", lastModified: nil, sortDate: nil, isFileMissing: false, indicatorState: .externalChange, indicatorPulseToken: 1)
         #expect(a != b)
     }
 }
@@ -54,6 +63,7 @@ struct SidebarRowStateDerivationTests {
         let state = try #require(harness.controller.rowStates[docID])
         #expect(state.isFileMissing == false)
         #expect(state.indicatorState == .none)
+        #expect(state.indicatorPulseToken == 0)
     }
 
     @Test @MainActor func controllerUpdatesRowStatesWhenDocumentsChange() throws {
@@ -96,6 +106,7 @@ struct SidebarRowStateDerivationTests {
 
         let updatedState = harness.controller.rowStates[docID]
         #expect(updatedState?.indicatorState == .externalChange)
+        #expect(updatedState?.indicatorPulseToken == (initialState?.indicatorPulseToken ?? 0) + 1)
         #expect(initialState != updatedState)
     }
 }
