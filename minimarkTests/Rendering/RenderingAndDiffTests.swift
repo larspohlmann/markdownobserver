@@ -169,6 +169,45 @@ struct RenderingAndDiffTests {
         #expect(html.contains("applyRuntimeCSS(runtimeCSSBase64);"))
     }
 
+    @Test func htmlRuntimeExposesOverlayTopInsetSetter() {
+        let factory = ReaderCSSFactory()
+        let html = factory.makeHTMLDocument(
+            css: "",
+            payloadBase64: "",
+            runtimeAssets: ReaderRuntimeAssets(
+                markdownItScriptPath: "markdown-it.min.js",
+                highlightScriptPath: "highlight.min.js",
+                taskListsScriptPath: nil,
+                footnoteScriptPath: nil,
+                attrsScriptPath: nil,
+                deflistScriptPath: nil
+            )
+        )
+
+        #expect(html.contains("function setOverlayTopInset(value)"))
+        #expect(html.contains("window.__minimarkSetOverlayTopInset = function (value)"))
+    }
+
+    @Test func htmlRuntimeChangedRegionNavigationUsesMutableOverlayInsetVariable() {
+        let factory = ReaderCSSFactory()
+        let html = factory.makeHTMLDocument(
+            css: "",
+            payloadBase64: "",
+            runtimeAssets: ReaderRuntimeAssets(
+                markdownItScriptPath: "markdown-it.min.js",
+                highlightScriptPath: "highlight.min.js",
+                taskListsScriptPath: nil,
+                footnoteScriptPath: nil,
+                attrsScriptPath: nil,
+                deflistScriptPath: nil
+            )
+        )
+
+        #expect(html.contains("overlayTopInset = Math.max(0, numericValue);"))
+        #expect(html.contains("row.top - overlayTopInset"))
+        #expect(html.contains("var probeTop = currentTop + overlayTopInset;"))
+    }
+
     @Test func htmlRuntimeMeasuresChangedRegionMarkersWithExpandedPanelsStillMounted() {
         let factory = ReaderCSSFactory()
         let html = factory.makeHTMLDocument(
