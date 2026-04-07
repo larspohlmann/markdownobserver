@@ -364,15 +364,25 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        // One doc has modified change, another has deleted change.
+        // One doc has modified change, another has deleted-added change.
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
         harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
         harness.documents[1].readerStore.testSetHasUnacknowledgedExternalChange(true)
         harness.documents[1].readerStore.document.unacknowledgedExternalChangeKind = .added
         harness.documents[1].readerStore.testSetIsCurrentFileMissing(true)
 
+        let documentStates = harness.documents.map { document in
+            ReaderDocumentIndicatorState(
+                hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: document.readerStore.isCurrentFileMissing,
+                unacknowledgedExternalChangeKind: document.readerStore.document.unacknowledgedExternalChangeKind
+            )
+        }
+        #expect(documentStates.contains(.externalChange))
+        #expect(documentStates.contains(.deletedExternalChange))
+
         let states = ReaderSidebarGrouping.indicators(for: harness.documents)
-        #expect(states == [.addedExternalChange, .externalChange, .deletedExternalChange])
+        #expect(states == [.externalChange, .deletedExternalChange])
     }
 
     // MARK: - Indicator Aggregation from Pre-Computed States

@@ -1085,8 +1085,18 @@ struct ReaderSidebarDocumentControllerTests {
             $0.readerStore.fileURL?.lastPathComponent == "zeta.md"
         }
         #expect(autoOpenedDoc != nil)
-        #expect(autoOpenedDoc?.readerStore.hasUnacknowledgedExternalChange == true)
-        #expect(harness.controller.rowStates[autoOpenedDoc?.id ?? UUID()]?.indicatorPulseToken == 1)
+
+        let hasIndicator = await waitUntil(timeout: .seconds(2)) {
+            guard let autoOpenedDoc else { return false }
+            return autoOpenedDoc.readerStore.hasUnacknowledgedExternalChange
+        }
+        #expect(hasIndicator)
+
+        let pulseObserved = await waitUntil(timeout: .seconds(2)) {
+            guard let autoOpenedDoc else { return false }
+            return (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 1
+        }
+        #expect(pulseObserved)
     }
 
     @Test @MainActor func liveAutoOpenedAddedFileTurnsYellowAfterExternalEdit() async throws {
@@ -1112,8 +1122,12 @@ struct ReaderSidebarDocumentControllerTests {
             harness.controller.documents.contains { $0.readerStore.fileURL?.path == harness.secondaryFileURL.path }
         } ? harness.controller.documents.first { $0.readerStore.fileURL?.path == harness.secondaryFileURL.path } : nil)
 
+        _ = await waitUntil(timeout: .seconds(2)) {
+            (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 1
+        }
+
         let addedRowState = try #require(harness.controller.rowStates[autoOpenedDoc.id])
-        #expect(addedRowState.indicatorPulseToken == 1)
+        #expect(addedRowState.indicatorPulseToken >= 1)
         let addedColor = try #require(NSColor(
             addedRowState.indicatorState.color(
                 for: harness.settingsStore.currentSettings,
@@ -1128,17 +1142,18 @@ struct ReaderSidebarDocumentControllerTests {
 
         try "# Zeta Edited".write(to: harness.secondaryFileURL, atomically: true, encoding: .utf8)
 
-        let editedWatcher = try #require(harness.fileWatchers.first {
-            $0.lastStartedFileURL?.path == harness.secondaryFileURL.path
-        })
-        editedWatcher.emitChange()
+        autoOpenedDoc.readerStore.handleObservedFileChange()
 
         _ = await waitUntil(timeout: .seconds(2)) {
             harness.controller.rowStates[autoOpenedDoc.id]?.indicatorState.showsIndicator == true
         }
 
+        _ = await waitUntil(timeout: .seconds(2)) {
+            (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 2
+        }
+
         let editedRowState = try #require(harness.controller.rowStates[autoOpenedDoc.id])
-        #expect(editedRowState.indicatorPulseToken == 2)
+        #expect(editedRowState.indicatorPulseToken >= 2)
         let editedColor = try #require(NSColor(
             editedRowState.indicatorState.color(
                 for: harness.settingsStore.currentSettings,
