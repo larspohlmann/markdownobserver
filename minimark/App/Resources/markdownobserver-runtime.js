@@ -3,6 +3,24 @@
   var runtimeCSSBase64 = "__MINIMARK_CSS_BASE64__";
   var overlayTopInset = 56;
 
+  function setOverlayTopInset(value) {
+    var numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return false;
+    }
+
+    overlayTopInset = Math.max(0, numericValue);
+    window.__minimarkOverlayTopInset = overlayTopInset;
+    return true;
+  }
+
+  window.__minimarkSetOverlayTopInset = function (value) {
+    return setOverlayTopInset(value);
+  };
+
+  // Keep legacy global for compatibility on initial load.
+  window.__minimarkOverlayTopInset = overlayTopInset;
+
   function decodeBase64UTF8(base64Value) {
     var binary = atob(base64Value);
     var bytes = new Uint8Array(binary.length);
@@ -1702,8 +1720,6 @@
     renderMarkdown(scrollAnchorProgress);
     return true;
   };
-
-  window.__minimarkOverlayTopInset = overlayTopInset;
 
   window.__minimarkExtractHeadings = function () {
     extractHeadings();
