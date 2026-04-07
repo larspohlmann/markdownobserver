@@ -232,16 +232,6 @@ extension Color {
         self = Color(red: r, green: g, blue: b)
     }
 
-    static func folderWatchHighlight(
-        for settings: ReaderSettings,
-        colorScheme: ColorScheme
-    ) -> Color {
-        guard colorScheme == .dark else {
-            return Color(nsColor: .systemOrange)
-        }
-
-        return Color(hex: settings.syntaxTheme.changeEditedHex) ?? .accentColor
-    }
 }
 
 private struct ThemePreviewCard: View {
