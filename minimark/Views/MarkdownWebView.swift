@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import AppKit
 import OSLog
+import Foundation
 
 struct MarkdownWebView: NSViewRepresentable {
     private static let scrollSyncMessageName = "minimarkScrollSync"
@@ -21,6 +22,7 @@ struct MarkdownWebView: NSViewRepresentable {
         var scrollSyncRequest: ScrollSyncRequest?
     var tocScrollRequest: TOCScrollRequest?
     var supportsInPlaceContentUpdates: Bool = false
+    var overlayTopInset: CGFloat = 56
     var reloadAnchorProgress: Double?
     var onFatalCrash: () -> Void = {}
     var onPostLoadStatus: (String?) -> Void = { _ in }
@@ -84,6 +86,8 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
         context.coordinator.reloadAnchorProgress = reloadAnchorProgress
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
+        context.coordinator.overlayTopInset = max(0, overlayTopInset)
+        context.coordinator.updateOverlayTopInsetIfNeeded(in: webView)
         context.coordinator.handleChangedRegionNavigationIfNeeded(changedRegionNavigationRequest, in: webView)
         context.coordinator.handleScrollSyncRequestIfNeeded(scrollSyncRequest, in: webView)
         context.coordinator.handleTOCScrollRequestIfNeeded(tocScrollRequest, in: webView)
@@ -144,7 +148,9 @@ struct MarkdownWebView: NSViewRepresentable {
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
         var supportsInPlaceContentUpdates = false
+        var overlayTopInset: CGFloat = 56
         var reloadAnchorProgress: Double?
+        private var lastAppliedOverlayTopInset: CGFloat?
 
         func attach(_ webView: WKWebView, containerView: MarkdownWebContainerView) {
             self.webView = webView
@@ -314,6 +320,27 @@ struct MarkdownWebView: NSViewRepresentable {
             return true
         }
 
+        func updateOverlayTopInsetIfNeeded(in webView: WKWebView) {
+            let inset = max(0, overlayTopInset)
+            guard lastAppliedOverlayTopInset != inset else {
+                return
+            }
+
+            lastAppliedOverlayTopInset = inset
+            let insetLiteral = String(format: "%.3f", inset)
+            let script = """
+            (() => {
+              if (typeof window.__minimarkSetOverlayTopInset === 'function') {
+                return window.__minimarkSetOverlayTopInset(\(insetLiteral));
+              }
+              window.__minimarkOverlayTopInset = \(insetLiteral);
+              return true;
+            })();
+            """
+
+            webView.evaluateJavaScript(script)
+        }
+
         func dropAwareWebViewDidChangeTargeting(_ update: DropTargetingUpdate) {
             onDropTargetedChange(update)
         }
@@ -430,11 +457,12 @@ struct MarkdownWebView: NSViewRepresentable {
 
         private func scrollToHeadingElement(_ elementID: String, in webView: WKWebView) {
             let idLiteral = javaScriptStringLiteral(elementID)
+            let insetLiteral = String(format: "%.3f", max(0, overlayTopInset))
             let script = """
             (() => {
               const el = document.getElementById(\(idLiteral));
               if (!el) return false;
-              const inset = window.__minimarkOverlayTopInset || 0;
+              const inset = \(insetLiteral);
               const rect = el.getBoundingClientRect();
               const scrollTop = window.scrollY + rect.top - inset;
               window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
@@ -467,6 +495,7 @@ struct MarkdownWebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             logDebug("navigation finished")
             runPostLoadStatusProbe(in: webView)
+            updateOverlayTopInsetIfNeeded(in: webView)
             hasCompletedFirstLoad = true
 
             var hadPendingChangedRegionNavigation = false

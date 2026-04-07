@@ -974,6 +974,7 @@ private struct DocumentSurfaceHost: View {
                     scrollSyncRequest: configuration.scrollSyncRequest,
                     tocScrollRequest: configuration.tocScrollRequest,
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
+                    overlayTopInset: configuration.overlayTopInset,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
                     onFatalCrash: configuration.onFatalCrash,
                     onPostLoadStatus: configuration.onPostLoadStatus,
