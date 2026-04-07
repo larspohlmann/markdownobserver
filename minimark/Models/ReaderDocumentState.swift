@@ -1,5 +1,10 @@
 import Foundation
 
+enum ReaderExternalChangeKind: Equatable, Sendable {
+    case added
+    case modified
+}
+
 struct ReaderDocumentState {
     var fileURL: URL?
     var fileDisplayName: String = ""
@@ -17,6 +22,7 @@ struct ReaderDocumentState {
     var lastExternalChangeAt: Date?
     var fileLastModifiedAt: Date?
     var hasUnacknowledgedExternalChange: Bool = false
+    var unacknowledgedExternalChangeKind: ReaderExternalChangeKind = .modified
     var openInApplications: [ReaderExternalApplication] = []
     var lastError: ReaderPresentableError?
     var isCurrentFileMissing: Bool = false

@@ -34,6 +34,7 @@ final class ReaderSidebarDocumentController {
     @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
     @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
+    @ObservationIgnored private var rowIndicatorPulseTokens: [UUID: Int] = [:]
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
     deinit {
@@ -496,24 +497,35 @@ final class ReaderSidebarDocumentController {
 
     func deriveRowState(from document: Document) -> SidebarRowState {
         let store = document.readerStore
+        let indicatorState = ReaderDocumentIndicatorState(
+            hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
+            isCurrentFileMissing: store.isCurrentFileMissing,
+            unacknowledgedExternalChangeKind: store.document.unacknowledgedExternalChangeKind
+        )
         return SidebarRowState(
             id: document.id,
             title: store.fileDisplayName.isEmpty ? "Untitled" : store.fileDisplayName,
             lastModified: store.fileLastModifiedAt,
             sortDate: store.fileLastModifiedAt ?? store.lastExternalChangeAt ?? store.lastRefreshAt,
             isFileMissing: store.isCurrentFileMissing,
-            indicatorState: ReaderDocumentIndicatorState(
-                hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
-                isCurrentFileMissing: store.isCurrentFileMissing
-            )
+            indicatorState: indicatorState,
+            indicatorPulseToken: rowIndicatorPulseTokens[document.id] ?? 0
         )
     }
 
     private func rebuildAllRowStates() {
         var states: [UUID: SidebarRowState] = [:]
         for document in documents {
+            let previousIndicatorState = rowStates[document.id]?.indicatorState
+            let candidateState = deriveRowState(from: document)
+            if let previousIndicatorState,
+               previousIndicatorState != candidateState.indicatorState,
+               candidateState.indicatorState.showsIndicator {
+                rowIndicatorPulseTokens[document.id, default: 0] += 1
+            }
             states[document.id] = deriveRowState(from: document)
         }
+        rowIndicatorPulseTokens = rowIndicatorPulseTokens.filter { states[$0.key] != nil }
         guard states != rowStates else { return }
         rowStates = states
         onRowStatesChanged?(states)
@@ -550,9 +562,16 @@ final class ReaderSidebarDocumentController {
 
     private func updateRowStateIfNeeded(for documentID: UUID) {
         guard let document = documents.first(where: { $0.id == documentID }) else { return }
-        let newState = deriveRowState(from: document)
-        if rowStates[documentID] != newState {
-            rowStates[documentID] = newState
+        let previousIndicatorState = rowStates[documentID]?.indicatorState
+        let candidateState = deriveRowState(from: document)
+        if let previousIndicatorState,
+           previousIndicatorState != candidateState.indicatorState,
+           candidateState.indicatorState.showsIndicator {
+            rowIndicatorPulseTokens[documentID, default: 0] += 1
+        }
+        let refreshedState = deriveRowState(from: document)
+        if rowStates[documentID] != refreshedState {
+            rowStates[documentID] = refreshedState
             onRowStatesChanged?(rowStates)
         }
     }
@@ -683,7 +702,7 @@ extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
     func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
         for url in urls {
             if let doc = document(for: url) {
-                doc.readerStore.noteObservedExternalChange()
+                doc.readerStore.noteObservedExternalChange(kind: .added)
             }
         }
     }

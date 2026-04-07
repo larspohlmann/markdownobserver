@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.1] - 2026-04-07
+
+### Changed
+- Refined sidebar external change indicators with pulse feedback and native system colors.
+- Removed syntax theme color coupling from native UI; syntax palette now only feeds HTML and settings preview.
+
+### Fixed
+- Fixed overlay inset alignment so status warnings and navigation targets offset correctly below the top bar.
+
 ## [1.2.0] - 2026-04-06
 
 ### Added

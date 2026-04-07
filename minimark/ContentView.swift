@@ -55,6 +55,7 @@ struct ContentView: View {
         let scrollSyncRequest: ScrollSyncRequest?
         let tocScrollRequest: TOCScrollRequest?
         let supportsInPlaceContentUpdates: Bool
+        let overlayTopInset: CGFloat
         let reloadAnchorProgress: Double?
         let minimumWidth: CGFloat?
         let onFatalCrash: () -> Void
@@ -106,10 +107,12 @@ struct ContentView: View {
                         fileName: readerStore.fileDisplayName,
                         message: readerStore.lastError?.message
                     )
+                    .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
                 } else if readerStore.needsImageDirectoryAccess {
                     ImageAccessWarningBar {
                         promptForImageDirectoryAccess()
                     }
+                    .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
                 }
 
                 documentSurfaceWithOverlays
@@ -525,12 +528,23 @@ struct ContentView: View {
         return height
     }
 
+    private var isStatusBannerVisible: Bool {
+        readerStore.isCurrentFileMissing || readerStore.needsImageDirectoryAccess
+    }
+
+    private var overlayInsets: ReaderOverlayInsetValues {
+        ReaderOverlayInsetCalculator.compute(
+            topBarInset: overlayTopInset,
+            hasStatusBanner: isStatusBannerVisible
+        )
+    }
+
     @ViewBuilder
     private var documentSurfaceWithOverlays: some View {
         documentSurfaceLayout
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
-                    .padding(.top, overlayTopInset + 8)
+                    .padding(.top, overlayInsets.railTopPadding)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
             }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
@@ -545,7 +559,7 @@ struct ContentView: View {
                         totalCount: readerStore.changedRegions.count,
                         onNavigate: requestChangedRegionNavigation
                     )
-                    .padding(.top, overlayTopInset + 8)
+                    .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                 }
@@ -565,7 +579,7 @@ struct ContentView: View {
                         isAppearanceLocked: folderWatchState.isAppearanceLocked,
                         onToggleAppearanceLock: callbacks.onToggleAppearanceLock
                     )
-                    .padding(.top, overlayTopInset + 8)
+                    .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
                     .padding(.trailing, 70)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
@@ -717,6 +731,7 @@ struct ContentView: View {
                 scrollSyncRequest: splitScrollRequest(for: surface),
                 tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: true,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
                 onFatalCrash: {
@@ -757,6 +772,7 @@ struct ContentView: View {
                 scrollSyncRequest: splitScrollRequest(for: surface),
                 tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: false,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
                 onFatalCrash: {
@@ -954,6 +970,7 @@ private struct DocumentSurfaceHost: View {
                     scrollSyncRequest: configuration.scrollSyncRequest,
                     tocScrollRequest: configuration.tocScrollRequest,
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
+                    overlayTopInset: configuration.overlayTopInset,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
                     onFatalCrash: configuration.onFatalCrash,
                     onPostLoadStatus: configuration.onPostLoadStatus,

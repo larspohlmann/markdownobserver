@@ -15,7 +15,8 @@ final class SidebarGroupStateController {
     // MARK: - Computed Outputs
 
     private(set) var computedGrouping: ReaderSidebarGrouping = .flat([])
-    private(set) var groupIndicatorStates: [String: ReaderDocumentIndicatorState] = [:]
+    private(set) var groupIndicatorStates: [String: [ReaderDocumentIndicatorState]] = [:]
+    private(set) var groupIndicatorPulseTokens: [String: Int] = [:]
 
     // MARK: - Private
 
@@ -149,7 +150,8 @@ final class SidebarGroupStateController {
             sortMode: sortMode,
             directoryOrderSourceDocuments: directoryOrderSourceDocuments,
             pinnedGroupIDs: pinnedGroupIDs,
-            precomputedIndicatorStates: groupIndicatorStates
+            precomputedIndicatorStates: groupIndicatorStates,
+            precomputedIndicatorPulseTokens: groupIndicatorPulseTokens
         )
     }
 
@@ -158,14 +160,21 @@ final class SidebarGroupStateController {
             document.readerStore.fileURL?.deletingLastPathComponent()
                 .path(percentEncoded: false) ?? ""
         }
-        var result: [String: ReaderDocumentIndicatorState] = [:]
+        var result: [String: [ReaderDocumentIndicatorState]] = [:]
+        var updatedPulseTokens = groupIndicatorPulseTokens
         for (path, docs) in grouped {
             let states = docs.compactMap { doc in
                 lastRowStates[doc.id]?.indicatorState
             }
-            result[path] = ReaderSidebarGrouping.aggregatedIndicatorState(from: states)
+            let previous = groupIndicatorStates[path] ?? []
+            let next = ReaderSidebarGrouping.indicators(from: states)
+            if previous != next, !next.isEmpty {
+                updatedPulseTokens[path, default: 0] += 1
+            }
+            result[path] = next
         }
         groupIndicatorStates = result
+        groupIndicatorPulseTokens = updatedPulseTokens.filter { result[$0.key] != nil }
     }
 
     private func pruneStaleGroupIDs() {

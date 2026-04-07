@@ -106,7 +106,8 @@ struct SidebarGroupStateControllerTests {
                 lastModified: nil,
                 sortDate: nil,
                 isFileMissing: false,
-                indicatorState: .externalChange
+                indicatorState: .externalChange,
+                indicatorPulseToken: 0
             ),
             testsDoc.id: SidebarRowState(
                 id: testsDoc.id,
@@ -114,7 +115,8 @@ struct SidebarGroupStateControllerTests {
                 lastModified: nil,
                 sortDate: nil,
                 isFileMissing: false,
-                indicatorState: .none
+                indicatorState: .none,
+                indicatorPulseToken: 0
             )
         ]
 
@@ -122,7 +124,95 @@ struct SidebarGroupStateControllerTests {
         controller.updateDocuments(harness.documents, rowStates: rowStates)
 
         let srcPath = harness.directoryPath(for: "src")
-        #expect(controller.groupIndicatorStates[srcPath] == .externalChange)
+        #expect(controller.groupIndicatorStates[srcPath] == [.externalChange])
+        #expect(controller.groupIndicatorPulseTokens[srcPath] == 1)
+    }
+
+    @Test @MainActor func groupIndicatorStatesIncludeAllPresentKinds() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src"],
+            filesPerSubdirectory: 2
+        )
+        defer { harness.cleanup() }
+
+        let srcDocs = harness.documentsInSubdirectory("src")
+        let yellowDoc = try #require(srcDocs.first)
+        let greenDoc = try #require(srcDocs.dropFirst().first)
+
+        let rowStates: [UUID: SidebarRowState] = [
+            yellowDoc.id: SidebarRowState(
+                id: yellowDoc.id,
+                title: "yellow.md",
+                lastModified: nil,
+                sortDate: nil,
+                isFileMissing: false,
+                indicatorState: .externalChange,
+                indicatorPulseToken: 0
+            ),
+            greenDoc.id: SidebarRowState(
+                id: greenDoc.id,
+                title: "green.md",
+                lastModified: nil,
+                sortDate: nil,
+                isFileMissing: false,
+                indicatorState: .addedExternalChange,
+                indicatorPulseToken: 0
+            )
+        ]
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(harness.documents, rowStates: rowStates)
+
+        let srcPath = harness.directoryPath(for: "src")
+        #expect(controller.groupIndicatorStates[srcPath] == [.addedExternalChange, .externalChange])
+        #expect(controller.groupIndicatorPulseTokens[srcPath] == 1)
+    }
+
+    @Test @MainActor func groupIndicatorPulseTokenIncrementsWhenIndicatorsChange() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["src"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let srcDoc = try #require(harness.documentsInSubdirectory("src").first)
+        let srcPath = harness.directoryPath(for: "src")
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(
+            harness.documents,
+            rowStates: [
+                srcDoc.id: SidebarRowState(
+                    id: srcDoc.id,
+                    title: "file0.md",
+                    lastModified: nil,
+                    sortDate: nil,
+                    isFileMissing: false,
+                    indicatorState: .none,
+                    indicatorPulseToken: 0
+                )
+            ]
+        )
+
+        let initialToken = controller.groupIndicatorPulseTokens[srcPath] ?? 0
+
+        controller.updateDocuments(
+            harness.documents,
+            rowStates: [
+                srcDoc.id: SidebarRowState(
+                    id: srcDoc.id,
+                    title: "file0.md",
+                    lastModified: nil,
+                    sortDate: nil,
+                    isFileMissing: false,
+                    indicatorState: .externalChange,
+                    indicatorPulseToken: 1
+                )
+            ]
+        )
+
+        let updatedToken = controller.groupIndicatorPulseTokens[srcPath] ?? 0
+        #expect(updatedToken == initialToken + 1)
     }
 
     @Test @MainActor func applyWorkspaceStateRestoresAllGroupState() throws {

@@ -4,7 +4,9 @@
 //
 
 import Foundation
+import AppKit
 import Observation
+import SwiftUI
 import Testing
 @testable import minimark
 
@@ -1083,7 +1085,86 @@ struct ReaderSidebarDocumentControllerTests {
             $0.readerStore.fileURL?.lastPathComponent == "zeta.md"
         }
         #expect(autoOpenedDoc != nil)
-        #expect(autoOpenedDoc?.readerStore.hasUnacknowledgedExternalChange == true)
+
+        let hasIndicator = await waitUntil(timeout: .seconds(2)) {
+            guard let autoOpenedDoc else { return false }
+            return autoOpenedDoc.readerStore.hasUnacknowledgedExternalChange
+        }
+        #expect(hasIndicator)
+
+        let pulseObserved = await waitUntil(timeout: .seconds(2)) {
+            guard let autoOpenedDoc else { return false }
+            return (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 1
+        }
+        #expect(pulseObserved)
+    }
+
+    @Test @MainActor func liveAutoOpenedAddedFileTurnsYellowAfterExternalEdit() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual
+        ))
+
+        try harness.controller.startWatchingFolder(
+            folderURL: harness.temporaryDirectoryURL,
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        )
+
+        harness.folderWatchControllerWatcher.emitChangedMarkdownEvents([
+            ReaderFolderWatchChangeEvent(fileURL: harness.secondaryFileURL, kind: .added)
+        ])
+
+        let autoOpenedDoc = try #require(await waitUntil(timeout: .seconds(2)) {
+            harness.controller.documents.contains { $0.readerStore.fileURL?.path == harness.secondaryFileURL.path }
+        } ? harness.controller.documents.first { $0.readerStore.fileURL?.path == harness.secondaryFileURL.path } : nil)
+
+        _ = await waitUntil(timeout: .seconds(2)) {
+            (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 1
+        }
+
+        let addedRowState = try #require(harness.controller.rowStates[autoOpenedDoc.id])
+        #expect(addedRowState.indicatorPulseToken >= 1)
+        let addedColor = try #require(NSColor(
+            addedRowState.indicatorState.color(
+                for: harness.settingsStore.currentSettings,
+                colorScheme: .light
+            )
+        ).usingColorSpace(.deviceRGB))
+        let expectedGreen = try #require(NSColor.systemGreen.usingColorSpace(.deviceRGB))
+
+        #expect(abs(addedColor.redComponent - expectedGreen.redComponent) < 0.002)
+        #expect(abs(addedColor.greenComponent - expectedGreen.greenComponent) < 0.002)
+        #expect(abs(addedColor.blueComponent - expectedGreen.blueComponent) < 0.002)
+
+        try "# Zeta Edited".write(to: harness.secondaryFileURL, atomically: true, encoding: .utf8)
+
+        autoOpenedDoc.readerStore.handleObservedFileChange()
+
+        _ = await waitUntil(timeout: .seconds(2)) {
+            harness.controller.rowStates[autoOpenedDoc.id]?.indicatorState.showsIndicator == true
+        }
+
+        _ = await waitUntil(timeout: .seconds(2)) {
+            (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 2
+        }
+
+        let editedRowState = try #require(harness.controller.rowStates[autoOpenedDoc.id])
+        #expect(editedRowState.indicatorPulseToken >= 2)
+        let editedColor = try #require(NSColor(
+            editedRowState.indicatorState.color(
+                for: harness.settingsStore.currentSettings,
+                colorScheme: .light
+            )
+        ).usingColorSpace(.deviceRGB))
+        let expectedYellow = try #require(NSColor.systemYellow.usingColorSpace(.deviceRGB))
+
+        #expect(abs(editedColor.redComponent - expectedYellow.redComponent) < 0.002)
+        #expect(abs(editedColor.greenComponent - expectedYellow.greenComponent) < 0.002)
+        #expect(abs(editedColor.blueComponent - expectedYellow.blueComponent) < 0.002)
     }
 
     @Test @MainActor func initialBatchAutoOpenDoesNotSetExternalChangeIndicator() throws {
