@@ -321,8 +321,12 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         func updateOverlayTopInsetIfNeeded(in webView: WKWebView) {
+            applyOverlayTopInset(in: webView, force: false)
+        }
+
+        private func applyOverlayTopInset(in webView: WKWebView, force: Bool) {
             let inset = max(0, overlayTopInset)
-            guard lastAppliedOverlayTopInset != inset else {
+            guard force || lastAppliedOverlayTopInset != inset else {
                 return
             }
 
@@ -495,7 +499,7 @@ struct MarkdownWebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             logDebug("navigation finished")
             runPostLoadStatusProbe(in: webView)
-            updateOverlayTopInsetIfNeeded(in: webView)
+            applyOverlayTopInset(in: webView, force: true)
             hasCompletedFirstLoad = true
 
             var hadPendingChangedRegionNavigation = false
