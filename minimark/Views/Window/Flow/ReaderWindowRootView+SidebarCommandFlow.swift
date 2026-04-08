@@ -330,6 +330,11 @@ extension ReaderWindowRootView {
             closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
         }
 
+        let newlyIncludedPaths = oldExcludedSet.subtracting(newExcludedSet)
+        if !newlyIncludedPaths.isEmpty, session.options.openMode == .openAllMarkdownFiles {
+            openFilesInNewlyIncludedPaths(Array(newlyIncludedPaths))
+        }
+
         refreshWindowPresentation()
     }
 
@@ -337,6 +342,12 @@ extension ReaderWindowRootView {
         let excludedPrefixes = excludedPaths.map { path in
             path.hasSuffix("/") ? path : path + "/"
         }
+
+        let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
+            doc.readerStore.fileURL.map { url in
+                excludedPrefixes.contains { url.path.hasPrefix($0) }
+            }
+        } ?? false
 
         let documentsToClose = sidebarDocumentController.documents.filter { doc in
             guard let fileURL = doc.readerStore.fileURL else { return false }
@@ -346,6 +357,41 @@ extension ReaderWindowRootView {
 
         for doc in documentsToClose {
             sidebarDocumentController.closeDocument(doc.id)
+        }
+
+        if wasSelectedExcluded {
+            sidebarDocumentController.selectDocumentWithNewestModificationDate()
+        }
+    }
+
+    private func openFilesInNewlyIncludedPaths(_ includedPaths: [String]) {
+        let includedPrefixes = includedPaths.map { path in
+            path.hasSuffix("/") ? path : path + "/"
+        }
+
+        sidebarDocumentController.scanCurrentMarkdownFiles { [self] scannedURLs in
+            guard let session = sharedFolderWatchSession else { return }
+
+            let alreadyOpenPaths = Set(
+                sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL?.path }
+            )
+
+            let newFileURLs = scannedURLs.filter { url in
+                let path = url.path
+                guard !alreadyOpenPaths.contains(path) else { return false }
+                return includedPrefixes.contains { path.hasPrefix($0) }
+            }
+
+            if !newFileURLs.isEmpty {
+                fileOpenCoordinator.open(FileOpenRequest(
+                    fileURLs: newFileURLs,
+                    origin: .folderWatchInitialBatchAutoOpen,
+                    folderWatchSession: session,
+                    slotStrategy: .alwaysAppend,
+                    materializationStrategy: .deferThenMaterializeNewest(count: 1)
+                ))
+                refreshWindowPresentation()
+            }
         }
     }
 

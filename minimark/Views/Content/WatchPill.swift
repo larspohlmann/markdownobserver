@@ -49,6 +49,13 @@ struct WatchPill: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            WatchPillFavoriteStarToggle(
+                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+                folderDisplayName: activeFolderWatch.detailSummaryTitle,
+                onSave: onSaveFavorite,
+                onRemove: onRemoveFavorite
+            )
+
             Button {
                 isShowingDetails = true
             } label: {
@@ -125,24 +132,24 @@ struct WatchPill: View {
                 Button {
                     onEditSubfolders()
                 } label: {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 11, weight: .medium))
-                        .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
-                        .contentShape(Rectangle())
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder.badge.gearshape")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("Edit")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(height: Metrics.buttonHeight)
+                    .contentShape(RoundedRectangle(cornerRadius: 5))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.primary.opacity(0.4))
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.primary.opacity(0.08)))
                 .help("Edit subfolders")
                 .accessibilityLabel("Edit subfolders")
                 .accessibilityHint("Choose which subfolders to include or exclude")
             }
-
-            WatchPillFavoriteStarToggle(
-                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                folderDisplayName: activeFolderWatch.detailSummaryTitle,
-                onSave: onSaveFavorite,
-                onRemove: onRemoveFavorite
-            )
 
             Button {
                 onStop()
