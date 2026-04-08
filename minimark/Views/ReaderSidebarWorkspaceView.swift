@@ -276,7 +276,6 @@ private struct ReaderSidebarDocumentRow: View {
     @State private var indicatorPulseTask: Task<Void, Never>?
 
     let state: SidebarRowState
-    let currentDate: Date
     let settings: ReaderSettings
     let documents: [ReaderSidebarDocumentController.Document]
     let readerStore: ReaderStore
@@ -396,11 +395,13 @@ private struct ReaderSidebarDocumentRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                Text(lastChangedText)
-                    .font(.system(size: 10, weight: .regular))
-                    .foregroundStyle(lastChangedTextColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                TimelineView(.periodic(from: .now, by: 5)) { context in
+                    Text(lastChangedText(currentDate: context.date))
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundStyle(lastChangedTextColor)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
             }
 
             Spacer(minLength: 8)
@@ -509,7 +510,7 @@ private struct ReaderSidebarDocumentRow: View {
         state.title
     }
 
-    private var lastChangedText: String {
+    private func lastChangedText(currentDate: Date) -> String {
         if state.isFileMissing {
             return "File deleted externally"
         }
@@ -695,20 +696,17 @@ private struct SidebarGroupListContent: View {
     @State private var lastDragEndDate = Date.distantPast
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 5)) { context in
-            switch groupState.computedGrouping {
-            case .flat(let documents):
-                flatSidebarList(documents: documents, currentDate: context.date)
-            case .grouped(let groups):
-                groupedSidebarList(groups: groups, currentDate: context.date)
-            }
+        switch groupState.computedGrouping {
+        case .flat(let documents):
+            flatSidebarList(documents: documents)
+        case .grouped(let groups):
+            groupedSidebarList(groups: groups)
         }
     }
 
     @ViewBuilder
     private func flatSidebarList(
-        documents: [ReaderSidebarDocumentController.Document],
-        currentDate: Date
+        documents: [ReaderSidebarDocumentController.Document]
     ) -> some View {
         List(
             selection: Binding(
@@ -717,7 +715,7 @@ private struct SidebarGroupListContent: View {
             )
         ) {
             ForEach(documents) { document in
-                documentRow(for: document, allDocuments: controller.documents, currentDate: currentDate)
+                documentRow(for: document, allDocuments: controller.documents)
                     .tag(document.id)
             }
         }
@@ -726,8 +724,7 @@ private struct SidebarGroupListContent: View {
 
     @ViewBuilder
     private func groupedSidebarList(
-        groups: [ReaderSidebarGrouping.Group],
-        currentDate: Date
+        groups: [ReaderSidebarGrouping.Group]
     ) -> some View {
         let dragSourceIndex = draggedGroupID.flatMap { id in
             groups.firstIndex { $0.id == id }
@@ -740,7 +737,7 @@ private struct SidebarGroupListContent: View {
                         SidebarGroupDropIndicator()
                     }
 
-                    groupedSection(for: group, at: index, currentDate: currentDate)
+                    groupedSection(for: group, at: index)
                 }
 
                 if let target = dropTargetIndex, let source = dragSourceIndex,
@@ -755,8 +752,7 @@ private struct SidebarGroupListContent: View {
 
     private func groupedSection(
         for group: ReaderSidebarGrouping.Group,
-        at index: Int,
-        currentDate: Date
+        at index: Int
     ) -> some View {
         let header = ReaderSidebarGroupHeader(
             displayName: group.displayName,
@@ -786,7 +782,7 @@ private struct SidebarGroupListContent: View {
             content: {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(group.documents) { document in
-                        groupedDocumentRow(for: document, allDocuments: controller.documents, currentDate: currentDate)
+                        groupedDocumentRow(for: document, allDocuments: controller.documents)
                     }
                 }
             }
@@ -868,13 +864,11 @@ private struct SidebarGroupListContent: View {
 
     private func groupedDocumentRow(
         for document: ReaderSidebarDocumentController.Document,
-        allDocuments: [ReaderSidebarDocumentController.Document],
-        currentDate: Date
+        allDocuments: [ReaderSidebarDocumentController.Document]
     ) -> some View {
         documentRow(
             for: document,
             allDocuments: allDocuments,
-            currentDate: currentDate,
             showsSelectionBackground: true
         )
             .contentShape(Rectangle())
@@ -931,7 +925,6 @@ private struct SidebarGroupListContent: View {
     private func documentRow(
         for document: ReaderSidebarDocumentController.Document,
         allDocuments: [ReaderSidebarDocumentController.Document],
-        currentDate: Date,
         showsSelectionBackground: Bool = false
     ) -> some View {
         let rowState = controller.rowStates[document.id]
@@ -939,7 +932,6 @@ private struct SidebarGroupListContent: View {
 
         return ReaderSidebarDocumentRow(
             state: rowState,
-            currentDate: currentDate,
             settings: settingsStore.currentSettings,
             documents: allDocuments,
             readerStore: document.readerStore,
