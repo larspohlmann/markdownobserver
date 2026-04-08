@@ -11,6 +11,7 @@ final class SidebarGroupStateController {
     var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
     var pinnedGroupIDs: Set<String> = [] { didSet { recomputeGroupingIfNeeded() } }
     var collapsedGroupIDs: Set<String> = []
+    var manualGroupOrder: [String]?
 
     // MARK: - Computed Outputs
 
@@ -113,6 +114,17 @@ final class SidebarGroupStateController {
         }
     }
 
+    func moveGroup(from sourceIndex: Int, to destinationIndex: Int) {
+        guard case .grouped(let groups) = computedGrouping else { return }
+        var orderedIDs = groups.map(\.id)
+        guard sourceIndex < orderedIDs.count else { return }
+        let movedID = orderedIDs.remove(at: sourceIndex)
+        let adjustedDestination = min(destinationIndex, orderedIDs.count)
+        orderedIDs.insert(movedID, at: adjustedDestination)
+        manualGroupOrder = orderedIDs
+        sortMode = .manualOrder
+    }
+
     // MARK: - Private
 
     private func recomputeGroupingIfNeeded() {
@@ -153,6 +165,18 @@ final class SidebarGroupStateController {
             precomputedIndicatorStates: groupIndicatorStates,
             precomputedIndicatorPulseTokens: groupIndicatorPulseTokens
         )
+
+        if let manualOrder = manualGroupOrder,
+           case .grouped(let groups) = computedGrouping {
+            let groupMap = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
+            let reordered: [ReaderSidebarGrouping.Group] = manualOrder.compactMap { groupMap[$0] }
+            let remaining = groups.filter { group in !manualOrder.contains(group.id) }
+            if reordered.count == groups.count {
+                computedGrouping = .grouped(reordered)
+            } else {
+                computedGrouping = .grouped(reordered + remaining)
+            }
+        }
     }
 
     private func rebuildGroupIndicatorStates() {

@@ -246,6 +246,28 @@ struct SidebarGroupStateControllerTests {
         #expect(snapshot.collapsedGroupIDs == ["/b"])
     }
 
+    @Test @MainActor func moveGroupSetsManualOrderAndSwitchesSortMode() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta", "gamma"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(harness.documents)
+
+        controller.moveGroup(from: 2, to: 0)
+
+        guard case .grouped(let groups) = controller.computedGrouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+
+        #expect(controller.sortMode == .manualOrder)
+        let gammaPath = harness.directoryPath(for: "gamma")
+        #expect(groups.first?.id == gammaPath)
+    }
+
     @Test @MainActor func prunesStaleGroupIDsWhenDocumentsChange() throws {
         let harness = try ReaderSidebarGroupingTestHarness(
             subdirectories: ["src"],
