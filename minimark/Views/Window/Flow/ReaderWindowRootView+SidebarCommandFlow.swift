@@ -310,6 +310,53 @@ extension ReaderWindowRootView {
         }
     }
 
+    func updateFolderWatchExclusions(_ newExcludedPaths: [String]) {
+        guard let session = sharedFolderWatchSession else { return }
+
+        let oldExcludedSet = Set(session.options.excludedSubdirectoryPaths)
+
+        do {
+            try sidebarDocumentController.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
+        } catch {
+            sidebarDocumentController.selectedReaderStore.presentError(error)
+            return
+        }
+
+        let newExcludedSet = Set(newExcludedPaths)
+        let newlyExcludedPaths = newExcludedSet.subtracting(oldExcludedSet)
+        if !newlyExcludedPaths.isEmpty {
+            closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
+        }
+
+        syncFavoriteExclusionsIfNeeded(newExcludedPaths)
+
+        refreshWindowPresentation()
+    }
+
+    private func closeDocumentsInExcludedPaths(_ excludedPaths: [String]) {
+        let excludedPrefixes = excludedPaths.map { path in
+            path.hasSuffix("/") ? path : path + "/"
+        }
+
+        let documentsToClose = sidebarDocumentController.documents.filter { doc in
+            guard let fileURL = doc.readerStore.fileURL else { return false }
+            let filePath = fileURL.path
+            return excludedPrefixes.contains { filePath.hasPrefix($0) }
+        }
+
+        for doc in documentsToClose {
+            sidebarDocumentController.closeDocument(doc.id)
+        }
+    }
+
+    private func syncFavoriteExclusionsIfNeeded(_ excludedPaths: [String]) {
+        guard let favoriteID = activeFavoriteID else { return }
+        settingsStore.updateFavoriteWatchedFolderExclusions(
+            id: favoriteID,
+            excludedSubdirectoryPaths: excludedPaths
+        )
+    }
+
     func persistFinalWorkspaceStateIfNeeded() {
         guard let favoriteID = activeFavoriteID, let state = activeFavoriteWorkspaceState else {
             return

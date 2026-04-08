@@ -1,5 +1,16 @@
 import Foundation
 
+enum FolderWatchUpdateError: Error, LocalizedError {
+    case noActiveWatch
+
+    var errorDescription: String? {
+        switch self {
+        case .noActiveWatch:
+            return "No folder is currently being watched."
+        }
+    }
+}
+
 @MainActor
 final class ReaderFolderWatchController {
     private static let scanProgressLingerDuration: Duration = .milliseconds(500)
@@ -185,6 +196,24 @@ final class ReaderFolderWatchController {
         didInitialMarkdownScanFail = false
         contentScanProgress = nil
         scannedFileCount = nil
+    }
+
+    func updateExcludedSubdirectories(_ paths: [String]) throws {
+        guard let session = activeFolderWatchSession else {
+            throw FolderWatchUpdateError.noActiveWatch
+        }
+
+        let updatedOptions = ReaderFolderWatchOptions(
+            openMode: session.options.openMode,
+            scope: session.options.scope,
+            excludedSubdirectoryPaths: paths
+        )
+
+        try startWatching(
+            folderURL: session.folderURL,
+            options: updatedOptions,
+            performInitialAutoOpen: false
+        )
     }
 
     func dismissFolderWatchAutoOpenWarning() {

@@ -10,6 +10,7 @@ struct WatchPill: View {
     let onRevealInFinder: () -> Void
     let isAppearanceLocked: Bool
     let onToggleAppearanceLock: () -> Void
+    let onEditSubfolders: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
@@ -119,6 +120,22 @@ struct WatchPill: View {
             .accessibilityLabel("Watched folder path")
             .accessibilityValue(tildeAbbreviatedPath)
             .accessibilityHint("Opens the watched folder in Finder")
+
+            if activeFolderWatch.options.scope == .includeSubfolders {
+                Button {
+                    onEditSubfolders()
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary.opacity(0.4))
+                .help("Edit subfolders")
+                .accessibilityLabel("Edit subfolders")
+                .accessibilityHint("Choose which subfolders to include or exclude")
+            }
 
             WatchPillFavoriteStarToggle(
                 isCurrentWatchAFavorite: isCurrentWatchAFavorite,

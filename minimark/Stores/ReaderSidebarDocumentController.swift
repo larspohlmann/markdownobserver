@@ -403,6 +403,10 @@ final class ReaderSidebarDocumentController {
         folderWatchController.stopWatching()
     }
 
+    func updateFolderWatchExcludedSubdirectories(_ paths: [String]) throws {
+        try folderWatchController.updateExcludedSubdirectories(paths)
+    }
+
     func stopWatchingFolders(_ documentIDs: Set<UUID>) {
         guard documentIDs.contains(where: { documentID in
             guard let document = documents.first(where: { $0.id == documentID }) else {

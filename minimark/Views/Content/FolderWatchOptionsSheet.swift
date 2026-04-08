@@ -950,7 +950,7 @@ private struct LargeFolderExclusionDialog: View {
     }
 }
 
-private struct FolderWatchTreeNodeRow: View {
+struct FolderWatchTreeNodeRow: View {
     let node: FolderWatchDirectoryNode
     let level: Int
     @Binding var expandedDirectoryPaths: Set<String>
