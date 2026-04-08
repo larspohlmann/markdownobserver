@@ -53,7 +53,7 @@ struct EditFolderWatchSheet: View {
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .accessibilityAddTraits(.isHeader)
 
-                    Text(folderURL.path)
+                    Text(abbreviatePathWithTilde(folderURL.path))
                         .font(.system(size: 12, weight: .regular, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -156,7 +156,7 @@ struct EditFolderWatchSheet: View {
                 .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
                 .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
-                .disabled(scanModel.isLoading)
+                .disabled(scanModel.isLoading || scanModel.summary == nil)
             }
         }
         .padding(22)

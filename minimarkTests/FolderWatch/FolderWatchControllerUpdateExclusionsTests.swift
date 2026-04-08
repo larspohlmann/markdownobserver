@@ -65,4 +65,38 @@ struct FolderWatchControllerUpdateExclusionsTests {
             try controller.updateExcludedSubdirectories(["/some/path"])
         }
     }
+
+    @Test func updateExclusionsSkipsRestartWhenUnchanged() throws {
+        let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
+        let options = ReaderFolderWatchOptions(
+            openMode: .watchChangesOnly,
+            scope: .includeSubfolders,
+            excludedSubdirectoryPaths: ["/tmp/test-folder/excluded"]
+        )
+
+        let watcher = TestFolderWatcher()
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.update-excl-noop.\(UUID().uuidString)"
+        )
+        let controller = ReaderFolderWatchController(
+            folderWatcher: watcher,
+            settingsStore: settingsStore,
+            securityScope: TestSecurityScopeAccess(),
+            systemNotifier: TestReaderSystemNotifier(),
+            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+        )
+
+        try controller.startWatching(folderURL: folderURL, options: options, performInitialAutoOpen: false)
+        #expect(watcher.startCallCount == 1)
+
+        try controller.updateExcludedSubdirectories(["/tmp/test-folder/excluded"])
+        #expect(watcher.startCallCount == 1)
+
+        try controller.updateExcludedSubdirectories(["/tmp/test-folder/excluded", "/tmp/test-folder/other"])
+        #expect(watcher.startCallCount == 2)
+
+        try controller.updateExcludedSubdirectories(["/tmp/test-folder/other", "/tmp/test-folder/excluded"])
+        #expect(watcher.startCallCount == 2)
+    }
 }

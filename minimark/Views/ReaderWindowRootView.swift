@@ -176,8 +176,9 @@ struct ReaderWindowRootView: View {
                         folderURL: session.folderURL,
                         currentExcludedSubdirectoryPaths: session.options.excludedSubdirectoryPaths,
                         onConfirm: { newExclusions in
-                            updateFolderWatchExclusions(newExclusions)
-                            isEditingSubfolders = false
+                            if updateFolderWatchExclusions(newExclusions) {
+                                isEditingSubfolders = false
+                            }
                         },
                         onCancel: {
                             isEditingSubfolders = false

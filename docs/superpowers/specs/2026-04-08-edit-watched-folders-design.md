@@ -14,7 +14,7 @@ The sidebar groups documents by parent directory. Currently these groups only ch
 
 ### 1. WatchPill Edit Button
 
-Add a pencil icon button (`pencil.circle`) between the path button and the star toggle on the WatchPill. Only visible when `scope == .includeSubfolders` (subfolder exclusions are irrelevant for single-folder scope).
+Add an "Edit" text button with a `folder.badge.gearshape` icon between the path button and the Stop button on the WatchPill. Only visible when `scope == .includeSubfolders` (subfolder exclusions are irrelevant for single-folder scope).
 
 New callback on `WatchPill`: `onEditSubfolders: () -> Void`.
 

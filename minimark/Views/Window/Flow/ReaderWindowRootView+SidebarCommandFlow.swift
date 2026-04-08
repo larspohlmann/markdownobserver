@@ -310,10 +310,22 @@ extension ReaderWindowRootView {
         }
     }
 
-    func updateFolderWatchExclusions(_ newExcludedPaths: [String]) {
-        guard let session = sharedFolderWatchSession else { return }
+    @discardableResult
+    func updateFolderWatchExclusions(_ newExcludedPaths: [String]) -> Bool {
+        guard let session = sharedFolderWatchSession else { return false }
 
-        let oldExcludedSet = Set(session.options.excludedSubdirectoryPaths)
+        let normalizedOld = Set(
+            session.options.encodedForFolder(session.folderURL).excludedSubdirectoryPaths
+        )
+        let normalizedNew = Set(
+            ReaderFolderWatchOptions(
+                openMode: session.options.openMode,
+                scope: session.options.scope,
+                excludedSubdirectoryPaths: newExcludedPaths
+            ).encodedForFolder(session.folderURL).excludedSubdirectoryPaths
+        )
+
+        guard normalizedOld != normalizedNew else { return true }
 
         syncFavoriteExclusionsIfNeeded(newExcludedPaths)
 
@@ -321,38 +333,42 @@ extension ReaderWindowRootView {
             try sidebarDocumentController.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
         } catch {
             sidebarDocumentController.selectedReaderStore.presentError(error)
-            return
+            return false
         }
 
-        let newExcludedSet = Set(newExcludedPaths)
-        let newlyExcludedPaths = newExcludedSet.subtracting(oldExcludedSet)
+        let newlyExcludedPaths = normalizedNew.subtracting(normalizedOld)
         if !newlyExcludedPaths.isEmpty {
             closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
         }
 
-        let newlyIncludedPaths = oldExcludedSet.subtracting(newExcludedSet)
+        let newlyIncludedPaths = normalizedOld.subtracting(normalizedNew)
         if !newlyIncludedPaths.isEmpty, session.options.openMode == .openAllMarkdownFiles {
             openFilesInNewlyIncludedPaths(Array(newlyIncludedPaths))
         }
 
         refreshWindowPresentation()
+        return true
     }
 
     private func closeDocumentsInExcludedPaths(_ excludedPaths: [String]) {
         let excludedPrefixes = excludedPaths.map { path in
-            path.hasSuffix("/") ? path : path + "/"
+            let normalized = ReaderFileRouting.normalizedFileURL(
+                URL(fileURLWithPath: path, isDirectory: true)
+            ).path
+            return normalized.hasSuffix("/") ? normalized : normalized + "/"
         }
 
         let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
             doc.readerStore.fileURL.map { url in
-                excludedPrefixes.contains { url.path.hasPrefix($0) }
+                let normalized = ReaderFileRouting.normalizedFileURL(url).path
+                return excludedPrefixes.contains { normalized.hasPrefix($0) }
             }
         } ?? false
 
         let documentsToClose = sidebarDocumentController.documents.filter { doc in
             guard let fileURL = doc.readerStore.fileURL else { return false }
-            let filePath = fileURL.path
-            return excludedPrefixes.contains { filePath.hasPrefix($0) }
+            let normalized = ReaderFileRouting.normalizedFileURL(fileURL).path
+            return excludedPrefixes.contains { normalized.hasPrefix($0) }
         }
 
         for doc in documentsToClose {
@@ -366,20 +382,25 @@ extension ReaderWindowRootView {
 
     private func openFilesInNewlyIncludedPaths(_ includedPaths: [String]) {
         let includedPrefixes = includedPaths.map { path in
-            path.hasSuffix("/") ? path : path + "/"
+            let normalized = ReaderFileRouting.normalizedFileURL(
+                URL(fileURLWithPath: path, isDirectory: true)
+            ).path
+            return normalized.hasSuffix("/") ? normalized : normalized + "/"
         }
 
         sidebarDocumentController.scanCurrentMarkdownFiles { [self] scannedURLs in
             guard let session = sharedFolderWatchSession else { return }
 
             let alreadyOpenPaths = Set(
-                sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL?.path }
+                sidebarDocumentController.documents.compactMap {
+                    ReaderFileRouting.normalizedFileURL($0.readerStore.fileURL!).path
+                }
             )
 
             let newFileURLs = scannedURLs.filter { url in
-                let path = url.path
-                guard !alreadyOpenPaths.contains(path) else { return false }
-                return includedPrefixes.contains { path.hasPrefix($0) }
+                let normalized = ReaderFileRouting.normalizedFileURL(url).path
+                guard !alreadyOpenPaths.contains(normalized) else { return false }
+                return includedPrefixes.contains { normalized.hasPrefix($0) }
             }
 
             if !newFileURLs.isEmpty {

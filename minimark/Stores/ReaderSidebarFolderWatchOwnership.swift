@@ -209,6 +209,11 @@ final class ReaderFolderWatchController {
             excludedSubdirectoryPaths: paths
         )
 
+        let normalizedOld = session.options.encodedForFolder(session.folderURL)
+        let normalizedNew = updatedOptions.encodedForFolder(session.folderURL)
+
+        guard normalizedOld != normalizedNew else { return }
+
         try startWatching(
             folderURL: session.folderURL,
             options: updatedOptions,

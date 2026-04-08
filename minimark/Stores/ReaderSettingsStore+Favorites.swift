@@ -183,13 +183,14 @@ extension ReaderSettingsStore {
             }
 
             let existing = settings.favoriteWatchedFolders[index]
-            let updatedOptions = ReaderFolderWatchOptions(
+            let folderURL = URL(fileURLWithPath: existing.folderPath, isDirectory: true)
+            let normalizedOptions = ReaderFolderWatchOptions(
                 openMode: existing.options.openMode,
                 scope: existing.options.scope,
                 excludedSubdirectoryPaths: excludedSubdirectoryPaths
-            )
+            ).encodedForFolder(folderURL)
 
-            guard existing.options != updatedOptions else {
+            guard existing.options != normalizedOptions else {
                 return
             }
 
@@ -197,7 +198,7 @@ extension ReaderSettingsStore {
                 id: existing.id,
                 name: existing.name,
                 folderPath: existing.folderPath,
-                options: updatedOptions,
+                options: normalizedOptions,
                 bookmarkData: existing.bookmarkData,
                 openDocumentRelativePaths: existing.openDocumentRelativePaths,
                 allKnownRelativePaths: existing.allKnownRelativePaths,
