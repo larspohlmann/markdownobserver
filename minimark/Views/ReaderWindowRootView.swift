@@ -31,7 +31,7 @@ struct ReaderWindowRootView: View {
     @State var appearanceController: WindowAppearanceController
     @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     @State private var isTitlebarEditingFavorites = false
-    @State var isEditingSubfolders = false
+    @State private var isEditingSubfolders = false
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
