@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 enum ReaderSidebarWorkspaceMetrics {
     static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 220
@@ -632,50 +631,13 @@ private struct ReaderSidebarGroupHeader: View {
     }
 }
 
-private struct SidebarGroupDropDelegate: DropDelegate {
-    let groups: [ReaderSidebarGrouping.Group]
-    let currentGroupIndex: Int
-    @Binding var dropTargetIndex: Int?
-    @Binding var draggedGroupID: String?
-    let onDrop: (Int, Int) -> Void
-
-    func validateUpdate(info: DropInfo) -> Bool {
-        true
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func dropEntered(info: DropInfo) {
-        guard draggedGroupID != nil else { return }
-        withAnimation(.easeInOut(duration: 0.2)) {
-            dropTargetIndex = currentGroupIndex
-        }
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        guard let draggedID = draggedGroupID,
-              let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }) else {
-            draggedGroupID = nil
-            dropTargetIndex = nil
-            return false
-        }
-
-        let targetIndex = currentGroupIndex
-        withAnimation(.easeInOut(duration: 0.25)) {
-            onDrop(sourceIndex, targetIndex)
-            draggedGroupID = nil
-        }
-        return true
-    }
-
-    func dropExited(info: DropInfo) {
-        if dropTargetIndex == currentGroupIndex {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                dropTargetIndex = nil
-            }
-        }
+private struct SidebarGroupDropIndicator: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.accentColor.opacity(0.5))
+            .frame(height: 2)
+            .padding(.horizontal, 12)
+            .transition(.opacity)
     }
 }
 
@@ -734,35 +696,16 @@ private struct SidebarGroupListContent: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
-                    groupedSection(for: group, currentDate: currentDate)
-                        .opacity(draggedGroupID == group.id ? 0.4 : 1.0)
-                        .onDrag {
-                            draggedGroupID = group.id
-                            return NSItemProvider(object: group.id as NSString)
-                        }
-                        .onDrop(
-                            of: [.text],
-                            delegate: SidebarGroupDropDelegate(
-                                groups: groups,
-                                currentGroupIndex: index,
-                                dropTargetIndex: $dropTargetIndex,
-                                draggedGroupID: $draggedGroupID,
-                                onDrop: { sourceIndex, destinationIndex in
-                                    withAnimation(.easeInOut(duration: 0.25)) {
-                                        groupState.moveGroup(from: sourceIndex, to: destinationIndex)
-                                        dropTargetIndex = nil
-                                    }
-                                }
-                            )
-                        )
+                    groupedSection(for: group, at: index, currentDate: currentDate)
 
-                    if dropTargetIndex == index && draggedGroupID != nil {
-                        Rectangle()
-                            .fill(Color.accentColor.opacity(0.4))
-                            .frame(height: 2)
-                            .padding(.horizontal, 12)
-                            .transition(.opacity)
+                    if dropTargetIndex == index && draggedGroupID != nil && draggedGroupID != group.id {
+                        SidebarGroupDropIndicator()
                     }
+                }
+
+                if let lastIdx = groups.indices.last,
+                   dropTargetIndex == lastIdx + 1 && draggedGroupID != nil {
+                    SidebarGroupDropIndicator()
                 }
             }
             .padding(.horizontal, 8)
@@ -772,6 +715,7 @@ private struct SidebarGroupListContent: View {
 
     private func groupedSection(
         for group: ReaderSidebarGrouping.Group,
+        at index: Int,
         currentDate: Date
     ) -> some View {
         let header = ReaderSidebarGroupHeader(
@@ -806,6 +750,64 @@ private struct SidebarGroupListContent: View {
                 }
             }
         )
+        .opacity(draggedGroupID == group.id ? 0.4 : 1.0)
+        .gesture(
+            DragGesture(minimumDistance: 5, coordinateSpace: .global)
+                .onChanged { value in
+                    handleDragUpdate(value, groupIndex: index)
+                }
+                .onEnded { value in
+                    handleDragEnd(value, groups: groupState.computedGrouping)
+                }
+        )
+    }
+
+    private func handleDragUpdate(_ value: DragGesture.Value, groupIndex: Int) {
+        guard case .grouped(let groups) = groupState.computedGrouping else { return }
+        let dropY = value.location.y
+        let newTarget = targetIndexFromY(dropY, groupCount: groups.count)
+        if newTarget != dropTargetIndex {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                dropTargetIndex = newTarget
+            }
+        }
+    }
+
+    private func handleDragEnd(_ value: DragGesture.Value, groups grouping: ReaderSidebarGrouping) {
+        guard let draggedID = draggedGroupID,
+              case .grouped(let groups) = grouping,
+              let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }),
+              let target = dropTargetIndex else {
+            draggedGroupID = nil
+            dropTargetIndex = nil
+            return
+        }
+
+        let destinationIndex: Int
+        if target <= sourceIndex {
+            destinationIndex = target
+        } else {
+            destinationIndex = target - 1
+        }
+
+        if sourceIndex != destinationIndex {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                groupState.moveGroup(from: sourceIndex, to: destinationIndex)
+            }
+        }
+
+        draggedGroupID = nil
+        dropTargetIndex = nil
+    }
+
+    private func targetIndexFromY(_ y: CGFloat, groupCount: Int) -> Int {
+        guard groupCount > 0 else { return 0 }
+        let estimatedSectionHeight: CGFloat = 36
+        let spacing: CGFloat = 4
+        let verticalPadding: CGFloat = 6
+        let adjustedY = y - verticalPadding
+        let index = Int(adjustedY / (estimatedSectionHeight + spacing))
+        return max(0, min(index, groupCount))
     }
 
     private func groupedDocumentRow(
@@ -911,30 +913,34 @@ private struct AnimatedSidebarGroupSection<Content: View>: View {
     let header: ReaderSidebarGroupHeader
     @ViewBuilder let content: () -> Content
 
+    @State private var isHovering = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button {
-                onToggleExpanded(!isExpanded)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 16, height: 16)
-                        .background(.quaternary.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                        .rotationEffect(isExpanded ? .degrees(90) : .zero)
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .background(.quaternary.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    .rotationEffect(isExpanded ? .degrees(90) : .zero)
 
-                    header
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Color(nsColor: .labelColor).opacity(0.04))
-                )
+                header
             }
-            .buttonStyle(.plain)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(isHovering ? Color.primary.opacity(0.06) : Color(nsColor: .labelColor).opacity(0.04))
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onToggleExpanded(!isExpanded)
+            }
+            .onHover { hovering in
+                isHovering = hovering
+            }
             .accessibilityIdentifier("sidebar-group-toggle")
             .accessibilityLabel(isExpanded ? "Collapse group" : "Expand group")
             .accessibilityValue(groupDisplayName)
