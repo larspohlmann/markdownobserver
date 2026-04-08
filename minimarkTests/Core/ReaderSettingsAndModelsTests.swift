@@ -680,7 +680,7 @@ struct ReaderSettingsAndModelsTests {
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
         let fileURL = watchedFolderURL.appendingPathComponent("roadmap.md")
 
-        notifier.notifyFileAutoLoaded(
+        notifier.notifyFileChanged(
             fileURL,
             changeKind: .modified,
             watchedFolderURL: watchedFolderURL
@@ -695,9 +695,9 @@ struct ReaderSettingsAndModelsTests {
 
         let request = try #require(notificationCenter.addedRequests.first)
         #expect(request.trigger == nil)
-        #expect(request.content.title == "roadmap.md")
-        #expect(request.content.subtitle == "Folder watch: docs")
-        #expect(request.content.body == "Updated and opened in MarkdownObserver")
+        #expect(request.content.title == "🟡 Modified")
+        #expect(request.content.subtitle == "roadmap.md")
+        #expect(request.content.body == "")
         #expect(request.content.userInfo["filePath"] as? String == fileURL.path)
         #expect(request.content.userInfo["watchedFolderPath"] as? String == watchedFolderURL.path)
     }

@@ -45,10 +45,10 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.notifier.externalChangeNotifications == [
-            TestReaderSystemNotifier.ExternalChangeNotification(
+        #expect(fixture.notifier.fileChangeNotifications == [
+            TestReaderSystemNotifier.FileChangeNotification(
                 fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
-                autoRefreshed: false,
+                changeKind: .modified,
                 watchedFolderURL: nil
             )
         ])
@@ -64,7 +64,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.notifier.externalChangeNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func folderWatchAutoOpenSkipsSystemNotificationWhenDisabled() throws {
@@ -76,7 +76,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        #expect(fixture.notifier.autoLoadedNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func decoratedWindowTitlePrependsAsteriskOnlyWhenPending() throws {
@@ -280,7 +280,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        #expect(fixture.notifier.autoLoadedNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func folderWatchAutoOpenStillHighlightsAfterIgnoredInitialWatcherNoise() throws {
@@ -524,7 +524,7 @@ struct ReaderStoreExternalChangeTests {
         await Task.yield()
 
         #expect(fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.notifier.externalChangeNotifications.count == 1)
+        #expect(fixture.notifier.fileChangeNotifications.count == 1)
     }
 
     @Test @MainActor func autoRefreshDisabledStillMarksExternalChangeAsPending() throws {
@@ -587,7 +587,7 @@ struct ReaderStoreExternalChangeTests {
         ])
 
         #expect(!fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.notifier.externalChangeNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
         #expect(fixture.watcher.startCallCount == 1)
     }
 
@@ -611,7 +611,7 @@ struct ReaderStoreExternalChangeTests {
         await Task.yield()
 
         #expect(fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.notifier.externalChangeNotifications.count == 1)
+        #expect(fixture.notifier.fileChangeNotifications.count == 1)
     }
 
     @Test @MainActor func watchedFolderChangesOpenMarkdownAsAdditionalDocuments() throws {
