@@ -315,6 +315,8 @@ extension ReaderWindowRootView {
 
         let oldExcludedSet = Set(session.options.excludedSubdirectoryPaths)
 
+        syncFavoriteExclusionsIfNeeded(newExcludedPaths)
+
         do {
             try sidebarDocumentController.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
         } catch {
@@ -327,8 +329,6 @@ extension ReaderWindowRootView {
         if !newlyExcludedPaths.isEmpty {
             closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
         }
-
-        syncFavoriteExclusionsIfNeeded(newExcludedPaths)
 
         refreshWindowPresentation()
     }
