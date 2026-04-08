@@ -81,6 +81,7 @@ final class SidebarGroupStateController {
         fileSortMode = state.fileSortMode
         pinnedGroupIDs = state.pinnedGroupIDs
         collapsedGroupIDs = state.collapsedGroupIDs
+        savedCollapsedGroupIDs = nil
         manualGroupOrder = state.manualGroupOrder
         suppressRecompute = false
         recomputeGrouping()
@@ -244,6 +245,9 @@ final class SidebarGroupStateController {
         collapsedGroupIDs.formIntersection(activeGroupIDs)
         pinnedGroupIDs.formIntersection(activeGroupIDs)
         savedCollapsedGroupIDs?.formIntersection(activeGroupIDs)
+        if let manualGroupOrder {
+            self.manualGroupOrder = manualGroupOrder.filter { activeGroupIDs.contains($0) }
+        }
     }
 
     private func applyManualOrder(_ manualOrder: [String], to groups: [ReaderSidebarGrouping.Group]) -> [ReaderSidebarGrouping.Group] {

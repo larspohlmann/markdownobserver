@@ -267,11 +267,13 @@ final class minimarkUITests: XCTestCase {
         let endCoord = docsToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         startCoord.click(forDuration: 0.3, thenDragTo: endCoord)
 
-        sleep(1)
-
         let afterToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
         let afterPlans = afterToggles.matching(NSPredicate(format: "value == 'plans'")).firstMatch
         let afterDocs = afterToggles.matching(NSPredicate(format: "value == 'docs'")).firstMatch
+
+        waitForCondition(timeout: 5) {
+            afterPlans.frame.origin.y > afterDocs.frame.origin.y
+        }
 
         XCTAssertGreaterThan(
             afterPlans.frame.origin.y,
