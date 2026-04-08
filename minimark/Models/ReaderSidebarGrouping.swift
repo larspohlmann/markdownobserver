@@ -221,6 +221,8 @@ enum ReaderSidebarGrouping: Equatable {
                         return comparison == .orderedAscending
                     }
                     return lhs.offset < rhs.offset
+                case .manualOrder:
+                    return lhs.offset < rhs.offset
                 }
             }
             .map(\.element)

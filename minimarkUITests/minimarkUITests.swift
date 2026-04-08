@@ -236,6 +236,52 @@ final class minimarkUITests: XCTestCase {
         XCTAssertTrue(customToggle.waitForExistence(timeout: 5), "Grouped sidebar should expose custom group toggle buttons")
     }
 
+    // MARK: - Group Drag-and-Drop Reordering
+
+    @MainActor
+    func testGroupedSidebarDragAndDropReordersGroups() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
+        app.launch()
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 10), "Window should appear")
+
+        let groupToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
+        waitForCondition(timeout: 10) {
+            groupToggles.count >= 6
+        }
+
+        let plansToggle = groupToggles.matching(NSPredicate(format: "value == 'plans'")).firstMatch
+        let docsToggle = groupToggles.matching(NSPredicate(format: "value == 'docs'")).firstMatch
+        XCTAssertTrue(plansToggle.exists, "Plans group should exist")
+        XCTAssertTrue(docsToggle.exists, "Docs group should exist")
+
+        XCTAssertLessThan(
+            plansToggle.frame.origin.y,
+            docsToggle.frame.origin.y,
+            "Plans group should be above docs group initially"
+        )
+
+        let startCoord = plansToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let endCoord = docsToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        startCoord.click(forDuration: 0.3, thenDragTo: endCoord)
+
+        let afterToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
+        let afterPlans = afterToggles.matching(NSPredicate(format: "value == 'plans'")).firstMatch
+        let afterDocs = afterToggles.matching(NSPredicate(format: "value == 'docs'")).firstMatch
+
+        waitForCondition(timeout: 5) {
+            afterPlans.frame.origin.y > afterDocs.frame.origin.y
+        }
+
+        XCTAssertGreaterThan(
+            afterPlans.frame.origin.y,
+            afterDocs.frame.origin.y,
+            "Plans should be below docs after being dragged down"
+        )
+    }
+
     // MARK: - Sidebar Width Stability
 
     @MainActor

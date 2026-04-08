@@ -69,6 +69,7 @@ extension ReaderWindowRootView {
         workspaceState.fileSortMode = groupSnapshot.fileSortMode
         workspaceState.groupSortMode = groupSnapshot.sortMode
         workspaceState.lockedAppearance = appearanceController.lockedAppearance
+        workspaceState.manualGroupOrder = groupSnapshot.manualGroupOrder
         settingsStore.addFavoriteWatchedFolder(
             name: name,
             folderURL: session.folderURL,
