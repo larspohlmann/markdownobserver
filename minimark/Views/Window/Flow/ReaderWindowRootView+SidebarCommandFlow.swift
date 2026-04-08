@@ -393,7 +393,7 @@ extension ReaderWindowRootView {
 
             let alreadyOpenPaths = Set(
                 sidebarDocumentController.documents.compactMap {
-                    ReaderFileRouting.normalizedFileURL($0.readerStore.fileURL!).path
+                    $0.readerStore.fileURL.map { ReaderFileRouting.normalizedFileURL($0).path }
                 }
             )
 
