@@ -147,7 +147,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
             Spacer(minLength: 0)
 
-            if case .grouped = groupState.computedGrouping {
+            if groupState.isGrouped {
                 sidebarExpandCollapseButtons
             }
         }
@@ -157,46 +157,30 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var sidebarExpandCollapseButtons: some View {
         HStack(spacing: 2) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    groupState.expandAllGroups()
-                }
-            } label: {
-                Image(systemName: "rectangle.expand.vertical")
-                    .font(.system(size: 10, weight: .semibold))
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
+            sidebarToolbarButton("rectangle.expand.vertical", help: "Expand all groups") {
+                groupState.expandAllGroups()
             }
-            .buttonStyle(.borderless)
-            .help("Expand all groups")
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    groupState.collapseAllGroups()
-                }
-            } label: {
-                Image(systemName: "rectangle.compress.vertical")
-                    .font(.system(size: 10, weight: .semibold))
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
+            sidebarToolbarButton("rectangle.compress.vertical", help: "Collapse all groups") {
+                groupState.collapseAllGroups()
             }
-            .buttonStyle(.borderless)
-            .help("Collapse all groups")
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    groupState.restoreManualExpandState()
-                }
-            } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 10, weight: .semibold))
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
+            sidebarToolbarButton("arrow.uturn.backward", help: "Restore manual expand/collapse state") {
+                groupState.restoreManualExpandState()
             }
-            .buttonStyle(.borderless)
             .disabled(!groupState.isInBulkExpandState)
-            .help("Restore manual expand/collapse state")
         }
+    }
+
+    private func sidebarToolbarButton(_ systemName: String, help: String, action: @escaping () -> Void) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { action() }
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 10, weight: .semibold))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .help(help)
     }
 
     private var detailColumn: some View {
@@ -745,17 +729,22 @@ private struct SidebarGroupListContent: View {
         groups: [ReaderSidebarGrouping.Group],
         currentDate: Date
     ) -> some View {
+        let dragSourceIndex = draggedGroupID.flatMap { id in
+            groups.firstIndex { $0.id == id }
+        }
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
-                    if dropTargetIndex == index && isEffectiveDrop(to: index) {
+                    if let target = dropTargetIndex, let source = dragSourceIndex,
+                       target == index && target != source && target != source + 1 {
                         SidebarGroupDropIndicator()
                     }
 
                     groupedSection(for: group, at: index, currentDate: currentDate)
                 }
 
-                if dropTargetIndex == groups.count && isEffectiveDrop(to: groups.count) {
+                if let target = dropTargetIndex, let source = dragSourceIndex,
+                   target == groups.count && target != source && target != source + 1 {
                     SidebarGroupDropIndicator()
                 }
             }
@@ -835,10 +824,7 @@ private struct SidebarGroupListContent: View {
               case .grouped(let groups) = grouping,
               let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }),
               let target = dropTargetIndex else {
-            draggedGroupID = nil
-            dropTargetIndex = nil
-            dragTranslation = .zero
-            lastDragEndDate = Date()
+            resetDragState()
             return
         }
 
@@ -855,10 +841,18 @@ private struct SidebarGroupListContent: View {
             }
         }
 
+        resetDragState()
+    }
+
+    private func resetDragState() {
         draggedGroupID = nil
         dropTargetIndex = nil
         dragTranslation = .zero
         lastDragEndDate = Date()
+        if case .grouped(let groups) = groupState.computedGrouping {
+            let activeIDs = Set(groups.map(\.id))
+            groupFrameCache.frames = groupFrameCache.frames.filter { activeIDs.contains($0.key) }
+        }
     }
 
     private func targetIndexFromGlobalY(_ globalY: CGFloat, groups: [ReaderSidebarGrouping.Group]) -> Int {
@@ -870,15 +864,6 @@ private struct SidebarGroupListContent: View {
             }
         }
         return groups.count
-    }
-
-    private func isEffectiveDrop(to targetIndex: Int) -> Bool {
-        guard let draggedID = draggedGroupID,
-              case .grouped(let groups) = groupState.computedGrouping,
-              let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }) else {
-            return false
-        }
-        return targetIndex != sourceIndex && targetIndex != sourceIndex + 1
     }
 
     private func groupedDocumentRow(

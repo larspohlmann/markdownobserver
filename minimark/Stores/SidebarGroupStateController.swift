@@ -24,6 +24,7 @@ final class SidebarGroupStateController {
     // MARK: - Computed Outputs
 
     private(set) var computedGrouping: ReaderSidebarGrouping = .flat([])
+    private(set) var isGrouped: Bool = false
     private(set) var groupIndicatorStates: [String: [ReaderDocumentIndicatorState]] = [:]
     private(set) var groupIndicatorPulseTokens: [String: Int] = [:]
 
@@ -207,6 +208,10 @@ final class SidebarGroupStateController {
            case .grouped(let groups) = computedGrouping {
             computedGrouping = .grouped(applyManualOrder(manualOrder, to: groups))
         }
+
+        let newIsGrouped: Bool
+        if case .grouped = computedGrouping { newIsGrouped = true } else { newIsGrouped = false }
+        if newIsGrouped != isGrouped { isGrouped = newIsGrouped }
     }
 
     private func rebuildGroupIndicatorStates() {
@@ -238,9 +243,7 @@ final class SidebarGroupStateController {
         })
         collapsedGroupIDs.formIntersection(activeGroupIDs)
         pinnedGroupIDs.formIntersection(activeGroupIDs)
-        if savedCollapsedGroupIDs != nil {
-            savedCollapsedGroupIDs?.formIntersection(activeGroupIDs)
-        }
+        savedCollapsedGroupIDs?.formIntersection(activeGroupIDs)
     }
 
     private func applyManualOrder(_ manualOrder: [String], to groups: [ReaderSidebarGrouping.Group]) -> [ReaderSidebarGrouping.Group] {
