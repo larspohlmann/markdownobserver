@@ -672,8 +672,6 @@ struct ReaderWindowRootView: View {
             }
             return
         }
-
-        hasAppliedUITestLaunchConfiguration = true
     }
 
     private func resolvedUITestLaunchAction() -> ReaderWindowUITestLaunchAction {

@@ -146,9 +146,57 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             sidebarFileSortMenu
 
             Spacer(minLength: 0)
+
+            if case .grouped = groupState.computedGrouping {
+                sidebarExpandCollapseButtons
+            }
         }
         .padding(.horizontal, 12)
         .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
+    }
+
+    private var sidebarExpandCollapseButtons: some View {
+        HStack(spacing: 2) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    groupState.expandAllGroups()
+                }
+            } label: {
+                Image(systemName: "rectangle.expand.vertical")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .help("Expand all groups")
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    groupState.collapseAllGroups()
+                }
+            } label: {
+                Image(systemName: "rectangle.compress.vertical")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .help("Collapse all groups")
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    groupState.restoreManualExpandState()
+                }
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .disabled(!groupState.isInBulkExpandState)
+            .help("Restore manual expand/collapse state")
+        }
     }
 
     private var detailColumn: some View {
@@ -633,11 +681,12 @@ private struct ReaderSidebarGroupHeader: View {
 
 private struct SidebarGroupDropIndicator: View {
     var body: some View {
-        Rectangle()
-            .fill(Color.accentColor.opacity(0.5))
-            .frame(height: 2)
-            .padding(.horizontal, 12)
-            .transition(.opacity)
+        Capsule()
+            .fill(Color.accentColor)
+            .frame(height: 3)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
     }
 }
 
@@ -657,6 +706,9 @@ private struct SidebarGroupListContent: View {
     let onCloseAllDocuments: () -> Void
     @State private var draggedGroupID: String?
     @State private var dropTargetIndex: Int?
+    @State private var dragTranslation: CGSize = .zero
+    @State private var groupFrameCache = GroupFrameCache()
+    @State private var lastDragEndDate = Date.distantPast
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
@@ -696,15 +748,14 @@ private struct SidebarGroupListContent: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
-                    groupedSection(for: group, at: index, currentDate: currentDate)
-
-                    if dropTargetIndex == index && draggedGroupID != nil && draggedGroupID != group.id {
+                    if dropTargetIndex == index && isEffectiveDrop(to: index) {
                         SidebarGroupDropIndicator()
                     }
+
+                    groupedSection(for: group, at: index, currentDate: currentDate)
                 }
 
-                if let lastIdx = groups.indices.last,
-                   dropTargetIndex == lastIdx + 1 && draggedGroupID != nil {
+                if dropTargetIndex == groups.count && isEffectiveDrop(to: groups.count) {
                     SidebarGroupDropIndicator()
                 }
             }
@@ -737,6 +788,7 @@ private struct SidebarGroupListContent: View {
             groupDisplayName: group.displayName,
             isExpanded: groupState.isGroupExpanded(group.id),
             onToggleExpanded: { nextExpandedState in
+                guard Date().timeIntervalSince(lastDragEndDate) > 0.3 else { return }
                 withAnimation(.easeInOut(duration: 0.2)) {
                     groupState.setGroupExpanded(group.id, isExpanded: nextExpandedState)
                 }
@@ -751,10 +803,12 @@ private struct SidebarGroupListContent: View {
             }
         )
         .opacity(draggedGroupID == group.id ? 0.4 : 1.0)
-        .gesture(
+        .background(GroupFrameTracker(groupID: group.id, cache: groupFrameCache))
+        .offset(draggedGroupID == group.id ? dragTranslation : .zero)
+        .simultaneousGesture(
             DragGesture(minimumDistance: 5, coordinateSpace: .global)
                 .onChanged { value in
-                    handleDragUpdate(value, groupIndex: index)
+                    handleDragUpdate(value, groupID: group.id)
                 }
                 .onEnded { value in
                     handleDragEnd(value, groups: groupState.computedGrouping)
@@ -762,10 +816,13 @@ private struct SidebarGroupListContent: View {
         )
     }
 
-    private func handleDragUpdate(_ value: DragGesture.Value, groupIndex: Int) {
+    private func handleDragUpdate(_ value: DragGesture.Value, groupID: String) {
+        if draggedGroupID == nil {
+            draggedGroupID = groupID
+        }
+        dragTranslation = value.translation
         guard case .grouped(let groups) = groupState.computedGrouping else { return }
-        let dropY = value.location.y
-        let newTarget = targetIndexFromY(dropY, groupCount: groups.count)
+        let newTarget = targetIndexFromGlobalY(value.location.y, groups: groups)
         if newTarget != dropTargetIndex {
             withAnimation(.easeInOut(duration: 0.15)) {
                 dropTargetIndex = newTarget
@@ -780,6 +837,8 @@ private struct SidebarGroupListContent: View {
               let target = dropTargetIndex else {
             draggedGroupID = nil
             dropTargetIndex = nil
+            dragTranslation = .zero
+            lastDragEndDate = Date()
             return
         }
 
@@ -798,16 +857,28 @@ private struct SidebarGroupListContent: View {
 
         draggedGroupID = nil
         dropTargetIndex = nil
+        dragTranslation = .zero
+        lastDragEndDate = Date()
     }
 
-    private func targetIndexFromY(_ y: CGFloat, groupCount: Int) -> Int {
-        guard groupCount > 0 else { return 0 }
-        let estimatedSectionHeight: CGFloat = 36
-        let spacing: CGFloat = 4
-        let verticalPadding: CGFloat = 6
-        let adjustedY = y - verticalPadding
-        let index = Int(adjustedY / (estimatedSectionHeight + spacing))
-        return max(0, min(index, groupCount))
+    private func targetIndexFromGlobalY(_ globalY: CGFloat, groups: [ReaderSidebarGrouping.Group]) -> Int {
+        for (index, group) in groups.enumerated() {
+            if group.id == draggedGroupID { continue }
+            guard let frame = groupFrameCache.frames[group.id] else { continue }
+            if globalY < frame.midY {
+                return index
+            }
+        }
+        return groups.count
+    }
+
+    private func isEffectiveDrop(to targetIndex: Int) -> Bool {
+        guard let draggedID = draggedGroupID,
+              case .grouped(let groups) = groupState.computedGrouping,
+              let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }) else {
+            return false
+        }
+        return targetIndex != sourceIndex && targetIndex != sourceIndex + 1
     }
 
     private func groupedDocumentRow(
@@ -957,5 +1028,26 @@ private struct AnimatedSidebarGroupSection<Content: View>: View {
             .clipped()
         }
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
+    }
+}
+
+// MARK: - Drag-and-drop frame tracking
+
+/// Reference-type cache so GeometryReader updates don't trigger SwiftUI re-renders.
+private class GroupFrameCache {
+    var frames: [String: CGRect] = [:]
+}
+
+/// Reads the group section's global frame into the cache without causing layout loops.
+private struct GroupFrameTracker: View {
+    let groupID: String
+    let cache: GroupFrameCache
+
+    var body: some View {
+        GeometryReader { proxy in
+            let _ = cache.frames[groupID] = proxy.frame(in: .global)
+            Color.clear
+        }
+        .frame(width: 0, height: 0)
     }
 }

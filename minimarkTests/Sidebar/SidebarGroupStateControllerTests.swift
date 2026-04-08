@@ -365,4 +365,125 @@ struct SidebarGroupStateControllerTests {
         #expect(controller.collapsedGroupIDs == [srcPath])
         #expect(controller.pinnedGroupIDs == [srcPath])
     }
+
+    // MARK: - Expand/Collapse All + Restore
+
+    @Test @MainActor func expandAllThenRestoreRevertsState() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta", "gamma"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(harness.documents)
+
+        let alphaPath = harness.directoryPath(for: "alpha")
+        let betaPath = harness.directoryPath(for: "beta")
+        controller.collapsedGroupIDs = [alphaPath, betaPath]
+
+        controller.expandAllGroups()
+        #expect(controller.collapsedGroupIDs.isEmpty)
+        #expect(controller.isInBulkExpandState)
+
+        controller.restoreManualExpandState()
+        #expect(controller.collapsedGroupIDs == [alphaPath, betaPath])
+        #expect(!controller.isInBulkExpandState)
+    }
+
+    @Test @MainActor func collapseAllThenRestoreRevertsState() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta", "gamma"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let alphaPath = harness.directoryPath(for: "alpha")
+        let betaPath = harness.directoryPath(for: "beta")
+        let gammaPath = harness.directoryPath(for: "gamma")
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(harness.documents)
+        controller.collapsedGroupIDs = [gammaPath]
+
+        controller.collapseAllGroups()
+        #expect(controller.collapsedGroupIDs == [alphaPath, betaPath, gammaPath])
+        #expect(controller.isInBulkExpandState)
+
+        controller.restoreManualExpandState()
+        #expect(controller.collapsedGroupIDs == [gammaPath])
+        #expect(!controller.isInBulkExpandState)
+    }
+
+    @Test @MainActor func collapseAllThenReorderThenRestorePreservesCorrectGroups() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta", "gamma", "delta"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let alphaPath = harness.directoryPath(for: "alpha")
+        let betaPath = harness.directoryPath(for: "beta")
+        let gammaPath = harness.directoryPath(for: "gamma")
+        let deltaPath = harness.directoryPath(for: "delta")
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(harness.documents)
+
+        // 1. Collapse all
+        controller.collapsedGroupIDs = [alphaPath, betaPath, gammaPath, deltaPath]
+
+        // 2. Expand alpha and beta manually
+        controller.setGroupExpanded(alphaPath, isExpanded: true)
+        controller.setGroupExpanded(betaPath, isExpanded: true)
+        #expect(!controller.isInBulkExpandState)
+
+        // 3. Collapse all via button
+        controller.collapseAllGroups()
+        #expect(controller.collapsedGroupIDs == [alphaPath, betaPath, gammaPath, deltaPath])
+        #expect(controller.isInBulkExpandState)
+
+        // 4. Reorder via drag (move first group to third position)
+        guard case .grouped(let groups) = controller.computedGrouping else {
+            Issue.record("Expected grouped result")
+            return
+        }
+        let firstID = groups[0].id
+        controller.moveGroup(from: 0, to: 2)
+
+        // Verify reorder happened and snapshot survived
+        #expect(controller.isInBulkExpandState)
+        guard case .grouped(let reorderedGroups) = controller.computedGrouping else {
+            Issue.record("Expected grouped result after reorder")
+            return
+        }
+        #expect(reorderedGroups[0].id != firstID)
+
+        // 5. Restore
+        controller.restoreManualExpandState()
+
+        // Alpha and beta should be expanded (not collapsed), gamma and delta collapsed
+        #expect(!controller.collapsedGroupIDs.contains(alphaPath))
+        #expect(!controller.collapsedGroupIDs.contains(betaPath))
+        #expect(controller.collapsedGroupIDs.contains(gammaPath))
+        #expect(controller.collapsedGroupIDs.contains(deltaPath))
+        #expect(!controller.isInBulkExpandState)
+    }
+
+    @Test @MainActor func manualToggleClearsBulkExpandState() throws {
+        let harness = try ReaderSidebarGroupingTestHarness(
+            subdirectories: ["alpha", "beta"],
+            filesPerSubdirectory: 1
+        )
+        defer { harness.cleanup() }
+
+        let controller = SidebarGroupStateController()
+        controller.updateDocuments(harness.documents)
+
+        controller.expandAllGroups()
+        #expect(controller.isInBulkExpandState)
+
+        controller.setGroupExpanded(harness.directoryPath(for: "alpha"), isExpanded: false)
+        #expect(!controller.isInBulkExpandState)
+    }
 }

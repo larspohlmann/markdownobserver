@@ -18,6 +18,7 @@ final class SidebarGroupStateController {
     var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
     var pinnedGroupIDs: Set<String> = [] { didSet { recomputeGroupingIfNeeded() } }
     var collapsedGroupIDs: Set<String> = []
+    private(set) var savedCollapsedGroupIDs: Set<String>?
     var manualGroupOrder: [String]?
 
     // MARK: - Computed Outputs
@@ -114,6 +115,32 @@ final class SidebarGroupStateController {
         } else {
             collapsedGroupIDs.insert(groupID)
         }
+        savedCollapsedGroupIDs = nil
+    }
+
+    var isInBulkExpandState: Bool {
+        savedCollapsedGroupIDs != nil
+    }
+
+    func expandAllGroups() {
+        if savedCollapsedGroupIDs == nil {
+            savedCollapsedGroupIDs = collapsedGroupIDs
+        }
+        collapsedGroupIDs = []
+    }
+
+    func collapseAllGroups() {
+        guard case .grouped(let groups) = computedGrouping else { return }
+        if savedCollapsedGroupIDs == nil {
+            savedCollapsedGroupIDs = collapsedGroupIDs
+        }
+        collapsedGroupIDs = Set(groups.map(\.id))
+    }
+
+    func restoreManualExpandState() {
+        guard let saved = savedCollapsedGroupIDs else { return }
+        collapsedGroupIDs = saved
+        savedCollapsedGroupIDs = nil
     }
 
     func toggleGroupPin(_ groupID: String) {
@@ -211,6 +238,9 @@ final class SidebarGroupStateController {
         })
         collapsedGroupIDs.formIntersection(activeGroupIDs)
         pinnedGroupIDs.formIntersection(activeGroupIDs)
+        if savedCollapsedGroupIDs != nil {
+            savedCollapsedGroupIDs?.formIntersection(activeGroupIDs)
+        }
     }
 
     private func applyManualOrder(_ manualOrder: [String], to groups: [ReaderSidebarGrouping.Group]) -> [ReaderSidebarGrouping.Group] {
