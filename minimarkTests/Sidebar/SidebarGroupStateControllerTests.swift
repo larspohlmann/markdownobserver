@@ -224,7 +224,8 @@ struct SidebarGroupStateControllerTests {
             sidebarPosition: .sidebarLeft,
             sidebarWidth: 300,
             pinnedGroupIDs: ["/path/a"],
-            collapsedGroupIDs: ["/path/b"]
+            collapsedGroupIDs: ["/path/b"],
+            manualGroupOrder: ["/path/x", "/path/y"]
         )
 
         controller.applyWorkspaceState(state)
@@ -232,6 +233,7 @@ struct SidebarGroupStateControllerTests {
         #expect(controller.sortMode == .nameDescending)
         #expect(controller.pinnedGroupIDs == ["/path/a"])
         #expect(controller.collapsedGroupIDs == ["/path/b"])
+        #expect(controller.manualGroupOrder == ["/path/x", "/path/y"])
     }
 
     @Test @MainActor func persistenceSnapshotCapturesCurrentState() throws {

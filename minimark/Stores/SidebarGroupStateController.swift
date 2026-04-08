@@ -79,6 +79,7 @@ final class SidebarGroupStateController {
         fileSortMode = state.fileSortMode
         pinnedGroupIDs = state.pinnedGroupIDs
         collapsedGroupIDs = state.collapsedGroupIDs
+        manualGroupOrder = state.manualGroupOrder
         suppressRecompute = false
         recomputeGrouping()
     }
@@ -88,6 +89,7 @@ final class SidebarGroupStateController {
         let fileSortMode: ReaderSidebarSortMode
         let pinnedGroupIDs: Set<String>
         let collapsedGroupIDs: Set<String>
+        let manualGroupOrder: [String]?
     }
 
     var persistenceSnapshot: WorkspaceStateSnapshot {
@@ -95,7 +97,8 @@ final class SidebarGroupStateController {
             sortMode: sortMode,
             fileSortMode: fileSortMode,
             pinnedGroupIDs: pinnedGroupIDs,
-            collapsedGroupIDs: collapsedGroupIDs
+            collapsedGroupIDs: collapsedGroupIDs,
+            manualGroupOrder: manualGroupOrder
         )
     }
 

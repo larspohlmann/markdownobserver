@@ -273,13 +273,15 @@ struct ReaderWindowRootView: View {
                         state.pinnedGroupIDs != newSnapshot.pinnedGroupIDs ||
                         state.collapsedGroupIDs != newSnapshot.collapsedGroupIDs ||
                         state.groupSortMode != newSnapshot.sortMode ||
-                        state.fileSortMode != newSnapshot.fileSortMode
+                        state.fileSortMode != newSnapshot.fileSortMode ||
+                        state.manualGroupOrder != newSnapshot.manualGroupOrder
 
                     if needsUpdate {
                         state.pinnedGroupIDs = newSnapshot.pinnedGroupIDs
                         state.collapsedGroupIDs = newSnapshot.collapsedGroupIDs
                         state.groupSortMode = newSnapshot.sortMode
                         state.fileSortMode = newSnapshot.fileSortMode
+                        state.manualGroupOrder = newSnapshot.manualGroupOrder
                         activeFavoriteWorkspaceState = state
                     }
                 } else {
