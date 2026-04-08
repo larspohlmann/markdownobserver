@@ -155,17 +155,12 @@ struct ReaderNotificationStatus: Equatable {
     }
 }
 
-private enum ReaderNotificationCopy {
-    static let appName = "MarkdownObserver"
-}
-
 protocol ReaderSystemNotifying {
-    func notifyFileAutoLoaded(
+    func notifyFileChanged(
         _ fileURL: URL,
         changeKind: ReaderFolderWatchChangeKind,
         watchedFolderURL: URL?
     )
-    func notifyExternalChange(for fileURL: URL, autoRefreshed: Bool, watchedFolderURL: URL?)
 }
 
 private enum ReaderSystemNotificationUserInfoKey {
@@ -174,32 +169,16 @@ private enum ReaderSystemNotificationUserInfoKey {
 }
 
 private enum ReaderSystemNotificationEvent {
-    case fileAutoLoaded(changeKind: ReaderFolderWatchChangeKind)
-    case externalChange(autoRefreshed: Bool)
+    case fileChanged(changeKind: ReaderFolderWatchChangeKind)
 
-    var statusText: String {
+    var titleText: String {
         switch self {
-        case .fileAutoLoaded(changeKind: .added):
-            return "Opened automatically in \(ReaderNotificationCopy.appName)"
-        case .fileAutoLoaded(changeKind: .modified):
-            return "Updated and opened in \(ReaderNotificationCopy.appName)"
-        case .externalChange(autoRefreshed: true):
-            return "Reloaded after edits outside \(ReaderNotificationCopy.appName)"
-        case .externalChange(autoRefreshed: false):
-            return "Edited outside \(ReaderNotificationCopy.appName)"
-        }
-    }
-
-    var folderlessSubtitle: String {
-        switch self {
-        case .fileAutoLoaded(changeKind: .added):
-            return "New file"
-        case .fileAutoLoaded(changeKind: .modified):
-            return "Updated file"
-        case .externalChange(autoRefreshed: true):
-            return "External edit reloaded"
-        case .externalChange(autoRefreshed: false):
-            return "External edit detected"
+        case .fileChanged(changeKind: .added):
+            return "🟢 Created"
+        case .fileChanged(changeKind: .modified):
+            return "🟡 Modified"
+        case .fileChanged(changeKind: .deleted):
+            return "🔴 Deleted"
         }
     }
 }
@@ -226,19 +205,10 @@ private struct ReaderSystemNotificationDescriptor {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         let normalizedWatchedFolderURL = watchedFolderURL.map(ReaderFileRouting.normalizedFileURL)
         let fileName = normalizedFileURL.lastPathComponent
-        let watchedFolderName = normalizedWatchedFolderURL.map(Self.displayName(for:))
-        let parentFolderName = Self.displayName(for: normalizedFileURL.deletingLastPathComponent())
 
-        title = fileName.isEmpty ? normalizedFileURL.path : fileName
-        subtitle = watchedFolderName.map { "Folder watch: \($0)" } ?? event.folderlessSubtitle
-
-        var bodyLines = [event.statusText]
-        if watchedFolderName == nil {
-            bodyLines.append("Folder: \(parentFolderName)")
-        } else if watchedFolderName != parentFolderName {
-            bodyLines.append("Subfolder: \(parentFolderName)")
-        }
-        body = bodyLines.joined(separator: "\n")
+        title = event.titleText
+        subtitle = fileName.isEmpty ? normalizedFileURL.path : fileName
+        body = ""
 
         var userInfo: [AnyHashable: Any] = [
             ReaderSystemNotificationUserInfoKey.filePath: normalizedFileURL.path
@@ -247,11 +217,6 @@ private struct ReaderSystemNotificationDescriptor {
             userInfo[ReaderSystemNotificationUserInfoKey.watchedFolderPath] = normalizedWatchedFolderURL.path
         }
         self.userInfo = userInfo
-    }
-
-    private nonisolated static func displayName(for url: URL) -> String {
-        let lastPathComponent = url.lastPathComponent
-        return lastPathComponent.isEmpty ? url.path : lastPathComponent
     }
 }
 
@@ -335,7 +300,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
         )
     }
 
-    func notifyFileAutoLoaded(
+    func notifyFileChanged(
         _ fileURL: URL,
         changeKind: ReaderFolderWatchChangeKind,
         watchedFolderURL: URL?
@@ -344,17 +309,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
             ReaderSystemNotificationDescriptor(
                 fileURL: fileURL,
                 watchedFolderURL: watchedFolderURL,
-                event: .fileAutoLoaded(changeKind: changeKind)
-            )
-        )
-    }
-
-    func notifyExternalChange(for fileURL: URL, autoRefreshed: Bool, watchedFolderURL: URL?) {
-        postNotification(
-            ReaderSystemNotificationDescriptor(
-                fileURL: fileURL,
-                watchedFolderURL: watchedFolderURL,
-                event: .externalChange(autoRefreshed: autoRefreshed)
+                event: .fileChanged(changeKind: changeKind)
             )
         )
     }

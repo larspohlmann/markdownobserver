@@ -97,7 +97,7 @@ extension ReaderStore {
             return
         }
 
-        systemNotifier.notifyFileAutoLoaded(
+        systemNotifier.notifyFileChanged(
             normalizedURL,
             changeKind: initialDiffBaselineMarkdown == nil ? .added : .modified,
             watchedFolderURL: activeFolderWatchSession?.folderURL

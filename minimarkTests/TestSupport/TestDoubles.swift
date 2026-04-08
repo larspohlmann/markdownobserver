@@ -615,40 +615,23 @@ final class TestWorkspace: WorkspaceControlling {
 }
 
 final class TestReaderSystemNotifier: ReaderSystemNotifying {
-    struct AutoLoadedNotification: Equatable {
+    struct FileChangeNotification: Equatable {
         let fileURL: URL
         let changeKind: ReaderFolderWatchChangeKind
         let watchedFolderURL: URL?
     }
 
-    struct ExternalChangeNotification: Equatable {
-        let fileURL: URL
-        let autoRefreshed: Bool
-        let watchedFolderURL: URL?
-    }
+    private(set) var fileChangeNotifications: [FileChangeNotification] = []
 
-    private(set) var autoLoadedNotifications: [AutoLoadedNotification] = []
-    private(set) var externalChangeNotifications: [ExternalChangeNotification] = []
-
-    func notifyFileAutoLoaded(
+    func notifyFileChanged(
         _ fileURL: URL,
         changeKind: ReaderFolderWatchChangeKind,
         watchedFolderURL: URL?
     ) {
-        autoLoadedNotifications.append(
-            AutoLoadedNotification(
+        fileChangeNotifications.append(
+            FileChangeNotification(
                 fileURL: ReaderFileRouting.normalizedFileURL(fileURL),
                 changeKind: changeKind,
-                watchedFolderURL: watchedFolderURL.map(ReaderFileRouting.normalizedFileURL)
-            )
-        )
-    }
-
-    func notifyExternalChange(for fileURL: URL, autoRefreshed: Bool, watchedFolderURL: URL?) {
-        externalChangeNotifications.append(
-            ExternalChangeNotification(
-                fileURL: ReaderFileRouting.normalizedFileURL(fileURL),
-                autoRefreshed: autoRefreshed,
                 watchedFolderURL: watchedFolderURL.map(ReaderFileRouting.normalizedFileURL)
             )
         )
