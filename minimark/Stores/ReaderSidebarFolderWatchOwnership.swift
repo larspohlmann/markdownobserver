@@ -329,7 +329,7 @@ final class ReaderFolderWatchController {
         if origin.shouldNotifyFileAutoLoaded,
            events.count == 1,
            settingsStore.currentSettings.notificationsEnabled {
-            systemNotifier.notifyFileAutoLoaded(
+            systemNotifier.notifyFileChanged(
                 events[0].fileURL,
                 changeKind: events[0].kind,
                 watchedFolderURL: session.folderURL
