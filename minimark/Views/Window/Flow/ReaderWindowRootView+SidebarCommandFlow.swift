@@ -310,6 +310,120 @@ extension ReaderWindowRootView {
         }
     }
 
+    @discardableResult
+    func updateFolderWatchExclusions(_ newExcludedPaths: [String]) -> Bool {
+        guard let session = sharedFolderWatchSession else { return false }
+
+        let normalizedOld = Set(
+            session.options.encodedForFolder(session.folderURL).excludedSubdirectoryPaths
+        )
+        let normalizedNew = Set(
+            ReaderFolderWatchOptions(
+                openMode: session.options.openMode,
+                scope: session.options.scope,
+                excludedSubdirectoryPaths: newExcludedPaths
+            ).encodedForFolder(session.folderURL).excludedSubdirectoryPaths
+        )
+
+        guard normalizedOld != normalizedNew else { return true }
+
+        syncFavoriteExclusionsIfNeeded(newExcludedPaths)
+
+        do {
+            try sidebarDocumentController.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
+        } catch {
+            sidebarDocumentController.selectedReaderStore.presentError(error)
+            return false
+        }
+
+        let newlyExcludedPaths = normalizedNew.subtracting(normalizedOld)
+        if !newlyExcludedPaths.isEmpty {
+            closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
+        }
+
+        let newlyIncludedPaths = normalizedOld.subtracting(normalizedNew)
+        if !newlyIncludedPaths.isEmpty, session.options.openMode == .openAllMarkdownFiles {
+            openFilesInNewlyIncludedPaths(Array(newlyIncludedPaths))
+        }
+
+        refreshWindowPresentation()
+        return true
+    }
+
+    private func closeDocumentsInExcludedPaths(_ excludedPaths: [String]) {
+        let excludedPrefixes = excludedPaths.map { path in
+            let normalized = ReaderFileRouting.normalizedFileURL(
+                URL(fileURLWithPath: path, isDirectory: true)
+            ).path
+            return normalized.hasSuffix("/") ? normalized : normalized + "/"
+        }
+
+        let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
+            doc.readerStore.fileURL.map { url in
+                let normalized = ReaderFileRouting.normalizedFileURL(url).path
+                return excludedPrefixes.contains { normalized.hasPrefix($0) }
+            }
+        } ?? false
+
+        let documentsToClose = sidebarDocumentController.documents.filter { doc in
+            guard let fileURL = doc.readerStore.fileURL else { return false }
+            let normalized = ReaderFileRouting.normalizedFileURL(fileURL).path
+            return excludedPrefixes.contains { normalized.hasPrefix($0) }
+        }
+
+        for doc in documentsToClose {
+            sidebarDocumentController.closeDocument(doc.id)
+        }
+
+        if wasSelectedExcluded {
+            sidebarDocumentController.selectDocumentWithNewestModificationDate()
+        }
+    }
+
+    private func openFilesInNewlyIncludedPaths(_ includedPaths: [String]) {
+        let includedPrefixes = includedPaths.map { path in
+            let normalized = ReaderFileRouting.normalizedFileURL(
+                URL(fileURLWithPath: path, isDirectory: true)
+            ).path
+            return normalized.hasSuffix("/") ? normalized : normalized + "/"
+        }
+
+        sidebarDocumentController.scanCurrentMarkdownFiles { [self] scannedURLs in
+            guard let session = sharedFolderWatchSession else { return }
+
+            let alreadyOpenPaths = Set(
+                sidebarDocumentController.documents.compactMap {
+                    $0.readerStore.fileURL.map { ReaderFileRouting.normalizedFileURL($0).path }
+                }
+            )
+
+            let newFileURLs = scannedURLs.filter { url in
+                let normalized = ReaderFileRouting.normalizedFileURL(url).path
+                guard !alreadyOpenPaths.contains(normalized) else { return false }
+                return includedPrefixes.contains { normalized.hasPrefix($0) }
+            }
+
+            if !newFileURLs.isEmpty {
+                fileOpenCoordinator.open(FileOpenRequest(
+                    fileURLs: newFileURLs,
+                    origin: .folderWatchInitialBatchAutoOpen,
+                    folderWatchSession: session,
+                    slotStrategy: .alwaysAppend,
+                    materializationStrategy: .deferThenMaterializeNewest(count: 1)
+                ))
+                refreshWindowPresentation()
+            }
+        }
+    }
+
+    private func syncFavoriteExclusionsIfNeeded(_ excludedPaths: [String]) {
+        guard let favoriteID = activeFavoriteID else { return }
+        settingsStore.updateFavoriteWatchedFolderExclusions(
+            id: favoriteID,
+            excludedSubdirectoryPaths: excludedPaths
+        )
+    }
+
     func persistFinalWorkspaceStateIfNeeded() {
         guard let favoriteID = activeFavoriteID, let state = activeFavoriteWorkspaceState else {
             return

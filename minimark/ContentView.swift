@@ -577,7 +577,8 @@ struct ContentView: View {
                             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
                         },
                         isAppearanceLocked: folderWatchState.isAppearanceLocked,
-                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock
+                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock,
+                        onEditSubfolders: callbacks.onEditSubfolders
                     )
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
@@ -1180,7 +1181,8 @@ private final class SplitScrollCoordinator: ObservableObject {
             onStartRecentManuallyOpenedFile: { _ in },
             onStartRecentFolderWatch: { _ in },
             onClearRecentWatchedFolders: {},
-            onClearRecentManuallyOpenedFiles: {}
+            onClearRecentManuallyOpenedFiles: {},
+            onEditSubfolders: {}
         ),
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),

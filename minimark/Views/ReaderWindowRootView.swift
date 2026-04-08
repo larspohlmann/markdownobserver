@@ -31,6 +31,7 @@ struct ReaderWindowRootView: View {
     @State var appearanceController: WindowAppearanceController
     @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     @State private var isTitlebarEditingFavorites = false
+    @State private var isEditingSubfolders = false
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
@@ -168,6 +169,22 @@ struct ReaderWindowRootView: View {
                     },
                     onDismiss: { isTitlebarEditingFavorites = false }
                 )
+            }
+            .sheet(isPresented: $isEditingSubfolders) {
+                if let session = sharedFolderWatchSession {
+                    EditFolderWatchSheet(
+                        folderURL: session.folderURL,
+                        currentExcludedSubdirectoryPaths: session.options.excludedSubdirectoryPaths,
+                        onConfirm: { newExclusions in
+                            if updateFolderWatchExclusions(newExclusions) {
+                                isEditingSubfolders = false
+                            }
+                        },
+                        onCancel: {
+                            isEditingSubfolders = false
+                        }
+                    )
+                }
             }
             .background(
                 WindowAccessor { window in
@@ -587,7 +604,10 @@ struct ReaderWindowRootView: View {
                 },
                 onStartRecentFolderWatch: startRecentFolderWatch,
                 onClearRecentWatchedFolders: clearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles
+                onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles,
+                onEditSubfolders: {
+                    isEditingSubfolders = true
+                }
             ),
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,

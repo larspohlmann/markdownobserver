@@ -176,6 +176,38 @@ extension ReaderSettingsStore {
         }
     }
 
+    func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String]) {
+        updateSettings { settings in
+            guard let index = settings.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+            let existing = settings.favoriteWatchedFolders[index]
+            let folderURL = URL(fileURLWithPath: existing.folderPath, isDirectory: true)
+            let normalizedOptions = ReaderFolderWatchOptions(
+                openMode: existing.options.openMode,
+                scope: existing.options.scope,
+                excludedSubdirectoryPaths: excludedSubdirectoryPaths
+            ).encodedForFolder(folderURL)
+
+            guard existing.options != normalizedOptions else {
+                return
+            }
+
+            settings.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+                id: existing.id,
+                name: existing.name,
+                folderPath: existing.folderPath,
+                options: normalizedOptions,
+                bookmarkData: existing.bookmarkData,
+                openDocumentRelativePaths: existing.openDocumentRelativePaths,
+                allKnownRelativePaths: existing.allKnownRelativePaths,
+                workspaceState: existing.workspaceState,
+                createdAt: existing.createdAt
+            )
+        }
+    }
+
     private func refreshFavoriteWatchedFolderBookmark(for entry: ReaderFavoriteWatchedFolder, resolvedURL: URL) {
         let refreshedBookmarkData = try? bookmarkCreator(resolvedURL)
         let normalizedResolvedPath = ReaderFileRouting.normalizedFileURL(resolvedURL).path
