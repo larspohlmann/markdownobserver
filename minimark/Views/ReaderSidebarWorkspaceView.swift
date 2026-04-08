@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum ReaderSidebarWorkspaceMetrics {
     static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 220
@@ -631,6 +632,53 @@ private struct ReaderSidebarGroupHeader: View {
     }
 }
 
+private struct SidebarGroupDropDelegate: DropDelegate {
+    let groups: [ReaderSidebarGrouping.Group]
+    let currentGroupIndex: Int
+    @Binding var dropTargetIndex: Int?
+    @Binding var draggedGroupID: String?
+    let onDrop: (Int, Int) -> Void
+
+    func validateUpdate(info: DropInfo) -> Bool {
+        true
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard draggedGroupID != nil else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            dropTargetIndex = currentGroupIndex
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let draggedID = draggedGroupID,
+              let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }) else {
+            draggedGroupID = nil
+            dropTargetIndex = nil
+            return false
+        }
+
+        let targetIndex = currentGroupIndex
+        withAnimation(.easeInOut(duration: 0.25)) {
+            onDrop(sourceIndex, targetIndex)
+            draggedGroupID = nil
+        }
+        return true
+    }
+
+    func dropExited(info: DropInfo) {
+        if dropTargetIndex == currentGroupIndex {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                dropTargetIndex = nil
+            }
+        }
+    }
+}
+
 private struct SidebarGroupListContent: View {
     var groupState: SidebarGroupStateController
     var controller: ReaderSidebarDocumentController
@@ -645,6 +693,8 @@ private struct SidebarGroupListContent: View {
     let onCloseDocuments: (Set<UUID>) -> Void
     let onCloseOtherDocuments: (Set<UUID>) -> Void
     let onCloseAllDocuments: () -> Void
+    @State private var draggedGroupID: String?
+    @State private var dropTargetIndex: Int?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
@@ -683,8 +733,36 @@ private struct SidebarGroupListContent: View {
     ) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
-                ForEach(groups) { group in
+                ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
                     groupedSection(for: group, currentDate: currentDate)
+                        .opacity(draggedGroupID == group.id ? 0.4 : 1.0)
+                        .onDrag {
+                            draggedGroupID = group.id
+                            return NSItemProvider(object: group.id as NSString)
+                        }
+                        .onDrop(
+                            of: [.text],
+                            delegate: SidebarGroupDropDelegate(
+                                groups: groups,
+                                currentGroupIndex: index,
+                                dropTargetIndex: $dropTargetIndex,
+                                draggedGroupID: $draggedGroupID,
+                                onDrop: { sourceIndex, destinationIndex in
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        groupState.moveGroup(from: sourceIndex, to: destinationIndex)
+                                        dropTargetIndex = nil
+                                    }
+                                }
+                            )
+                        )
+
+                    if dropTargetIndex == index && draggedGroupID != nil {
+                        Rectangle()
+                            .fill(Color.accentColor.opacity(0.4))
+                            .frame(height: 2)
+                            .padding(.horizontal, 12)
+                            .transition(.opacity)
+                    }
                 }
             }
             .padding(.horizontal, 8)
