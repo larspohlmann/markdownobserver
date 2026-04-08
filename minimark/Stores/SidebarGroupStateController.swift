@@ -7,7 +7,14 @@ final class SidebarGroupStateController {
 
     // MARK: - Mutable Inputs
 
-    var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
+    var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst {
+        didSet {
+            if sortMode != .manualOrder {
+                manualGroupOrder = nil
+            }
+            recomputeGroupingIfNeeded()
+        }
+    }
     var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
     var pinnedGroupIDs: Set<String> = [] { didSet { recomputeGroupingIfNeeded() } }
     var collapsedGroupIDs: Set<String> = []
@@ -166,16 +173,9 @@ final class SidebarGroupStateController {
             precomputedIndicatorPulseTokens: groupIndicatorPulseTokens
         )
 
-        if let manualOrder = manualGroupOrder,
+        if sortMode == .manualOrder, let manualOrder = manualGroupOrder,
            case .grouped(let groups) = computedGrouping {
-            let groupMap = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
-            let reordered: [ReaderSidebarGrouping.Group] = manualOrder.compactMap { groupMap[$0] }
-            let remaining = groups.filter { group in !manualOrder.contains(group.id) }
-            if reordered.count == groups.count {
-                computedGrouping = .grouped(reordered)
-            } else {
-                computedGrouping = .grouped(reordered + remaining)
-            }
+            computedGrouping = .grouped(applyManualOrder(manualOrder, to: groups))
         }
     }
 
@@ -208,5 +208,32 @@ final class SidebarGroupStateController {
         })
         collapsedGroupIDs.formIntersection(activeGroupIDs)
         pinnedGroupIDs.formIntersection(activeGroupIDs)
+    }
+
+    private func applyManualOrder(_ manualOrder: [String], to groups: [ReaderSidebarGrouping.Group]) -> [ReaderSidebarGrouping.Group] {
+        let groupByID = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var pinnedManual: [ReaderSidebarGrouping.Group] = []
+        var unpinnedManual: [ReaderSidebarGrouping.Group] = []
+        var seen = Set<String>()
+
+        for id in manualOrder {
+            guard let group = groupByID[id], seen.insert(id).inserted else { continue }
+            if group.isPinned {
+                pinnedManual.append(group)
+            } else {
+                unpinnedManual.append(group)
+            }
+        }
+
+        for group in groups where !seen.contains(group.id) {
+            if group.isPinned {
+                pinnedManual.append(group)
+            } else {
+                unpinnedManual.append(group)
+            }
+        }
+
+        return pinnedManual + unpinnedManual
     }
 }
