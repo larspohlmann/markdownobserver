@@ -24,7 +24,6 @@ struct ContentEmptyStateView: View {
                     .padding(.bottom, 16)
 
                 headline
-                    .padding(.bottom, subtitlePaddingBottom)
 
                 subtitle
             }
@@ -59,7 +58,7 @@ struct ContentEmptyStateView: View {
                 .foregroundStyle(Color(hex: theme.secondaryForegroundHex)?.opacity(0.5) ?? .secondary)
         case .folderWatchEmpty:
             Image(systemName: "binoculars.fill")
-                .font(.system(size: 48, weight: .thin))
+                .font(.system(size: 48))
                 .foregroundStyle(watchTintColor.opacity(0.5))
         }
     }
@@ -75,13 +74,6 @@ struct ContentEmptyStateView: View {
             Text("Waiting for Markdown files\u{2026}")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color(hex: theme.foregroundHex)?.opacity(0.7) ?? .primary)
-        }
-    }
-
-    private var subtitlePaddingBottom: CGFloat {
-        switch variant {
-        case .noDocument: return 0
-        case .folderWatchEmpty: return 0
         }
     }
 
