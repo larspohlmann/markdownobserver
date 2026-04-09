@@ -811,17 +811,20 @@ private struct SidebarGroupListContent: View {
         )
 
         return Section {
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(group.documents) { document in
-                        groupedDocumentRow(for: document, allDocuments: controller.documents)
+            VStack(alignment: .leading, spacing: 0) {
+                if isExpanded {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(group.documents) { document in
+                            groupedDocumentRow(for: document, allDocuments: controller.documents)
+                        }
                     }
+                    .padding(.leading, 28)
+                    .padding(.trailing, 6)
+                    .padding(.bottom, 2)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .padding(.leading, 28)
-                .padding(.trailing, 6)
-                .padding(.bottom, 2)
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            .clipped()
         } header: {
             SidebarPinnableGroupHeader(
                 groupDisplayName: group.displayName,
