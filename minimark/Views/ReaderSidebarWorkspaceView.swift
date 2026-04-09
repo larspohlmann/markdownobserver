@@ -145,6 +145,10 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
             sidebarFileSortMenu
 
+            if selectedDocumentIDs.count > 1 {
+                selectionCountBadge
+            }
+
             Spacer(minLength: 0)
 
             if groupState.isGrouped {
@@ -153,6 +157,18 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .padding(.horizontal, 12)
         .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
+    }
+
+    private var selectionCountBadge: some View {
+        Text("\(selectedDocumentIDs.count) selected")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(Capsule())
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            .animation(.easeInOut(duration: 0.15), value: selectedDocumentIDs.count)
     }
 
     private var sidebarExpandCollapseButtons: some View {
@@ -689,7 +705,8 @@ private struct SidebarGroupDropIndicator: View {
     var body: some View {
         Capsule()
             .fill(Color.accentColor)
-            .frame(height: 3)
+            .frame(height: 4)
+            .shadow(color: .accentColor.opacity(0.4), radius: 4)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .leading)))
@@ -751,7 +768,7 @@ private struct SidebarGroupListContent: View {
             groups.firstIndex { $0.id == id }
         }
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 4) {
+            LazyVStack(alignment: .leading, spacing: 4, pinnedViews: draggedGroupID == nil ? [.sectionHeaders] : []) {
                 ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
                     if let target = dropTargetIndex, let source = dragSourceIndex,
                        target == index && target != source && target != source + 1 {
@@ -775,7 +792,10 @@ private struct SidebarGroupListContent: View {
         for group: ReaderSidebarGrouping.Group,
         at index: Int
     ) -> some View {
-        let header = ReaderSidebarGroupHeader(
+        let isExpanded = groupState.isGroupExpanded(group.id)
+        let isDragging = draggedGroupID == group.id
+
+        let groupHeader = ReaderSidebarGroupHeader(
             displayName: group.displayName,
             documentCount: group.documents.count,
             isPinned: group.isPinned,
@@ -790,36 +810,47 @@ private struct SidebarGroupListContent: View {
             }
         )
 
-        return AnimatedSidebarGroupSection(
-            groupDisplayName: group.displayName,
-            isExpanded: groupState.isGroupExpanded(group.id),
-            onToggleExpanded: { nextExpandedState in
-                guard Date().timeIntervalSince(lastDragEndDate) > 0.3 else { return }
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    groupState.setGroupExpanded(group.id, isExpanded: nextExpandedState)
-                }
-            },
-            header: header,
-            content: {
+        return Section {
+            if isExpanded {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(group.documents) { document in
                         groupedDocumentRow(for: document, allDocuments: controller.documents)
                     }
                 }
+                .padding(.leading, 28)
+                .padding(.trailing, 6)
+                .padding(.bottom, 2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-        )
-        .opacity(draggedGroupID == group.id ? 0.4 : 1.0)
-        .background(GroupFrameTracker(groupID: group.id, cache: groupFrameCache))
-        .offset(draggedGroupID == group.id ? dragTranslation : .zero)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 5, coordinateSpace: .global)
-                .onChanged { value in
-                    handleDragUpdate(value, groupID: group.id)
-                }
-                .onEnded { value in
-                    handleDragEnd(value, groups: groupState.computedGrouping)
-                }
-        )
+        } header: {
+            SidebarPinnableGroupHeader(
+                groupDisplayName: group.displayName,
+                isExpanded: isExpanded,
+                onToggleExpanded: {
+                    guard Date().timeIntervalSince(lastDragEndDate) > 0.3 else { return }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        groupState.setGroupExpanded(group.id, isExpanded: !isExpanded)
+                    }
+                },
+                header: groupHeader
+            )
+            .background(GroupFrameTracker(groupID: group.id, cache: groupFrameCache))
+            .opacity(isDragging ? 0.7 : 1.0)
+            .shadow(color: isDragging ? .black.opacity(0.2) : .clear, radius: 8, y: 4)
+            .scaleEffect(isDragging ? 1.02 : 1.0)
+            .offset(isDragging ? dragTranslation : .zero)
+            .zIndex(isDragging ? 1 : 0)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .global)
+                    .onChanged { value in
+                        handleDragUpdate(value, groupID: group.id)
+                    }
+                    .onEnded { value in
+                        handleDragEnd(value, groups: groupState.computedGrouping)
+                    }
+            )
+        }
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
     }
 
     private func handleDragUpdate(_ value: DragGesture.Value, groupID: String) {
@@ -975,61 +1006,48 @@ private struct SidebarGroupListContent: View {
     }
 }
 
-private struct AnimatedSidebarGroupSection<Content: View>: View {
+private struct SidebarPinnableGroupHeader: View {
     let groupDisplayName: String
     let isExpanded: Bool
-    let onToggleExpanded: (Bool) -> Void
+    let onToggleExpanded: () -> Void
     let header: ReaderSidebarGroupHeader
-    @ViewBuilder let content: () -> Content
 
     @State private var isHovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16, height: 16)
-                    .background(.quaternary.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    .rotationEffect(isExpanded ? .degrees(90) : .zero)
+        HStack(spacing: 8) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
+                .background(.quaternary.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                .rotationEffect(isExpanded ? .degrees(90) : .zero)
 
-                header
-            }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(isHovering ? Color.primary.opacity(0.06) : Color(nsColor: .labelColor).opacity(0.04))
-            )
-            .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    onToggleExpanded(!isExpanded)
-                }
-            }
-            .onHover { hovering in
-                isHovering = hovering
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("sidebar-group-toggle")
-            .accessibilityLabel(isExpanded ? "Collapse group" : "Expand group")
-            .accessibilityValue(groupDisplayName)
-
-            VStack(alignment: .leading, spacing: 0) {
-                if isExpanded {
-                    content()
-                        .padding(.leading, 28)
-                        .padding(.trailing, 6)
-                        .padding(.bottom, 2)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-            }
-            .clipped()
+            header
         }
-        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(isHovering ? Color.primary.opacity(0.06) : Color(nsColor: .labelColor).opacity(0.04))
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onToggleExpanded()
+        }
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("sidebar-group-toggle")
+        .accessibilityLabel(isExpanded ? "Collapse group" : "Expand group")
+        .accessibilityValue(groupDisplayName)
     }
 }
 
