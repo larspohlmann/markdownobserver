@@ -157,6 +157,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         }
         .padding(.horizontal, 12)
         .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
+        .animation(.easeInOut(duration: 0.15), value: selectedDocumentIDs.count > 1)
     }
 
     private var selectionCountBadge: some View {
@@ -168,7 +169,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             .background(.quaternary.opacity(0.5))
             .clipShape(Capsule())
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            .animation(.easeInOut(duration: 0.15), value: selectedDocumentIDs.count)
     }
 
     private var sidebarExpandCollapseButtons: some View {
@@ -834,7 +834,6 @@ private struct SidebarGroupListContent: View {
                 },
                 header: groupHeader
             )
-            .background(GroupFrameTracker(groupID: group.id, cache: groupFrameCache))
             .opacity(isDragging ? 0.7 : 1.0)
             .shadow(color: isDragging ? .black.opacity(0.2) : .clear, radius: 8, y: 4)
             .scaleEffect(isDragging ? 1.02 : 1.0)
@@ -850,6 +849,7 @@ private struct SidebarGroupListContent: View {
                     }
             )
         }
+        .background(GroupFrameTracker(groupID: group.id, cache: groupFrameCache))
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
     }
 
