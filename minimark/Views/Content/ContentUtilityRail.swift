@@ -134,21 +134,33 @@ struct ContentUtilityRail: View {
     // MARK: - TOC Group
 
     private var tocGroup: some View {
-        Button {
+        let isActive = isTOCVisible.wrappedValue
+
+        return Button {
             isTOCVisible.wrappedValue.toggle()
         } label: {
             Image(systemName: "list.bullet.indent")
-                .font(.system(size: Metrics.iconSize, weight: .semibold))
+                .font(.system(size: Metrics.iconSize, weight: isActive ? .bold : .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
+                .background {
+                    if isActive {
+                        RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
+                            .fill(Color.primary.opacity(0.12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.18), lineWidth: 1)
+                            )
+                    }
+                }
                 .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
-                    fill: Color.primary.opacity(0.06),
-                    border: Color.primary.opacity(0.10),
-                    hoverFill: Color.primary.opacity(0.10),
-                    hoverBorder: Color.primary.opacity(0.14)
+                    fill: Color.clear,
+                    border: Color.clear,
+                    hoverFill: isActive ? nil : Color.primary.opacity(0.06),
+                    hoverBorder: isActive ? nil : Color.primary.opacity(0.08)
                 )
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(isActive ? .primary : .secondary)
         .help("Table of Contents (⇧⌘T)")
         .accessibilityIdentifier("toc-button")
         .accessibilityLabel("Table of Contents")
