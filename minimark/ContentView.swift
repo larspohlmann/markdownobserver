@@ -518,7 +518,7 @@ struct ContentView: View {
     }
 
     private var overlayColorScheme: ColorScheme {
-        currentReaderTheme.hasLightBackground ? .light : .dark
+        currentReaderTheme.kind.isDark ? .dark : .light
     }
 
     private var overlayTopInset: CGFloat {
