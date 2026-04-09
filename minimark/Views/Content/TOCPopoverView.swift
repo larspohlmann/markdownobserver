@@ -39,7 +39,11 @@ struct TOCPopoverView: View {
                     .buttonStyle(.plain)
                     .modifier(PointingHandCursor())
                     .onHover { isHovered in
-                        hoveredHeadingID = isHovered ? heading.id : nil
+                        if isHovered {
+                            hoveredHeadingID = heading.id
+                        } else if hoveredHeadingID == heading.id {
+                            hoveredHeadingID = nil
+                        }
                     }
                 }
             }
