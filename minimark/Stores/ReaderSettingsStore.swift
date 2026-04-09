@@ -18,6 +18,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     var trustedImageFolders: [ReaderTrustedImageFolder]
     var diffBaselineLookback: DiffBaselineLookback
+    var dismissedHints: Set<FirstUseHint>
 
     init(
         appAppearance: AppAppearance,
@@ -33,7 +34,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         recentWatchedFolders: [ReaderRecentWatchedFolder],
         recentManuallyOpenedFiles: [ReaderRecentOpenedFile],
         trustedImageFolders: [ReaderTrustedImageFolder] = [],
-        diffBaselineLookback: DiffBaselineLookback = .twoMinutes
+        diffBaselineLookback: DiffBaselineLookback = .twoMinutes,
+        dismissedHints: Set<FirstUseHint> = []
     ) {
         self.appAppearance = appAppearance
         self.readerTheme = readerTheme
@@ -49,6 +51,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         self.recentManuallyOpenedFiles = recentManuallyOpenedFiles
         self.trustedImageFolders = trustedImageFolders
         self.diffBaselineLookback = diffBaselineLookback
+        self.dismissedHints = dismissedHints
     }
 
     enum CodingKeys: String, CodingKey {
@@ -66,6 +69,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         case recentManuallyOpenedFiles
         case trustedImageFolders
         case diffBaselineLookback
+        case dismissedHints
     }
 
     static let `default` = ReaderSettings(
@@ -82,7 +86,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
         trustedImageFolders: [],
-        diffBaselineLookback: .twoMinutes
+        diffBaselineLookback: .twoMinutes,
+        dismissedHints: []
     )
 
     init(from decoder: Decoder) throws {
@@ -101,6 +106,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
         trustedImageFolders = try container.decodeIfPresent([ReaderTrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
         diffBaselineLookback = try container.decodeIfPresent(DiffBaselineLookback.self, forKey: .diffBaselineLookback) ?? .twoMinutes
+        dismissedHints = try container.decodeIfPresent(Set<FirstUseHint>.self, forKey: .dismissedHints) ?? []
 
         // Migrate legacy favorites: replace hardcoded-default workspace state with decoded global settings
         let legacyDefaultState = ReaderFavoriteWorkspaceState.from(
@@ -178,6 +184,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func clearRecentManuallyOpenedFiles()
     func addTrustedImageFolder(_ folderURL: URL)
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL?
+    func isHintDismissed(_ hint: FirstUseHint) -> Bool
+    func dismissHint(_ hint: FirstUseHint)
 }
 
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
@@ -314,6 +322,16 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) {
         updateSettings(coalescePersistence: true) { settings in
             settings.diffBaselineLookback = lookback
+        }
+    }
+
+    func isHintDismissed(_ hint: FirstUseHint) -> Bool {
+        currentSettings.dismissedHints.contains(hint)
+    }
+
+    func dismissHint(_ hint: FirstUseHint) {
+        updateSettings { settings in
+            settings.dismissedHints.insert(hint)
         }
     }
 
