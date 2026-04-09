@@ -5,8 +5,6 @@ import OSLog
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     private enum Metrics {
         static let splitPaneMinimumWidth: CGFloat = 320
     }
@@ -191,7 +189,7 @@ struct ContentView: View {
                     readerStore.discardSourceDraft()
                 }
             )
-            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+            .environment(\.colorScheme, overlayColorScheme)
         }
         .overlay(alignment: .bottomLeading) {
             if isUITestModeEnabled {
@@ -519,9 +517,8 @@ struct ContentView: View {
         )
     }
 
-    private var overlayColorScheme: ColorScheme? {
-        guard readerStore.fileURL != nil else { return nil }
-        return currentReaderTheme.hasLightBackground ? .light : .dark
+    private var overlayColorScheme: ColorScheme {
+        currentReaderTheme.hasLightBackground ? .light : .dark
     }
 
     private var overlayTopInset: CGFloat {
@@ -549,7 +546,7 @@ struct ContentView: View {
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
                     .padding(.top, overlayInsets.railTopPadding)
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .environment(\.colorScheme, overlayColorScheme)
             }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
                 if readerStore.isTOCVisible, let anchor {
@@ -573,7 +570,7 @@ struct ContentView: View {
                     }
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .environment(\.colorScheme, overlayColorScheme)
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
                         removal: .opacity
@@ -600,7 +597,7 @@ struct ContentView: View {
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
                     .padding(.trailing, 70)
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .environment(\.colorScheme, overlayColorScheme)
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
                         removal: .opacity
