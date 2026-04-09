@@ -13,7 +13,9 @@ struct FirstUseHintView: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    settingsStore.dismissHint(hint)
+                    withAnimation {
+                        settingsStore.dismissHint(hint)
+                    }
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .semibold))
