@@ -82,7 +82,9 @@ struct ContentUtilityRail: View {
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
                 .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
                     fill: isSelected ? Color.primary.opacity(0.12) : Color.clear,
-                    border: isSelected ? Color.primary.opacity(0.18) : Color.clear
+                    border: isSelected ? Color.primary.opacity(0.18) : Color.clear,
+                    hoverFill: isSelected ? nil : Color.primary.opacity(0.06),
+                    hoverBorder: isSelected ? nil : Color.primary.opacity(0.08)
                 )
         }
         .buttonStyle(.plain)
@@ -104,7 +106,9 @@ struct ContentUtilityRail: View {
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
                 .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
                     fill: Color.primary.opacity(canStartSourceEditing ? 0.06 : 0.03),
-                    border: Color.primary.opacity(canStartSourceEditing ? 0.10 : 0.05)
+                    border: Color.primary.opacity(canStartSourceEditing ? 0.10 : 0.05),
+                    hoverFill: canStartSourceEditing ? Color.primary.opacity(0.10) : nil,
+                    hoverBorder: canStartSourceEditing ? Color.primary.opacity(0.14) : nil
                 )
         }
         .buttonStyle(.plain)
@@ -125,7 +129,9 @@ struct ContentUtilityRail: View {
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
                 .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
                     fill: Color.primary.opacity(0.06),
-                    border: Color.primary.opacity(0.10)
+                    border: Color.primary.opacity(0.10),
+                    hoverFill: Color.primary.opacity(0.10),
+                    hoverBorder: Color.primary.opacity(0.14)
                 )
         }
         .buttonStyle(.plain)
@@ -160,25 +166,46 @@ struct TOCButtonAnchorKey: PreferenceKey {
 
 private struct RailButtonBackgroundModifier: ViewModifier {
     let fill: Color
+    let hoverFill: Color
     let border: Color
+    let hoverBorder: Color
     let cornerRadius: CGFloat
+
+    @State private var isHovered = false
 
     func body(content: Content) -> some View {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(fill)
+                    .fill(isHovered ? hoverFill : fill)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(border, lineWidth: 1)
+                    .strokeBorder(isHovered ? hoverBorder : border, lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.12)) {
+                    isHovered = hovering
+                }
+            }
     }
 }
 
 private extension View {
-    func railButtonBackground(cornerRadius: CGFloat, fill: Color, border: Color) -> some View {
-        modifier(RailButtonBackgroundModifier(fill: fill, border: border, cornerRadius: cornerRadius))
+    func railButtonBackground(
+        cornerRadius: CGFloat,
+        fill: Color,
+        border: Color,
+        hoverFill: Color? = nil,
+        hoverBorder: Color? = nil
+    ) -> some View {
+        modifier(RailButtonBackgroundModifier(
+            fill: fill,
+            hoverFill: hoverFill ?? fill,
+            border: border,
+            hoverBorder: hoverBorder ?? border,
+            cornerRadius: cornerRadius
+        ))
     }
 }

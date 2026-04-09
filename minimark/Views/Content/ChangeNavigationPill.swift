@@ -8,7 +8,7 @@ struct ChangeNavigationPill: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
 
-    private enum Metrics {
+    fileprivate enum Metrics {
         static let pillHeight: CGFloat = 30
         static let horizontalPadding: CGFloat = 10
         static let controlHeight: CGFloat = 28
@@ -21,10 +21,11 @@ struct ChangeNavigationPill: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            navigationButton(
+            NavigationChevronButton(
                 symbolName: "chevron.up",
                 label: "Previous change",
-                direction: .previous
+                direction: .previous,
+                onNavigate: onNavigate
             )
 
             (
@@ -35,10 +36,11 @@ struct ChangeNavigationPill: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
 
-            navigationButton(
+            NavigationChevronButton(
                 symbolName: "chevron.down",
                 label: "Next change",
-                direction: .next
+                direction: .next,
+                onNavigate: onNavigate
             )
         }
         .padding(.horizontal, Metrics.horizontalPadding)
@@ -57,21 +59,36 @@ struct ChangeNavigationPill: View {
         .fixedSize()
     }
 
-    private func navigationButton(
-        symbolName: String,
-        label: String,
-        direction: ReaderChangedRegionNavigationDirection
-    ) -> some View {
+}
+
+private struct NavigationChevronButton: View {
+    let symbolName: String
+    let label: String
+    let direction: ReaderChangedRegionNavigationDirection
+    let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
         Button {
             onNavigate(direction)
         } label: {
             Image(systemName: symbolName)
-                .font(.system(size: Metrics.iconSize, weight: .semibold))
-                .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
-                .contentShape(Rectangle())
+                .font(.system(size: ChangeNavigationPill.Metrics.iconSize, weight: .semibold))
+                .frame(width: ChangeNavigationPill.Metrics.controlHeight, height: ChangeNavigationPill.Metrics.controlHeight)
+                .background(
+                    Circle()
+                        .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+                )
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primary.opacity(0.55))
+        .foregroundStyle(.primary.opacity(isHovered ? 0.75 : 0.55))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) {
+                isHovered = hovering
+            }
+        }
         .help(label)
         .accessibilityLabel(label)
         .accessibilityHint("Jumps to a changed region in the current preview")
