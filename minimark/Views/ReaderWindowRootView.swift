@@ -22,6 +22,7 @@ struct ReaderWindowRootView: View {
     @State private var uiTestWatchFlowTask: Task<Void, Never>?
     @State private var hasAppliedUITestLaunchConfiguration = false
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
+    @State private var dockTileWindowToken = UUID()
     @State var groupStateController = SidebarGroupStateController()
     @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     @State private var lastAppliedSidebarDelta: CGFloat = 0
@@ -309,6 +310,18 @@ struct ReaderWindowRootView: View {
                     rowStates: sidebarDocumentController.rowStates
                 )
                 groupStateController.observeRowStates(from: sidebarDocumentController)
+                DockTileController.shared.configureDockTileIfNeeded()
+                sidebarDocumentController.onDockTileRowStatesChanged = { [dockTileWindowToken] rowStates in
+                    DockTileController.shared.updateRowStates(for: dockTileWindowToken, rowStates: rowStates)
+                }
+                DockTileController.shared.updateRowStates(
+                    for: dockTileWindowToken,
+                    rowStates: sidebarDocumentController.rowStates
+                )
+            }
+            .onDisappear {
+                sidebarDocumentController.onDockTileRowStatesChanged = nil
+                DockTileController.shared.removeRowStates(for: dockTileWindowToken)
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()
