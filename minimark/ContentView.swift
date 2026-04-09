@@ -507,9 +507,11 @@ struct ContentView: View {
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
             documentViewMode: readerStore.documentViewMode,
+            hasOpenDocument: readerStore.hasOpenDocument,
             showsLoadingOverlay: shouldShowDocumentLoadingOverlay,
             loadingOverlayHeadline: loadingOverlayHeadline,
             loadingOverlaySubtitle: loadingOverlaySubtitle,
+            emptyStateVariant: emptyStateVariant,
             currentReaderTheme: currentReaderTheme,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
@@ -683,6 +685,13 @@ struct ContentView: View {
 
     private var currentReaderTheme: ReaderTheme {
         ReaderTheme.theme(for: folderWatchState.effectiveReaderTheme)
+    }
+
+    private var emptyStateVariant: ContentEmptyStateView.Variant {
+        if let activeWatch = folderWatchState.activeFolderWatch {
+            return .folderWatchEmpty(folderName: activeWatch.folderURL.lastPathComponent)
+        }
+        return .noDocument
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
@@ -1063,9 +1072,11 @@ private struct FolderDropBlockedOverlayView: View {
 
 private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
     let documentViewMode: ReaderDocumentViewMode
+    let hasOpenDocument: Bool
     let showsLoadingOverlay: Bool
     let loadingOverlayHeadline: String
     let loadingOverlaySubtitle: String?
+    let emptyStateVariant: ContentEmptyStateView.Variant
     let currentReaderTheme: ReaderTheme
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
@@ -1076,6 +1087,11 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
                 theme: currentReaderTheme,
                 headline: loadingOverlayHeadline,
                 subtitle: loadingOverlaySubtitle
+            )
+        } else if !hasOpenDocument {
+            ContentEmptyStateView(
+                variant: emptyStateVariant,
+                theme: currentReaderTheme
             )
         } else {
             switch documentViewMode {
