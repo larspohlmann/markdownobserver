@@ -32,6 +32,7 @@ final class ReaderSidebarDocumentController {
     @ObservationIgnored private var selectedStoreObservationTask: Task<Void, Never>?
     @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
     @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
+    @ObservationIgnored var onDockTileRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
     @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var rowIndicatorPulseTokens: [UUID: Int] = [:]
@@ -533,6 +534,7 @@ final class ReaderSidebarDocumentController {
         guard states != rowStates else { return }
         rowStates = states
         onRowStatesChanged?(states)
+        onDockTileRowStatesChanged?(states)
     }
 
     private func synchronizeDocumentChangeObservers() {
@@ -577,6 +579,7 @@ final class ReaderSidebarDocumentController {
         if rowStates[documentID] != refreshedState {
             rowStates[documentID] = refreshedState
             onRowStatesChanged?(rowStates)
+            onDockTileRowStatesChanged?(rowStates)
         }
     }
 

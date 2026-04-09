@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 @MainActor
 final class DockTileController {
@@ -11,8 +11,35 @@ final class DockTileController {
     var onCountsChanged: ((_ created: Int, _ modified: Int, _ deleted: Int) -> Void)?
 
     private var rowStatesByWindow: [UUID: [UUID: SidebarRowState]] = [:]
+    private var badgeView: DockTileBadgeView?
+    private var isConfigured = false
 
     init() {}
+
+    func configureDockTileIfNeeded() {
+        guard !isConfigured else { return }
+        isConfigured = true
+        configureDockTile()
+    }
+
+    private func configureDockTile() {
+        let view = DockTileBadgeView(frame: NSRect(x: 0, y: 0, width: 128, height: 128))
+        badgeView = view
+        NSApp?.dockTile.contentView = view
+        NSApp?.dockTile.display()
+
+        onCountsChanged = { [weak self] created, modified, deleted in
+            self?.updateBadgeView(created: created, modified: modified, deleted: deleted)
+        }
+    }
+
+    private func updateBadgeView(created: Int, modified: Int, deleted: Int) {
+        guard let badgeView else { return }
+        badgeView.counts = DockTileBadgeView.Counts(
+            created: created, modified: modified, deleted: deleted
+        )
+        NSApp?.dockTile.display()
+    }
 
     func updateRowStates(for windowToken: UUID, rowStates: [UUID: SidebarRowState]) {
         rowStatesByWindow[windowToken] = rowStates
@@ -60,5 +87,7 @@ final class DockTileController {
         modifiedCount = 0
         deletedCount = 0
         onCountsChanged = nil
+        badgeView = nil
+        isConfigured = false
     }
 }
