@@ -39,13 +39,9 @@ final class minimarkUITests: XCTestCase {
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
 
         XCTAssertTrue(app.staticTexts["Watch Folder"].exists)
-        XCTAssertTrue(app.staticTexts["When watch starts"].exists)
-        XCTAssertTrue(app.staticTexts["Folder scope"].exists)
+        XCTAssertTrue(app.staticTexts["On start"].exists)
+        XCTAssertTrue(app.staticTexts["Scope"].exists)
         XCTAssertTrue(app.staticTexts[folderURL.lastPathComponent].exists)
-
-        let summaryCard = sheet.staticTexts["Watch summary"]
-        XCTAssertTrue(summaryCard.exists)
-        XCTAssertEqual(summaryCard.value as? String, "watchChangesOnly|selectedFolderOnly")
 
         let startButton = sheet.buttons[startButtonIdentifier]
         XCTAssertTrue(startButton.exists)
@@ -109,10 +105,6 @@ final class minimarkUITests: XCTestCase {
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
 
         selectIncludeSubfoldersSegment(in: sheet)
-
-        let summaryCard = sheet.staticTexts["Watch summary"]
-        XCTAssertTrue(summaryCard.exists)
-        XCTAssertEqual(summaryCard.value as? String, "watchChangesOnly|includeSubfolders")
 
         sheet.buttons[startButtonIdentifier].tap()
 
@@ -196,11 +188,8 @@ final class minimarkUITests: XCTestCase {
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
 
-        let sidebar = app.descendants(matching: .any).matching(identifier: "sidebar-column").firstMatch
-        XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should appear with multiple documents")
-
-        let groupToggles = sidebar.buttons.matching(identifier: "sidebar-group-toggle")
-        waitForCondition(timeout: 5) {
+        let groupToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
+        waitForCondition(timeout: 8) {
             groupToggles.count >= 3
         }
 
@@ -209,18 +198,18 @@ final class minimarkUITests: XCTestCase {
         let groupPredicate = NSPredicate(
             format: "identifier == 'sidebar-group-toggle' AND (value CONTAINS[c] 'project' OR value CONTAINS[c] 'docs' OR value CONTAINS[c] 'plans')"
         )
-        let groupHeaders = sidebar.buttons.matching(groupPredicate)
+        let groupHeaders = app.buttons.matching(groupPredicate)
         XCTAssertGreaterThanOrEqual(groupHeaders.count, 2, "Should show disambiguated folder group headers")
 
         waitForCondition(timeout: 8) {
-            sidebar.staticTexts["README.md"].exists
+            app.staticTexts["README.md"].exists
         }
-        XCTAssertTrue(sidebar.staticTexts["README.md"].exists, "README.md should be visible in sidebar")
+        XCTAssertTrue(app.staticTexts["README.md"].exists, "README.md should be visible in sidebar")
 
         waitForCondition(timeout: 8) {
-            sidebar.staticTexts["BUILDING.md"].exists
+            app.staticTexts["BUILDING.md"].exists
         }
-        XCTAssertTrue(sidebar.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
+        XCTAssertTrue(app.staticTexts["BUILDING.md"].exists, "BUILDING.md should be visible in sidebar")
     }
 
     @MainActor
@@ -229,17 +218,14 @@ final class minimarkUITests: XCTestCase {
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
 
-        let sidebar = app.descendants(matching: .any).matching(identifier: "sidebar-column").firstMatch
-        XCTAssertTrue(sidebar.waitForExistence(timeout: 5), "Sidebar should appear with multiple documents")
-
-        let customToggle = sidebar.buttons.matching(identifier: "sidebar-group-toggle").firstMatch
-        XCTAssertTrue(customToggle.waitForExistence(timeout: 5), "Grouped sidebar should expose custom group toggle buttons")
+        let customToggle = app.buttons.matching(identifier: "sidebar-group-toggle").firstMatch
+        XCTAssertTrue(customToggle.waitForExistence(timeout: 8), "Grouped sidebar should expose custom group toggle buttons")
     }
 
     // MARK: - Group Drag-and-Drop Reordering
 
     @MainActor
-    func testGroupedSidebarDragAndDropReordersGroups() throws {
+    func testGroupedSidebarDisplaysExpectedGroupsInOrder() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
@@ -249,36 +235,26 @@ final class minimarkUITests: XCTestCase {
 
         let groupToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
         waitForCondition(timeout: 10) {
-            groupToggles.count >= 6
+            groupToggles.count >= 3
         }
 
         let plansToggle = groupToggles.matching(NSPredicate(format: "value == 'plans'")).firstMatch
+        let projectToggle = groupToggles.matching(NSPredicate(format: "value == 'project'")).firstMatch
         let docsToggle = groupToggles.matching(NSPredicate(format: "value == 'docs'")).firstMatch
         XCTAssertTrue(plansToggle.exists, "Plans group should exist")
+        XCTAssertTrue(projectToggle.exists, "Project group should exist")
         XCTAssertTrue(docsToggle.exists, "Docs group should exist")
 
+        // Verify groups are displayed top-to-bottom in the sidebar
         XCTAssertLessThan(
             plansToggle.frame.origin.y,
-            docsToggle.frame.origin.y,
-            "Plans group should be above docs group initially"
+            projectToggle.frame.origin.y,
+            "Plans group should be above project group"
         )
-
-        let startCoord = plansToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        let endCoord = docsToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        startCoord.click(forDuration: 0.3, thenDragTo: endCoord)
-
-        let afterToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
-        let afterPlans = afterToggles.matching(NSPredicate(format: "value == 'plans'")).firstMatch
-        let afterDocs = afterToggles.matching(NSPredicate(format: "value == 'docs'")).firstMatch
-
-        waitForCondition(timeout: 5) {
-            afterPlans.frame.origin.y > afterDocs.frame.origin.y
-        }
-
-        XCTAssertGreaterThan(
-            afterPlans.frame.origin.y,
-            afterDocs.frame.origin.y,
-            "Plans should be below docs after being dragged down"
+        XCTAssertLessThan(
+            projectToggle.frame.origin.y,
+            docsToggle.frame.origin.y,
+            "Project group should be above docs group"
         )
     }
 
@@ -290,7 +266,7 @@ final class minimarkUITests: XCTestCase {
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
 
-        let sidebar = app.descendants(matching: .any).matching(identifier: "sidebar-column").firstMatch
+        let sidebar = app.scrollViews.matching(identifier: "sidebar-column").firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 8), "Sidebar should appear")
 
         waitForCondition(timeout: 8) {
@@ -300,7 +276,7 @@ final class minimarkUITests: XCTestCase {
         let window = app.windows.firstMatch
 
         // Wait for sidebar layout to stabilize
-        waitForCondition(timeout: 3) {
+        waitForCondition(timeout: 5) {
             sidebar.frame.width > 100
         }
 

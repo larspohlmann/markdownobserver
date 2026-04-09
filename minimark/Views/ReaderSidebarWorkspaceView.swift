@@ -989,6 +989,8 @@ private struct AnimatedSidebarGroupSection<Content: View>: View {
             .onHover { hovering in
                 isHovering = hovering
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("sidebar-group-toggle")
             .accessibilityLabel(isExpanded ? "Collapse group" : "Expand group")
             .accessibilityValue(groupDisplayName)
