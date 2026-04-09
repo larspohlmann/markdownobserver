@@ -8,6 +8,16 @@ struct ChangeNavigationPill: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
 
+    private var canGoPrevious: Bool {
+        if let currentIndex { return currentIndex > 0 }
+        return totalCount > 0
+    }
+
+    private var canGoNext: Bool {
+        if let currentIndex { return currentIndex < totalCount - 1 }
+        return totalCount > 0
+    }
+
     fileprivate enum Metrics {
         static let pillHeight: CGFloat = 30
         static let horizontalPadding: CGFloat = 10
@@ -24,6 +34,7 @@ struct ChangeNavigationPill: View {
             NavigationChevronButton(
                 symbolName: "chevron.up",
                 label: "Previous change",
+                isEnabled: canGoPrevious,
                 direction: .previous,
                 onNavigate: onNavigate
             )
@@ -39,6 +50,7 @@ struct ChangeNavigationPill: View {
             NavigationChevronButton(
                 symbolName: "chevron.down",
                 label: "Next change",
+                isEnabled: canGoNext,
                 direction: .next,
                 onNavigate: onNavigate
             )
@@ -64,10 +76,16 @@ struct ChangeNavigationPill: View {
 private struct NavigationChevronButton: View {
     let symbolName: String
     let label: String
+    let isEnabled: Bool
     let direction: ReaderChangedRegionNavigationDirection
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     @State private var isHovered = false
+
+    private var foregroundOpacity: Double {
+        if !isEnabled { return 0.25 }
+        return isHovered ? 0.75 : 0.6
+    }
 
     var body: some View {
         Button {
@@ -78,13 +96,15 @@ private struct NavigationChevronButton: View {
                 .frame(width: ChangeNavigationPill.Metrics.controlHeight, height: ChangeNavigationPill.Metrics.controlHeight)
                 .background(
                     Circle()
-                        .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+                        .fill(Color.primary.opacity(isEnabled && isHovered ? 0.08 : 0))
                 )
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primary.opacity(isHovered ? 0.75 : 0.55))
+        .disabled(!isEnabled)
+        .foregroundStyle(.primary.opacity(foregroundOpacity))
         .onHover { hovering in
+            guard isEnabled else { return }
             withAnimation(.easeInOut(duration: 0.12)) {
                 isHovered = hovering
             }

@@ -12,6 +12,7 @@ struct ContentUtilityRail: View {
     let isTOCVisible: Binding<Bool>
 
     @State private var isHovering = false
+    @Namespace private var viewModeNamespace
 
     private enum Metrics {
         static let railWidth: CGFloat = 44
@@ -61,11 +62,12 @@ struct ContentUtilityRail: View {
     // MARK: - View Mode Group
 
     private var viewModeGroup: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             ForEach(ReaderDocumentViewMode.allCases, id: \.self) { mode in
                 viewModeButton(mode: mode)
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: documentViewMode)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Document view mode")
         .accessibilityHint("Switch between preview, split, and source views of the document.")
@@ -80,9 +82,20 @@ struct ContentUtilityRail: View {
             Image(systemName: mode.systemImageName)
                 .font(.system(size: Metrics.iconSize, weight: isSelected ? .bold : .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
+                            .fill(Color.primary.opacity(0.12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Metrics.buttonCornerRadius, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.18), lineWidth: 1)
+                            )
+                            .matchedGeometryEffect(id: "viewModeIndicator", in: viewModeNamespace)
+                    }
+                }
                 .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
-                    fill: isSelected ? Color.primary.opacity(0.12) : Color.clear,
-                    border: isSelected ? Color.primary.opacity(0.18) : Color.clear,
+                    fill: Color.clear,
+                    border: Color.clear,
                     hoverFill: isSelected ? nil : Color.primary.opacity(0.06),
                     hoverBorder: isSelected ? nil : Color.primary.opacity(0.08)
                 )
@@ -149,7 +162,7 @@ struct ContentUtilityRail: View {
         Rectangle()
             .fill(Color.primary.opacity(0.10))
             .frame(width: Metrics.separatorWidth, height: 1)
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
     }
 }
 

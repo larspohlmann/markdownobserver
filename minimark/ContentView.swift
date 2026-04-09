@@ -562,8 +562,13 @@ struct ContentView: View {
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
                 }
             }
+            .animation(.easeOut(duration: 0.25), value: canNavigateChangedRegions)
             .overlay(alignment: .top) {
                 if let activeWatch = folderWatchState.activeFolderWatch {
                     WatchPill(
@@ -584,8 +589,13 @@ struct ContentView: View {
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
                     .padding(.trailing, 70)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
                 }
             }
+            .animation(.easeOut(duration: 0.25), value: folderWatchState.activeFolderWatch != nil)
     }
 
     private var contentUtilityRail: some View {
@@ -831,10 +841,12 @@ struct ContentView: View {
 
         let count = readerStore.changedRegions.count
         if let current = currentChangedRegionIndex {
-            if direction == .next {
-                currentChangedRegionIndex = current >= count - 1 ? 0 : current + 1
+            if direction == .next, current < count - 1 {
+                currentChangedRegionIndex = current + 1
+            } else if direction == .previous, current > 0 {
+                currentChangedRegionIndex = current - 1
             } else {
-                currentChangedRegionIndex = current <= 0 ? count - 1 : current - 1
+                return
             }
         } else {
             currentChangedRegionIndex = direction == .next ? 0 : count - 1
