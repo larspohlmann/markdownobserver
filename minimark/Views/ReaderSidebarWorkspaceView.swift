@@ -384,7 +384,11 @@ private struct ReaderSidebarDocumentRow: View {
     }
 
     private var selectionBackgroundColor: Color {
-        Color(nsColor: .selectedContentBackgroundColor).opacity(colorScheme == .dark ? 0.55 : 0.65)
+        Color(nsColor: .selectedContentBackgroundColor).opacity(colorScheme == .dark ? 0.35 : 0.45)
+    }
+
+    private var selectionBorderColor: Color {
+        Color(nsColor: .selectedContentBackgroundColor).opacity(colorScheme == .dark ? 0.5 : 0.55)
     }
 
     var body: some View {
@@ -431,6 +435,7 @@ private struct ReaderSidebarDocumentRow: View {
                 }
                 .buttonStyle(.plain)
                 .opacity(isHovered || isSelected ? 1 : 0)
+                .scaleEffect(isHovered || isSelected ? 1 : 0.85)
                 .allowsHitTesting(isHovered || isSelected)
                 .accessibilityHidden(!(isHovered || isSelected))
                 .help("Close")
@@ -445,6 +450,16 @@ private struct ReaderSidebarDocumentRow: View {
                         : (isHovered ? Color.primary.opacity(0.04) : .clear)
                 )
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(
+                    showsSelectionBackground && isSelected
+                        ? selectionBorderColor
+                        : .clear,
+                    lineWidth: 0.5
+                )
+        )
+        .animation(.easeInOut(duration: 0.15), value: isSelected)
         .padding(.vertical, 2)
         .accessibilityIdentifier("sidebar-document-\(title)")
         .onHover { hovering in
@@ -990,7 +1005,9 @@ private struct AnimatedSidebarGroupSection<Content: View>: View {
             )
             .contentShape(Rectangle())
             .onTapGesture {
-                onToggleExpanded(!isExpanded)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    onToggleExpanded(!isExpanded)
+                }
             }
             .onHover { hovering in
                 isHovering = hovering
