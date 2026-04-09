@@ -29,6 +29,7 @@ Config/Signing.local.xcconfig
 .github/*
 !.github/workflows/
 !.github/workflows/**
+.agents/
 .claude/
 
 .mcp.json
@@ -41,3 +42,5 @@ docs/superpowers/
 .playwright-mcp/
 .worktrees/
 .superpowers/
+
+skills-lock.json
