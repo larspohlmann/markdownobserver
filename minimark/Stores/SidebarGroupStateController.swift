@@ -243,7 +243,8 @@ final class SidebarGroupStateController {
         pinnedGroupIDs.formIntersection(activeGroupIDs)
         savedCollapsedGroupIDs?.formIntersection(activeGroupIDs)
         if let manualGroupOrder {
-            self.manualGroupOrder = manualGroupOrder.filter { activeGroupIDs.contains($0) }
+            let pruned = manualGroupOrder.filter { activeGroupIDs.contains($0) }
+            self.manualGroupOrder = pruned.isEmpty ? nil : pruned
         }
     }
 

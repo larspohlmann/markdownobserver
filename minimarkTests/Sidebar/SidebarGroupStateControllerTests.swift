@@ -312,7 +312,7 @@ struct SidebarGroupStateControllerTests {
             return
         }
 
-        #expect(controller.manualGroupOrder != nil)
+        #expect(controller.manualGroupOrder == [harness.directoryPath(for: "beta")])
         #expect(groups.first?.displayName == "alpha")
     }
 
