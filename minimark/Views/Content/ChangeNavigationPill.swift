@@ -3,6 +3,8 @@ import SwiftUI
 struct ChangeNavigationPill: View {
     let currentIndex: Int?
     let totalCount: Int
+    let canGoPrevious: Bool
+    let canGoNext: Bool
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -24,6 +26,7 @@ struct ChangeNavigationPill: View {
             NavigationChevronButton(
                 symbolName: "chevron.up",
                 label: "Previous change",
+                isEnabled: canGoPrevious,
                 direction: .previous,
                 onNavigate: onNavigate
             )
@@ -39,6 +42,7 @@ struct ChangeNavigationPill: View {
             NavigationChevronButton(
                 symbolName: "chevron.down",
                 label: "Next change",
+                isEnabled: canGoNext,
                 direction: .next,
                 onNavigate: onNavigate
             )
@@ -64,10 +68,16 @@ struct ChangeNavigationPill: View {
 private struct NavigationChevronButton: View {
     let symbolName: String
     let label: String
+    let isEnabled: Bool
     let direction: ReaderChangedRegionNavigationDirection
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     @State private var isHovered = false
+
+    private var foregroundOpacity: Double {
+        if !isEnabled { return 0.25 }
+        return isHovered ? 0.75 : 0.6
+    }
 
     var body: some View {
         Button {
@@ -78,13 +88,15 @@ private struct NavigationChevronButton: View {
                 .frame(width: ChangeNavigationPill.Metrics.controlHeight, height: ChangeNavigationPill.Metrics.controlHeight)
                 .background(
                     Circle()
-                        .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+                        .fill(Color.primary.opacity(isEnabled && isHovered ? 0.08 : 0))
                 )
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primary.opacity(isHovered ? 0.75 : 0.55))
+        .disabled(!isEnabled)
+        .foregroundStyle(.primary.opacity(foregroundOpacity))
         .onHover { hovering in
+            guard isEnabled else { return }
             withAnimation(.easeInOut(duration: 0.12)) {
                 isHovered = hovering
             }
