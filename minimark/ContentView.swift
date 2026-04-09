@@ -630,7 +630,7 @@ struct ContentView: View {
     @ViewBuilder
     private func tocOverlay(buttonAnchor: Anchor<CGRect>) -> some View {
         let gap: CGFloat = 8
-        let tocColorScheme: ColorScheme = currentReaderTheme.hasLightBackground ? .light : .dark
+        let tocColorScheme: ColorScheme = currentReaderTheme.kind.isDark ? .dark : .light
 
         GeometryReader { proxy in
             let buttonFrame = proxy[buttonAnchor]
