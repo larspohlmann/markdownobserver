@@ -513,6 +513,7 @@ struct ContentView: View {
             loadingOverlaySubtitle: loadingOverlaySubtitle,
             emptyStateVariant: emptyStateVariant,
             currentReaderTheme: currentReaderTheme,
+            onDroppedFileURLs: handleDroppedFileURLs,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
         )
@@ -1078,6 +1079,7 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
     let loadingOverlaySubtitle: String?
     let emptyStateVariant: ContentEmptyStateView.Variant
     let currentReaderTheme: ReaderTheme
+    let onDroppedFileURLs: ([URL]) -> Void
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
 
@@ -1093,6 +1095,12 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
                 variant: emptyStateVariant,
                 theme: currentReaderTheme
             )
+            .dropDestination(for: URL.self) { urls, _ in
+                let fileURLs = urls.filter { $0.isFileURL }
+                guard !fileURLs.isEmpty else { return false }
+                onDroppedFileURLs(fileURLs)
+                return true
+            }
         } else {
             switch documentViewMode {
             case .preview:
