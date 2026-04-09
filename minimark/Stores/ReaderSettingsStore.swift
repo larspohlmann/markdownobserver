@@ -139,6 +139,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 @MainActor protocol ReaderSettingsReading: AnyObject {
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> { get }
     var currentSettings: ReaderSettings { get }
+    func isHintDismissed(_ hint: FirstUseHint) -> Bool
 }
 
 @MainActor protocol ReaderSettingsWriting: AnyObject {
@@ -184,7 +185,6 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func clearRecentManuallyOpenedFiles()
     func addTrustedImageFolder(_ folderURL: URL)
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL?
-    func isHintDismissed(_ hint: FirstUseHint) -> Bool
     func dismissHint(_ hint: FirstUseHint)
 }
 
