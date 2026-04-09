@@ -33,6 +33,7 @@ struct ContentViewAdapter: View {
 
         ContentView(
             readerStore: readerStore,
+            settingsStore: settingsStore,
             folderWatchState: ContentViewFolderWatchState(
                 activeFolderWatch: sharedFolderWatchSession,
                 isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,

@@ -53,7 +53,7 @@ struct FolderWatchToolbarButton: View {
                 mainButtonLabel
             }
             .buttonStyle(.plain)
-            .help(isActive ? "Watch a different folder" : "Watch Folder...")
+            .help(isActive ? "Watch a different folder (⌥⌘W)" : "Watch Folder… (⌥⌘W)")
             .accessibilityIdentifier("folder-watch-toolbar-button")
             .accessibilityLabel("Watch folder")
             .accessibilityValue(isActive ? "Active" : "Inactive")

@@ -408,6 +408,16 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
+    func isHintDismissed(_ hint: FirstUseHint) -> Bool {
+        subject.value.dismissedHints.contains(hint)
+    }
+
+    func dismissHint(_ hint: FirstUseHint) {
+        var next = subject.value
+        next.dismissedHints.insert(hint)
+        subject.send(next)
+    }
+
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         let filePath = normalizedFileURL.path

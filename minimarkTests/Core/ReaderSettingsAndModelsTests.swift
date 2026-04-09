@@ -881,4 +881,18 @@ struct ReaderSettingsAndModelsTests {
                 == "macOS didn’t allow this change. In Finder, select a .md file, choose Get Info, set Open with to MarkdownObserver, then choose Change All."
         )
     }
+
+    @Test @MainActor func dismissedHintsPersistAcrossReload() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.dismissed-hints.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.dismissHint(.manualGroupReorder)
+        store.dismissHint(.changeNavigation)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.isHintDismissed(.manualGroupReorder))
+        #expect(reloadedStore.isHintDismissed(.changeNavigation))
+        #expect(!reloadedStore.isHintDismissed(.multiSelect))
+    }
 }
