@@ -550,6 +550,9 @@ final class ReaderSidebarDocumentController {
         }
 
         for document in documents where documentObservationTasks[document.id] == nil {
+            document.readerStore.onExternalChangeKindChanged = { [weak self] in
+                self?.updateRowStateIfNeeded(for: document.id)
+            }
             documentObservationTasks[document.id] = Task { [weak self] in
                 let store = document.readerStore
                 while !Task.isCancelled {

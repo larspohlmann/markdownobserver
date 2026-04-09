@@ -109,4 +109,34 @@ struct SidebarRowStateDerivationTests {
         #expect(updatedState?.indicatorPulseToken == (initialState?.indicatorPulseToken ?? 0) + 1)
         #expect(initialState != updatedState)
     }
+
+    @Test @MainActor func controllerUpdatesRowStateWhenChangeKindTransitions() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual
+        ))
+
+        let docID = harness.controller.documents[0].id
+        let store = harness.controller.documents[0].readerStore
+
+        await Task.yield()
+
+        // Simulate file-created indicator (green badge)
+        store.noteObservedExternalChange(kind: .added)
+        try await Task.sleep(for: .milliseconds(50))
+
+        let addedState = harness.controller.rowStates[docID]
+        #expect(addedState?.indicatorState == .addedExternalChange)
+
+        // Simulate file-modified indicator (yellow badge) — should replace green
+        store.noteObservedExternalChange(kind: .modified)
+        try await Task.sleep(for: .milliseconds(50))
+
+        let modifiedState = harness.controller.rowStates[docID]
+        #expect(modifiedState?.indicatorState == .externalChange)
+    }
 }
