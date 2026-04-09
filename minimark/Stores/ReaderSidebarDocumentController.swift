@@ -522,10 +522,15 @@ final class ReaderSidebarDocumentController {
         var states: [UUID: SidebarRowState] = [:]
         for document in documents {
             let previousIndicatorState = rowStates[document.id]?.indicatorState
-            let candidateState = deriveRowState(from: document)
+            let store = document.readerStore
+            let currentIndicatorState = ReaderDocumentIndicatorState(
+                hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: store.isCurrentFileMissing,
+                unacknowledgedExternalChangeKind: store.document.unacknowledgedExternalChangeKind
+            )
             if let previousIndicatorState,
-               previousIndicatorState != candidateState.indicatorState,
-               candidateState.indicatorState.showsIndicator {
+               previousIndicatorState != currentIndicatorState,
+               currentIndicatorState.showsIndicator {
                 rowIndicatorPulseTokens[document.id, default: 0] += 1
             }
             states[document.id] = deriveRowState(from: document)
@@ -569,15 +574,20 @@ final class ReaderSidebarDocumentController {
     private func updateRowStateIfNeeded(for documentID: UUID) {
         guard let document = documents.first(where: { $0.id == documentID }) else { return }
         let previousIndicatorState = rowStates[documentID]?.indicatorState
-        let candidateState = deriveRowState(from: document)
+        let store = document.readerStore
+        let currentIndicatorState = ReaderDocumentIndicatorState(
+            hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
+            isCurrentFileMissing: store.isCurrentFileMissing,
+            unacknowledgedExternalChangeKind: store.document.unacknowledgedExternalChangeKind
+        )
         if let previousIndicatorState,
-           previousIndicatorState != candidateState.indicatorState,
-           candidateState.indicatorState.showsIndicator {
+           previousIndicatorState != currentIndicatorState,
+           currentIndicatorState.showsIndicator {
             rowIndicatorPulseTokens[documentID, default: 0] += 1
         }
-        let refreshedState = deriveRowState(from: document)
-        if rowStates[documentID] != refreshedState {
-            rowStates[documentID] = refreshedState
+        let state = deriveRowState(from: document)
+        if rowStates[documentID] != state {
+            rowStates[documentID] = state
             onRowStatesChanged?(rowStates)
             onDockTileRowStatesChanged?(rowStates)
         }
