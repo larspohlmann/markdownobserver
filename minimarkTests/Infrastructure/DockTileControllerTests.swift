@@ -145,6 +145,32 @@ struct DockTileControllerTests {
         #expect(controller.createdCount == 0)
     }
 
+    @Test @MainActor func transitionFromAddedToModifiedUpdatesCount() {
+        let controller = DockTileController()
+        let windowToken = UUID()
+        let docA = UUID()
+
+        controller.updateRowStates(for: windowToken, rowStates: [
+            docA: SidebarRowState(
+                id: docA, title: "a.md", lastModified: nil, sortDate: nil,
+                isFileMissing: false, indicatorState: .addedExternalChange, indicatorPulseToken: 0
+            ),
+        ])
+
+        #expect(controller.createdCount == 1)
+        #expect(controller.modifiedCount == 0)
+
+        controller.updateRowStates(for: windowToken, rowStates: [
+            docA: SidebarRowState(
+                id: docA, title: "a.md", lastModified: nil, sortDate: nil,
+                isFileMissing: false, indicatorState: .externalChange, indicatorPulseToken: 1
+            ),
+        ])
+
+        #expect(controller.createdCount == 0)
+        #expect(controller.modifiedCount == 1)
+    }
+
     @Test @MainActor func notifiesOnCountChange() {
         var updateCount = 0
         let controller = DockTileController()
