@@ -169,6 +169,7 @@ struct WatchPill: View {
             .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 5))
             .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.primary.opacity(0.08)))
             .disabled(!canStop)
+            .help("Stop watching folder")
             .accessibilityLabel("Stop watching folder")
             .accessibilityHint("Stops monitoring the current folder")
         }

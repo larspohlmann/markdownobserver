@@ -127,7 +127,7 @@ struct ContentUtilityRail: View {
         .buttonStyle(.plain)
         .disabled(!canStartSourceEditing)
         .foregroundStyle(canStartSourceEditing ? .primary : .tertiary)
-        .help("Edit Source")
+        .help("Edit Source (⌘E)")
         .accessibilityLabel("Edit source")
     }
 
@@ -149,7 +149,7 @@ struct ContentUtilityRail: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
-        .help("Table of Contents")
+        .help("Table of Contents (⇧⌘T)")
         .accessibilityIdentifier("toc-button")
         .accessibilityLabel("Table of Contents")
         .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
