@@ -143,10 +143,24 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
         HStack(spacing: 6) {
             sidebarGroupSortMenu
 
+            if groupState.sortMode == .manualOrder {
+                FirstUseHintView(
+                    hint: .manualGroupReorder,
+                    message: "Drag groups to reorder",
+                    settingsStore: settingsStore
+                )
+            }
+
             sidebarFileSortMenu
 
             if selectedDocumentIDs.count > 1 {
                 selectionCountBadge
+
+                FirstUseHintView(
+                    hint: .multiSelect,
+                    message: "⌘-click to select multiple files",
+                    settingsStore: settingsStore
+                )
             }
 
             Spacer(minLength: 0)

@@ -75,6 +75,7 @@ struct ContentView: View {
     )
 
     var readerStore: ReaderStore
+    let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
     let callbacks: ContentViewCallbacks
     @Binding var isFolderWatchOptionsPresented: Bool
@@ -554,11 +555,19 @@ struct ContentView: View {
             }
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
-                    ChangeNavigationPill(
-                        currentIndex: currentChangedRegionIndex,
-                        totalCount: readerStore.changedRegions.count,
-                        onNavigate: requestChangedRegionNavigation
-                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        ChangeNavigationPill(
+                            currentIndex: currentChangedRegionIndex,
+                            totalCount: readerStore.changedRegions.count,
+                            onNavigate: requestChangedRegionNavigation
+                        )
+
+                        FirstUseHintView(
+                            hint: .changeNavigation,
+                            message: "Use the arrows to step through changes",
+                            settingsStore: settingsStore
+                        )
+                    }
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
@@ -1163,6 +1172,7 @@ private final class SplitScrollCoordinator: ObservableObject {
     )
     return ContentView(
         readerStore: store,
+        settingsStore: settingsStore,
         folderWatchState: ContentViewFolderWatchState(
             activeFolderWatch: nil,
             isFolderWatchInitialScanInProgress: false,
