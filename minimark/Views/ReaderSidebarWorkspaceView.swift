@@ -439,12 +439,18 @@ private struct ReaderSidebarDocumentRow: View {
         .padding(.horizontal, 4)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(showsSelectionBackground && isSelected ? selectionBackgroundColor : .clear)
+                .fill(
+                    showsSelectionBackground && isSelected
+                        ? selectionBackgroundColor
+                        : (isHovered ? Color.primary.opacity(0.04) : .clear)
+                )
         )
         .padding(.vertical, 2)
         .accessibilityIdentifier("sidebar-document-\(title)")
         .onHover { hovering in
-            isHovered = hovering
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
         }
         .onAppear {
             triggerIndicatorPulseIfNeeded(for: state.indicatorPulseToken)
