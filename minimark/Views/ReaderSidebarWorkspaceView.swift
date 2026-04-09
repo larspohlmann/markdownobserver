@@ -194,7 +194,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var sidebarGroupSortMenu: some View {
         Menu {
-            ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
+            ForEach(ReaderSidebarSortMode.availableCases(hasManualOrder: groupState.manualGroupOrder != nil), id: \.self) { mode in
                 Button {
                     groupState.sortMode = mode
                 } label: {
