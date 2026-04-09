@@ -20,6 +20,8 @@ struct FirstUseHintView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(.tertiary)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Dismiss hint")
