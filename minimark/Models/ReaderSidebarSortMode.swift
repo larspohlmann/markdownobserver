@@ -16,6 +16,10 @@ nonisolated enum ReaderSidebarSortMode: String, Codable, Sendable {
         .lastChangedOldestFirst
     ]
 
+    static func availableCases(hasManualOrder: Bool) -> [ReaderSidebarSortMode] {
+        hasManualOrder ? allCases + [.manualOrder] : allCases
+    }
+
     var displayName: String {
         switch self {
         case .openOrder:

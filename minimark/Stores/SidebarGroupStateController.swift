@@ -9,9 +9,6 @@ final class SidebarGroupStateController {
 
     var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst {
         didSet {
-            if sortMode != .manualOrder {
-                manualGroupOrder = nil
-            }
             recomputeGroupingIfNeeded()
         }
     }
