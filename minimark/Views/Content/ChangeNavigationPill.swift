@@ -3,12 +3,20 @@ import SwiftUI
 struct ChangeNavigationPill: View {
     let currentIndex: Int?
     let totalCount: Int
-    let canGoPrevious: Bool
-    let canGoNext: Bool
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
+
+    private var canGoPrevious: Bool {
+        if let currentIndex { return currentIndex > 0 }
+        return totalCount > 0
+    }
+
+    private var canGoNext: Bool {
+        if let currentIndex { return currentIndex < totalCount - 1 }
+        return totalCount > 0
+    }
 
     fileprivate enum Metrics {
         static let pillHeight: CGFloat = 30

@@ -557,8 +557,6 @@ struct ContentView: View {
                     ChangeNavigationPill(
                         currentIndex: currentChangedRegionIndex,
                         totalCount: readerStore.changedRegions.count,
-                        canGoPrevious: currentChangedRegionIndex != nil && currentChangedRegionIndex! > 0,
-                        canGoNext: currentChangedRegionIndex != nil && currentChangedRegionIndex! < readerStore.changedRegions.count - 1,
                         onNavigate: requestChangedRegionNavigation
                     )
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
@@ -566,7 +564,7 @@ struct ContentView: View {
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .move(edge: .top))
+                        removal: .opacity
                     ))
                 }
             }
@@ -593,7 +591,7 @@ struct ContentView: View {
                     .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .move(edge: .top))
+                        removal: .opacity
                     ))
                 }
             }
