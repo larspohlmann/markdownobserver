@@ -1,5 +1,6 @@
 import AppKit
 
+@MainActor
 final class DockTileBadgeView: NSView {
     struct Counts: Equatable {
         var created: Int
@@ -25,22 +26,22 @@ final class DockTileBadgeView: NSView {
 
         guard !counts.isEmpty else { return }
 
-        let bubbleDiameter: CGFloat = 24
-        let bubbleSpacing: CGFloat = 3
-        let borderWidth: CGFloat = 2
-        let fontSize: CGFloat = 11
+        let bubbleDiameter: CGFloat = 42
+        let bubbleSpacing: CGFloat = 4
+        let borderWidth: CGFloat = 2.5
+        let fontSize: CGFloat = 24
 
-        let activeBubbles: [(color: NSColor, count: Int)] = [
-            (.systemGreen, counts.created),
-            (.systemYellow, counts.modified),
-            (.systemRed, counts.deleted),
+        let activeBubbles: [(fill: NSColor, text: NSColor, count: Int)] = [
+            (NSColor(red: 0.20, green: 0.70, blue: 0.30, alpha: 1), .white, counts.created),
+            (NSColor(red: 0.90, green: 0.72, blue: 0.15, alpha: 1), NSColor(red: 0.25, green: 0.20, blue: 0.05, alpha: 1), counts.modified),
+            (NSColor(red: 0.85, green: 0.20, blue: 0.18, alpha: 1), .white, counts.deleted),
         ].filter { $0.count > 0 }
 
         let totalWidth = CGFloat(activeBubbles.count) * bubbleDiameter
             + CGFloat(max(activeBubbles.count - 1, 0)) * bubbleSpacing
 
-        let startX = bounds.maxX - totalWidth - 2
-        let centerY = bounds.maxY - bubbleDiameter / 2 - 2
+        let startX = bounds.maxX - totalWidth - 4
+        let centerY = bounds.maxY - bubbleDiameter / 2 - 4
 
         let font = NSFont.boldSystemFont(ofSize: fontSize)
         let paragraphStyle = NSMutableParagraphStyle()
@@ -63,14 +64,14 @@ final class DockTileBadgeView: NSView {
             // Colored fill
             let insetRect = bubbleRect.insetBy(dx: borderWidth, dy: borderWidth)
             let fillPath = NSBezierPath(ovalIn: insetRect)
-            bubble.color.setFill()
+            bubble.fill.setFill()
             fillPath.fill()
 
             // Count text
             let text = "\(bubble.count)" as NSString
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: NSColor.white,
+                .foregroundColor: bubble.text,
                 .paragraphStyle: paragraphStyle,
             ]
             let textSize = text.size(withAttributes: attributes)

@@ -19,25 +19,10 @@ final class DockTileController {
     func configureDockTileIfNeeded() {
         guard !isConfigured else { return }
         isConfigured = true
-        configureDockTile()
-    }
 
-    private func configureDockTile() {
         let view = DockTileBadgeView(frame: NSRect(x: 0, y: 0, width: 128, height: 128))
         badgeView = view
         NSApp?.dockTile.contentView = view
-        NSApp?.dockTile.display()
-
-        onCountsChanged = { [weak self] created, modified, deleted in
-            self?.updateBadgeView(created: created, modified: modified, deleted: deleted)
-        }
-    }
-
-    private func updateBadgeView(created: Int, modified: Int, deleted: Int) {
-        guard let badgeView else { return }
-        badgeView.counts = DockTileBadgeView.Counts(
-            created: created, modified: modified, deleted: deleted
-        )
         NSApp?.dockTile.display()
     }
 
@@ -78,6 +63,13 @@ final class DockTileController {
 
         if changed {
             onCountsChanged?(created, modified, deleted)
+
+            if let badgeView {
+                badgeView.counts = DockTileBadgeView.Counts(
+                    created: created, modified: modified, deleted: deleted
+                )
+                NSApp?.dockTile.display()
+            }
         }
     }
 
