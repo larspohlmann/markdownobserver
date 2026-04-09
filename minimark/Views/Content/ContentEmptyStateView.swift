@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentEmptyStateView: View {
     @Environment(\.colorScheme) private var colorScheme
 
-    enum Variant {
+    enum Variant: Equatable {
         case noDocument
         case folderWatchEmpty(folderName: String)
     }
@@ -56,10 +56,12 @@ struct ContentEmptyStateView: View {
             Image(systemName: "doc.text")
                 .font(.system(size: 48, weight: .thin))
                 .foregroundStyle(Color(hex: theme.secondaryForegroundHex)?.opacity(0.5) ?? .secondary)
+                .accessibilityHidden(true)
         case .folderWatchEmpty:
             Image(systemName: "binoculars.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(watchTintColor.opacity(0.5))
+                .accessibilityHidden(true)
         }
     }
 
@@ -67,7 +69,7 @@ struct ContentEmptyStateView: View {
     private var headline: some View {
         switch variant {
         case .noDocument:
-            Text("Open a Markdown File")
+            Text("Open a Markdown file")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color(hex: theme.foregroundHex)?.opacity(0.7) ?? .primary)
         case .folderWatchEmpty:

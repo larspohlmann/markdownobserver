@@ -3,24 +3,25 @@ import Testing
 @testable import minimark
 
 struct ContentEmptyStateTests {
-    @Test func noDocumentVariantShowsCorrectContent() {
+    @Test func noDocumentVariantIsEquatable() {
         let variant = ContentEmptyStateView.Variant.noDocument
-        switch variant {
-        case .noDocument:
-            // Expected path
-            break
-        case .folderWatchEmpty:
-            Issue.record("Expected .noDocument variant")
-        }
+        #expect(variant == .noDocument)
     }
 
     @Test func folderWatchEmptyVariantCarriesFolderName() {
         let variant = ContentEmptyStateView.Variant.folderWatchEmpty(folderName: "my-docs")
-        switch variant {
-        case .folderWatchEmpty(let name):
-            #expect(name == "my-docs")
-        case .noDocument:
-            Issue.record("Expected .folderWatchEmpty variant")
-        }
+        #expect(variant == .folderWatchEmpty(folderName: "my-docs"))
+    }
+
+    @Test func folderWatchEmptyVariantDistinguishesFolderNames() {
+        let a = ContentEmptyStateView.Variant.folderWatchEmpty(folderName: "docs")
+        let b = ContentEmptyStateView.Variant.folderWatchEmpty(folderName: "notes")
+        #expect(a != b)
+    }
+
+    @Test func variantsAreDistinct() {
+        let noDoc = ContentEmptyStateView.Variant.noDocument
+        let watchEmpty = ContentEmptyStateView.Variant.folderWatchEmpty(folderName: "test")
+        #expect(noDoc != watchEmpty)
     }
 }

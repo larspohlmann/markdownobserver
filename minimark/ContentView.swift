@@ -690,7 +690,7 @@ struct ContentView: View {
 
     private var emptyStateVariant: ContentEmptyStateView.Variant {
         if let activeWatch = folderWatchState.activeFolderWatch {
-            return .folderWatchEmpty(folderName: activeWatch.folderURL.lastPathComponent)
+            return .folderWatchEmpty(folderName: activeWatch.detailSummaryTitle)
         }
         return .noDocument
     }
