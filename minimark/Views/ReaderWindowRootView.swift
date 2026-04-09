@@ -314,8 +314,13 @@ struct ReaderWindowRootView: View {
                 sidebarDocumentController.onDockTileRowStatesChanged = { [dockTileWindowToken] rowStates in
                     DockTileController.shared.updateRowStates(for: dockTileWindowToken, rowStates: rowStates)
                 }
+                DockTileController.shared.updateRowStates(
+                    for: dockTileWindowToken,
+                    rowStates: sidebarDocumentController.rowStates
+                )
             }
             .onDisappear {
+                sidebarDocumentController.onDockTileRowStatesChanged = nil
                 DockTileController.shared.removeRowStates(for: dockTileWindowToken)
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in

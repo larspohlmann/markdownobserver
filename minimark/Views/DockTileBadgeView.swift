@@ -26,22 +26,23 @@ final class DockTileBadgeView: NSView {
 
         guard !counts.isEmpty else { return }
 
-        let bubbleDiameter: CGFloat = 42
-        let bubbleSpacing: CGFloat = 4
-        let borderWidth: CGFloat = 2.5
-        let fontSize: CGFloat = 24
-
         let activeBubbles: [(fill: NSColor, text: NSColor, count: Int)] = [
             (NSColor(red: 0.20, green: 0.70, blue: 0.30, alpha: 1), .white, counts.created),
             (NSColor(red: 0.90, green: 0.72, blue: 0.15, alpha: 1), NSColor(red: 0.25, green: 0.20, blue: 0.05, alpha: 1), counts.modified),
             (NSColor(red: 0.85, green: 0.20, blue: 0.18, alpha: 1), .white, counts.deleted),
         ].filter { $0.count > 0 }
 
-        let totalWidth = CGFloat(activeBubbles.count) * bubbleDiameter
-            + CGFloat(max(activeBubbles.count - 1, 0)) * bubbleSpacing
+        let padding: CGFloat = 4
+        let bubbleSpacing: CGFloat = 4
+        let bubbleCount = CGFloat(activeBubbles.count)
+        let availableWidth = bounds.width - 2 * padding
+        let bubbleDiameter = min(42, (availableWidth - (bubbleCount - 1) * bubbleSpacing) / bubbleCount)
+        let borderWidth: CGFloat = 2.5
+        let fontSize = bubbleDiameter * 0.57
 
-        let startX = bounds.maxX - totalWidth - 4
-        let centerY = bounds.maxY - bubbleDiameter / 2 - 4
+        let totalWidth = bubbleCount * bubbleDiameter + (bubbleCount - 1) * bubbleSpacing
+        let startX = bounds.maxX - totalWidth - padding
+        let centerY = bounds.maxY - bubbleDiameter / 2 - padding
 
         let font = NSFont.boldSystemFont(ofSize: fontSize)
         let paragraphStyle = NSMutableParagraphStyle()
