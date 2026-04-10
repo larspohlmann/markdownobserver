@@ -113,8 +113,20 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
             return !normalizedChangedDirectories.contains(parentPath)
         }
 
+        let rootPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
+
         for directoryURL in changedDirectoryURLs {
             let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
+
+            // Skip directories beyond the configured depth limit
+            let depth = Self.relativePathDepth(
+                forPath: normalizedDirectoryURL.path,
+                relativeToPathWithSlash: rootPathWithSlash,
+                isDirectory: true
+            )
+            guard depth <= ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
+                continue
+            }
 
             guard !exclusionMatcher.excludesDirectory(normalizedDirectoryURL) else {
                 continue
