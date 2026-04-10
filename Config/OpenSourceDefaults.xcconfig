@@ -9,5 +9,9 @@ UITESTS_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER).uitests
 CODE_SIGNING_ALLOWED = NO
 CODE_SIGNING_REQUIRED = NO
 
+// Layout tuning — gap (in points) between overlay controls and where
+// change-navigation scrolls to. Increase for more breathing room.
+SCROLL_LANDING_GAP = 36
+
 // Optional local overrides (gitignored), for distribution signing.
 #include? "Signing.local.xcconfig"

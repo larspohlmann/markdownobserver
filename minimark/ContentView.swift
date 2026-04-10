@@ -64,6 +64,7 @@ struct ContentView: View {
         let onDroppedFileURLs: ([URL]) -> Void
         let onDropTargetedChange: (DropTargetingUpdate) -> Void
         let canAcceptDroppedFileURLs: ([URL]) -> Bool
+        let onChangedRegionNavigationResult: (Int, Int) -> Void
         let onRetryFallback: () -> Void
     }
 
@@ -772,6 +773,9 @@ struct ContentView: View {
                     updateDropTargetState(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onChangedRegionNavigationResult: { index, _ in
+                    currentChangedRegionIndex = index
+                },
                 onRetryFallback: {
                     previewReloadToken += 1
                     previewMode = .web
@@ -815,6 +819,7 @@ struct ContentView: View {
                     updateDropTargetState(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onChangedRegionNavigationResult: { _, _ in },
                 onRetryFallback: {
                     sourceReloadToken += 1
                     sourceMode = .web
@@ -846,17 +851,6 @@ struct ContentView: View {
     private func requestChangedRegionNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
         guard canNavigateChangedRegions else {
             return
-        }
-
-        let count = readerStore.changedRegions.count
-        if let current = currentChangedRegionIndex {
-            if direction == .next {
-                currentChangedRegionIndex = (current + 1) % count
-            } else {
-                currentChangedRegionIndex = (current - 1 + count) % count
-            }
-        } else {
-            currentChangedRegionIndex = direction == .next ? 0 : count - 1
         }
 
         lastChangedRegionNavigationDirection = direction
@@ -999,7 +993,8 @@ private struct DocumentSurfaceHost: View {
                     onTOCHeadingsExtracted: configuration.onTOCHeadingsExtracted,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
                     onDropTargetedChange: configuration.onDropTargetedChange,
-                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs
+                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs,
+                    onChangedRegionNavigationResult: configuration.onChangedRegionNavigationResult
                 )
             } else {
                 fallbackSurface

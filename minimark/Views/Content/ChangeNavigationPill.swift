@@ -16,6 +16,13 @@ struct ChangeNavigationPill: View {
         totalCount > 0
     }
 
+    static func counterText(currentIndex: Int?, totalCount: Int) -> String {
+        let position = currentIndex.map {
+            "\(min(max($0, 0), max(0, totalCount - 1)) + 1)"
+        } ?? "\u{2014}"
+        return "\(position) / \(totalCount)"
+    }
+
     fileprivate enum Metrics {
         static let pillHeight: CGFloat = 30
         static let horizontalPadding: CGFloat = 10
@@ -37,10 +44,7 @@ struct ChangeNavigationPill: View {
                 onNavigate: onNavigate
             )
 
-            (
-                Text(currentIndex.map { "\(min($0, max(0, totalCount - 1)) + 1)" } ?? "\u{2014}")
-                + Text(" / \(totalCount)")
-            )
+            Text(Self.counterText(currentIndex: currentIndex, totalCount: totalCount))
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()

@@ -1,7 +1,7 @@
 (function () {
   var payload = decodePayload("__MINIMARK_PAYLOAD_BASE64__");
   var runtimeCSSBase64 = "__MINIMARK_CSS_BASE64__";
-  var overlayTopInset = 56;
+  var overlayTopInset = __MINIMARK_OVERLAY_TOP_INSET__;
 
   function setOverlayTopInset(value) {
     var numericValue = Number(value);
@@ -1152,7 +1152,7 @@
 
     var currentTop = Math.max(0, (scrollContainer.scrollTop || 0) - getRootDocumentTop(root));
     var activeIndex = findMarkerIndexByKey(markers, activeNavigatedChangedRegionKey);
-    if (activeIndex < 0) {
+    if (activeIndex < 0 && activeNavigatedChangedRegionKey) {
       activeIndex = findMarkerIndexNearScrollPosition(markers, currentTop);
     }
 
@@ -1164,8 +1164,9 @@
     }
 
     var targetRow = markers[targetIndex];
+    var scrolled = scrollToChangedRegion(targetRow, root);
 
-    return scrollToChangedRegion(targetRow, root);
+    return scrolled ? { index: targetIndex, count: markers.length } : null;
   }
 
   window.__minimarkNavigateChangedRegion = navigateChangedRegion;
