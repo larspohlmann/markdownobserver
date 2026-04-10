@@ -468,6 +468,18 @@ struct FolderFileMetadata: Equatable {
 // MARK: - Exclusion matcher
 
 struct FolderWatchExclusionMatcher {
+    /// macOS system metadata directory names that are always excluded from
+    /// file watching. Spotlight writes to `.Spotlight-V100` inside watched
+    /// trees, generating FSEvents that trigger verification cycles and
+    /// create a feedback loop with `mdworker_shared`.
+    private static let systemExcludedDirectoryNames: Set<String> = [
+        ".Spotlight-V100",
+        ".fseventsd",
+        ".Trashes",
+        ".DocumentRevisions-V100",
+        ".TemporaryItems",
+    ]
+
     private let rootFolderPathWithSlash: String
     private let excludedDirectoryPaths: [String]
 
@@ -497,11 +509,20 @@ struct FolderWatchExclusionMatcher {
     }
 
     func excludesNormalizedDirectoryPath(_ normalizedPath: String) -> Bool {
-        excludesPath(normalizedPath)
+        Self.containsSystemExcludedComponent(inPath: normalizedPath) || excludesPath(normalizedPath)
     }
 
     func excludesNormalizedFilePath(_ normalizedPath: String) -> Bool {
-        excludesPath(normalizedPath)
+        Self.containsSystemExcludedComponent(inPath: normalizedPath) || excludesPath(normalizedPath)
+    }
+
+    private static func containsSystemExcludedComponent(inPath path: String) -> Bool {
+        for name in systemExcludedDirectoryNames {
+            if path.contains("/" + name + "/") || path.hasSuffix("/" + name) {
+                return true
+            }
+        }
+        return false
     }
 
     private func excludesPath(_ path: String) -> Bool {
