@@ -751,4 +751,87 @@ struct RenderingAndDiffTests {
         #expect(regions.contains { $0.kind == .added || $0.kind == .edited })
         #expect(!regions.contains { $0.kind == .deleted })
     }
+
+    // MARK: - Adjacent region coalescing (#234)
+
+    @Test @MainActor func changedRegionDifferCoalescesConsecutiveEditedLinesIntoOneRegion() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\nLine one\nLine two\nLine three\n\nEnd"
+        let newMarkdown = "# Title\n\nLine one modified\nLine two modified\nLine three modified\n\nEnd"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let editedRegions = regions.filter { $0.kind == .edited }
+        #expect(editedRegions.count == 1)
+        #expect(editedRegions.first?.lineRange == 3...5)
+    }
+
+    @Test @MainActor func changedRegionDifferCoalescesConsecutiveAddedLinesIntoOneRegion() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\nEnd"
+        let newMarkdown = "# Title\n\nNew line one\nNew line two\n\nEnd"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let addedRegions = regions.filter { $0.kind == .added }
+        #expect(addedRegions.count == 1)
+        #expect(addedRegions.first?.lineRange == 3...4)
+    }
+
+    @Test @MainActor func changedRegionDifferKeepsSeparateRegionsForLinesSeparatedByBlankLine() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\nParagraph one\n\nParagraph two"
+        let newMarkdown = "# Title\n\nParagraph one modified\n\nParagraph two modified"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let editedRegions = regions.filter { $0.kind == .edited }
+        #expect(editedRegions.count == 2)
+    }
+
+    @Test @MainActor func changedRegionDifferDoesNotCoalesceDeletedWithEdited() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\nRemove me\nKeep me\n\nEnd"
+        let newMarkdown = "# Title\n\nKeep me modified\n\nEnd"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let deletedRegions = regions.filter { $0.kind == .deleted }
+        let editedRegions = regions.filter { $0.kind == .edited }
+        #expect(deletedRegions.count + editedRegions.count >= 2)
+        #expect(!deletedRegions.isEmpty)
+        #expect(!editedRegions.isEmpty)
+    }
+
+    @Test @MainActor func changedRegionDifferSingleLineEditProducesOneRegion() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\nOriginal line\n\nEnd"
+        let newMarkdown = "# Title\n\nModified line\n\nEnd"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let editedRegions = regions.filter { $0.kind == .edited }
+        #expect(editedRegions.count == 1)
+        #expect(editedRegions.first?.lineRange == 3...3)
+    }
 }

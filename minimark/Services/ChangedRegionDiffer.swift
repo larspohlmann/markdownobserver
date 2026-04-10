@@ -34,6 +34,7 @@ struct ChangedRegionDiffer: ChangedRegionDiffering {
         }
 
         changedRegions = coalescedDeletedRegions(changedRegions)
+        changedRegions = coalescedAdjacentRegions(changedRegions)
 
         return changedRegions.sorted { lhs, rhs in
             if lhs.lineRange.lowerBound != rhs.lineRange.lowerBound {
@@ -372,6 +373,47 @@ struct ChangedRegionDiffer: ChangedRegionDiffering {
         switch (lhs, rhs) {
         case let (lhs?, rhs?) where !lhs.isEmpty && !rhs.isEmpty:
             return normalizedSnippet(lhs + "\n" + rhs)
+        case let (lhs?, _):
+            return lhs
+        case let (_, rhs?):
+            return rhs
+        default:
+            return nil
+        }
+    }
+
+    private func coalescedAdjacentRegions(_ regions: [ChangedRegion]) -> [ChangedRegion] {
+        let sorted = regions.sorted { $0.lineRange.lowerBound < $1.lineRange.lowerBound }
+        var coalesced: [ChangedRegion] = []
+
+        for region in sorted {
+            guard region.kind != .deleted,
+                  let last = coalesced.last,
+                  last.kind == region.kind,
+                  region.lineRange.lowerBound == last.lineRange.upperBound + 1 else {
+                coalesced.append(region)
+                continue
+            }
+
+            coalesced.removeLast()
+            coalesced.append(
+                ChangedRegion(
+                    blockIndex: min(last.blockIndex, region.blockIndex),
+                    lineRange: last.lineRange.lowerBound...region.lineRange.upperBound,
+                    kind: last.kind,
+                    previousTextSnippet: mergedSnippet(last.previousTextSnippet, region.previousTextSnippet),
+                    currentTextSnippet: mergedSnippet(last.currentTextSnippet, region.currentTextSnippet)
+                )
+            )
+        }
+
+        return coalesced
+    }
+
+    private func mergedSnippet(_ lhs: String?, _ rhs: String?) -> String? {
+        switch (lhs, rhs) {
+        case let (lhs?, rhs?) where !lhs.isEmpty && !rhs.isEmpty:
+            return truncatedSnippet(lhs + "\n" + rhs)
         case let (lhs?, _):
             return lhs
         case let (_, rhs?):
