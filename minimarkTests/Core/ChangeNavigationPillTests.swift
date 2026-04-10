@@ -17,8 +17,12 @@ struct ChangeNavigationPillTests {
         #expect(ChangeNavigationPill.counterText(currentIndex: 2, totalCount: 3) == "3 / 3")
     }
 
-    @Test func counterClampsIndexToValidRange() {
+    @Test func counterClampsIndexAboveRange() {
         #expect(ChangeNavigationPill.counterText(currentIndex: 5, totalCount: 3) == "3 / 3")
+    }
+
+    @Test func counterClampsNegativeIndex() {
+        #expect(ChangeNavigationPill.counterText(currentIndex: -1, totalCount: 3) == "1 / 3")
     }
 
     @Test func counterHandlesSingleChange() {

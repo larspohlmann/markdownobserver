@@ -17,7 +17,9 @@ struct ChangeNavigationPill: View {
     }
 
     static func counterText(currentIndex: Int?, totalCount: Int) -> String {
-        let position = currentIndex.map { "\(min($0, max(0, totalCount - 1)) + 1)" } ?? "\u{2014}"
+        let position = currentIndex.map {
+            "\(min(max($0, 0), max(0, totalCount - 1)) + 1)"
+        } ?? "\u{2014}"
         return "\(position) / \(totalCount)"
     }
 
