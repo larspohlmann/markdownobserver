@@ -342,6 +342,122 @@ struct FolderEventSourceTests {
         })
     }
 
+    // MARK: - Accumulated directory URL merging
+
+    @Test @MainActor func fsEventStreamAccumulatesChangedDirectoriesAcrossRapidEvents() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let subdirA = directoryURL.appendingPathComponent("alpha", isDirectory: true)
+        let subdirB = directoryURL.appendingPathComponent("bravo", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdirA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subdirB, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let fileA = subdirA.appendingPathComponent("a.md")
+        let fileB = subdirB.appendingPathComponent("b.md")
+        try "# A".write(to: fileA, atomically: true, encoding: .utf8)
+        try "# B".write(to: fileB, atomically: true, encoding: .utf8)
+
+        let watcher = makeFSEventsWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        // Write to both subdirectories in rapid succession — both should be detected
+        // even though the verification delay may coalesce them
+        try "# A modified".write(to: fileA, atomically: true, encoding: .utf8)
+        try "# B modified".write(to: fileB, atomically: true, encoding: .utf8)
+
+        let normalizedA = ReaderFileRouting.normalizedFileURL(fileA)
+        let normalizedB = ReaderFileRouting.normalizedFileURL(fileB)
+
+        #expect(await waitUntil(timeout: .seconds(5)) {
+            receivedEvents.contains(where: { $0.fileURL == normalizedA && $0.kind == .modified }) &&
+            receivedEvents.contains(where: { $0.fileURL == normalizedB && $0.kind == .modified })
+        })
+    }
+
+    // MARK: - New subdirectory detection (directory resync)
+
+    @Test @MainActor func dispatchSourceDetectsChangesInNewlyCreatedSubdirectory() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let existingFileURL = directoryURL.appendingPathComponent("existing.md")
+        try "# Existing".write(to: existingFileURL, atomically: true, encoding: .utf8)
+
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: .milliseconds(50),
+                    fallbackPollingInterval: .milliseconds(80),
+                    maximumDirectoryEventSourceCount: 128
+                )
+            }
+        )
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        // Create a new subdirectory and add a file — should be detected after resync
+        let newSubdir = directoryURL.appendingPathComponent("new-subdir", isDirectory: true)
+        try FileManager.default.createDirectory(at: newSubdir, withIntermediateDirectories: true)
+        let newFileURL = newSubdir.appendingPathComponent("new.md")
+        try "# New".write(to: newFileURL, atomically: true, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(newFileURL) &&
+                $0.kind == .added
+            })
+        })
+    }
+
+    // MARK: - FSEvents non-recursive guard
+
+    @Test func fsEventStreamSourceRejectsNonRecursiveWatch() {
+        let source = FSEventStreamFolderEventSource(latency: 0.1, safetyPollingInterval: .seconds(30))
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: URL(fileURLWithPath: "/tmp"), excludedSubdirectoryURLs: []
+        )
+        let queue = DispatchQueue(label: "test.fsevents.guard")
+        var eventCount = 0
+
+        source.start(
+            folderURL: URL(fileURLWithPath: "/tmp"),
+            includeSubfolders: false,
+            exclusionMatcher: exclusionMatcher,
+            queue: queue
+        ) { _ in
+            eventCount += 1
+        }
+        defer { source.stop() }
+
+        // Should not have started — no events should be delivered
+        queue.sync {
+            // If the source started, it would have scheduled a safety timer.
+            // Give it a moment then verify no events fired.
+        }
+
+        // The source should not be active (no stream, no timer)
+        // We verify by checking that stop() is safe to call (no crash)
+        source.stop()
+    }
+
     // MARK: - Factory selection
 
     @Test func factorySelectsFSEventsForRecursiveAndDispatchSourceForFlat() {

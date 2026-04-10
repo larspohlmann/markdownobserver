@@ -1037,6 +1037,71 @@ struct FileRoutingAndWatcherTests {
         #expect(changes.first?.fileURL == normalizedDest)
     }
 
+    @Test func folderSnapshotDifferTargetedSnapshotRejectsNonFileURL() {
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: URL(fileURLWithPath: "/tmp"), excludedSubdirectoryURLs: []
+        )
+
+        #expect(throws: ReaderError.self) {
+            _ = try differ.buildTargetedIncrementalSnapshot(
+                folderURL: URL(string: "https://example.com")!,
+                includeSubfolders: true,
+                exclusionMatcher: exclusionMatcher,
+                previousSnapshot: [:],
+                changedDirectoryURLs: []
+            )
+        }
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotEnforcesDepthLimit() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        // Create a directory structure 6 levels deep (exceeds the 5-level limit)
+        var deepDir = directoryURL
+        for level in 1...6 {
+            deepDir = deepDir.appendingPathComponent("level\(level)", isDirectory: true)
+        }
+        try FileManager.default.createDirectory(at: deepDir, withIntermediateDirectories: true)
+
+        // Also create a directory at the limit (depth 5)
+        var atLimitDir = directoryURL
+        for level in 1...5 {
+            atLimitDir = atLimitDir.appendingPathComponent("ok\(level)", isDirectory: true)
+        }
+        try FileManager.default.createDirectory(at: atLimitDir, withIntermediateDirectories: true)
+
+        let deepFileURL = deepDir.appendingPathComponent("too-deep.md")
+        let atLimitFileURL = atLimitDir.appendingPathComponent("at-limit.md")
+        try "# Too deep".write(to: deepFileURL, atomically: false, encoding: .utf8)
+        try "# At limit".write(to: atLimitFileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:],
+            changedDirectoryURLs: Set([
+                ReaderFileRouting.normalizedFileURL(deepDir),
+                ReaderFileRouting.normalizedFileURL(atLimitDir)
+            ])
+        )
+
+        let normalizedDeepURL = ReaderFileRouting.normalizedFileURL(deepFileURL)
+        let normalizedAtLimitURL = ReaderFileRouting.normalizedFileURL(atLimitFileURL)
+
+        // File beyond depth limit should be excluded
+        #expect(targetedSnapshot[normalizedDeepURL] == nil)
+        // File at the limit should be included
+        #expect(targetedSnapshot[normalizedAtLimitURL] != nil)
+    }
+
     @Test func readerFileActionServiceDeduplicatesApplicationsWithSameBundleIdentifier() throws {
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("reader-file-action-service-tests-\(UUID().uuidString)", isDirectory: true)
