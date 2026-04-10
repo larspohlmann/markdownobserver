@@ -555,19 +555,12 @@ struct ContentView: View {
             }
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ChangeNavigationPill(
-                            currentIndex: currentChangedRegionIndex,
-                            totalCount: readerStore.changedRegions.count,
-                            onNavigate: requestChangedRegionNavigation
-                        )
-
-                        FirstUseHintView(
-                            hint: .changeNavigation,
-                            message: "Use the arrows to step through changes",
-                            settingsStore: settingsStore
-                        )
-                    }
+                    ChangeNavigationPill(
+                        currentIndex: currentChangedRegionIndex,
+                        totalCount: readerStore.changedRegions.count,
+                        onNavigate: requestChangedRegionNavigation
+                    )
+                    .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
                     .environment(\.colorScheme, overlayColorScheme)

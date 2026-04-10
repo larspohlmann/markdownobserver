@@ -1,33 +1,62 @@
 import SwiftUI
 
-struct FirstUseHintView: View {
+struct FirstUseHintModifier: ViewModifier {
     let hint: FirstUseHint
     let message: String
     let settingsStore: ReaderSettingsStore
+    let isActive: Bool
 
-    var body: some View {
-        if !settingsStore.isHintDismissed(hint) {
-            HStack(spacing: 4) {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    @State private var isPresented = false
 
-                Button {
-                    withAnimation {
-                        settingsStore.dismissHint(hint)
+    func body(content: Content) -> some View {
+        content
+            .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+                HStack(spacing: 6) {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        isPresented = false
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 16, height: 16)
+                            .contentShape(Rectangle())
                     }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 16, height: 16)
-                        .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss hint")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Dismiss hint")
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
             }
-            .fixedSize()
-            .transition(.opacity)
-        }
+            .onChange(of: isActive) { _, active in
+                if active && !settingsStore.isHintDismissed(hint) {
+                    isPresented = true
+                }
+            }
+            .onChange(of: isPresented) { _, newValue in
+                if !newValue {
+                    settingsStore.dismissHint(hint)
+                }
+            }
+            .onAppear {
+                if isActive && !settingsStore.isHintDismissed(hint) {
+                    isPresented = true
+                }
+            }
     }
 }
+
+extension View {
+    func firstUseHint(
+        _ hint: FirstUseHint,
+        message: String,
+        settingsStore: ReaderSettingsStore,
+        isActive: Bool = true
+    ) -> some View {
+        modifier(FirstUseHintModifier(hint: hint, message: message, settingsStore: settingsStore, isActive: isActive))
+    }
+}
+
