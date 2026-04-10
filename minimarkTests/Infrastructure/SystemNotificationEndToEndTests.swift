@@ -14,7 +14,7 @@ import Testing
 import UserNotifications
 @testable import minimark
 
-@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["RUN_E2E_NOTIFICATION_TESTS"] != nil))
+@Suite(.serialized, .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil, "Skipped in CI — requires notification permissions"))
 struct SystemNotificationEndToEndTests {
 
     @Test func notificationPostedForCreatedFile() async throws {
