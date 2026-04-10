@@ -591,9 +591,15 @@ struct FileRoutingAndWatcherTests {
 
         try "# Before".write(to: deepFileURL, atomically: false, encoding: .utf8)
 
-        let watcher = makeFolderChangeWatcher(
-            fallbackPollingInterval: .seconds(5),
-            maximumDirectoryEventSourceCount: 2
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5),
+                    maximumDirectoryEventSourceCount: 2
+                )
+            }
         )
         var receivedEvents: [ReaderFolderWatchChangeEvent] = []
 
@@ -602,8 +608,9 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
-        #expect(!watcher.isUsingEventSourcesForTesting)
-        #expect(watcher.activeDirectorySourceCountForTesting == 0)
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting
+        })
 
         try "# After".write(to: deepFileURL, atomically: false, encoding: .utf8)
 
@@ -625,9 +632,15 @@ struct FileRoutingAndWatcherTests {
 
         try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
 
-        let watcher = makeFolderChangeWatcher(
-            fallbackPollingInterval: .seconds(5),
-            maximumDirectoryEventSourceCount: 2
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5),
+                    maximumDirectoryEventSourceCount: 2
+                )
+            }
         )
         var receivedEvents: [ReaderFolderWatchChangeEvent] = []
 
@@ -640,59 +653,9 @@ struct FileRoutingAndWatcherTests {
             watcher.didCompleteStartupForTesting
         })
 
-        #expect(watcher.isUsingEventSourcesForTesting)
-        #expect(watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting)
-
         let overLimitDirectoryURL = nestedDirectoryURL.appendingPathComponent("level-1", isDirectory: true)
         try FileManager.default.createDirectory(at: overLimitDirectoryURL, withIntermediateDirectories: true)
 
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            !watcher.isUsingEventSourcesForTesting &&
-            !watcher.isUsingFallbackPollingIntervalForTesting &&
-            !watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting
-        })
-
-        try "# After".write(to: trackedFileURL, atomically: false, encoding: .utf8)
-
-        #expect(await waitUntil(timeout: .seconds(1)) {
-            receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(trackedFileURL) &&
-                $0.kind == .modified &&
-                $0.previousMarkdown == "# Before"
-            })
-        })
-    }
-
-    @Test @MainActor func recursiveEventSourceSafetyPollingBacksOffWhenIdleAndResetsAfterEvent() async throws {
-        let directoryURL = try makeTemporaryDirectory()
-        let nestedDirectoryURL = directoryURL.appendingPathComponent("docs", isDirectory: true)
-        let trackedFileURL = nestedDirectoryURL.appendingPathComponent("tracked.md")
-        try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directoryURL) }
-
-        try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
-
-        let baseSafetyInterval: DispatchTimeInterval = .milliseconds(60)
-        let watcher = makeFolderChangeWatcher(
-            fallbackPollingInterval: .seconds(5),
-            recursiveEventSourceSafetyPollingInterval: baseSafetyInterval
-        )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
-
-        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
-            receivedEvents.append(contentsOf: events)
-        }
-        defer { watcher.stopWatching() }
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            watcher.didCompleteStartupForTesting &&
-            watcher.currentTimerIntervalForTesting == baseSafetyInterval
-        })
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            watcher.currentTimerIntervalForTesting == .milliseconds(120)
-        })
-
         try "# After".write(to: trackedFileURL, atomically: false, encoding: .utf8)
 
         #expect(await waitUntil(timeout: .seconds(2)) {
@@ -701,10 +664,6 @@ struct FileRoutingAndWatcherTests {
                 $0.kind == .modified &&
                 $0.previousMarkdown == "# Before"
             })
-        })
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            watcher.currentTimerIntervalForTesting == baseSafetyInterval
         })
     }
 
@@ -739,7 +698,15 @@ struct FileRoutingAndWatcherTests {
             try "# Startup Profile \(index)".write(to: fileURL, atomically: false, encoding: .utf8)
         }
 
-        let watcher = makeFolderChangeWatcher(fallbackPollingInterval: .seconds(5))
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5)
+                )
+            }
+        )
         let clock = ContinuousClock()
         let start = clock.now
 
@@ -971,31 +938,16 @@ private extension FileRoutingAndWatcherTests {
     }
 
     func makeFolderChangeWatcher(
-        fallbackPollingInterval: DispatchTimeInterval = defaultFallbackPollingInterval,
-        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval? = nil,
-        maximumDirectoryEventSourceCount: Int? = nil,
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) -> FolderChangeWatcher {
-        guard let maximumDirectoryEventSourceCount else {
-            return FolderChangeWatcher(
-                pollingInterval: Self.defaultPollingInterval,
-                fallbackPollingInterval: fallbackPollingInterval,
-                recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval ?? .seconds(
-                    ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
-                ),
-                verificationDelay: Self.defaultVerificationDelay,
-                onFailure: onFailure
-            )
-        }
-
-        return FolderChangeWatcher(
-            pollingInterval: Self.defaultPollingInterval,
-            fallbackPollingInterval: fallbackPollingInterval,
-            recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval ?? .seconds(
-                ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
-            ),
+        FolderChangeWatcher(
             verificationDelay: Self.defaultVerificationDelay,
-            maximumDirectoryEventSourceCount: maximumDirectoryEventSourceCount,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: Self.defaultFallbackPollingInterval
+                )
+            },
             onFailure: onFailure
         )
     }
@@ -1015,7 +967,15 @@ private extension FileRoutingAndWatcherTests {
         let nestedFileURL = nestedDirectoryURL.appendingPathComponent(fileName)
         try "# Before".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
-        let watcher = makeFolderChangeWatcher(fallbackPollingInterval: .seconds(5))
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5)
+                )
+            }
+        )
         var receivedEvents: [ReaderFolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
@@ -1023,13 +983,7 @@ private extension FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
-        let expectedDirectorySourceCount = subdirectoryComponents.count + 1
-        let watcherReady = await waitUntil(timeout: .seconds(3)) {
-            watcher.activeDirectorySourceCountForTesting >= expectedDirectorySourceCount
-        }
-        #expect(watcherReady)
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
+        #expect(await waitUntil(timeout: .seconds(3)) {
             watcher.didCompleteStartupForTesting
         })
 

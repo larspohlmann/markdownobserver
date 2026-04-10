@@ -125,9 +125,13 @@ struct FolderChangeWatcherScanProgressTests {
 
     private func makeFolderChangeWatcher() -> FolderChangeWatcher {
         FolderChangeWatcher(
-            pollingInterval: Self.defaultPollingInterval,
-            fallbackPollingInterval: Self.defaultFallbackPollingInterval,
-            verificationDelay: Self.defaultVerificationDelay
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: Self.defaultFallbackPollingInterval
+                )
+            }
         )
     }
 }

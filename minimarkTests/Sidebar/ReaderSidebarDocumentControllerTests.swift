@@ -281,9 +281,13 @@ struct ReaderSidebarDocumentControllerTests {
             makeFolderWatchController: {
                 ReaderFolderWatchController(
                     folderWatcher: FolderChangeWatcher(
-                        pollingInterval: .milliseconds(50),
-                        fallbackPollingInterval: .milliseconds(80),
-                        verificationDelay: .milliseconds(20)
+                        verificationDelay: .milliseconds(20),
+                        makeEventSource: { _ in
+                            DispatchSourceFolderEventSource(
+                                pollingInterval: .milliseconds(50),
+                                fallbackPollingInterval: .milliseconds(80)
+                            )
+                        }
                     ),
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),

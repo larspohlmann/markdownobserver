@@ -81,12 +81,11 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
             self.reconfigureTimerIfNeeded()
         }
 
-        if let existingQueue = self.queue,
-           DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            _ = existingQueue
+        queue.setSpecific(key: Self.queueKey, value: 1)
+
+        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
             startWork()
         } else {
-            queue.setSpecific(key: Self.queueKey, value: 1)
             queue.sync(execute: startWork)
         }
     }
