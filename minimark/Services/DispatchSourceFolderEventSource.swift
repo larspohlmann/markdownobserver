@@ -91,64 +91,20 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
 
     // MARK: - Testing properties
 
-    var isUsingEventSourcesForTesting: Bool {
+    var isUsingEventSourcesForTesting: Bool { syncRead { usesEventSource } }
+    var activeDirectorySourceCountForTesting: Int { syncRead { directorySources.count } }
+    var isUsingFallbackPollingIntervalForTesting: Bool { syncRead { timerInterval == fallbackPollingInterval } }
+    var isUsingRecursiveEventSourceSafetyPollingIntervalForTesting: Bool { syncRead { timerInterval == recursiveEventSourceSafetyPollingInterval } }
+    var currentTimerIntervalForTesting: DispatchTimeInterval? { syncRead { timerInterval } }
+
+    private func syncRead<T>(_ body: () -> T) -> T {
         if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
-            return usesEventSource
+            return body()
         }
-
         if let queue {
-            return queue.sync { usesEventSource }
+            return queue.sync(execute: body)
         }
-
-        return usesEventSource
-    }
-
-    var activeDirectorySourceCountForTesting: Int {
-        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
-            return directorySources.count
-        }
-
-        if let queue {
-            return queue.sync { directorySources.count }
-        }
-
-        return directorySources.count
-    }
-
-    var isUsingFallbackPollingIntervalForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
-            return timerInterval == fallbackPollingInterval
-        }
-
-        if let queue {
-            return queue.sync { timerInterval == fallbackPollingInterval }
-        }
-
-        return timerInterval == fallbackPollingInterval
-    }
-
-    var isUsingRecursiveEventSourceSafetyPollingIntervalForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
-            return timerInterval == recursiveEventSourceSafetyPollingInterval
-        }
-
-        if let queue {
-            return queue.sync { timerInterval == recursiveEventSourceSafetyPollingInterval }
-        }
-
-        return timerInterval == recursiveEventSourceSafetyPollingInterval
-    }
-
-    var currentTimerIntervalForTesting: DispatchTimeInterval? {
-        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
-            return timerInterval
-        }
-
-        if let queue {
-            return queue.sync { timerInterval }
-        }
-
-        return timerInterval
+        return body()
     }
 
     // MARK: - Private

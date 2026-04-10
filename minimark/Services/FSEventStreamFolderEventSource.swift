@@ -156,9 +156,9 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
             if isDirectory {
                 directoryURL = normalizedEventURL
             } else {
-                directoryURL = ReaderFileRouting.normalizedFileURL(
-                    normalizedEventURL.deletingLastPathComponent()
-                )
+                // normalizedEventURL is already standardized, so
+                // deletingLastPathComponent produces a normalized parent
+                directoryURL = normalizedEventURL.deletingLastPathComponent()
             }
 
             changedDirectoryURLs.insert(directoryURL)

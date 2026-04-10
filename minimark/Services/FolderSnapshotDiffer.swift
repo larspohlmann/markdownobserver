@@ -107,7 +107,6 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
             changedDirectoryURLs.map { ReaderFileRouting.normalizedFileURL($0).path }
         )
 
-        // Single pass: remove files whose parent directory is in the changed set
         snapshot = snapshot.filter { url, _ in
             let parentPath = ReaderFileRouting.normalizedFileURL(url.deletingLastPathComponent()).path
             return !normalizedChangedDirectories.contains(parentPath)
@@ -132,17 +131,17 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 continue
             }
 
-            // If the directory was deleted, treat it as empty (files already
-            // removed from snapshot above). contentsOfDirectory throws for
-            // missing directories.
-            guard FileManager.default.fileExists(atPath: normalizedDirectoryURL.path) else {
+            let freshURLs: [URL]
+            do {
+                freshURLs = try enumerateMarkdownFilesInSingleDirectory(
+                    directoryURL: normalizedDirectoryURL,
+                    exclusionMatcher: exclusionMatcher
+                )
+            } catch let error as NSError where error.domain == NSCocoaErrorDomain &&
+                (error.code == NSFileReadNoSuchFileError || error.code == NSFileNoSuchFileError) {
+                // Directory was deleted — treat as empty (files already removed above)
                 continue
             }
-
-            let freshURLs = try enumerateMarkdownFilesInSingleDirectory(
-                directoryURL: normalizedDirectoryURL,
-                exclusionMatcher: exclusionMatcher
-            )
 
             for url in freshURLs {
                 let metadata = FolderFileMetadata(url: url)
