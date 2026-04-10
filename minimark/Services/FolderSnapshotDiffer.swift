@@ -103,19 +103,16 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
 
         var snapshot = previousSnapshot
 
-        let normalizedChangedDirectoryPathsWithSlash = changedDirectoryURLs.map {
-            let path = ReaderFileRouting.normalizedFileURL($0).path
-            return path.hasSuffix("/") ? path : path + "/"
-        }
+        let normalizedChangedDirectoryPaths = Set(
+            changedDirectoryURLs.map { ReaderFileRouting.normalizedFileURL($0).path }
+        )
 
+        // Remove files whose immediate parent is a changed directory.
+        // Deeper descendants are handled by the per-directory enumeration
+        // below (deleted directories produce an empty result via catch).
         snapshot = snapshot.filter { url, _ in
-            let filePath = url.path
-            for dirPath in normalizedChangedDirectoryPathsWithSlash {
-                if filePath.hasPrefix(dirPath) {
-                    return false
-                }
-            }
-            return true
+            let parentPath = url.deletingLastPathComponent().path
+            return !normalizedChangedDirectoryPaths.contains(parentPath)
         }
 
         let rootPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
