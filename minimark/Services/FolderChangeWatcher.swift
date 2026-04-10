@@ -64,7 +64,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         var isFinished: Bool { completed == total }
     }
 
-    private static let queueKey = DispatchSpecificKey<UInt8>()
+    private static let queueKey = DispatchSpecificKey<ObjectIdentifier>()
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "FolderChangeWatcher"
@@ -118,7 +118,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         self.verificationDelay = verificationDelay
         self.makeEventSource = makeEventSource
         self.onFailure = onFailure
-        queue.setSpecific(key: Self.queueKey, value: 1)
+        queue.setSpecific(key: Self.queueKey, value: ObjectIdentifier(self))
     }
 
     deinit {
@@ -196,7 +196,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.startupSequence &+= 1
         }
 
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             stopWork()
         } else {
             queue.sync(execute: stopWork)
@@ -269,7 +269,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     func cachedMarkdownFileURLs() -> [URL]? {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             guard didCompleteStartup else { return nil }
             return lastSnapshot.keys.sorted(by: { $0.path < $1.path })
         }
@@ -280,7 +280,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     var didCompleteStartupForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             return didCompleteStartup
         }
 
@@ -288,7 +288,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     var scanProgressStream: AsyncStream<ScanProgress> {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             return _scanProgressStream ?? emptyFinishedStream()
         }
         return queue.sync { _scanProgressStream ?? emptyFinishedStream() }
