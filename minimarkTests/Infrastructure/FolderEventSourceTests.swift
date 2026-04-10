@@ -117,6 +117,36 @@ struct FolderEventSourceTests {
         }))
     }
 
+    @Test @MainActor func fsEventStreamDetectsFileDeletionInRecursiveWatch() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let docsURL = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: docsURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let fileURL = docsURL.appendingPathComponent("will-be-deleted.md")
+        try "# Delete me".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let watcher = makeFSEventsWatcher()
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { _ in }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let cachedBefore = watcher.cachedMarkdownFileURLs() ?? []
+        #expect(cachedBefore.contains(normalizedFileURL))
+
+        try FileManager.default.removeItem(at: fileURL)
+
+        #expect(await waitUntil(timeout: .seconds(5)) {
+            let cached = watcher.cachedMarkdownFileURLs() ?? []
+            return !cached.contains(normalizedFileURL)
+        })
+    }
+
     // MARK: - Factory selection
 
     @Test func factorySelectsFSEventsForRecursiveAndDispatchSourceForFlat() {
