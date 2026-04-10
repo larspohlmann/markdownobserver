@@ -17,10 +17,6 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
     private var exclusionMatcher: FolderWatchExclusionMatcher?
     private var onEvent: ((@Sendable (Set<URL>?) -> Void))?
 
-    var recommendedSafetyPollingInterval: DispatchTimeInterval {
-        safetyPollingInterval
-    }
-
     init(
         latency: CFTimeInterval = 0.3,
         safetyPollingInterval: DispatchTimeInterval = .seconds(30)

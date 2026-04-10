@@ -31,10 +31,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     private var unsignaledVerificationSkipCycles = 0
     private var hasPendingFileSystemSignal = false
 
-    var recommendedSafetyPollingInterval: DispatchTimeInterval {
-        fallbackPollingInterval
-    }
-
     init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
         fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
@@ -100,59 +96,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         } else {
             stopInternal()
         }
-    }
-
-    // MARK: - Watcher integration
-
-    func reportVerificationResult(
-        changedEventCount: Int,
-        didResynchronizeDirectories: Bool
-    ) {
-        adaptRecursiveEventSourceSafetyPollingIfNeeded(
-            changedEventCount: changedEventCount,
-            didResynchronizeDirectories: didResynchronizeDirectories
-        )
-    }
-
-    func shouldSkipVerification() -> Bool {
-        guard usesEventSource,
-              includesSubfolders,
-              !needsDirectorySourceResync,
-              !hasPendingFileSystemSignal else {
-            unsignaledVerificationSkipCycles = 0
-            return false
-        }
-
-        guard unsignaledVerificationSkipCycles < Self.adaptiveSafetyPollingMaximumUnsignaledSkips else {
-            unsignaledVerificationSkipCycles = 0
-            return false
-        }
-
-        unsignaledVerificationSkipCycles += 1
-        return true
-    }
-
-    func consumePendingSignal() {
-        hasPendingFileSystemSignal = false
-        unsignaledVerificationSkipCycles = 0
-    }
-
-    func resynchronizeIfNeeded(
-        folderURL: URL,
-        includeSubfolders: Bool,
-        exclusionMatcher: FolderWatchExclusionMatcher
-    ) -> Bool {
-        guard needsDirectorySourceResync else {
-            return false
-        }
-
-        synchronizeDirectorySources(
-            folderURL: folderURL,
-            includeSubfolders: includeSubfolders,
-            exclusionMatcher: exclusionMatcher
-        )
-        needsDirectorySourceResync = false
-        return true
     }
 
     // MARK: - Testing properties

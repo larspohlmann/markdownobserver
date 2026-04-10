@@ -79,7 +79,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private let makeEventSource: (_ includeSubfolders: Bool) -> any FolderEventSource
     private let onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)?
     private var eventSource: (any FolderEventSource)?
-    private var safetyTimer: DispatchSourceTimer?
     private var pendingWorkItem: DispatchWorkItem?
 
     private var watchedFolderURL: URL?
@@ -179,9 +178,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.eventSource?.stop()
             self.eventSource = nil
 
-            self.safetyTimer?.cancel()
-            self.safetyTimer = nil
-
             self.watchedFolderURL = nil
             self.includesSubfolders = false
             self.excludedSubdirectoryURLs = []
@@ -247,15 +243,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         ) { [weak self] changedDirectoryURLs in
             self?.scheduleVerification(changedDirectoryURLs: changedDirectoryURLs)
         }
-
-        let safetyInterval = source.recommendedSafetyPollingInterval
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + safetyInterval, repeating: safetyInterval)
-        timer.setEventHandler { [weak self] in
-            self?.scheduleVerification(changedDirectoryURLs: nil)
-        }
-        safetyTimer = timer
-        timer.resume()
 
         didCompleteStartup = true
         scheduleVerification(changedDirectoryURLs: nil)

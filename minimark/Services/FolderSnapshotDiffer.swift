@@ -99,21 +99,21 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
     ) throws -> [URL: FolderFileSnapshot] {
         var snapshot = previousSnapshot
 
+        let normalizedChangedDirectories = Set(
+            changedDirectoryURLs.map { ReaderFileRouting.normalizedFileURL($0).path }
+        )
+
+        // Single pass: remove files whose parent directory is in the changed set
+        snapshot = snapshot.filter { url, _ in
+            let parentPath = ReaderFileRouting.normalizedFileURL(url.deletingLastPathComponent()).path
+            return !normalizedChangedDirectories.contains(parentPath)
+        }
+
         for directoryURL in changedDirectoryURLs {
             let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
 
             guard !exclusionMatcher.excludesDirectory(normalizedDirectoryURL) else {
                 continue
-            }
-
-            let directoryPath = normalizedDirectoryURL.path
-            let directoryPathWithSlash = directoryPath.hasSuffix("/") ? directoryPath : directoryPath + "/"
-
-            for url in snapshot.keys {
-                let parentPath = url.deletingLastPathComponent().path
-                if parentPath == directoryPath || parentPath + "/" == directoryPathWithSlash {
-                    snapshot.removeValue(forKey: url)
-                }
             }
 
             let freshURLs = try enumerateMarkdownFilesInSingleDirectory(

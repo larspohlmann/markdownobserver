@@ -1,8 +1,6 @@
 import Foundation
 
 protocol FolderEventSource: AnyObject, Sendable {
-    var recommendedSafetyPollingInterval: DispatchTimeInterval { get }
-
     func start(
         folderURL: URL,
         includeSubfolders: Bool,
