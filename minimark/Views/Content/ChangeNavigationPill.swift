@@ -9,13 +9,11 @@ struct ChangeNavigationPill: View {
     @State private var isHovering = false
 
     private var canGoPrevious: Bool {
-        if let currentIndex { return currentIndex > 0 }
-        return totalCount > 0
+        totalCount > 0
     }
 
     private var canGoNext: Bool {
-        if let currentIndex { return currentIndex < totalCount - 1 }
-        return totalCount > 0
+        totalCount > 0
     }
 
     fileprivate enum Metrics {

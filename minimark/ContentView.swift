@@ -850,12 +850,10 @@ struct ContentView: View {
 
         let count = readerStore.changedRegions.count
         if let current = currentChangedRegionIndex {
-            if direction == .next, current < count - 1 {
-                currentChangedRegionIndex = current + 1
-            } else if direction == .previous, current > 0 {
-                currentChangedRegionIndex = current - 1
+            if direction == .next {
+                currentChangedRegionIndex = (current + 1) % count
             } else {
-                return
+                currentChangedRegionIndex = (current - 1 + count) % count
             }
         } else {
             currentChangedRegionIndex = direction == .next ? 0 : count - 1
