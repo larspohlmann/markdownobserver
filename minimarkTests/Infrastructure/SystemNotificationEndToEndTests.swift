@@ -14,7 +14,7 @@ import Testing
 import UserNotifications
 @testable import minimark
 
-@Suite(.serialized)
+@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["RUN_E2E_NOTIFICATION_TESTS"] != nil))
 struct SystemNotificationEndToEndTests {
 
     @Test func notificationPostedForCreatedFile() async throws {

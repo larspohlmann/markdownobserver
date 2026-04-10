@@ -80,6 +80,8 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private let onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)?
     private var eventSource: (any FolderEventSource)?
     private var pendingWorkItem: DispatchWorkItem?
+    private var pendingChangedDirectoryURLs: Set<URL>?
+    private var pendingNeedsFullScan = false
 
     private var watchedFolderURL: URL?
     private var includesSubfolders = false
@@ -174,6 +176,8 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         let stopWork = {
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
+            self.pendingChangedDirectoryURLs = nil
+            self.pendingNeedsFullScan = false
 
             self.eventSource?.stop()
             self.eventSource = nil
@@ -342,13 +346,29 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     }
 
     private func scheduleVerification(changedDirectoryURLs: Set<URL>?) {
+        // Accumulate changed directories while a work item is pending.
+        // nil means "full scan needed" — once set, it overrides any targeted set.
+        if changedDirectoryURLs == nil {
+            pendingNeedsFullScan = true
+        } else if !pendingNeedsFullScan, let dirs = changedDirectoryURLs {
+            if pendingChangedDirectoryURLs != nil {
+                pendingChangedDirectoryURLs?.formUnion(dirs)
+            } else {
+                pendingChangedDirectoryURLs = dirs
+            }
+        }
+
         guard pendingWorkItem == nil else {
             return
         }
 
         let workItem = DispatchWorkItem { [weak self] in
-            self?.pendingWorkItem = nil
-            self?.verifyChanges(changedDirectoryURLs: changedDirectoryURLs)
+            guard let self else { return }
+            self.pendingWorkItem = nil
+            let resolvedURLs: Set<URL>? = self.pendingNeedsFullScan ? nil : self.pendingChangedDirectoryURLs
+            self.pendingChangedDirectoryURLs = nil
+            self.pendingNeedsFullScan = false
+            self.verifyChanges(changedDirectoryURLs: resolvedURLs)
         }
         pendingWorkItem = workItem
         queue.asyncAfter(deadline: .now() + verificationDelay, execute: workItem)

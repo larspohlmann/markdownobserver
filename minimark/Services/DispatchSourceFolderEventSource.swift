@@ -2,10 +2,8 @@ import Foundation
 import OSLog
 
 final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Sendable {
-    private static let adaptiveSafetyPollingIdleCyclesPerStep = 3
-    private static let adaptiveSafetyPollingMaximumMultiplier = 4
     private static let adaptiveSafetyPollingMaximumUnsignaledSkips = 2
-    private static let queueKey = DispatchSpecificKey<UInt8>()
+    private static let queueKey = DispatchSpecificKey<ObjectIdentifier>()
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "DispatchSourceFolderEventSource"
@@ -26,8 +24,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     private var includesSubfolders = false
     private var watchedFolderURL: URL?
     private var exclusionMatcher: FolderWatchExclusionMatcher?
-    private var adaptiveSafetyPollingMultiplier = 1
-    private var adaptiveSafetyPollingIdleCycles = 0
     private var unsignaledVerificationSkipCycles = 0
     private var hasPendingFileSystemSignal = false
 
@@ -77,9 +73,10 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
             self.reconfigureTimerIfNeeded()
         }
 
-        queue.setSpecific(key: Self.queueKey, value: 1)
+        let token = ObjectIdentifier(self)
+        queue.setSpecific(key: Self.queueKey, value: token)
 
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == token {
             startWork()
         } else {
             queue.sync(execute: startWork)
@@ -87,9 +84,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     func stop() {
-        if let queue,
-           DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            _ = queue
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             stopInternal()
         } else if let queue {
             queue.sync { self.stopInternal() }
@@ -101,7 +96,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     // MARK: - Testing properties
 
     var isUsingEventSourcesForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             return usesEventSource
         }
 
@@ -113,7 +108,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     var activeDirectorySourceCountForTesting: Int {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             return directorySources.count
         }
 
@@ -125,7 +120,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     var isUsingFallbackPollingIntervalForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             return timerInterval == fallbackPollingInterval
         }
 
@@ -137,19 +132,19 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     var isUsingRecursiveEventSourceSafetyPollingIntervalForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval()
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
+            return timerInterval == recursiveEventSourceSafetyPollingInterval
         }
 
         if let queue {
-            return queue.sync { timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval() }
+            return queue.sync { timerInterval == recursiveEventSourceSafetyPollingInterval }
         }
 
-        return timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval()
+        return timerInterval == recursiveEventSourceSafetyPollingInterval
     }
 
     var currentTimerIntervalForTesting: DispatchTimeInterval? {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             return timerInterval
         }
 
@@ -175,8 +170,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         onEvent = nil
         usesEventSource = false
         needsDirectorySourceResync = false
-        adaptiveSafetyPollingMultiplier = 1
-        adaptiveSafetyPollingIdleCycles = 0
         unsignaledVerificationSkipCycles = 0
         hasPendingFileSystemSignal = false
     }
@@ -240,7 +233,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         let desiredInterval: DispatchTimeInterval
         if usesEventSource {
             desiredInterval = includesSubfolders
-                ? resolvedRecursiveEventSourceSafetyPollingInterval()
+                ? recursiveEventSourceSafetyPollingInterval
                 : fallbackPollingInterval
         } else {
             desiredInterval = pollingInterval
@@ -305,7 +298,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     private func handleDirectorySourceEvent(_ events: DispatchSource.FileSystemEvent) {
-        resetAdaptiveSafetyPollingToBaselineIfNeeded()
         hasPendingFileSystemSignal = true
         unsignaledVerificationSkipCycles = 0
 
@@ -313,49 +305,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         if !events.intersection(topologyChangeEvents).isEmpty {
             needsDirectorySourceResync = needsDirectorySourceResync || includesSubfolders
         }
-    }
-
-    private func resolvedRecursiveEventSourceSafetyPollingInterval() -> DispatchTimeInterval {
-        scaledInterval(recursiveEventSourceSafetyPollingInterval, multiplier: adaptiveSafetyPollingMultiplier)
-    }
-
-    private func adaptRecursiveEventSourceSafetyPollingIfNeeded(
-        changedEventCount: Int,
-        didResynchronizeDirectories: Bool
-    ) {
-        guard usesEventSource, includesSubfolders else {
-            adaptiveSafetyPollingMultiplier = 1
-            adaptiveSafetyPollingIdleCycles = 0
-            return
-        }
-
-        guard changedEventCount == 0, !didResynchronizeDirectories else {
-            resetAdaptiveSafetyPollingToBaselineIfNeeded()
-            return
-        }
-
-        adaptiveSafetyPollingIdleCycles += 1
-        guard adaptiveSafetyPollingIdleCycles >= Self.adaptiveSafetyPollingIdleCyclesPerStep else {
-            return
-        }
-
-        adaptiveSafetyPollingIdleCycles = 0
-        guard adaptiveSafetyPollingMultiplier < Self.adaptiveSafetyPollingMaximumMultiplier else {
-            return
-        }
-
-        adaptiveSafetyPollingMultiplier += 1
-        reconfigureTimerIfNeeded()
-    }
-
-    private func resetAdaptiveSafetyPollingToBaselineIfNeeded() {
-        adaptiveSafetyPollingIdleCycles = 0
-        guard adaptiveSafetyPollingMultiplier != 1 else {
-            return
-        }
-
-        adaptiveSafetyPollingMultiplier = 1
-        reconfigureTimerIfNeeded()
     }
 
     private func enumerateWatchedDirectories(
@@ -412,26 +361,5 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         }
 
         return result
-    }
-
-    private func scaledInterval(_ interval: DispatchTimeInterval, multiplier: Int) -> DispatchTimeInterval {
-        guard multiplier > 1 else {
-            return interval
-        }
-
-        switch interval {
-        case let .seconds(value):
-            return .seconds(value * multiplier)
-        case let .milliseconds(value):
-            return .milliseconds(value * multiplier)
-        case let .microseconds(value):
-            return .microseconds(value * multiplier)
-        case let .nanoseconds(value):
-            return .nanoseconds(value * multiplier)
-        case .never:
-            return .never
-        @unknown default:
-            return interval
-        }
     }
 }

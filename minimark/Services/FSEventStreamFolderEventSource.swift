@@ -68,10 +68,15 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
             return
         }
 
-        stream = newStream
         FSEventStreamSetDispatchQueue(newStream, queue)
-        FSEventStreamStart(newStream)
+        guard FSEventStreamStart(newStream) else {
+            Self.logger.error("failed to start FSEventStream for \(folderURL.path, privacy: .private(mask: .hash))")
+            FSEventStreamInvalidate(newStream)
+            FSEventStreamRelease(newStream)
+            return
+        }
 
+        stream = newStream
         configureSafetyTimer(queue: queue)
     }
 
