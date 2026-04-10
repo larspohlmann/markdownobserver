@@ -97,6 +97,10 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
         previousSnapshot: [URL: FolderFileSnapshot],
         changedDirectoryURLs: Set<URL>
     ) throws -> [URL: FolderFileSnapshot] {
+        guard folderURL.isFileURL else {
+            throw ReaderError.invalidFileURL
+        }
+
         var snapshot = previousSnapshot
 
         let normalizedChangedDirectories = Set(

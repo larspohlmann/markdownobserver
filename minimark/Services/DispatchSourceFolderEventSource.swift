@@ -2,7 +2,6 @@ import Foundation
 import OSLog
 
 final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Sendable {
-    private static let adaptiveSafetyPollingMaximumUnsignaledSkips = 2
     private static let queueKey = DispatchSpecificKey<ObjectIdentifier>()
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
@@ -24,8 +23,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     private var includesSubfolders = false
     private var watchedFolderURL: URL?
     private var exclusionMatcher: FolderWatchExclusionMatcher?
-    private var unsignaledVerificationSkipCycles = 0
-    private var hasPendingFileSystemSignal = false
 
     init(
         pollingInterval: DispatchTimeInterval = .seconds(1),
@@ -62,7 +59,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
             self.includesSubfolders = includeSubfolders
             self.exclusionMatcher = exclusionMatcher
             self.onEvent = onEvent
-            self.hasPendingFileSystemSignal = true
 
             self.synchronizeDirectorySources(
                 folderURL: folderURL,
@@ -170,8 +166,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         onEvent = nil
         usesEventSource = false
         needsDirectorySourceResync = false
-        unsignaledVerificationSkipCycles = 0
-        hasPendingFileSystemSignal = false
     }
 
     private func synchronizeDirectorySources(
@@ -313,9 +307,6 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     private func handleDirectorySourceEvent(_ events: DispatchSource.FileSystemEvent) {
-        hasPendingFileSystemSignal = true
-        unsignaledVerificationSkipCycles = 0
-
         let topologyChangeEvents: DispatchSource.FileSystemEvent = [.rename, .delete, .revoke, .write]
         if !events.intersection(topologyChangeEvents).isEmpty {
             needsDirectorySourceResync = needsDirectorySourceResync || includesSubfolders
