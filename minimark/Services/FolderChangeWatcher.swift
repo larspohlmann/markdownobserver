@@ -64,9 +64,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         var isFinished: Bool { completed == total }
     }
 
-    private static let adaptiveSafetyPollingIdleCyclesPerStep = 3
-    private static let adaptiveSafetyPollingMaximumMultiplier = 4
-    private static let adaptiveSafetyPollingMaximumUnsignaledSkips = 2
     private static let queueKey = DispatchSpecificKey<UInt8>()
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
@@ -78,22 +75,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     )
     private let queue = DispatchQueue(label: "minimark.folderwatcher")
     private let snapshotDiffer: FolderSnapshotDiffing
-    private let pollingInterval: DispatchTimeInterval
-    private let fallbackPollingInterval: DispatchTimeInterval
-    private let recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval
     private let verificationDelay: DispatchTimeInterval
-    private let maximumDirectoryEventSourceCount: Int
+    private let makeEventSource: (_ includeSubfolders: Bool) -> any FolderEventSource
     private let onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)?
-    private var directorySources: [URL: DispatchSourceFileSystemObject] = [:]
-    private var timer: DispatchSourceTimer?
-    private var timerInterval: DispatchTimeInterval?
+    private var eventSource: (any FolderEventSource)?
+    private var safetyTimer: DispatchSourceTimer?
     private var pendingWorkItem: DispatchWorkItem?
-    private var usesEventSource = false
-    private var needsDirectorySourceResync = false
-    private var adaptiveSafetyPollingMultiplier = 1
-    private var adaptiveSafetyPollingIdleCycles = 0
-    private var unsignaledVerificationSkipCycles = 0
-    private var hasPendingFileSystemSignal = false
 
     private var watchedFolderURL: URL?
     private var includesSubfolders = false
@@ -108,42 +95,27 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var _scanProgressStream: AsyncStream<ScanProgress>?
 
     convenience init(
-        pollingInterval: DispatchTimeInterval = .seconds(1),
-        fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
-        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval = .seconds(
-            ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
-        ),
         verificationDelay: DispatchTimeInterval = .milliseconds(75),
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) {
         self.init(
             snapshotDiffer: FolderSnapshotDiffer(),
-            pollingInterval: pollingInterval,
-            fallbackPollingInterval: fallbackPollingInterval,
-            recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval,
             verificationDelay: verificationDelay,
-            maximumDirectoryEventSourceCount: 128,
+            makeEventSource: { FolderEventSourceFactory.makeEventSource(includeSubfolders: $0) },
             onFailure: onFailure
         )
     }
 
     init(
         snapshotDiffer: FolderSnapshotDiffing = FolderSnapshotDiffer(),
-        pollingInterval: DispatchTimeInterval = .seconds(1),
-        fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
-        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval = .seconds(
-            ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
-        ),
         verificationDelay: DispatchTimeInterval = .milliseconds(75),
-        maximumDirectoryEventSourceCount: Int = 128,
+        makeEventSource: @escaping (_ includeSubfolders: Bool) -> any FolderEventSource
+            = { FolderEventSourceFactory.makeEventSource(includeSubfolders: $0) },
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) {
         self.snapshotDiffer = snapshotDiffer
-        self.pollingInterval = pollingInterval
-        self.fallbackPollingInterval = fallbackPollingInterval
-        self.recursiveEventSourceSafetyPollingInterval = recursiveEventSourceSafetyPollingInterval
         self.verificationDelay = verificationDelay
-        self.maximumDirectoryEventSourceCount = max(1, maximumDirectoryEventSourceCount)
+        self.makeEventSource = makeEventSource
         self.onFailure = onFailure
         queue.setSpecific(key: Self.queueKey, value: 1)
     }
@@ -180,10 +152,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.onMarkdownFilesAddedOrChanged = onMarkdownFilesAddedOrChanged
             lastSnapshot = [:]
             lastReportedFailureByStage = [:]
-            needsDirectorySourceResync = false
             didCompleteStartup = false
-            unsignaledVerificationSkipCycles = 0
-            hasPendingFileSystemSignal = true
 
             let (stream, continuation) = AsyncStream.makeStream(of: ScanProgress.self)
             _scanProgressStream = stream
@@ -207,11 +176,11 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
 
-            self.cancelAllDirectorySources()
+            self.eventSource?.stop()
+            self.eventSource = nil
 
-            self.timer?.cancel()
-            self.timer = nil
-            self.timerInterval = nil
+            self.safetyTimer?.cancel()
+            self.safetyTimer = nil
 
             self.watchedFolderURL = nil
             self.includesSubfolders = false
@@ -220,12 +189,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             self.onMarkdownFilesAddedOrChanged = nil
             self.lastSnapshot = [:]
             self.lastReportedFailureByStage = [:]
-            self.usesEventSource = false
-            self.needsDirectorySourceResync = false
-            self.adaptiveSafetyPollingMultiplier = 1
-            self.adaptiveSafetyPollingIdleCycles = 0
-            self.unsignaledVerificationSkipCycles = 0
-            self.hasPendingFileSystemSignal = false
             self.didCompleteStartup = false
             self.scanProgressContinuation?.finish()
             self.scanProgressContinuation = nil
@@ -270,15 +233,32 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
 
         lastSnapshot = snapshot
 
-        synchronizeDirectorySources(
+        guard let exclusionMatcher else {
+            return
+        }
+
+        let source = makeEventSource(includeSubfolders)
+        eventSource = source
+        source.start(
             folderURL: folderURL,
             includeSubfolders: includeSubfolders,
-            excludedSubdirectoryURLs: excludedSubdirectoryURLs
-        )
-        needsDirectorySourceResync = false
+            exclusionMatcher: exclusionMatcher,
+            queue: queue
+        ) { [weak self] changedDirectoryURLs in
+            self?.scheduleVerification(changedDirectoryURLs: changedDirectoryURLs)
+        }
+
+        let safetyInterval = source.recommendedSafetyPollingInterval
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + safetyInterval, repeating: safetyInterval)
+        timer.setEventHandler { [weak self] in
+            self?.scheduleVerification(changedDirectoryURLs: nil)
+        }
+        safetyTimer = timer
+        timer.resume()
+
         didCompleteStartup = true
-        reconfigureTimerIfNeeded()
-        scheduleVerification()
+        scheduleVerification(changedDirectoryURLs: nil)
         // populateContentPhase runs synchronously on `queue`, so the
         // verifyChanges work item scheduled above cannot execute until
         // content population is complete.
@@ -306,46 +286,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             guard didCompleteStartup else { return nil }
             return lastSnapshot.keys.sorted(by: { $0.path < $1.path })
         }
-    }
-
-    var isUsingEventSourcesForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return usesEventSource
-        }
-
-        return queue.sync { usesEventSource }
-    }
-
-    var activeDirectorySourceCountForTesting: Int {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return directorySources.count
-        }
-
-        return queue.sync { directorySources.count }
-    }
-
-    var isUsingFallbackPollingIntervalForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return timerInterval == fallbackPollingInterval
-        }
-
-        return queue.sync { timerInterval == fallbackPollingInterval }
-    }
-
-    var isUsingRecursiveEventSourceSafetyPollingIntervalForTesting: Bool {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval()
-        }
-
-        return queue.sync { timerInterval == resolvedRecursiveEventSourceSafetyPollingInterval() }
-    }
-
-    var currentTimerIntervalForTesting: DispatchTimeInterval? {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            return timerInterval
-        }
-
-        return queue.sync { timerInterval }
     }
 
     var didCompleteStartupForTesting: Bool {
@@ -414,20 +354,20 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         scanProgressContinuation = nil
     }
 
-    private func scheduleVerification() {
+    private func scheduleVerification(changedDirectoryURLs: Set<URL>?) {
         guard pendingWorkItem == nil else {
             return
         }
 
         let workItem = DispatchWorkItem { [weak self] in
             self?.pendingWorkItem = nil
-            self?.verifyChanges()
+            self?.verifyChanges(changedDirectoryURLs: changedDirectoryURLs)
         }
         pendingWorkItem = workItem
         queue.asyncAfter(deadline: .now() + verificationDelay, execute: workItem)
     }
 
-    private func verifyChanges() {
+    private func verifyChanges(changedDirectoryURLs: Set<URL>?) {
         let verifySignpostID = Self.signposter.makeSignpostID()
         let verifyIntervalState = Self.signposter.beginInterval("verifyChanges", id: verifySignpostID)
         defer {
@@ -442,29 +382,30 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             return
         }
 
-        if shouldSkipIdleVerificationCycle() {
-            adaptRecursiveEventSourceSafetyPollingIfNeeded(
-                changedEventCount: 0,
-                didResynchronizeDirectories: false
-            )
-            return
-        }
-
-        hasPendingFileSystemSignal = false
-        unsignaledVerificationSkipCycles = 0
-
         let currentSnapshot: [URL: FolderFileSnapshot]
         do {
             let snapshotIntervalState = Self.signposter.beginInterval("buildIncrementalSnapshot", id: verifySignpostID)
             defer {
                 Self.signposter.endInterval("buildIncrementalSnapshot", snapshotIntervalState)
             }
-            currentSnapshot = try snapshotDiffer.buildIncrementalSnapshot(
-                folderURL: watchedFolderURL,
-                includeSubfolders: includesSubfolders,
-                exclusionMatcher: exclusionMatcher,
-                previousSnapshot: lastSnapshot
-            )
+
+            if let changedDirectoryURLs, !changedDirectoryURLs.isEmpty {
+                currentSnapshot = try snapshotDiffer.buildTargetedIncrementalSnapshot(
+                    folderURL: watchedFolderURL,
+                    includeSubfolders: includesSubfolders,
+                    exclusionMatcher: exclusionMatcher,
+                    previousSnapshot: lastSnapshot,
+                    changedDirectoryURLs: changedDirectoryURLs
+                )
+            } else {
+                currentSnapshot = try snapshotDiffer.buildIncrementalSnapshot(
+                    folderURL: watchedFolderURL,
+                    includeSubfolders: includesSubfolders,
+                    exclusionMatcher: exclusionMatcher,
+                    previousSnapshot: lastSnapshot
+                )
+            }
+
             Self.signposter.emitEvent(
                 "snapshotCounts",
                 "current \(currentSnapshot.count) previous \(self.lastSnapshot.count) include_subfolders \(self.includesSubfolders ? 1 : 0)"
@@ -475,30 +416,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
             return
         }
 
-        var didResynchronizeDirectories = false
-        if needsDirectorySourceResync {
-            let resyncIntervalState = Self.signposter.beginInterval("synchronizeDirectorySources", id: verifySignpostID)
-            synchronizeDirectorySources(
-                folderURL: watchedFolderURL,
-                includeSubfolders: includesSubfolders,
-                excludedSubdirectoryURLs: excludedSubdirectoryURLs
-            )
-            Self.signposter.endInterval("synchronizeDirectorySources", resyncIntervalState)
-            needsDirectorySourceResync = false
-            didResynchronizeDirectories = true
-        }
-
         let diffIntervalState = Self.signposter.beginInterval("diffSnapshots", id: verifySignpostID)
         let changedEvents = snapshotDiffer.diff(current: currentSnapshot, previous: lastSnapshot)
         Self.signposter.endInterval("diffSnapshots", diffIntervalState)
         Self.signposter.emitEvent(
             "diffCounts",
             "changed \(changedEvents.count) current \(currentSnapshot.count)"
-        )
-
-        adaptRecursiveEventSourceSafetyPollingIfNeeded(
-            changedEventCount: changedEvents.count,
-            didResynchronizeDirectories: didResynchronizeDirectories
         )
 
         lastSnapshot = currentSnapshot
@@ -511,280 +434,6 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         DispatchQueue.main.async {
             onMarkdownFilesAddedOrChanged(normalized)
         }
-    }
-
-    private func synchronizeDirectorySources(
-        folderURL: URL,
-        includeSubfolders: Bool,
-        excludedSubdirectoryURLs: [URL]
-    ) {
-        let usedEventSourcesBeforeSync = usesEventSource
-        let exclusionMatcher = FolderWatchExclusionMatcher(
-            rootFolderURL: folderURL,
-            excludedSubdirectoryURLs: excludedSubdirectoryURLs
-        )
-        let watchedDirectoryURLs: [URL]
-        do {
-            watchedDirectoryURLs = try enumerateWatchedDirectories(
-                folderURL: folderURL,
-                includeSubfolders: includeSubfolders,
-                exclusionMatcher: exclusionMatcher
-            )
-            Self.signposter.emitEvent(
-                "watchedDirectoryEnumeration",
-                "directories \(watchedDirectoryURLs.count) include_subfolders \(includeSubfolders ? 1 : 0)"
-            )
-            clearReportedFailure(for: .watchedDirectoryEnumeration)
-        } catch {
-            watchedDirectoryURLs = [folderURL]
-            reportFailure(stage: .watchedDirectoryEnumeration, folderURL: folderURL, error: error)
-        }
-
-        if includeSubfolders && watchedDirectoryURLs.count > maximumDirectoryEventSourceCount {
-            cancelAllDirectorySources()
-            if usedEventSourcesBeforeSync != usesEventSource {
-                reconfigureTimerIfNeeded()
-            }
-            return
-        }
-
-        let targetURLs = Set(watchedDirectoryURLs)
-
-        for url in directorySources.keys where !targetURLs.contains(url) {
-            directorySources[url]?.cancel()
-            directorySources.removeValue(forKey: url)
-        }
-
-        for url in watchedDirectoryURLs where directorySources[url] == nil {
-            guard let source = makeDirectorySource(for: url) else {
-                continue
-            }
-
-            directorySources[url] = source
-            source.resume()
-        }
-
-        usesEventSource = !directorySources.isEmpty
-        Self.signposter.emitEvent(
-            "directorySourceCounts",
-            "sources \(self.directorySources.count) uses_event_sources \(self.usesEventSource ? 1 : 0)"
-        )
-        if usedEventSourcesBeforeSync != usesEventSource {
-            reconfigureTimerIfNeeded()
-        }
-    }
-
-    private func reconfigureTimerIfNeeded() {
-        let desiredInterval: DispatchTimeInterval
-        if usesEventSource {
-            desiredInterval = includesSubfolders
-                ? resolvedRecursiveEventSourceSafetyPollingInterval()
-                : fallbackPollingInterval
-        } else {
-            desiredInterval = pollingInterval
-        }
-
-        guard timer == nil || timerInterval != desiredInterval else {
-            return
-        }
-
-        timer?.cancel()
-
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + desiredInterval, repeating: desiredInterval)
-        timer.setEventHandler { [weak self] in
-            self?.verifyChanges()
-        }
-        self.timer = timer
-        timerInterval = desiredInterval
-        timer.resume()
-    }
-
-    private func makeDirectorySource(for directoryURL: URL) -> DispatchSourceFileSystemObject? {
-        let descriptor = open(directoryURL.path, O_EVTONLY)
-        guard descriptor >= 0 else {
-            return nil
-        }
-
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: descriptor,
-            eventMask: [.write, .rename, .delete, .attrib, .extend, .revoke],
-            queue: queue
-        )
-
-        source.setEventHandler { [weak self] in
-            guard let self else {
-                return
-            }
-
-            let events = source.data
-            self.handleDirectorySourceEvent(events)
-            self.scheduleVerification()
-        }
-
-        source.setCancelHandler { [descriptor] in
-            close(descriptor)
-        }
-
-        return source
-    }
-
-    private func cancelAllDirectorySources() {
-        for source in directorySources.values {
-            source.cancel()
-        }
-
-        directorySources.removeAll()
-        usesEventSource = false
-    }
-
-    private func handleDirectorySourceEvent(_ events: DispatchSource.FileSystemEvent) {
-        resetAdaptiveSafetyPollingToBaselineIfNeeded()
-        hasPendingFileSystemSignal = true
-        unsignaledVerificationSkipCycles = 0
-
-        let topologyChangeEvents: DispatchSource.FileSystemEvent = [.rename, .delete, .revoke, .write]
-        if !events.intersection(topologyChangeEvents).isEmpty {
-            needsDirectorySourceResync = needsDirectorySourceResync || includesSubfolders
-        }
-    }
-
-    private func resolvedRecursiveEventSourceSafetyPollingInterval() -> DispatchTimeInterval {
-        scaledInterval(recursiveEventSourceSafetyPollingInterval, multiplier: adaptiveSafetyPollingMultiplier)
-    }
-
-    private func adaptRecursiveEventSourceSafetyPollingIfNeeded(
-        changedEventCount: Int,
-        didResynchronizeDirectories: Bool
-    ) {
-        guard usesEventSource, includesSubfolders else {
-            adaptiveSafetyPollingMultiplier = 1
-            adaptiveSafetyPollingIdleCycles = 0
-            return
-        }
-
-        guard changedEventCount == 0, !didResynchronizeDirectories else {
-            resetAdaptiveSafetyPollingToBaselineIfNeeded()
-            return
-        }
-
-        adaptiveSafetyPollingIdleCycles += 1
-        guard adaptiveSafetyPollingIdleCycles >= Self.adaptiveSafetyPollingIdleCyclesPerStep else {
-            return
-        }
-
-        adaptiveSafetyPollingIdleCycles = 0
-        guard adaptiveSafetyPollingMultiplier < Self.adaptiveSafetyPollingMaximumMultiplier else {
-            return
-        }
-
-        adaptiveSafetyPollingMultiplier += 1
-        reconfigureTimerIfNeeded()
-    }
-
-    private func resetAdaptiveSafetyPollingToBaselineIfNeeded() {
-        adaptiveSafetyPollingIdleCycles = 0
-        guard adaptiveSafetyPollingMultiplier != 1 else {
-            return
-        }
-
-        adaptiveSafetyPollingMultiplier = 1
-        reconfigureTimerIfNeeded()
-    }
-
-    private func shouldSkipIdleVerificationCycle() -> Bool {
-        guard usesEventSource,
-              includesSubfolders,
-              !needsDirectorySourceResync,
-              !hasPendingFileSystemSignal else {
-            unsignaledVerificationSkipCycles = 0
-            return false
-        }
-
-        guard unsignaledVerificationSkipCycles < Self.adaptiveSafetyPollingMaximumUnsignaledSkips else {
-            unsignaledVerificationSkipCycles = 0
-            return false
-        }
-
-        unsignaledVerificationSkipCycles += 1
-        return true
-    }
-
-    private func scaledInterval(_ interval: DispatchTimeInterval, multiplier: Int) -> DispatchTimeInterval {
-        guard multiplier > 1 else {
-            return interval
-        }
-
-        switch interval {
-        case let .seconds(value):
-            return .seconds(value * multiplier)
-        case let .milliseconds(value):
-            return .milliseconds(value * multiplier)
-        case let .microseconds(value):
-            return .microseconds(value * multiplier)
-        case let .nanoseconds(value):
-            return .nanoseconds(value * multiplier)
-        case .never:
-            return .never
-        @unknown default:
-            return interval
-        }
-    }
-
-    private func enumerateWatchedDirectories(
-        folderURL: URL,
-        includeSubfolders: Bool,
-        exclusionMatcher: FolderWatchExclusionMatcher
-    ) throws -> [URL] {
-        guard folderURL.isFileURL else {
-            throw ReaderError.invalidFileURL
-        }
-
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        guard includeSubfolders else {
-            return [normalizedFolderURL]
-        }
-
-        var result: [URL] = [normalizedFolderURL]
-        let fileManager = FileManager.default
-        let rootFolderPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
-
-        guard let enumerator = fileManager.enumerator(
-            at: normalizedFolderURL,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [],
-            errorHandler: { _, _ in true }
-        ) else {
-            return result
-        }
-
-        for case let directoryURL as URL in enumerator {
-            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
-            if FolderSnapshotDiffer.shouldSkipEntryBeyondIncludeSubfolderDepth(
-                normalizedDirectoryURL,
-                rootFolderPathWithSlash: rootFolderPathWithSlash,
-                enumerator: enumerator
-               ) {
-                continue
-            }
-
-            if FolderSnapshotDiffer.shouldSkipDescendants(
-                forNormalizedURL: normalizedDirectoryURL,
-                exclusionMatcher: exclusionMatcher,
-                enumerator: enumerator
-            ) {
-                continue
-            }
-
-            if (try? normalizedDirectoryURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-                guard !exclusionMatcher.excludesNormalizedDirectoryPath(normalizedDirectoryURL.path) else {
-                    continue
-                }
-                result.append(normalizedDirectoryURL)
-            }
-        }
-
-        return result
     }
 
     private func reportFailure(stage: FolderChangeWatcherFailure.Stage, folderURL: URL, error: any Error) {
