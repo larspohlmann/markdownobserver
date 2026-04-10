@@ -17,7 +17,7 @@ enum ReaderOverlayInsetCalculator {
            let value = Double(raw), value >= 0 {
             return CGFloat(value)
         }
-        return 16
+        return 8
     }()
 
     static let defaultScrollTargetTopInset: CGFloat =
