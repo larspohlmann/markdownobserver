@@ -4,6 +4,8 @@ import Testing
 
 @Suite
 struct ReaderOverlayInsetCalculatorTests {
+    private var gap: CGFloat { ReaderOverlayInsetCalculator.scrollLandingGap }
+
     @Test func computesInsetsForTopBarOnly() {
         let result = ReaderOverlayInsetCalculator.compute(
             topBarInset: 44,
@@ -12,7 +14,7 @@ struct ReaderOverlayInsetCalculatorTests {
 
         #expect(result.railTopPadding == 52)
         #expect(result.leadingOverlayTopPadding == 60)
-        #expect(result.scrollTargetTopInset == 98)
+        #expect(result.scrollTargetTopInset == 60 + 30 + gap)
     }
 
     @Test func computesInsetsWhenSourceEditBarAndWarningBarAreVisible() {
@@ -23,7 +25,7 @@ struct ReaderOverlayInsetCalculatorTests {
 
         #expect(result.railTopPadding == 8)
         #expect(result.leadingOverlayTopPadding == 16)
-        #expect(result.scrollTargetTopInset == 54)
+        #expect(result.scrollTargetTopInset == 16 + 30 + gap)
     }
 
     @Test func clampsNegativeBannerHeightToZero() {
@@ -34,7 +36,7 @@ struct ReaderOverlayInsetCalculatorTests {
 
         #expect(result.railTopPadding == 52)
         #expect(result.leadingOverlayTopPadding == 60)
-        #expect(result.scrollTargetTopInset == 98)
+        #expect(result.scrollTargetTopInset == 60 + 30 + gap)
     }
 
     @Test func ignoresTopBarInsetWhenStatusBannerIsVisible() {
@@ -45,7 +47,7 @@ struct ReaderOverlayInsetCalculatorTests {
 
         #expect(result.railTopPadding == 8)
         #expect(result.leadingOverlayTopPadding == 16)
-        #expect(result.scrollTargetTopInset == 54)
+        #expect(result.scrollTargetTopInset == 16 + 30 + gap)
     }
 
     @Test func statusBannerTopPaddingMatchesTopBarInset() {

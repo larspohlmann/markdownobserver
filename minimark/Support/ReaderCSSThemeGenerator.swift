@@ -56,7 +56,7 @@ enum ReaderCSSThemeGenerator {
           box-sizing: border-box;
           width: 100%;
           margin: 0;
-          padding: 52px 12px 24px calc(var(--reader-gutter-width) + var(--reader-gutter-gap));
+          padding: \(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset))px 12px 24px calc(var(--reader-gutter-width) + var(--reader-gutter-gap));
           color: var(--reader-fg);
           overflow-wrap: anywhere;
         }

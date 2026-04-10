@@ -22,7 +22,7 @@ struct MarkdownWebView: NSViewRepresentable {
         var scrollSyncRequest: ScrollSyncRequest?
     var tocScrollRequest: TOCScrollRequest?
     var supportsInPlaceContentUpdates: Bool = false
-    var overlayTopInset: CGFloat = 56
+    var overlayTopInset: CGFloat = ReaderOverlayInsetCalculator.defaultScrollTargetTopInset
     var reloadAnchorProgress: Double?
     var onFatalCrash: () -> Void = {}
     var onPostLoadStatus: (String?) -> Void = { _ in }
@@ -32,6 +32,7 @@ struct MarkdownWebView: NSViewRepresentable {
     var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
+    var onChangedRegionNavigationResult: (Int, Int) -> Void = { _, _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -84,6 +85,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.onDroppedFileURLs = onDroppedFileURLs
         context.coordinator.onDropTargetedChange = onDropTargetedChange
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
+        context.coordinator.onChangedRegionNavigationResult = onChangedRegionNavigationResult
         context.coordinator.reloadAnchorProgress = reloadAnchorProgress
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
         context.coordinator.overlayTopInset = max(0, overlayTopInset)
@@ -147,8 +149,9 @@ struct MarkdownWebView: NSViewRepresentable {
         var onDroppedFileURLs: ([URL]) -> Void = { _ in }
         var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
+        var onChangedRegionNavigationResult: (Int, Int) -> Void = { _, _ in }
         var supportsInPlaceContentUpdates = false
-        var overlayTopInset: CGFloat = 56
+        var overlayTopInset: CGFloat = ReaderOverlayInsetCalculator.defaultScrollTargetTopInset
         var reloadAnchorProgress: Double?
         private var lastAppliedOverlayTopInset: CGFloat?
 
@@ -569,12 +572,19 @@ struct MarkdownWebView: NSViewRepresentable {
             in webView: WKWebView
         ) {
             let script = "window.__minimarkNavigateChangedRegion && window.__minimarkNavigateChangedRegion('\(request.direction.rawValue)');"
-            webView.evaluateJavaScript(script) { [weak self] _, error in
-                guard let self, let error else {
+            webView.evaluateJavaScript(script) { [weak self] result, error in
+                guard let self else { return }
+
+                if let error {
+                    self.logError("changed-region navigation failed: \(error.localizedDescription)")
                     return
                 }
 
-                self.logError("changed-region navigation failed: \(error.localizedDescription)")
+                if let dict = result as? [String: Any],
+                   let index = dict["index"] as? Int,
+                   let count = dict["count"] as? Int {
+                    self.onChangedRegionNavigationResult(index, count)
+                }
             }
         }
 
