@@ -147,6 +147,201 @@ struct FolderEventSourceTests {
         })
     }
 
+    @Test @MainActor func fsEventStreamDetectsRapidSuccessiveWritesToSameFile() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let subdirURL = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdirURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let fileURL = subdirURL.appendingPathComponent("rapid.md")
+        try "# Version 0".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let watcher = makeFSEventsWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        for version in 1...5 {
+            try "# Version \(version)".write(to: fileURL, atomically: true, encoding: .utf8)
+        }
+
+        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        #expect(await waitUntil(timeout: .seconds(5)) {
+            receivedEvents.contains(where: {
+                $0.fileURL == normalizedURL && $0.kind == .modified
+            })
+        })
+
+        // Final snapshot should reflect the last write
+        if let cached = watcher.cachedMarkdownFileURLs() {
+            #expect(cached.contains(normalizedURL))
+        }
+    }
+
+    @Test @MainActor func fsEventStreamDetectsDeeplyNestedSubdirectoryChange() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let deepURL = directoryURL
+            .appendingPathComponent("level1", isDirectory: true)
+            .appendingPathComponent("level2", isDirectory: true)
+            .appendingPathComponent("level3", isDirectory: true)
+        try FileManager.default.createDirectory(at: deepURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let watcher = makeFSEventsWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        let deepFileURL = deepURL.appendingPathComponent("deep.md")
+        try "# Deep".write(to: deepFileURL, atomically: true, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            receivedEvents.contains(where: {
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(deepFileURL) &&
+                $0.kind == .added
+            })
+        })
+    }
+
+    @Test @MainActor func fsEventStreamDoesNotEmitEventForEphemeralFile() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let subdirURL = directoryURL.appendingPathComponent("temp", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdirURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let stableFileURL = subdirURL.appendingPathComponent("stable.md")
+        try "# Stable".write(to: stableFileURL, atomically: true, encoding: .utf8)
+
+        let watcher = makeFSEventsWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        // Create and immediately delete a file
+        let ephemeralURL = subdirURL.appendingPathComponent("ephemeral.md")
+        try "# Gone".write(to: ephemeralURL, atomically: true, encoding: .utf8)
+        try FileManager.default.removeItem(at: ephemeralURL)
+
+        // Wait for any events to settle
+        try? await Task.sleep(for: .seconds(1))
+
+        let normalizedEphemeral = ReaderFileRouting.normalizedFileURL(ephemeralURL)
+        let hasEphemeralEvent = receivedEvents.contains(where: {
+            $0.fileURL == normalizedEphemeral && $0.kind == .added
+        })
+        // The ephemeral file should NOT appear as added since it doesn't exist at verification time
+        #expect(!hasEphemeralEvent)
+    }
+
+    @Test @MainActor func fsEventStreamDetectsMultipleFilesInDifferentSubdirectories() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let subdirA = directoryURL.appendingPathComponent("alpha", isDirectory: true)
+        let subdirB = directoryURL.appendingPathComponent("bravo", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdirA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subdirB, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let watcher = makeFSEventsWatcher()
+        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            receivedEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        let fileA = subdirA.appendingPathComponent("alpha.md")
+        let fileB = subdirB.appendingPathComponent("bravo.md")
+        try "# Alpha".write(to: fileA, atomically: true, encoding: .utf8)
+        try "# Bravo".write(to: fileB, atomically: true, encoding: .utf8)
+
+        let normalizedA = ReaderFileRouting.normalizedFileURL(fileA)
+        let normalizedB = ReaderFileRouting.normalizedFileURL(fileB)
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            receivedEvents.contains(where: { $0.fileURL == normalizedA && $0.kind == .added }) &&
+            receivedEvents.contains(where: { $0.fileURL == normalizedB && $0.kind == .added })
+        })
+    }
+
+    @Test @MainActor func fsEventStreamWatcherHandlesStopAndRestart() async throws {
+        let directoryURL = try makeTemporaryDirectory()
+        let subdirURL = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdirURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let fileURL = subdirURL.appendingPathComponent("persistent.md")
+        try "# Round 1".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let watcher = makeFSEventsWatcher()
+        var firstRoundEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            firstRoundEvents.append(contentsOf: events)
+        }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        try "# Round 1 modified".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            firstRoundEvents.contains(where: { $0.kind == .modified })
+        })
+
+        watcher.stopWatching()
+
+        // Modify while stopped — should not be detected
+        try "# Round 2".write(to: fileURL, atomically: true, encoding: .utf8)
+        try? await Task.sleep(for: .milliseconds(200))
+
+        var secondRoundEvents: [ReaderFolderWatchChangeEvent] = []
+
+        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
+            secondRoundEvents.append(contentsOf: events)
+        }
+        defer { watcher.stopWatching() }
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            watcher.didCompleteStartupForTesting
+        })
+
+        // Modify again after restart
+        try "# Round 2 modified".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            secondRoundEvents.contains(where: {
+                $0.kind == .modified &&
+                $0.fileURL == ReaderFileRouting.normalizedFileURL(fileURL)
+            })
+        })
+    }
+
     // MARK: - Factory selection
 
     @Test func factorySelectsFSEventsForRecursiveAndDispatchSourceForFlat() {

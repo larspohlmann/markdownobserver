@@ -116,6 +116,13 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 continue
             }
 
+            // If the directory was deleted, treat it as empty (files already
+            // removed from snapshot above). contentsOfDirectory throws for
+            // missing directories.
+            guard FileManager.default.fileExists(atPath: normalizedDirectoryURL.path) else {
+                continue
+            }
+
             let freshURLs = try enumerateMarkdownFilesInSingleDirectory(
                 directoryURL: normalizedDirectoryURL,
                 exclusionMatcher: exclusionMatcher
