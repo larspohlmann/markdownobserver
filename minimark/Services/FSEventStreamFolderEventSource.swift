@@ -38,12 +38,12 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
         queue: DispatchQueue,
         onEvent: @escaping @Sendable (Set<URL>?) -> Void
     ) {
+        stop()
+
         guard includeSubfolders else {
             Self.logger.warning("FSEventStreamFolderEventSource is designed for recursive watches; use DispatchSourceFolderEventSource for flat folders")
             return
         }
-
-        stop()
 
         self.queue = queue
         self.exclusionMatcher = exclusionMatcher
@@ -69,15 +69,17 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
             latency,
             flags
         ) else {
-            Self.logger.error("failed to create FSEventStream for \(folderURL.path, privacy: .private(mask: .hash))")
+            Self.logger.error("failed to create FSEventStream for \(folderURL.path, privacy: .private(mask: .hash)); falling back to safety polling")
+            configureSafetyTimer(queue: queue)
             return
         }
 
         FSEventStreamSetDispatchQueue(newStream, queue)
         guard FSEventStreamStart(newStream) else {
-            Self.logger.error("failed to start FSEventStream for \(folderURL.path, privacy: .private(mask: .hash))")
+            Self.logger.error("failed to start FSEventStream for \(folderURL.path, privacy: .private(mask: .hash)); falling back to safety polling")
             FSEventStreamInvalidate(newStream)
             FSEventStreamRelease(newStream)
+            configureSafetyTimer(queue: queue)
             return
         }
 
@@ -132,7 +134,9 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
             let flags = eventFlags[index]
 
             if (flags & UInt32(kFSEventStreamEventFlagMustScanSubDirs)) != 0 ||
-               (flags & UInt32(kFSEventStreamEventFlagRootChanged)) != 0 {
+               (flags & UInt32(kFSEventStreamEventFlagRootChanged)) != 0 ||
+               (flags & UInt32(kFSEventStreamEventFlagUserDropped)) != 0 ||
+               (flags & UInt32(kFSEventStreamEventFlagKernelDropped)) != 0 {
                 requiresFullScan = true
                 break
             }

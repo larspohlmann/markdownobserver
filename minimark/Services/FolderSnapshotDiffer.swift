@@ -103,13 +103,19 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
 
         var snapshot = previousSnapshot
 
-        let normalizedChangedDirectories = Set(
-            changedDirectoryURLs.map { ReaderFileRouting.normalizedFileURL($0).path }
-        )
+        let normalizedChangedDirectoryPathsWithSlash = changedDirectoryURLs.map {
+            let path = ReaderFileRouting.normalizedFileURL($0).path
+            return path.hasSuffix("/") ? path : path + "/"
+        }
 
         snapshot = snapshot.filter { url, _ in
-            let parentPath = ReaderFileRouting.normalizedFileURL(url.deletingLastPathComponent()).path
-            return !normalizedChangedDirectories.contains(parentPath)
+            let filePath = url.path
+            for dirPath in normalizedChangedDirectoryPathsWithSlash {
+                if filePath.hasPrefix(dirPath) {
+                    return false
+                }
+            }
+            return true
         }
 
         let rootPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
