@@ -278,6 +278,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
 
             let events = source.data
             self.handleDirectorySourceEvent(events)
+            self.resynchronizeIfNeeded()
             self.onEvent?(nil)
         }
 
@@ -295,6 +296,20 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
 
         directorySources.removeAll()
         usesEventSource = false
+    }
+
+    private func resynchronizeIfNeeded() {
+        guard needsDirectorySourceResync,
+              let folderURL = watchedFolderURL,
+              let exclusionMatcher else {
+            return
+        }
+        synchronizeDirectorySources(
+            folderURL: folderURL,
+            includeSubfolders: includesSubfolders,
+            exclusionMatcher: exclusionMatcher
+        )
+        needsDirectorySourceResync = false
     }
 
     private func handleDirectorySourceEvent(_ events: DispatchSource.FileSystemEvent) {

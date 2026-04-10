@@ -119,10 +119,7 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
         eventFlags: UnsafePointer<FSEventStreamEventFlags>,
         eventIds: UnsafePointer<FSEventStreamEventId>
     ) {
-        guard let cfPaths = unsafeBitCast(eventPaths, to: CFArray?.self) else {
-            onEvent?(nil)
-            return
-        }
+        let cfPaths = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue()
 
         var changedDirectoryURLs = Set<URL>()
         var requiresFullScan = false
@@ -141,24 +138,26 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
             }
 
             let path = unsafeBitCast(cfPath, to: CFString.self) as String
+            let isDirectory = (flags & UInt32(kFSEventStreamEventFlagItemIsDir)) != 0
+            let normalizedEventURL = ReaderFileRouting.normalizedFileURL(
+                URL(fileURLWithPath: path, isDirectory: isDirectory)
+            )
 
-            if let exclusionMatcher, exclusionMatcher.excludesNormalizedFilePath(path) {
+            if let exclusionMatcher,
+               exclusionMatcher.excludesNormalizedFilePath(normalizedEventURL.path) {
                 continue
             }
 
             let directoryURL: URL
-            let isDirectory = (flags & UInt32(kFSEventStreamEventFlagItemIsDir)) != 0
-
             if isDirectory {
-                directoryURL = URL(fileURLWithPath: path, isDirectory: true)
+                directoryURL = normalizedEventURL
             } else {
-                let parentPath = (path as NSString).deletingLastPathComponent
-                directoryURL = URL(fileURLWithPath: parentPath, isDirectory: true)
+                directoryURL = ReaderFileRouting.normalizedFileURL(
+                    normalizedEventURL.deletingLastPathComponent()
+                )
             }
 
-            changedDirectoryURLs.insert(
-                ReaderFileRouting.normalizedFileURL(directoryURL)
-            )
+            changedDirectoryURLs.insert(directoryURL)
         }
 
         if requiresFullScan {
