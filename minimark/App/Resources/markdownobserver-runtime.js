@@ -1152,7 +1152,7 @@
 
     var currentTop = Math.max(0, (scrollContainer.scrollTop || 0) - getRootDocumentTop(root));
     var activeIndex = findMarkerIndexByKey(markers, activeNavigatedChangedRegionKey);
-    if (activeIndex < 0) {
+    if (activeIndex < 0 && activeNavigatedChangedRegionKey) {
       activeIndex = findMarkerIndexNearScrollPosition(markers, currentTop);
     }
 
