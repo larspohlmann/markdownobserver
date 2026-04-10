@@ -18,4 +18,5 @@ struct ContentViewCallbacks {
     let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
     let onClearRecentWatchedFolders: () -> Void
     let onClearRecentManuallyOpenedFiles: () -> Void
+    let onEditSubfolders: () -> Void
 }

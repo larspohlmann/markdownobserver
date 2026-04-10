@@ -591,9 +591,15 @@ struct FileRoutingAndWatcherTests {
 
         try "# Before".write(to: deepFileURL, atomically: false, encoding: .utf8)
 
-        let watcher = makeFolderChangeWatcher(
-            fallbackPollingInterval: .seconds(5),
-            maximumDirectoryEventSourceCount: 2
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5),
+                    maximumDirectoryEventSourceCount: 2
+                )
+            }
         )
         var receivedEvents: [ReaderFolderWatchChangeEvent] = []
 
@@ -602,8 +608,9 @@ struct FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
-        #expect(!watcher.isUsingEventSourcesForTesting)
-        #expect(watcher.activeDirectorySourceCountForTesting == 0)
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            watcher.didCompleteStartupForTesting
+        })
 
         try "# After".write(to: deepFileURL, atomically: false, encoding: .utf8)
 
@@ -625,9 +632,15 @@ struct FileRoutingAndWatcherTests {
 
         try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
 
-        let watcher = makeFolderChangeWatcher(
-            fallbackPollingInterval: .seconds(5),
-            maximumDirectoryEventSourceCount: 2
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5),
+                    maximumDirectoryEventSourceCount: 2
+                )
+            }
         )
         var receivedEvents: [ReaderFolderWatchChangeEvent] = []
 
@@ -640,59 +653,9 @@ struct FileRoutingAndWatcherTests {
             watcher.didCompleteStartupForTesting
         })
 
-        #expect(watcher.isUsingEventSourcesForTesting)
-        #expect(watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting)
-
         let overLimitDirectoryURL = nestedDirectoryURL.appendingPathComponent("level-1", isDirectory: true)
         try FileManager.default.createDirectory(at: overLimitDirectoryURL, withIntermediateDirectories: true)
 
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            !watcher.isUsingEventSourcesForTesting &&
-            !watcher.isUsingFallbackPollingIntervalForTesting &&
-            !watcher.isUsingRecursiveEventSourceSafetyPollingIntervalForTesting
-        })
-
-        try "# After".write(to: trackedFileURL, atomically: false, encoding: .utf8)
-
-        #expect(await waitUntil(timeout: .seconds(1)) {
-            receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(trackedFileURL) &&
-                $0.kind == .modified &&
-                $0.previousMarkdown == "# Before"
-            })
-        })
-    }
-
-    @Test @MainActor func recursiveEventSourceSafetyPollingBacksOffWhenIdleAndResetsAfterEvent() async throws {
-        let directoryURL = try makeTemporaryDirectory()
-        let nestedDirectoryURL = directoryURL.appendingPathComponent("docs", isDirectory: true)
-        let trackedFileURL = nestedDirectoryURL.appendingPathComponent("tracked.md")
-        try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directoryURL) }
-
-        try "# Before".write(to: trackedFileURL, atomically: false, encoding: .utf8)
-
-        let baseSafetyInterval: DispatchTimeInterval = .milliseconds(60)
-        let watcher = makeFolderChangeWatcher(
-            fallbackPollingInterval: .seconds(5),
-            recursiveEventSourceSafetyPollingInterval: baseSafetyInterval
-        )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
-
-        try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
-            receivedEvents.append(contentsOf: events)
-        }
-        defer { watcher.stopWatching() }
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            watcher.didCompleteStartupForTesting &&
-            watcher.currentTimerIntervalForTesting == baseSafetyInterval
-        })
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            watcher.currentTimerIntervalForTesting == .milliseconds(120)
-        })
-
         try "# After".write(to: trackedFileURL, atomically: false, encoding: .utf8)
 
         #expect(await waitUntil(timeout: .seconds(2)) {
@@ -701,10 +664,6 @@ struct FileRoutingAndWatcherTests {
                 $0.kind == .modified &&
                 $0.previousMarkdown == "# Before"
             })
-        })
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
-            watcher.currentTimerIntervalForTesting == baseSafetyInterval
         })
     }
 
@@ -739,7 +698,15 @@ struct FileRoutingAndWatcherTests {
             try "# Startup Profile \(index)".write(to: fileURL, atomically: false, encoding: .utf8)
         }
 
-        let watcher = makeFolderChangeWatcher(fallbackPollingInterval: .seconds(5))
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5)
+                )
+            }
+        )
         let clock = ContinuousClock()
         let start = clock.now
 
@@ -764,6 +731,375 @@ struct FileRoutingAndWatcherTests {
             let outputText = "elapsed_ms=\(elapsedText)\nfile_count=\(fileCount)\ndepth=\(depth)\ninclude_subfolders=\(includeSubfolders)\n"
             try outputText.write(to: outputURL, atomically: true, encoding: .utf8)
         }
+    }
+
+    @Test func folderSnapshotDifferBuildsTargetedIncrementalSnapshotForChangedDirectoriesOnly() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let unchangedSubdir = directoryURL.appendingPathComponent("unchanged", isDirectory: true)
+        let changedSubdir = directoryURL.appendingPathComponent("changed", isDirectory: true)
+        try FileManager.default.createDirectory(at: unchangedSubdir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: changedSubdir, withIntermediateDirectories: true)
+
+        let unchangedFileURL = unchangedSubdir.appendingPathComponent("stable.md")
+        let changedFileURL = changedSubdir.appendingPathComponent("modified.md")
+        try "# Unchanged".write(to: unchangedFileURL, atomically: false, encoding: .utf8)
+        try "# Before".write(to: changedFileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL,
+            excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:]
+        )
+
+        try "# After".write(to: changedFileURL, atomically: false, encoding: .utf8)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(changedSubdir)])
+        )
+
+        let normalizedUnchangedURL = ReaderFileRouting.normalizedFileURL(unchangedFileURL)
+        let normalizedChangedURL = ReaderFileRouting.normalizedFileURL(changedFileURL)
+
+        #expect(targetedSnapshot[normalizedUnchangedURL] != nil)
+        #expect(targetedSnapshot[normalizedChangedURL] != nil)
+        #expect(targetedSnapshot[normalizedUnchangedURL]?.markdown == initialSnapshot[normalizedUnchangedURL]?.markdown)
+        #expect(targetedSnapshot[normalizedChangedURL]?.markdown == "# After")
+
+        let changes = differ.diff(current: targetedSnapshot, previous: initialSnapshot)
+        #expect(changes.count == 1)
+        #expect(changes.first?.fileURL == normalizedChangedURL)
+        #expect(changes.first?.kind == .modified)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotDetectsDeletedFileInChangedDirectory() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let subdir = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
+
+        let fileURL = subdir.appendingPathComponent("doomed.md")
+        try "# Doomed".write(to: fileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL,
+            excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:]
+        )
+
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        #expect(initialSnapshot[normalizedFileURL] != nil)
+
+        try FileManager.default.removeItem(at: fileURL)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+        )
+
+        #expect(targetedSnapshot[normalizedFileURL] == nil)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotDetectsCreatedFileInChangedDirectory() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let subdir = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
+
+        let existingFileURL = subdir.appendingPathComponent("existing.md")
+        try "# Existing".write(to: existingFileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL,
+            excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:]
+        )
+
+        let newFileURL = subdir.appendingPathComponent("brand-new.md")
+        try "# Brand New".write(to: newFileURL, atomically: false, encoding: .utf8)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+        )
+
+        let normalizedExistingURL = ReaderFileRouting.normalizedFileURL(existingFileURL)
+        let normalizedNewURL = ReaderFileRouting.normalizedFileURL(newFileURL)
+
+        #expect(targetedSnapshot[normalizedExistingURL] != nil)
+        #expect(targetedSnapshot[normalizedNewURL] != nil)
+        #expect(targetedSnapshot[normalizedNewURL]?.markdown == "# Brand New")
+
+        let changes = differ.diff(current: targetedSnapshot, previous: initialSnapshot)
+        #expect(changes.count == 1)
+        #expect(changes.first?.fileURL == normalizedNewURL)
+        #expect(changes.first?.kind == .added)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotHandlesMultipleChangedDirectories() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let subdirA = directoryURL.appendingPathComponent("alpha", isDirectory: true)
+        let subdirB = directoryURL.appendingPathComponent("bravo", isDirectory: true)
+        let subdirC = directoryURL.appendingPathComponent("charlie", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdirA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subdirB, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subdirC, withIntermediateDirectories: true)
+
+        let fileA = subdirA.appendingPathComponent("a.md")
+        let fileB = subdirB.appendingPathComponent("b.md")
+        let fileC = subdirC.appendingPathComponent("c.md")
+        try "# A".write(to: fileA, atomically: false, encoding: .utf8)
+        try "# B".write(to: fileB, atomically: false, encoding: .utf8)
+        try "# C".write(to: fileC, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: [:]
+        )
+
+        try "# A modified".write(to: fileA, atomically: false, encoding: .utf8)
+        try FileManager.default.removeItem(at: fileB)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([
+                ReaderFileRouting.normalizedFileURL(subdirA),
+                ReaderFileRouting.normalizedFileURL(subdirB)
+            ])
+        )
+
+        let normalizedA = ReaderFileRouting.normalizedFileURL(fileA)
+        let normalizedB = ReaderFileRouting.normalizedFileURL(fileB)
+        let normalizedC = ReaderFileRouting.normalizedFileURL(fileC)
+
+        #expect(targetedSnapshot[normalizedA]?.markdown == "# A modified")
+        #expect(targetedSnapshot[normalizedB] == nil)
+        #expect(targetedSnapshot[normalizedC] != nil)
+
+        let changes = differ.diff(current: targetedSnapshot, previous: initialSnapshot)
+        #expect(changes.count == 1)
+        #expect(changes.first?.kind == .modified)
+        #expect(changes.first?.fileURL == normalizedA)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotHandlesDeletedDirectory() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let subdir = directoryURL.appendingPathComponent("ephemeral", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
+
+        let fileURL = subdir.appendingPathComponent("temp.md")
+        try "# Temporary".write(to: fileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: [:]
+        )
+
+        try FileManager.default.removeItem(at: subdir)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+        )
+
+        #expect(targetedSnapshot[ReaderFileRouting.normalizedFileURL(fileURL)] == nil)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotIgnoresNonMarkdownFiles() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let subdir = directoryURL.appendingPathComponent("mixed", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
+
+        let markdownURL = subdir.appendingPathComponent("notes.md")
+        try "# Notes".write(to: markdownURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: [:]
+        )
+
+        let txtURL = subdir.appendingPathComponent("data.txt")
+        let jsonURL = subdir.appendingPathComponent("config.json")
+        try "plain text".write(to: txtURL, atomically: false, encoding: .utf8)
+        try "{}".write(to: jsonURL, atomically: false, encoding: .utf8)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+        )
+
+        #expect(targetedSnapshot.count == 1)
+        #expect(targetedSnapshot[ReaderFileRouting.normalizedFileURL(markdownURL)] != nil)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotDetectsFileMoveAcrossDirectories() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let sourceDir = directoryURL.appendingPathComponent("source", isDirectory: true)
+        let destDir = directoryURL.appendingPathComponent("dest", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+
+        let sourceFileURL = sourceDir.appendingPathComponent("moved.md")
+        try "# Moved".write(to: sourceFileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: [:]
+        )
+
+        let destFileURL = destDir.appendingPathComponent("moved.md")
+        try FileManager.default.moveItem(at: sourceFileURL, to: destFileURL)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([
+                ReaderFileRouting.normalizedFileURL(sourceDir),
+                ReaderFileRouting.normalizedFileURL(destDir)
+            ])
+        )
+
+        let normalizedSource = ReaderFileRouting.normalizedFileURL(sourceFileURL)
+        let normalizedDest = ReaderFileRouting.normalizedFileURL(destFileURL)
+
+        #expect(targetedSnapshot[normalizedSource] == nil)
+        #expect(targetedSnapshot[normalizedDest] != nil)
+        #expect(targetedSnapshot[normalizedDest]?.markdown == "# Moved")
+
+        let changes = differ.diff(current: targetedSnapshot, previous: initialSnapshot)
+        #expect(changes.count == 1)
+        #expect(changes.first?.kind == .added)
+        #expect(changes.first?.fileURL == normalizedDest)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotRejectsNonFileURL() {
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: URL(fileURLWithPath: "/tmp"), excludedSubdirectoryURLs: []
+        )
+
+        #expect(throws: ReaderError.self) {
+            _ = try differ.buildTargetedIncrementalSnapshot(
+                folderURL: URL(string: "https://example.com")!,
+                includeSubfolders: true,
+                exclusionMatcher: exclusionMatcher,
+                previousSnapshot: [:],
+                changedDirectoryURLs: []
+            )
+        }
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotEnforcesDepthLimit() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        // Create a directory structure 6 levels deep (exceeds the 5-level limit)
+        var deepDir = directoryURL
+        for level in 1...6 {
+            deepDir = deepDir.appendingPathComponent("level\(level)", isDirectory: true)
+        }
+        try FileManager.default.createDirectory(at: deepDir, withIntermediateDirectories: true)
+
+        // Also create a directory at the limit (depth 5)
+        var atLimitDir = directoryURL
+        for level in 1...5 {
+            atLimitDir = atLimitDir.appendingPathComponent("ok\(level)", isDirectory: true)
+        }
+        try FileManager.default.createDirectory(at: atLimitDir, withIntermediateDirectories: true)
+
+        let deepFileURL = deepDir.appendingPathComponent("too-deep.md")
+        let atLimitFileURL = atLimitDir.appendingPathComponent("at-limit.md")
+        try "# Too deep".write(to: deepFileURL, atomically: false, encoding: .utf8)
+        try "# At limit".write(to: atLimitFileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:],
+            changedDirectoryURLs: Set([
+                ReaderFileRouting.normalizedFileURL(deepDir),
+                ReaderFileRouting.normalizedFileURL(atLimitDir)
+            ])
+        )
+
+        let normalizedDeepURL = ReaderFileRouting.normalizedFileURL(deepFileURL)
+        let normalizedAtLimitURL = ReaderFileRouting.normalizedFileURL(atLimitFileURL)
+
+        // File beyond depth limit should be excluded
+        #expect(targetedSnapshot[normalizedDeepURL] == nil)
+        // File at the limit should be included
+        #expect(targetedSnapshot[normalizedAtLimitURL] != nil)
     }
 
     @Test func readerFileActionServiceDeduplicatesApplicationsWithSameBundleIdentifier() throws {
@@ -881,31 +1217,16 @@ private extension FileRoutingAndWatcherTests {
     }
 
     func makeFolderChangeWatcher(
-        fallbackPollingInterval: DispatchTimeInterval = defaultFallbackPollingInterval,
-        recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval? = nil,
-        maximumDirectoryEventSourceCount: Int? = nil,
         onFailure: (@Sendable (FolderChangeWatcherFailure) -> Void)? = nil
     ) -> FolderChangeWatcher {
-        guard let maximumDirectoryEventSourceCount else {
-            return FolderChangeWatcher(
-                pollingInterval: Self.defaultPollingInterval,
-                fallbackPollingInterval: fallbackPollingInterval,
-                recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval ?? .seconds(
-                    ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
-                ),
-                verificationDelay: Self.defaultVerificationDelay,
-                onFailure: onFailure
-            )
-        }
-
-        return FolderChangeWatcher(
-            pollingInterval: Self.defaultPollingInterval,
-            fallbackPollingInterval: fallbackPollingInterval,
-            recursiveEventSourceSafetyPollingInterval: recursiveEventSourceSafetyPollingInterval ?? .seconds(
-                ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
-            ),
+        FolderChangeWatcher(
             verificationDelay: Self.defaultVerificationDelay,
-            maximumDirectoryEventSourceCount: maximumDirectoryEventSourceCount,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: Self.defaultFallbackPollingInterval
+                )
+            },
             onFailure: onFailure
         )
     }
@@ -925,7 +1246,15 @@ private extension FileRoutingAndWatcherTests {
         let nestedFileURL = nestedDirectoryURL.appendingPathComponent(fileName)
         try "# Before".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
-        let watcher = makeFolderChangeWatcher(fallbackPollingInterval: .seconds(5))
+        let watcher = FolderChangeWatcher(
+            verificationDelay: Self.defaultVerificationDelay,
+            makeEventSource: { _ in
+                DispatchSourceFolderEventSource(
+                    pollingInterval: Self.defaultPollingInterval,
+                    fallbackPollingInterval: .seconds(5)
+                )
+            }
+        )
         var receivedEvents: [ReaderFolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
@@ -933,13 +1262,7 @@ private extension FileRoutingAndWatcherTests {
         }
         defer { watcher.stopWatching() }
 
-        let expectedDirectorySourceCount = subdirectoryComponents.count + 1
-        let watcherReady = await waitUntil(timeout: .seconds(3)) {
-            watcher.activeDirectorySourceCountForTesting >= expectedDirectorySourceCount
-        }
-        #expect(watcherReady)
-
-        #expect(await waitUntil(timeout: .seconds(2)) {
+        #expect(await waitUntil(timeout: .seconds(3)) {
             watcher.didCompleteStartupForTesting
         })
 

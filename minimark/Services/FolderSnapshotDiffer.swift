@@ -15,6 +15,14 @@ protocol FolderSnapshotDiffing: Sendable {
         previousSnapshot: [URL: FolderFileSnapshot]
     ) throws -> [URL: FolderFileSnapshot]
 
+    func buildTargetedIncrementalSnapshot(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        exclusionMatcher: FolderWatchExclusionMatcher,
+        previousSnapshot: [URL: FolderFileSnapshot],
+        changedDirectoryURLs: Set<URL>
+    ) throws -> [URL: FolderFileSnapshot]
+
     func diff(
         current: [URL: FolderFileSnapshot],
         previous: [URL: FolderFileSnapshot]
@@ -77,6 +85,76 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
             }
 
             snapshot[url] = FolderFileSnapshot(url: url, metadata: metadata)
+        }
+
+        return snapshot
+    }
+
+    func buildTargetedIncrementalSnapshot(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        exclusionMatcher: FolderWatchExclusionMatcher,
+        previousSnapshot: [URL: FolderFileSnapshot],
+        changedDirectoryURLs: Set<URL>
+    ) throws -> [URL: FolderFileSnapshot] {
+        guard folderURL.isFileURL else {
+            throw ReaderError.invalidFileURL
+        }
+
+        var snapshot = previousSnapshot
+
+        let normalizedChangedDirectoryPaths = Set(
+            changedDirectoryURLs.map { ReaderFileRouting.normalizedFileURL($0).path }
+        )
+
+        // Remove files whose immediate parent is a changed directory.
+        // Deeper descendants are handled by the per-directory enumeration
+        // below (deleted directories produce an empty result via catch).
+        snapshot = snapshot.filter { url, _ in
+            let parentPath = url.deletingLastPathComponent().path
+            return !normalizedChangedDirectoryPaths.contains(parentPath)
+        }
+
+        let rootPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
+
+        for directoryURL in changedDirectoryURLs {
+            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
+
+            // Skip directories beyond the configured depth limit
+            let depth = Self.relativePathDepth(
+                forPath: normalizedDirectoryURL.path,
+                relativeToPathWithSlash: rootPathWithSlash,
+                isDirectory: true
+            )
+            guard depth <= ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
+                continue
+            }
+
+            guard !exclusionMatcher.excludesDirectory(normalizedDirectoryURL) else {
+                continue
+            }
+
+            let freshURLs: [URL]
+            do {
+                freshURLs = try enumerateMarkdownFilesInSingleDirectory(
+                    directoryURL: normalizedDirectoryURL,
+                    exclusionMatcher: exclusionMatcher
+                )
+            } catch let error as NSError where error.domain == NSCocoaErrorDomain &&
+                (error.code == NSFileReadNoSuchFileError || error.code == NSFileNoSuchFileError) {
+                // Directory was deleted — treat as empty (files already removed above)
+                continue
+            }
+
+            for url in freshURLs {
+                let metadata = FolderFileMetadata(url: url)
+                if let previous = previousSnapshot[url], previous.matches(metadata: metadata) {
+                    snapshot[url] = previous
+                    continue
+                }
+
+                snapshot[url] = FolderFileSnapshot(url: url, metadata: metadata)
+            }
         }
 
         return snapshot
@@ -186,6 +264,22 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 .compactMap(regularMarkdownFileURL(fromNormalized:))
                 .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
         }
+    }
+
+    private func enumerateMarkdownFilesInSingleDirectory(
+        directoryURL: URL,
+        exclusionMatcher: FolderWatchExclusionMatcher
+    ) throws -> [URL] {
+        let fileManager = FileManager.default
+        let urls = try fileManager.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: []
+        )
+        return urls
+            .map(ReaderFileRouting.normalizedFileURL)
+            .compactMap(regularMarkdownFileURL(fromNormalized:))
+            .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
     }
 
     private func regularMarkdownFileURL(fromNormalized normalizedFileURL: URL) -> URL? {

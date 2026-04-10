@@ -5,8 +5,6 @@ import OSLog
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     private enum Metrics {
         static let splitPaneMinimumWidth: CGFloat = 320
     }
@@ -66,6 +64,7 @@ struct ContentView: View {
         let onDroppedFileURLs: ([URL]) -> Void
         let onDropTargetedChange: (DropTargetingUpdate) -> Void
         let canAcceptDroppedFileURLs: ([URL]) -> Bool
+        let onChangedRegionNavigationResult: (Int, Int) -> Void
         let onRetryFallback: () -> Void
     }
 
@@ -75,6 +74,7 @@ struct ContentView: View {
     )
 
     var readerStore: ReaderStore
+    let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
     let callbacks: ContentViewCallbacks
     @Binding var isFolderWatchOptionsPresented: Bool
@@ -190,7 +190,7 @@ struct ContentView: View {
                     readerStore.discardSourceDraft()
                 }
             )
-            .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+            .environment(\.colorScheme, overlayColorScheme)
         }
         .overlay(alignment: .bottomLeading) {
             if isUITestModeEnabled {
@@ -506,18 +506,20 @@ struct ContentView: View {
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
             documentViewMode: readerStore.documentViewMode,
+            hasOpenDocument: readerStore.hasOpenDocument,
             showsLoadingOverlay: shouldShowDocumentLoadingOverlay,
             loadingOverlayHeadline: loadingOverlayHeadline,
             loadingOverlaySubtitle: loadingOverlaySubtitle,
+            emptyStateVariant: emptyStateVariant,
             currentReaderTheme: currentReaderTheme,
+            onDroppedFileURLs: handleDroppedFileURLs,
             previewSurface: documentSurfacePane(for: .preview),
             sourceSurface: documentSurfacePane(for: .source)
         )
     }
 
-    private var overlayColorScheme: ColorScheme? {
-        guard readerStore.fileURL != nil else { return nil }
-        return currentReaderTheme.hasLightBackground ? .light : .dark
+    private var overlayColorScheme: ColorScheme {
+        currentReaderTheme.kind.isDark ? .dark : .light
     }
 
     private var overlayTopInset: CGFloat {
@@ -545,7 +547,7 @@ struct ContentView: View {
             .overlay(alignment: .topTrailing) {
                 contentUtilityRail
                     .padding(.top, overlayInsets.railTopPadding)
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .environment(\.colorScheme, overlayColorScheme)
             }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
                 if readerStore.isTOCVisible, let anchor {
@@ -559,11 +561,17 @@ struct ContentView: View {
                         totalCount: readerStore.changedRegions.count,
                         onNavigate: requestChangedRegionNavigation
                     )
+                    .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, 8)
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .environment(\.colorScheme, overlayColorScheme)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
                 }
             }
+            .animation(.easeOut(duration: 0.25), value: canNavigateChangedRegions)
             .overlay(alignment: .top) {
                 if let activeWatch = folderWatchState.activeFolderWatch {
                     WatchPill(
@@ -577,14 +585,20 @@ struct ContentView: View {
                             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
                         },
                         isAppearanceLocked: folderWatchState.isAppearanceLocked,
-                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock
+                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock,
+                        onEditSubfolders: callbacks.onEditSubfolders
                     )
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
                     .padding(.leading, canNavigateChangedRegions ? 150 : 60)
                     .padding(.trailing, 70)
-                    .environment(\.colorScheme, overlayColorScheme ?? colorScheme)
+                    .environment(\.colorScheme, overlayColorScheme)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
                 }
             }
+            .animation(.easeOut(duration: 0.25), value: folderWatchState.activeFolderWatch != nil)
     }
 
     private var contentUtilityRail: some View {
@@ -610,7 +624,7 @@ struct ContentView: View {
     @ViewBuilder
     private func tocOverlay(buttonAnchor: Anchor<CGRect>) -> some View {
         let gap: CGFloat = 8
-        let tocColorScheme: ColorScheme = currentReaderTheme.hasLightBackground ? .light : .dark
+        let tocColorScheme: ColorScheme = currentReaderTheme.kind.isDark ? .dark : .light
 
         GeometryReader { proxy in
             let buttonFrame = proxy[buttonAnchor]
@@ -663,6 +677,13 @@ struct ContentView: View {
 
     private var currentReaderTheme: ReaderTheme {
         ReaderTheme.theme(for: folderWatchState.effectiveReaderTheme)
+    }
+
+    private var emptyStateVariant: ContentEmptyStateView.Variant {
+        if let activeWatch = folderWatchState.activeFolderWatch {
+            return .folderWatchEmpty(folderName: activeWatch.detailSummaryTitle)
+        }
+        return .noDocument
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
@@ -752,6 +773,9 @@ struct ContentView: View {
                     updateDropTargetState(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onChangedRegionNavigationResult: { index, _ in
+                    currentChangedRegionIndex = index
+                },
                 onRetryFallback: {
                     previewReloadToken += 1
                     previewMode = .web
@@ -795,6 +819,7 @@ struct ContentView: View {
                     updateDropTargetState(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onChangedRegionNavigationResult: { _, _ in },
                 onRetryFallback: {
                     sourceReloadToken += 1
                     sourceMode = .web
@@ -826,17 +851,6 @@ struct ContentView: View {
     private func requestChangedRegionNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
         guard canNavigateChangedRegions else {
             return
-        }
-
-        let count = readerStore.changedRegions.count
-        if let current = currentChangedRegionIndex {
-            if direction == .next {
-                currentChangedRegionIndex = current >= count - 1 ? 0 : current + 1
-            } else {
-                currentChangedRegionIndex = current <= 0 ? count - 1 : current - 1
-            }
-        } else {
-            currentChangedRegionIndex = direction == .next ? 0 : count - 1
         }
 
         lastChangedRegionNavigationDirection = direction
@@ -979,7 +993,8 @@ private struct DocumentSurfaceHost: View {
                     onTOCHeadingsExtracted: configuration.onTOCHeadingsExtracted,
                     onDroppedFileURLs: configuration.onDroppedFileURLs,
                     onDropTargetedChange: configuration.onDropTargetedChange,
-                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs
+                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs,
+                    onChangedRegionNavigationResult: configuration.onChangedRegionNavigationResult
                 )
             } else {
                 fallbackSurface
@@ -1041,10 +1056,13 @@ private struct FolderDropBlockedOverlayView: View {
 
 private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
     let documentViewMode: ReaderDocumentViewMode
+    let hasOpenDocument: Bool
     let showsLoadingOverlay: Bool
     let loadingOverlayHeadline: String
     let loadingOverlaySubtitle: String?
+    let emptyStateVariant: ContentEmptyStateView.Variant
     let currentReaderTheme: ReaderTheme
+    let onDroppedFileURLs: ([URL]) -> Void
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
 
@@ -1055,6 +1073,17 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
                 headline: loadingOverlayHeadline,
                 subtitle: loadingOverlaySubtitle
             )
+        } else if !hasOpenDocument {
+            ContentEmptyStateView(
+                variant: emptyStateVariant,
+                theme: currentReaderTheme
+            )
+            .dropDestination(for: URL.self) { urls, _ in
+                let fileURLs = urls.filter { $0.isFileURL }
+                guard !fileURLs.isEmpty else { return false }
+                onDroppedFileURLs(fileURLs)
+                return true
+            }
         } else {
             switch documentViewMode {
             case .preview:
@@ -1150,6 +1179,7 @@ private final class SplitScrollCoordinator: ObservableObject {
     )
     return ContentView(
         readerStore: store,
+        settingsStore: settingsStore,
         folderWatchState: ContentViewFolderWatchState(
             activeFolderWatch: nil,
             isFolderWatchInitialScanInProgress: false,
@@ -1180,7 +1210,8 @@ private final class SplitScrollCoordinator: ObservableObject {
             onStartRecentManuallyOpenedFile: { _ in },
             onStartRecentFolderWatch: { _ in },
             onClearRecentWatchedFolders: {},
-            onClearRecentManuallyOpenedFiles: {}
+            onClearRecentManuallyOpenedFiles: {},
+            onEditSubfolders: {}
         ),
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),

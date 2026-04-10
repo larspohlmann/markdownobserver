@@ -680,7 +680,7 @@ struct ReaderSettingsAndModelsTests {
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
         let fileURL = watchedFolderURL.appendingPathComponent("roadmap.md")
 
-        notifier.notifyFileAutoLoaded(
+        notifier.notifyFileChanged(
             fileURL,
             changeKind: .modified,
             watchedFolderURL: watchedFolderURL
@@ -695,9 +695,9 @@ struct ReaderSettingsAndModelsTests {
 
         let request = try #require(notificationCenter.addedRequests.first)
         #expect(request.trigger == nil)
-        #expect(request.content.title == "roadmap.md")
-        #expect(request.content.subtitle == "Folder watch: docs")
-        #expect(request.content.body == "Updated and opened in MarkdownObserver")
+        #expect(request.content.title == "🟡 Modified")
+        #expect(request.content.subtitle == "roadmap.md")
+        #expect(request.content.body == "")
         #expect(request.content.userInfo["filePath"] as? String == fileURL.path)
         #expect(request.content.userInfo["watchedFolderPath"] as? String == watchedFolderURL.path)
     }
@@ -737,6 +737,63 @@ struct ReaderSettingsAndModelsTests {
         #expect(trigger.timeInterval == 5)
         #expect(request.content.title == "Test notification")
         #expect(request.content.body == "This test was scheduled by MarkdownObserver. Switch away from the app before it fires to verify background delivery.")
+    }
+
+    @Test func readerSystemNotifierPostsAddedNotificationWithCorrectContent() throws {
+        let notificationCenter = TestUserNotificationCenter()
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let fileURL = watchedFolderURL.appendingPathComponent("new-file.md")
+
+        notifier.notifyFileChanged(
+            fileURL,
+            changeKind: .added,
+            watchedFolderURL: watchedFolderURL
+        )
+
+        let request = try #require(notificationCenter.addedRequests.first)
+        #expect(request.content.title == "🟢 Created")
+        #expect(request.content.subtitle == "new-file.md")
+        #expect(request.content.userInfo["filePath"] as? String == fileURL.path)
+        #expect(request.content.userInfo["watchedFolderPath"] as? String == watchedFolderURL.path)
+    }
+
+    @Test func readerSystemNotifierPostsModifiedNotificationWithCorrectContent() throws {
+        let notificationCenter = TestUserNotificationCenter()
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let fileURL = watchedFolderURL.appendingPathComponent("edited.md")
+
+        notifier.notifyFileChanged(
+            fileURL,
+            changeKind: .modified,
+            watchedFolderURL: watchedFolderURL
+        )
+
+        let request = try #require(notificationCenter.addedRequests.first)
+        #expect(request.content.title == "🟡 Modified")
+        #expect(request.content.subtitle == "edited.md")
+        #expect(request.content.userInfo["filePath"] as? String == fileURL.path)
+        #expect(request.content.userInfo["watchedFolderPath"] as? String == watchedFolderURL.path)
+    }
+
+    @Test func readerSystemNotifierPostsDeletedNotificationWithCorrectContent() throws {
+        let notificationCenter = TestUserNotificationCenter()
+        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
+        let fileURL = watchedFolderURL.appendingPathComponent("removed.md")
+
+        notifier.notifyFileChanged(
+            fileURL,
+            changeKind: .deleted,
+            watchedFolderURL: watchedFolderURL
+        )
+
+        let request = try #require(notificationCenter.addedRequests.first)
+        #expect(request.content.title == "🔴 Deleted")
+        #expect(request.content.subtitle == "removed.md")
+        #expect(request.content.userInfo["filePath"] as? String == fileURL.path)
+        #expect(request.content.userInfo["watchedFolderPath"] as? String == watchedFolderURL.path)
     }
 
     @Test @MainActor func readerSettingsStoreDecodesLegacySidebarModeAsSidebarLeftAndDefaultsAppAppearance() {
@@ -880,5 +937,19 @@ struct ReaderSettingsAndModelsTests {
             ReaderSettingsGuidance.markdownAssociationErrorMessage(for: error)
                 == "macOS didn’t allow this change. In Finder, select a .md file, choose Get Info, set Open with to MarkdownObserver, then choose Change All."
         )
+    }
+
+    @Test @MainActor func dismissedHintsPersistAcrossReload() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.dismissed-hints.tests"
+        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+
+        store.dismissHint(.manualGroupReorder)
+        store.dismissHint(.changeNavigation)
+
+        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.isHintDismissed(.manualGroupReorder))
+        #expect(reloadedStore.isHintDismissed(.changeNavigation))
+        #expect(!reloadedStore.isHintDismissed(.multiSelect))
     }
 }

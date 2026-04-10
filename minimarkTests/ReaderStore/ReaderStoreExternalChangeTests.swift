@@ -45,11 +45,93 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.notifier.externalChangeNotifications == [
-            TestReaderSystemNotifier.ExternalChangeNotification(
+        #expect(fixture.notifier.fileChangeNotifications == [
+            TestReaderSystemNotifier.FileChangeNotification(
                 fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
-                autoRefreshed: false,
+                changeKind: .modified,
                 watchedFolderURL: nil
+            )
+        ])
+    }
+
+    @Test @MainActor func handleObservedFileChangePostsDeletedNotificationWhenFileMissing() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.delete(fixture.primaryFileURL)
+        fixture.store.handleObservedFileChange()
+
+        #expect(fixture.notifier.fileChangeNotifications == [
+            TestReaderSystemNotifier.FileChangeNotification(
+                fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
+                changeKind: .deleted,
+                watchedFolderURL: nil
+            )
+        ])
+    }
+
+    @Test @MainActor func folderWatchAutoOpenPostsAddedNotification() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        let folderURL = fixture.temporaryDirectoryURL
+        let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        fixture.store.setActiveFolderWatchSession(session)
+
+        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+
+        #expect(fixture.notifier.fileChangeNotifications == [
+            TestReaderSystemNotifier.FileChangeNotification(
+                fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
+                changeKind: .added,
+                watchedFolderURL: ReaderFileRouting.normalizedFileURL(folderURL)
+            )
+        ])
+    }
+
+    @Test @MainActor func folderWatchAutoOpenPostsModifiedNotificationWhenBaselineProvided() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        let folderURL = fixture.temporaryDirectoryURL
+        let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        fixture.store.setActiveFolderWatchSession(session)
+
+        fixture.store.openFile(
+            at: fixture.primaryFileURL,
+            origin: .folderWatchAutoOpen,
+            initialDiffBaselineMarkdown: "# Old content"
+        )
+
+        #expect(fixture.notifier.fileChangeNotifications == [
+            TestReaderSystemNotifier.FileChangeNotification(
+                fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
+                changeKind: .modified,
+                watchedFolderURL: ReaderFileRouting.normalizedFileURL(folderURL)
+            )
+        ])
+    }
+
+    @Test @MainActor func handleObservedFileChangePostsModifiedNotificationWithWatchedFolderURL() throws {
+        let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
+        defer { fixture.cleanup() }
+
+        let folderURL = fixture.temporaryDirectoryURL
+        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        fixture.store.setActiveFolderWatchSession(session)
+
+        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.handleObservedFileChange()
+
+        #expect(fixture.notifier.fileChangeNotifications == [
+            TestReaderSystemNotifier.FileChangeNotification(
+                fileURL: ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
+                changeKind: .modified,
+                watchedFolderURL: ReaderFileRouting.normalizedFileURL(folderURL)
             )
         ])
     }
@@ -64,7 +146,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.notifier.externalChangeNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func folderWatchAutoOpenSkipsSystemNotificationWhenDisabled() throws {
@@ -76,7 +158,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        #expect(fixture.notifier.autoLoadedNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func decoratedWindowTitlePrependsAsteriskOnlyWhenPending() throws {
@@ -280,7 +362,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        #expect(fixture.notifier.autoLoadedNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func folderWatchAutoOpenStillHighlightsAfterIgnoredInitialWatcherNoise() throws {
@@ -524,7 +606,7 @@ struct ReaderStoreExternalChangeTests {
         await Task.yield()
 
         #expect(fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.notifier.externalChangeNotifications.count == 1)
+        #expect(fixture.notifier.fileChangeNotifications.count == 1)
     }
 
     @Test @MainActor func autoRefreshDisabledStillMarksExternalChangeAsPending() throws {
@@ -587,7 +669,7 @@ struct ReaderStoreExternalChangeTests {
         ])
 
         #expect(!fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.notifier.externalChangeNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
         #expect(fixture.watcher.startCallCount == 1)
     }
 
@@ -611,7 +693,7 @@ struct ReaderStoreExternalChangeTests {
         await Task.yield()
 
         #expect(fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.notifier.externalChangeNotifications.count == 1)
+        #expect(fixture.notifier.fileChangeNotifications.count == 1)
     }
 
     @Test @MainActor func watchedFolderChangesOpenMarkdownAsAdditionalDocuments() throws {

@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.2] - 2026-04-10
+
+### Added
+- Added manual sidebar group reorder with drag-and-drop.
+- Added dock icon indicators for created/modified/deleted change counts.
+- Added edit subfolders button to the watch pill for quick subfolder management.
+- Added styled empty state for the content area.
+- Added first-use hint popover bubbles for discoverability.
+
+### Changed
+- Replaced DispatchSource folder watching with FSEvents for better large-tree performance.
+- Coalesced adjacent changed regions into single consolidated changes.
+- Improved change pill navigation with wrap-around and always-active buttons.
+- Polished sidebar chrome: close button scale, selection highlight, chevron rotation, multi-select badge, sticky headers, and drag feedback.
+- Polished hover feedback for sidebar, TOC, and pill controls.
+- Polished tooltips and first-use hints presentation.
+- Highlighted TOC button while its popover is open.
+- Narrowed TimelineView scope from sidebar list to individual document row timestamps.
+- Simplified notification event model.
+
+### Fixed
+- Fixed top bar text unreadable in empty state with opposing theme color schemes.
+- Fixed dock badge not updating on change-kind transition.
+- Fixed manual group order lost when switching sort modes.
+- Fixed redundant sidebar row state derivation.
+
 ## [1.2.1] - 2026-04-07
 
 ### Changed

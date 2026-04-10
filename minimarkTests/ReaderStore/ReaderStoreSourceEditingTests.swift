@@ -161,7 +161,7 @@ struct ReaderStoreSourceEditingTests {
         #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
         #expect(!fixture.store.hasUnacknowledgedExternalChange)
         #expect(fixture.store.lastExternalChangeAt == nil)
-        #expect(fixture.notifier.externalChangeNotifications.isEmpty)
+        #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
     @Test @MainActor func discardDraftRestoresSavedContent() throws {

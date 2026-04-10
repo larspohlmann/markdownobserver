@@ -338,6 +338,18 @@ final class ThemeDefinitionTests: XCTestCase {
         XCTAssertTrue(css.contains("font-weight: bold"), "Should use weight to differentiate")
     }
 
+    // MARK: - Theme Color Scheme Consistency
+
+    func testIsDarkAndHasLightBackgroundAreConsistentForAllThemes() {
+        for kind in ReaderThemeKind.allCases {
+            let theme = ReaderTheme.theme(for: kind)
+            XCTAssertEqual(
+                kind.isDark, !theme.hasLightBackground,
+                "\(kind): isDark (\(kind.isDark)) must be opposite of hasLightBackground (\(theme.hasLightBackground))"
+            )
+        }
+    }
+
     // MARK: - Backward Compatibility
 
     func testSimpleThemesCSSOutputContainsExpectedVariables() {

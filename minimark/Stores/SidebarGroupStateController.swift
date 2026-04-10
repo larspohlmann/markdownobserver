@@ -7,14 +7,21 @@ final class SidebarGroupStateController {
 
     // MARK: - Mutable Inputs
 
-    var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
+    var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst {
+        didSet {
+            recomputeGroupingIfNeeded()
+        }
+    }
     var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
     var pinnedGroupIDs: Set<String> = [] { didSet { recomputeGroupingIfNeeded() } }
     var collapsedGroupIDs: Set<String> = []
+    private(set) var savedCollapsedGroupIDs: Set<String>?
+    var manualGroupOrder: [String]?
 
     // MARK: - Computed Outputs
 
     private(set) var computedGrouping: ReaderSidebarGrouping = .flat([])
+    private(set) var isGrouped: Bool = false
     private(set) var groupIndicatorStates: [String: [ReaderDocumentIndicatorState]] = [:]
     private(set) var groupIndicatorPulseTokens: [String: Int] = [:]
 
@@ -71,6 +78,8 @@ final class SidebarGroupStateController {
         fileSortMode = state.fileSortMode
         pinnedGroupIDs = state.pinnedGroupIDs
         collapsedGroupIDs = state.collapsedGroupIDs
+        savedCollapsedGroupIDs = nil
+        manualGroupOrder = state.manualGroupOrder
         suppressRecompute = false
         recomputeGrouping()
     }
@@ -80,6 +89,7 @@ final class SidebarGroupStateController {
         let fileSortMode: ReaderSidebarSortMode
         let pinnedGroupIDs: Set<String>
         let collapsedGroupIDs: Set<String>
+        let manualGroupOrder: [String]?
     }
 
     var persistenceSnapshot: WorkspaceStateSnapshot {
@@ -87,7 +97,8 @@ final class SidebarGroupStateController {
             sortMode: sortMode,
             fileSortMode: fileSortMode,
             pinnedGroupIDs: pinnedGroupIDs,
-            collapsedGroupIDs: collapsedGroupIDs
+            collapsedGroupIDs: collapsedGroupIDs,
+            manualGroupOrder: manualGroupOrder
         )
     }
 
@@ -103,6 +114,32 @@ final class SidebarGroupStateController {
         } else {
             collapsedGroupIDs.insert(groupID)
         }
+        savedCollapsedGroupIDs = nil
+    }
+
+    var isInBulkExpandState: Bool {
+        savedCollapsedGroupIDs != nil
+    }
+
+    func expandAllGroups() {
+        if savedCollapsedGroupIDs == nil {
+            savedCollapsedGroupIDs = collapsedGroupIDs
+        }
+        collapsedGroupIDs = []
+    }
+
+    func collapseAllGroups() {
+        guard case .grouped(let groups) = computedGrouping else { return }
+        if savedCollapsedGroupIDs == nil {
+            savedCollapsedGroupIDs = collapsedGroupIDs
+        }
+        collapsedGroupIDs = Set(groups.map(\.id))
+    }
+
+    func restoreManualExpandState() {
+        guard let saved = savedCollapsedGroupIDs else { return }
+        collapsedGroupIDs = saved
+        savedCollapsedGroupIDs = nil
     }
 
     func toggleGroupPin(_ groupID: String) {
@@ -111,6 +148,17 @@ final class SidebarGroupStateController {
         } else {
             pinnedGroupIDs.insert(groupID)
         }
+    }
+
+    func moveGroup(from sourceIndex: Int, to destinationIndex: Int) {
+        guard case .grouped(let groups) = computedGrouping else { return }
+        var orderedIDs = groups.map(\.id)
+        guard sourceIndex < orderedIDs.count else { return }
+        let movedID = orderedIDs.remove(at: sourceIndex)
+        let adjustedDestination = min(destinationIndex, orderedIDs.count)
+        orderedIDs.insert(movedID, at: adjustedDestination)
+        manualGroupOrder = orderedIDs
+        sortMode = .manualOrder
     }
 
     // MARK: - Private
@@ -153,6 +201,15 @@ final class SidebarGroupStateController {
             precomputedIndicatorStates: groupIndicatorStates,
             precomputedIndicatorPulseTokens: groupIndicatorPulseTokens
         )
+
+        if sortMode == .manualOrder, let manualOrder = manualGroupOrder,
+           case .grouped(let groups) = computedGrouping {
+            computedGrouping = .grouped(applyManualOrder(manualOrder, to: groups))
+        }
+
+        let newIsGrouped: Bool
+        if case .grouped = computedGrouping { newIsGrouped = true } else { newIsGrouped = false }
+        if newIsGrouped != isGrouped { isGrouped = newIsGrouped }
     }
 
     private func rebuildGroupIndicatorStates() {
@@ -184,5 +241,37 @@ final class SidebarGroupStateController {
         })
         collapsedGroupIDs.formIntersection(activeGroupIDs)
         pinnedGroupIDs.formIntersection(activeGroupIDs)
+        savedCollapsedGroupIDs?.formIntersection(activeGroupIDs)
+        if let manualGroupOrder {
+            let pruned = manualGroupOrder.filter { activeGroupIDs.contains($0) }
+            self.manualGroupOrder = pruned.isEmpty ? nil : pruned
+        }
+    }
+
+    private func applyManualOrder(_ manualOrder: [String], to groups: [ReaderSidebarGrouping.Group]) -> [ReaderSidebarGrouping.Group] {
+        let groupByID = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var pinnedManual: [ReaderSidebarGrouping.Group] = []
+        var unpinnedManual: [ReaderSidebarGrouping.Group] = []
+        var seen = Set<String>()
+
+        for id in manualOrder {
+            guard let group = groupByID[id], seen.insert(id).inserted else { continue }
+            if group.isPinned {
+                pinnedManual.append(group)
+            } else {
+                unpinnedManual.append(group)
+            }
+        }
+
+        for group in groups where !seen.contains(group.id) {
+            if group.isPinned {
+                pinnedManual.append(group)
+            } else {
+                unpinnedManual.append(group)
+            }
+        }
+
+        return pinnedManual + unpinnedManual
     }
 }

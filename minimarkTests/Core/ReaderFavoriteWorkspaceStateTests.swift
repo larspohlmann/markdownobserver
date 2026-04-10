@@ -24,6 +24,25 @@ struct ReaderFavoriteWorkspaceStateTests {
         #expect(decoded.sidebarWidth == 300)
         #expect(decoded.pinnedGroupIDs == ["groupA", "groupB"])
         #expect(decoded.collapsedGroupIDs == ["groupC"])
+        #expect(decoded.manualGroupOrder == nil)
+    }
+
+    @Test func codableRoundTripPreservesManualGroupOrder() throws {
+        let state = ReaderFavoriteWorkspaceState(
+            fileSortMode: .nameAscending,
+            groupSortMode: .manualOrder,
+            sidebarPosition: .sidebarRight,
+            sidebarWidth: 300,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            manualGroupOrder: ["/path/gamma", "/path/alpha"]
+        )
+
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(ReaderFavoriteWorkspaceState.self, from: data)
+
+        #expect(decoded.manualGroupOrder == ["/path/gamma", "/path/alpha"])
+        #expect(decoded.groupSortMode == .manualOrder)
     }
 
     @Test func defaultFactoryUsesGlobalSettingsAndEmptySets() {

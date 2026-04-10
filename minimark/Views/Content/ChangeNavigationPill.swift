@@ -8,7 +8,22 @@ struct ChangeNavigationPill: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
 
-    private enum Metrics {
+    private var canGoPrevious: Bool {
+        totalCount > 0
+    }
+
+    private var canGoNext: Bool {
+        totalCount > 0
+    }
+
+    static func counterText(currentIndex: Int?, totalCount: Int) -> String {
+        let position = currentIndex.map {
+            "\(min(max($0, 0), max(0, totalCount - 1)) + 1)"
+        } ?? "\u{2014}"
+        return "\(position) / \(totalCount)"
+    }
+
+    fileprivate enum Metrics {
         static let pillHeight: CGFloat = 30
         static let horizontalPadding: CGFloat = 10
         static let controlHeight: CGFloat = 28
@@ -21,24 +36,25 @@ struct ChangeNavigationPill: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            navigationButton(
+            NavigationChevronButton(
                 symbolName: "chevron.up",
                 label: "Previous change",
-                direction: .previous
+                isEnabled: canGoPrevious,
+                direction: .previous,
+                onNavigate: onNavigate
             )
 
-            (
-                Text(currentIndex.map { "\(min($0, max(0, totalCount - 1)) + 1)" } ?? "\u{2014}")
-                + Text(" / \(totalCount)")
-            )
+            Text(Self.counterText(currentIndex: currentIndex, totalCount: totalCount))
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
 
-            navigationButton(
+            NavigationChevronButton(
                 symbolName: "chevron.down",
                 label: "Next change",
-                direction: .next
+                isEnabled: canGoNext,
+                direction: .next,
+                onNavigate: onNavigate
             )
         }
         .padding(.horizontal, Metrics.horizontalPadding)
@@ -57,21 +73,44 @@ struct ChangeNavigationPill: View {
         .fixedSize()
     }
 
-    private func navigationButton(
-        symbolName: String,
-        label: String,
-        direction: ReaderChangedRegionNavigationDirection
-    ) -> some View {
+}
+
+private struct NavigationChevronButton: View {
+    let symbolName: String
+    let label: String
+    let isEnabled: Bool
+    let direction: ReaderChangedRegionNavigationDirection
+    let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
+
+    @State private var isHovered = false
+
+    private var foregroundOpacity: Double {
+        if !isEnabled { return 0.25 }
+        return isHovered ? 0.75 : 0.6
+    }
+
+    var body: some View {
         Button {
             onNavigate(direction)
         } label: {
             Image(systemName: symbolName)
-                .font(.system(size: Metrics.iconSize, weight: .semibold))
-                .frame(width: Metrics.controlHeight, height: Metrics.controlHeight)
-                .contentShape(Rectangle())
+                .font(.system(size: ChangeNavigationPill.Metrics.iconSize, weight: .semibold))
+                .frame(width: ChangeNavigationPill.Metrics.controlHeight, height: ChangeNavigationPill.Metrics.controlHeight)
+                .background(
+                    Circle()
+                        .fill(Color.primary.opacity(isEnabled && isHovered ? 0.08 : 0))
+                )
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.primary.opacity(0.55))
+        .disabled(!isEnabled)
+        .foregroundStyle(.primary.opacity(foregroundOpacity))
+        .onHover { hovering in
+            guard isEnabled else { return }
+            withAnimation(.easeInOut(duration: 0.12)) {
+                isHovered = hovering
+            }
+        }
         .help(label)
         .accessibilityLabel(label)
         .accessibilityHint("Jumps to a changed region in the current preview")

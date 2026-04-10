@@ -105,9 +105,11 @@ struct ReaderCSSFactory {
         let escapedCSS = cssBase64.replacingOccurrences(of: "\"", with: "\\\"")
 
         let inlineDiffJS = ReaderJavaScriptLoader.loadBundledJS(named: "markdownobserver-inline-diff")
+        let defaultInset = "\(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))"
         let runtimeJS = ReaderJavaScriptLoader.loadBundledJS(named: "markdownobserver-runtime")
             .replacingOccurrences(of: "__MINIMARK_PAYLOAD_BASE64__", with: escapedPayload)
             .replacingOccurrences(of: "__MINIMARK_CSS_BASE64__", with: escapedCSS)
+            .replacingOccurrences(of: "__MINIMARK_OVERLAY_TOP_INSET__", with: defaultInset)
 
         return """
         <script>

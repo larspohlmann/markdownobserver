@@ -46,9 +46,9 @@ extension ReaderStore {
         noteObservedExternalChange(kind: .modified)
         if let fileURL,
            settingsStore.currentSettings.notificationsEnabled {
-            systemNotifier.notifyExternalChange(
-                for: fileURL,
-                autoRefreshed: settingsStore.currentSettings.autoRefreshOnExternalChange,
+            systemNotifier.notifyFileChanged(
+                fileURL,
+                changeKind: currentDocumentHasBeenDeleted ? .deleted : .modified,
                 watchedFolderURL: watchedFolderURLForCurrentFile
             )
         }

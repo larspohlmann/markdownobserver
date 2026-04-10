@@ -3,6 +3,7 @@ import Foundation
 enum ReaderFolderWatchChangeKind: String, Equatable, Hashable, Codable, Sendable {
     case added
     case modified
+    case deleted
 }
 
 struct ReaderFolderWatchChangeEvent: Equatable, Hashable, Codable, Sendable {

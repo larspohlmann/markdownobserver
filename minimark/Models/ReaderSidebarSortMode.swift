@@ -1,11 +1,24 @@
 import Foundation
 
-nonisolated enum ReaderSidebarSortMode: String, CaseIterable, Codable, Sendable {
+nonisolated enum ReaderSidebarSortMode: String, Codable, Sendable {
     case openOrder
     case nameAscending
     case nameDescending
     case lastChangedNewestFirst
     case lastChangedOldestFirst
+    case manualOrder
+
+    static let allCases: [ReaderSidebarSortMode] = [
+        .openOrder,
+        .nameAscending,
+        .nameDescending,
+        .lastChangedNewestFirst,
+        .lastChangedOldestFirst
+    ]
+
+    static func availableCases(hasManualOrder: Bool) -> [ReaderSidebarSortMode] {
+        hasManualOrder ? allCases + [.manualOrder] : allCases
+    }
 
     var displayName: String {
         switch self {
@@ -19,6 +32,8 @@ nonisolated enum ReaderSidebarSortMode: String, CaseIterable, Codable, Sendable 
             return "Last Changed Newest First"
         case .lastChangedOldestFirst:
             return "Last Changed Oldest First"
+        case .manualOrder:
+            return "Manual"
         }
     }
 
@@ -34,6 +49,8 @@ nonisolated enum ReaderSidebarSortMode: String, CaseIterable, Codable, Sendable 
             return "Newest First"
         case .lastChangedOldestFirst:
             return "Oldest First"
+        case .manualOrder:
+            return "Manual"
         }
     }
 
@@ -69,6 +86,8 @@ nonisolated enum ReaderSidebarSortMode: String, CaseIterable, Codable, Sendable 
             return compareDates(lhs.lastChangedAt, rhs.lastChangedAt, newestFirst: true) ?? (leftIndex < rightIndex)
         case .lastChangedOldestFirst:
             return compareDates(lhs.lastChangedAt, rhs.lastChangedAt, newestFirst: false) ?? (leftIndex < rightIndex)
+        case .manualOrder:
+            return leftIndex < rightIndex
         }
     }
 

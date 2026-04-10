@@ -62,6 +62,7 @@ final class ReaderStore {
     private let documentIO: ReaderDocumentIO
     let requestWatchedFolderReauthorization: (URL) -> URL?
 
+    @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
     @ObservationIgnored private var appearanceOverride: LockedAppearance?
     private(set) var needsAppearanceRender = false
@@ -211,9 +212,14 @@ final class ReaderStore {
     }
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
+        let previousKind = document.unacknowledgedExternalChangeKind
+        let wasAcknowledged = !document.hasUnacknowledgedExternalChange
         document.lastExternalChangeAt = Date()
         document.hasUnacknowledgedExternalChange = true
         document.unacknowledgedExternalChangeKind = kind
+        if !wasAcknowledged && previousKind != kind {
+            onExternalChangeKindChanged?()
+        }
     }
 
     func clearExternalChangeIndicator() {

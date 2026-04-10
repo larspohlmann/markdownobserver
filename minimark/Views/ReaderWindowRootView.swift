@@ -22,6 +22,7 @@ struct ReaderWindowRootView: View {
     @State private var uiTestWatchFlowTask: Task<Void, Never>?
     @State private var hasAppliedUITestLaunchConfiguration = false
     @State var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
+    @State private var dockTileWindowToken = UUID()
     @State var groupStateController = SidebarGroupStateController()
     @State var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     @State private var lastAppliedSidebarDelta: CGFloat = 0
@@ -31,6 +32,7 @@ struct ReaderWindowRootView: View {
     @State var appearanceController: WindowAppearanceController
     @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     @State private var isTitlebarEditingFavorites = false
+    @State private var isEditingSubfolders = false
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
@@ -169,6 +171,22 @@ struct ReaderWindowRootView: View {
                     onDismiss: { isTitlebarEditingFavorites = false }
                 )
             }
+            .sheet(isPresented: $isEditingSubfolders) {
+                if let session = sharedFolderWatchSession {
+                    EditFolderWatchSheet(
+                        folderURL: session.folderURL,
+                        currentExcludedSubdirectoryPaths: session.options.excludedSubdirectoryPaths,
+                        onConfirm: { newExclusions in
+                            if updateFolderWatchExclusions(newExclusions) {
+                                isEditingSubfolders = false
+                            }
+                        },
+                        onCancel: {
+                            isEditingSubfolders = false
+                        }
+                    )
+                }
+            }
             .background(
                 WindowAccessor { window in
                     handleWindowAccessorUpdate(window)
@@ -256,13 +274,15 @@ struct ReaderWindowRootView: View {
                         state.pinnedGroupIDs != newSnapshot.pinnedGroupIDs ||
                         state.collapsedGroupIDs != newSnapshot.collapsedGroupIDs ||
                         state.groupSortMode != newSnapshot.sortMode ||
-                        state.fileSortMode != newSnapshot.fileSortMode
+                        state.fileSortMode != newSnapshot.fileSortMode ||
+                        state.manualGroupOrder != newSnapshot.manualGroupOrder
 
                     if needsUpdate {
                         state.pinnedGroupIDs = newSnapshot.pinnedGroupIDs
                         state.collapsedGroupIDs = newSnapshot.collapsedGroupIDs
                         state.groupSortMode = newSnapshot.sortMode
                         state.fileSortMode = newSnapshot.fileSortMode
+                        state.manualGroupOrder = newSnapshot.manualGroupOrder
                         activeFavoriteWorkspaceState = state
                     }
                 } else {
@@ -290,6 +310,18 @@ struct ReaderWindowRootView: View {
                     rowStates: sidebarDocumentController.rowStates
                 )
                 groupStateController.observeRowStates(from: sidebarDocumentController)
+                DockTileController.shared.configureDockTileIfNeeded()
+                sidebarDocumentController.onDockTileRowStatesChanged = { [dockTileWindowToken] rowStates in
+                    DockTileController.shared.updateRowStates(for: dockTileWindowToken, rowStates: rowStates)
+                }
+                DockTileController.shared.updateRowStates(
+                    for: dockTileWindowToken,
+                    rowStates: sidebarDocumentController.rowStates
+                )
+            }
+            .onDisappear {
+                sidebarDocumentController.onDockTileRowStatesChanged = nil
+                DockTileController.shared.removeRowStates(for: dockTileWindowToken)
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 reapplyAppearance()
@@ -587,7 +619,10 @@ struct ReaderWindowRootView: View {
                 },
                 onStartRecentFolderWatch: startRecentFolderWatch,
                 onClearRecentWatchedFolders: clearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles
+                onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles,
+                onEditSubfolders: {
+                    isEditingSubfolders = true
+                }
             ),
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
@@ -650,8 +685,6 @@ struct ReaderWindowRootView: View {
             }
             return
         }
-
-        hasAppliedUITestLaunchConfiguration = true
     }
 
     private func resolvedUITestLaunchAction() -> ReaderWindowUITestLaunchAction {

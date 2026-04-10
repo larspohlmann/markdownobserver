@@ -32,9 +32,7 @@ struct FolderWatchToolbarButton: View {
     }
 
     private var activeButtonColor: Color {
-        colorScheme == .dark
-            ? Color(red: 0.59, green: 0.49, blue: 1.0)
-            : Color(red: 0.34, green: 0.24, blue: 0.71)
+        WatchActiveColor.color(for: colorScheme)
     }
 
     private var backgroundFill: Color {
@@ -53,7 +51,7 @@ struct FolderWatchToolbarButton: View {
                 mainButtonLabel
             }
             .buttonStyle(.plain)
-            .help(isActive ? "Watch a different folder" : "Watch Folder...")
+            .help(isActive ? "Watch a different folder (⌥⌘W)" : "Watch Folder… (⌥⌘W)")
             .accessibilityIdentifier("folder-watch-toolbar-button")
             .accessibilityLabel("Watch folder")
             .accessibilityValue(isActive ? "Active" : "Inactive")

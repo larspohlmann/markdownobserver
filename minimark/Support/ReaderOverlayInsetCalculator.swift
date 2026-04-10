@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 struct ReaderOverlayInsetValues: Equatable {
     let railTopPadding: CGFloat
@@ -10,7 +11,17 @@ enum ReaderOverlayInsetCalculator {
     static let overlayBaseGap: CGFloat = 8
     static let leadingOverlayAlignmentAdjustment: CGFloat = 8
     static let overlayControlHeight: CGFloat = 30
-    static let scrollLandingGap: CGFloat = 8
+
+    static let scrollLandingGap: CGFloat = {
+        if let raw = Bundle.main.object(forInfoDictionaryKey: "ScrollLandingGap") as? String,
+           let value = Double(raw), value >= 0 {
+            return CGFloat(value)
+        }
+        return 8
+    }()
+
+    static let defaultScrollTargetTopInset: CGFloat =
+        overlayBaseGap + leadingOverlayAlignmentAdjustment + overlayControlHeight + scrollLandingGap
 
     static func statusBannerTopPadding(topBarInset: CGFloat) -> CGFloat {
         max(0, topBarInset)

@@ -3,6 +3,7 @@ import SwiftUI
 struct TOCPopoverView: View {
     let headings: [TOCHeading]
     let onSelect: (TOCHeading) -> Void
+    @State private var hoveredHeadingID: Int?
 
     private enum Metrics {
         static let popoverMinWidth: CGFloat = 320
@@ -29,12 +30,24 @@ struct TOCPopoverView: View {
                             .padding(.leading, Metrics.rowHorizontalPadding + CGFloat(heading.level - 1) * Metrics.indentPerLevel)
                             .padding(.trailing, Metrics.rowHorizontalPadding)
                             .padding(.vertical, Metrics.rowVerticalPadding)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(hoveredHeadingID == heading.id ? Color.primary.opacity(0.06) : .clear)
+                            )
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .modifier(PointingHandCursor())
+                    .onHover { isHovered in
+                        if isHovered {
+                            hoveredHeadingID = heading.id
+                        } else if hoveredHeadingID == heading.id {
+                            hoveredHeadingID = nil
+                        }
+                    }
                 }
             }
+            .animation(.easeInOut(duration: 0.12), value: hoveredHeadingID)
             .padding(.vertical, 8)
         }
         .frame(minWidth: Metrics.popoverMinWidth, maxWidth: Metrics.popoverMaxWidth, maxHeight: Metrics.popoverMaxHeight)
