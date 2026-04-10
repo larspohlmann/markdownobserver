@@ -80,8 +80,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
     }
 
     func stop() {
-        if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
-            // Already on a managed queue — safe to run inline
+        if DispatchQueue.getSpecific(key: Self.queueKey) == ObjectIdentifier(self) {
             stopInternal()
         } else if let queue {
             queue.sync { self.stopInternal() }

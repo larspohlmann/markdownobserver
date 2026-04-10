@@ -38,6 +38,11 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
         queue: DispatchQueue,
         onEvent: @escaping @Sendable (Set<URL>?) -> Void
     ) {
+        guard includeSubfolders else {
+            Self.logger.warning("FSEventStreamFolderEventSource is designed for recursive watches; use DispatchSourceFolderEventSource for flat folders")
+            return
+        }
+
         stop()
 
         self.queue = queue
@@ -116,8 +121,7 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
     fileprivate func handleEvents(
         numEvents: Int,
         eventPaths: UnsafeMutableRawPointer,
-        eventFlags: UnsafePointer<FSEventStreamEventFlags>,
-        eventIds: UnsafePointer<FSEventStreamEventId>
+        eventFlags: UnsafePointer<FSEventStreamEventFlags>
     ) {
         let cfPaths = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue()
 
@@ -189,7 +193,6 @@ private func fsEventCallback(
     source.handleEvents(
         numEvents: numEvents,
         eventPaths: eventPaths,
-        eventFlags: eventFlags,
-        eventIds: eventIds
+        eventFlags: eventFlags
     )
 }
