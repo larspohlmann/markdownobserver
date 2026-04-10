@@ -15,6 +15,14 @@ protocol FolderSnapshotDiffing: Sendable {
         previousSnapshot: [URL: FolderFileSnapshot]
     ) throws -> [URL: FolderFileSnapshot]
 
+    func buildTargetedIncrementalSnapshot(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        exclusionMatcher: FolderWatchExclusionMatcher,
+        previousSnapshot: [URL: FolderFileSnapshot],
+        changedDirectoryURLs: Set<URL>
+    ) throws -> [URL: FolderFileSnapshot]
+
     func diff(
         current: [URL: FolderFileSnapshot],
         previous: [URL: FolderFileSnapshot]
@@ -77,6 +85,51 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
             }
 
             snapshot[url] = FolderFileSnapshot(url: url, metadata: metadata)
+        }
+
+        return snapshot
+    }
+
+    func buildTargetedIncrementalSnapshot(
+        folderURL: URL,
+        includeSubfolders: Bool,
+        exclusionMatcher: FolderWatchExclusionMatcher,
+        previousSnapshot: [URL: FolderFileSnapshot],
+        changedDirectoryURLs: Set<URL>
+    ) throws -> [URL: FolderFileSnapshot] {
+        var snapshot = previousSnapshot
+
+        for directoryURL in changedDirectoryURLs {
+            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
+
+            guard !exclusionMatcher.excludesDirectory(normalizedDirectoryURL) else {
+                continue
+            }
+
+            let directoryPath = normalizedDirectoryURL.path
+            let directoryPathWithSlash = directoryPath.hasSuffix("/") ? directoryPath : directoryPath + "/"
+
+            for url in snapshot.keys {
+                let parentPath = url.deletingLastPathComponent().path
+                if parentPath == directoryPath || parentPath + "/" == directoryPathWithSlash {
+                    snapshot.removeValue(forKey: url)
+                }
+            }
+
+            let freshURLs = try enumerateMarkdownFilesInSingleDirectory(
+                directoryURL: normalizedDirectoryURL,
+                exclusionMatcher: exclusionMatcher
+            )
+
+            for url in freshURLs {
+                let metadata = FolderFileMetadata(url: url)
+                if let previous = previousSnapshot[url], previous.matches(metadata: metadata) {
+                    snapshot[url] = previous
+                    continue
+                }
+
+                snapshot[url] = FolderFileSnapshot(url: url, metadata: metadata)
+            }
         }
 
         return snapshot
@@ -186,6 +239,22 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 .compactMap(regularMarkdownFileURL(fromNormalized:))
                 .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
         }
+    }
+
+    private func enumerateMarkdownFilesInSingleDirectory(
+        directoryURL: URL,
+        exclusionMatcher: FolderWatchExclusionMatcher
+    ) throws -> [URL] {
+        let fileManager = FileManager.default
+        let urls = try fileManager.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: []
+        )
+        return urls
+            .map(ReaderFileRouting.normalizedFileURL)
+            .compactMap(regularMarkdownFileURL(fromNormalized:))
+            .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
     }
 
     private func regularMarkdownFileURL(fromNormalized normalizedFileURL: URL) -> URL? {

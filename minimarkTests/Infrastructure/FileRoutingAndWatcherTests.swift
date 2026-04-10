@@ -766,6 +766,96 @@ struct FileRoutingAndWatcherTests {
         }
     }
 
+    @Test func folderSnapshotDifferBuildsTargetedIncrementalSnapshotForChangedDirectoriesOnly() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let unchangedSubdir = directoryURL.appendingPathComponent("unchanged", isDirectory: true)
+        let changedSubdir = directoryURL.appendingPathComponent("changed", isDirectory: true)
+        try FileManager.default.createDirectory(at: unchangedSubdir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: changedSubdir, withIntermediateDirectories: true)
+
+        let unchangedFileURL = unchangedSubdir.appendingPathComponent("stable.md")
+        let changedFileURL = changedSubdir.appendingPathComponent("modified.md")
+        try "# Unchanged".write(to: unchangedFileURL, atomically: false, encoding: .utf8)
+        try "# Before".write(to: changedFileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL,
+            excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:]
+        )
+
+        try "# After".write(to: changedFileURL, atomically: false, encoding: .utf8)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(changedSubdir)])
+        )
+
+        let normalizedUnchangedURL = ReaderFileRouting.normalizedFileURL(unchangedFileURL)
+        let normalizedChangedURL = ReaderFileRouting.normalizedFileURL(changedFileURL)
+
+        #expect(targetedSnapshot[normalizedUnchangedURL] != nil)
+        #expect(targetedSnapshot[normalizedChangedURL] != nil)
+        #expect(targetedSnapshot[normalizedUnchangedURL]?.markdown == initialSnapshot[normalizedUnchangedURL]?.markdown)
+        #expect(targetedSnapshot[normalizedChangedURL]?.markdown == "# After")
+
+        let changes = differ.diff(current: targetedSnapshot, previous: initialSnapshot)
+        #expect(changes.count == 1)
+        #expect(changes.first?.fileURL == normalizedChangedURL)
+        #expect(changes.first?.kind == .modified)
+    }
+
+    @Test func folderSnapshotDifferTargetedSnapshotDetectsDeletedFileInChangedDirectory() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let subdir = directoryURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: subdir, withIntermediateDirectories: true)
+
+        let fileURL = subdir.appendingPathComponent("doomed.md")
+        try "# Doomed".write(to: fileURL, atomically: false, encoding: .utf8)
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL,
+            excludedSubdirectoryURLs: []
+        )
+
+        let initialSnapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: [:]
+        )
+
+        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        #expect(initialSnapshot[normalizedFileURL] != nil)
+
+        try FileManager.default.removeItem(at: fileURL)
+
+        let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
+            folderURL: directoryURL,
+            includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher,
+            previousSnapshot: initialSnapshot,
+            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+        )
+
+        #expect(targetedSnapshot[normalizedFileURL] == nil)
+    }
+
     @Test func readerFileActionServiceDeduplicatesApplicationsWithSameBundleIdentifier() throws {
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("reader-file-action-service-tests-\(UUID().uuidString)", isDirectory: true)
