@@ -472,7 +472,7 @@ struct FolderWatchExclusionMatcher {
     /// file watching. Spotlight writes to `.Spotlight-V100` inside watched
     /// trees, generating FSEvents that trigger verification cycles and
     /// create a feedback loop with `mdworker_shared`.
-    static let systemExcludedDirectoryNames: Set<String> = [
+    private static let systemExcludedDirectoryNames: Set<String> = [
         ".Spotlight-V100",
         ".fseventsd",
         ".Trashes",
@@ -516,7 +516,7 @@ struct FolderWatchExclusionMatcher {
         Self.containsSystemExcludedComponent(inPath: normalizedPath) || excludesPath(normalizedPath)
     }
 
-    static func containsSystemExcludedComponent(inPath path: String) -> Bool {
+    private static func containsSystemExcludedComponent(inPath path: String) -> Bool {
         for name in systemExcludedDirectoryNames {
             if path.contains("/" + name + "/") || path.hasSuffix("/" + name) {
                 return true
