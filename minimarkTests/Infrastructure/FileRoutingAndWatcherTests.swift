@@ -1102,6 +1102,77 @@ struct FileRoutingAndWatcherTests {
         #expect(targetedSnapshot[normalizedAtLimitURL] != nil)
     }
 
+    // MARK: - System-excluded directory filtering
+
+    @Test func exclusionMatcherExcludesSpotlightDirectory() {
+        let matcher = FolderWatchExclusionMatcher(
+            rootFolderURL: URL(fileURLWithPath: "/Users/test/docs"),
+            excludedSubdirectoryURLs: []
+        )
+
+        #expect(matcher.excludesNormalizedDirectoryPath("/Users/test/docs/.Spotlight-V100"))
+        #expect(matcher.excludesNormalizedFilePath("/Users/test/docs/.Spotlight-V100/store.db"))
+        #expect(matcher.excludesNormalizedFilePath("/Users/test/docs/.fseventsd/00000001"))
+        #expect(matcher.excludesNormalizedDirectoryPath("/Users/test/docs/.Trashes"))
+        #expect(matcher.excludesNormalizedDirectoryPath("/Users/test/docs/.DocumentRevisions-V100"))
+        #expect(matcher.excludesNormalizedDirectoryPath("/Users/test/docs/.TemporaryItems"))
+    }
+
+    @Test func exclusionMatcherAllowsNonSystemHiddenDirectories() {
+        let matcher = FolderWatchExclusionMatcher(
+            rootFolderURL: URL(fileURLWithPath: "/Users/test/docs"),
+            excludedSubdirectoryURLs: []
+        )
+
+        #expect(!matcher.excludesNormalizedDirectoryPath("/Users/test/docs/.github"))
+        #expect(!matcher.excludesNormalizedFilePath("/Users/test/docs/.github/README.md"))
+        #expect(!matcher.excludesNormalizedDirectoryPath("/Users/test/docs/.claude"))
+        #expect(!matcher.excludesNormalizedFilePath("/Users/test/docs/.obsidian/config.md"))
+    }
+
+    @Test func exclusionMatcherExcludesNestedSystemDirectories() {
+        let matcher = FolderWatchExclusionMatcher(
+            rootFolderURL: URL(fileURLWithPath: "/Users/test/docs"),
+            excludedSubdirectoryURLs: []
+        )
+
+        #expect(matcher.excludesNormalizedFilePath("/Users/test/docs/subdir/.Spotlight-V100/store.db"))
+        #expect(matcher.excludesNormalizedDirectoryPath("/Users/test/docs/deep/nested/.fseventsd"))
+    }
+
+    @Test func snapshotDifferExcludesFilesInSystemDirectories() throws {
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        let spotlightDir = directoryURL.appendingPathComponent(".Spotlight-V100", isDirectory: true)
+        try FileManager.default.createDirectory(at: spotlightDir, withIntermediateDirectories: true)
+        try "spotlight data".write(
+            to: spotlightDir.appendingPathComponent("notes.md"),
+            atomically: false, encoding: .utf8
+        )
+
+        let realDir = directoryURL.appendingPathComponent("notes", isDirectory: true)
+        try FileManager.default.createDirectory(at: realDir, withIntermediateDirectories: true)
+        try "# Real".write(
+            to: realDir.appendingPathComponent("real.md"),
+            atomically: false, encoding: .utf8
+        )
+
+        let differ = FolderSnapshotDiffer()
+        let exclusionMatcher = FolderWatchExclusionMatcher(
+            rootFolderURL: directoryURL, excludedSubdirectoryURLs: []
+        )
+
+        let snapshot = try differ.buildIncrementalSnapshot(
+            folderURL: directoryURL, includeSubfolders: true,
+            exclusionMatcher: exclusionMatcher, previousSnapshot: [:]
+        )
+
+        #expect(snapshot.count == 1)
+        let realURL = ReaderFileRouting.normalizedFileURL(realDir.appendingPathComponent("real.md"))
+        #expect(snapshot[realURL] != nil)
+    }
+
     @Test func readerFileActionServiceDeduplicatesApplicationsWithSameBundleIdentifier() throws {
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("reader-file-action-service-tests-\(UUID().uuidString)", isDirectory: true)
