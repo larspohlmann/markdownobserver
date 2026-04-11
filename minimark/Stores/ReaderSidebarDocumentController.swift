@@ -53,6 +53,7 @@ final class ReaderSidebarDocumentController {
     @ObservationIgnored var onDockTileRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
     @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
+    @ObservationIgnored private var needsInitialObservationSetup = true
     @ObservationIgnored private var rowIndicatorPulseTokens: [UUID: Int] = [:]
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
@@ -117,8 +118,7 @@ final class ReaderSidebarDocumentController {
         contentScanProgress = nil
         scannedFileCount = nil
         rebuildDocumentURLIndex()
-        synchronizeDocumentChangeObservers()
-        bindSelectedStore()
+        rebuildAllRowStates()
     }
 
     var selectedDocument: Document? {
@@ -141,6 +141,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func selectDocument(_ documentID: UUID?) {
+        ensureObservationSetup()
         guard let documentID,
               documents.contains(where: { $0.id == documentID }) else {
             return
@@ -201,6 +202,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func executePlan(_ plan: FileOpenPlan) {
+        ensureObservationSetup()
         guard !plan.assignments.isEmpty else { return }
 
         var didAppendDocuments = false
@@ -518,6 +520,13 @@ final class ReaderSidebarDocumentController {
             load()
             store.holdLoadingOverlayBriefly()
         }
+    }
+
+    private func ensureObservationSetup() {
+        guard needsInitialObservationSetup else { return }
+        needsInitialObservationSetup = false
+        synchronizeDocumentChangeObservers()
+        bindSelectedStore()
     }
 
     private func bindSelectedStore() {
