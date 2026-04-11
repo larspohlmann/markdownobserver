@@ -84,6 +84,19 @@ struct MarkdownSourceHTMLRendererTests {
         #expect(html.contains("padding-top: \(expectedPadding)px"))
     }
 
+    @Test func makeHTMLDocumentContainsContentSecurityPolicy() {
+        let html = MarkdownSourceHTMLRenderer.makeHTMLDocument(
+            markdown: "# Hello",
+            settings: defaultSettings,
+            isEditable: true
+        )
+
+        #expect(html.contains("Content-Security-Policy"))
+        #expect(html.contains("default-src 'none'"))
+        #expect(html.contains("script-src 'unsafe-inline'"))
+        #expect(html.contains("img-src data:"))
+    }
+
     @Test func differentThemesProduceDifferentCSS() {
         var lightSettings = defaultSettings
         lightSettings.readerTheme = .blackOnWhite
