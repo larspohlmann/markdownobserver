@@ -30,13 +30,30 @@ final class ReaderSidebarDocumentController {
     private(set) var rowStates: [UUID: SidebarRowState] = [:]
 
     private let makeReaderStore: () -> ReaderStore
-    private let folderWatchController: ReaderFolderWatchController
+    @ObservationIgnored private var _folderWatchController: ReaderFolderWatchController?
+    @ObservationIgnored private let _makeFolderWatchController: () -> ReaderFolderWatchController
+
+    private var folderWatchController: ReaderFolderWatchController {
+        if let existing = _folderWatchController {
+            return existing
+        }
+        let controller = _makeFolderWatchController()
+        controller.delegate = self
+        _folderWatchController = controller
+        synchronizeFolderWatchState()
+        return controller
+    }
+
+    private var folderWatchControllerIfCreated: ReaderFolderWatchController? {
+        _folderWatchController
+    }
     @ObservationIgnored private var selectedStoreObservationTask: Task<Void, Never>?
     @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
     @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     @ObservationIgnored var onDockTileRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
     @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
     @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
+    @ObservationIgnored private var needsInitialObservationSetup = true
     @ObservationIgnored private var rowIndicatorPulseTokens: [UUID: Int] = [:]
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
@@ -56,7 +73,6 @@ final class ReaderSidebarDocumentController {
                 renderer: MarkdownRenderingService(),
                 differ: ChangedRegionDiffer(),
                 fileWatcher: FileChangeWatcher(),
-                folderWatcher: FolderChangeWatcher(),
                 settingsStore: settingsStore,
                 securityScope: SecurityScopedResourceAccess(),
                 fileActions: ReaderFileActionService(),
@@ -77,15 +93,17 @@ final class ReaderSidebarDocumentController {
             return store
         }
         self.makeReaderStore = resolvedMakeReaderStore
-        self.folderWatchController = makeFolderWatchController?() ?? ReaderFolderWatchController(
-            folderWatcher: FolderChangeWatcher(),
-            settingsStore: settingsStore,
-            securityScope: SecurityScopedResourceAccess(),
-            systemNotifier: ReaderSystemNotifier.shared,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        self._makeFolderWatchController = makeFolderWatchController ?? {
+            ReaderFolderWatchController(
+                folderWatcher: FolderChangeWatcher(),
+                settingsStore: settingsStore,
+                securityScope: SecurityScopedResourceAccess(),
+                systemNotifier: ReaderSystemNotifier.shared,
+                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                    minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+                )
             )
-        )
+        }
 
         let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore(), normalizedFileURL: nil)
         documents = [initialDocument]
@@ -100,9 +118,7 @@ final class ReaderSidebarDocumentController {
         contentScanProgress = nil
         scannedFileCount = nil
         rebuildDocumentURLIndex()
-        synchronizeDocumentChangeObservers()
-        configureFolderWatchController()
-        bindSelectedStore()
+        rebuildAllRowStates()
     }
 
     var selectedDocument: Document? {
@@ -125,6 +141,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func selectDocument(_ documentID: UUID?) {
+        ensureObservationSetup()
         guard let documentID,
               documents.contains(where: { $0.id == documentID }) else {
             return
@@ -185,6 +202,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func executePlan(_ plan: FileOpenPlan) {
+        ensureObservationSetup()
         guard !plan.assignments.isEmpty else { return }
 
         var didAppendDocuments = false
@@ -425,7 +443,8 @@ final class ReaderSidebarDocumentController {
     }
 
     func stopWatchingFolders(_ documentIDs: Set<UUID>) {
-        guard let session = activeFolderWatchSession else {
+        guard let session = activeFolderWatchSession,
+              let watchController = folderWatchControllerIfCreated else {
             return
         }
 
@@ -435,7 +454,7 @@ final class ReaderSidebarDocumentController {
                   let normalizedFileURL = document.normalizedFileURL else {
                 return false
             }
-            return folderWatchController.watchApplies(
+            return watchController.watchApplies(
                 normalizedFileURL: normalizedFileURL,
                 toNormalizedFolderAt: normalizedFolder,
                 scope: session.options.scope
@@ -443,7 +462,7 @@ final class ReaderSidebarDocumentController {
         }
 
         guard hasWatchedDocument else { return }
-        folderWatchController.stopWatching()
+        watchController.stopWatching()
     }
 
     func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
@@ -468,7 +487,8 @@ final class ReaderSidebarDocumentController {
     }
 
     func watchedDocumentIDs() -> Set<UUID> {
-        guard let session = activeFolderWatchSession else {
+        guard let session = activeFolderWatchSession,
+              let watchController = folderWatchControllerIfCreated else {
             return []
         }
 
@@ -477,7 +497,7 @@ final class ReaderSidebarDocumentController {
             guard let normalizedFileURL = document.normalizedFileURL else {
                 return nil
             }
-            return folderWatchController.watchApplies(
+            return watchController.watchApplies(
                 normalizedFileURL: normalizedFileURL,
                 toNormalizedFolderAt: normalizedFolder,
                 scope: session.options.scope
@@ -500,6 +520,12 @@ final class ReaderSidebarDocumentController {
             load()
             store.holdLoadingOverlayBriefly()
         }
+    }
+
+    private func ensureObservationSetup() {
+        guard needsInitialObservationSetup else { return }
+        needsInitialObservationSetup = false
+        synchronizeDocumentChangeObservers()
     }
 
     private func bindSelectedStore() {
@@ -658,17 +684,14 @@ final class ReaderSidebarDocumentController {
             return requestedSession
         }
 
-        guard folderWatchController.watchApplies(to: fileURL) else {
+        guard let watchController = folderWatchControllerIfCreated,
+              watchController.watchApplies(to: fileURL) else {
             return nil
         }
 
         return activeFolderWatchSession
     }
 
-    private func configureFolderWatchController() {
-        folderWatchController.delegate = self
-        synchronizeFolderWatchState()
-    }
 
     // MARK: - Observation helpers
 
@@ -716,13 +739,23 @@ final class ReaderSidebarDocumentController {
     }
 
     private func synchronizeFolderWatchState() {
-        activeFolderWatchSession = folderWatchController.activeFolderWatchSession
-        selectedFolderWatchAutoOpenWarning = folderWatchController.folderWatchAutoOpenWarning
-        pendingFileSelectionRequest = folderWatchController.pendingFileSelectionRequest
-        isFolderWatchInitialScanInProgress = folderWatchController.isInitialMarkdownScanInProgress
-        didFolderWatchInitialScanFail = folderWatchController.didInitialMarkdownScanFail
-        contentScanProgress = folderWatchController.contentScanProgress
-        scannedFileCount = folderWatchController.scannedFileCount
+        guard let controller = _folderWatchController else {
+            activeFolderWatchSession = nil
+            selectedFolderWatchAutoOpenWarning = nil
+            pendingFileSelectionRequest = nil
+            isFolderWatchInitialScanInProgress = false
+            didFolderWatchInitialScanFail = false
+            contentScanProgress = nil
+            scannedFileCount = nil
+            return
+        }
+        activeFolderWatchSession = controller.activeFolderWatchSession
+        selectedFolderWatchAutoOpenWarning = controller.folderWatchAutoOpenWarning
+        pendingFileSelectionRequest = controller.pendingFileSelectionRequest
+        isFolderWatchInitialScanInProgress = controller.isInitialMarkdownScanInProgress
+        didFolderWatchInitialScanFail = controller.didInitialMarkdownScanFail
+        contentScanProgress = controller.contentScanProgress
+        scannedFileCount = controller.scannedFileCount
     }
 }
 
