@@ -119,7 +119,7 @@ extension ReaderWindowRootView {
             performInitialAutoOpen: false
         )
 
-        let restoredFileURLs = entry.resolvedOpenDocumentFileURLs(relativeTo: resolvedURL)
+        let restoredFileURLs = entry.existingOpenDocumentFileURLs(relativeTo: resolvedURL)
         if let session = sharedFolderWatchSession,
            !restoredFileURLs.isEmpty {
             fileOpenCoordinator.open(FileOpenRequest(
