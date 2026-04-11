@@ -98,7 +98,7 @@
         var lineEnd = String(token.map[1]);
         result = result.replace(
           "<pre>",
-          '<pre data-src-line-start="' + lineStart + '" data-src-line-end="' + lineEnd + '">'
+          '<pre class="reader-code-fenced" data-src-line-start="' + lineStart + '" data-src-line-end="' + lineEnd + '">'
         );
       }
       return result;
@@ -1629,6 +1629,7 @@
     }
 
     var lineAnchors = root.querySelectorAll("[data-src-line-start][data-src-line-end]");
+    var matched = [];
     for (var i = 0; i < lineAnchors.length; i += 1) {
       var element = lineAnchors[i];
       var startLine = Number(element.getAttribute("data-src-line-start")) || 0;
@@ -1639,9 +1640,23 @@
         var regionStart = Number(region.lineStart) || 0;
         var regionEnd = Number(region.lineEnd) || regionStart;
         if (startLine <= regionEnd && regionStart <= endLine) {
-          element.classList.add("reader-unsaved-change");
+          matched.push(element);
           break;
         }
+      }
+    }
+
+    // Skip parent elements when a narrower descendant also matched
+    for (var mi = 0; mi < matched.length; mi += 1) {
+      var skip = false;
+      for (var mj = 0; mj < matched.length; mj += 1) {
+        if (mi !== mj && matched[mi].contains(matched[mj])) {
+          skip = true;
+          break;
+        }
+      }
+      if (!skip) {
+        matched[mi].classList.add("reader-unsaved-change");
       }
     }
   }
@@ -1721,12 +1736,14 @@
       }
 
       var blockStart = Number(pre.getAttribute("data-src-line-start"));
-      if (!Number.isFinite(blockStart)
-          || !(Number(pre.getAttribute("data-src-line-end")) > blockStart)) {
+      var blockEnd = Number(pre.getAttribute("data-src-line-end"));
+      if (!Number.isFinite(blockStart) || !Number.isFinite(blockEnd) || blockEnd < blockStart) {
         continue;
       }
 
-      var contentStartLine = blockStart + 1;
+      // Fenced blocks include delimiter lines; indented blocks start at the first content line
+      var isFenced = pre.classList.contains("reader-code-fenced");
+      var contentStartLine = isFenced ? blockStart + 1 : blockStart;
       var lines = splitHTMLIntoLines(code.innerHTML);
 
       if (lines.length === 1 && lines[0] === "") {
@@ -1748,10 +1765,6 @@
         );
       }
       code.innerHTML = wrapped.join("\n");
-
-      // Remove block-level attrs so highlights target per-line spans, not the whole <pre>
-      pre.removeAttribute("data-src-line-start");
-      pre.removeAttribute("data-src-line-end");
     }
   }
 
