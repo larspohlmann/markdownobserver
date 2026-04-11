@@ -526,7 +526,6 @@ final class ReaderSidebarDocumentController {
         guard needsInitialObservationSetup else { return }
         needsInitialObservationSetup = false
         synchronizeDocumentChangeObservers()
-        bindSelectedStore()
     }
 
     private func bindSelectedStore() {
