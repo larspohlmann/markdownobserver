@@ -73,6 +73,17 @@ struct MarkdownSourceHTMLRendererTests {
         #expect(html.contains("</html>"))
     }
 
+    @Test func sourceRootIncludesOverlayAwareTopPadding() {
+        let html = MarkdownSourceHTMLRenderer.makeHTMLDocument(
+            markdown: "# Hello",
+            settings: defaultSettings,
+            isEditable: true
+        )
+
+        let expectedPadding = Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded())
+        #expect(html.contains("padding-top: \(expectedPadding)px"))
+    }
+
     @Test func differentThemesProduceDifferentCSS() {
         var lightSettings = defaultSettings
         lightSettings.readerTheme = .blackOnWhite
