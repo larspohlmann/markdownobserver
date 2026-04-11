@@ -195,7 +195,7 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
                 case .unhandled:
                     continue
                 case .handled:
-                    return
+                    continue
                 }
             }
         }
