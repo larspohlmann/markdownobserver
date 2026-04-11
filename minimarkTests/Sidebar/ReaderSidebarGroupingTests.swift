@@ -250,7 +250,7 @@ struct ReaderSidebarGroupingTests {
         defer { harness.cleanup() }
 
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
+        harness.documents[0].readerStore.content.unacknowledgedExternalChangeKind = .modified
 
         let states = ReaderSidebarGrouping.indicators(for: harness.documents)
         #expect(states == [.externalChange])
@@ -264,7 +264,7 @@ struct ReaderSidebarGroupingTests {
         defer { harness.cleanup() }
 
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
+        harness.documents[0].readerStore.content.unacknowledgedExternalChangeKind = .modified
         harness.documents[0].readerStore.testSetIsCurrentFileMissing(true)
 
         let states = ReaderSidebarGrouping.indicators(for: harness.documents)
@@ -366,16 +366,16 @@ struct ReaderSidebarGroupingTests {
 
         // One doc has modified change, another has deleted-added change.
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[0].readerStore.document.unacknowledgedExternalChangeKind = .modified
+        harness.documents[0].readerStore.content.unacknowledgedExternalChangeKind = .modified
         harness.documents[1].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[1].readerStore.document.unacknowledgedExternalChangeKind = .added
+        harness.documents[1].readerStore.content.unacknowledgedExternalChangeKind = .added
         harness.documents[1].readerStore.testSetIsCurrentFileMissing(true)
 
         let documentStates = harness.documents.map { document in
             ReaderDocumentIndicatorState(
                 hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
                 isCurrentFileMissing: document.readerStore.isCurrentFileMissing,
-                unacknowledgedExternalChangeKind: document.readerStore.document.unacknowledgedExternalChangeKind
+                unacknowledgedExternalChangeKind: document.readerStore.content.unacknowledgedExternalChangeKind
             )
         }
         #expect(documentStates.contains(.externalChange))
@@ -474,7 +474,7 @@ struct ReaderSidebarGroupingTests {
 
         harness.documentsInSubdirectory("src").first!.readerStore
             .testSetHasUnacknowledgedExternalChange(true)
-        harness.documentsInSubdirectory("src").first!.readerStore.document.unacknowledgedExternalChangeKind = .modified
+        harness.documentsInSubdirectory("src").first!.readerStore.content.unacknowledgedExternalChangeKind = .modified
 
         let grouping = ReaderSidebarGrouping.group(harness.documents)
 
@@ -498,7 +498,7 @@ struct ReaderSidebarGroupingTests {
 
         harness.documentsInSubdirectory("src").first!.readerStore
             .testSetHasUnacknowledgedExternalChange(true)
-        harness.documentsInSubdirectory("src").first!.readerStore.document.unacknowledgedExternalChangeKind = .added
+        harness.documentsInSubdirectory("src").first!.readerStore.content.unacknowledgedExternalChangeKind = .added
 
         let grouping = ReaderSidebarGrouping.group(harness.documents)
 

@@ -558,7 +558,7 @@ final class ReaderSidebarDocumentController {
         ReaderDocumentIndicatorState(
             hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
             isCurrentFileMissing: store.isCurrentFileMissing,
-            unacknowledgedExternalChangeKind: store.document.unacknowledgedExternalChangeKind
+            unacknowledgedExternalChangeKind: store.content.unacknowledgedExternalChangeKind
         )
     }
 

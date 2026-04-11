@@ -1,5 +1,10 @@
 import Foundation
 
+enum ReaderExternalChangeKind: Equatable, Sendable {
+    case added
+    case modified
+}
+
 struct DocumentContent {
     var savedMarkdown: String = ""
     var sourceMarkdown: String = ""
