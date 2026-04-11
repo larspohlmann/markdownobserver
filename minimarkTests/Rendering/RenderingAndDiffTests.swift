@@ -147,6 +147,27 @@ struct RenderingAndDiffTests {
         #expect(html.contains("__minimarkSourceBootstrapStatus"))
     }
 
+    @Test func htmlDocumentContainsContentSecurityPolicy() {
+        let factory = ReaderCSSFactory()
+        let html = factory.makeHTMLDocument(
+            css: "",
+            payloadBase64: "",
+            runtimeAssets: ReaderRuntimeAssets(
+                markdownItScriptPath: "markdown-it.min.js",
+                highlightScriptPath: "highlight.min.js",
+                taskListsScriptPath: nil,
+                footnoteScriptPath: nil,
+                attrsScriptPath: nil,
+                deflistScriptPath: nil
+            )
+        )
+
+        #expect(html.contains("Content-Security-Policy"))
+        #expect(html.contains("default-src 'none'"))
+        #expect(html.contains("script-src 'unsafe-inline' 'unsafe-eval' file:"))
+        #expect(html.contains("img-src data: https:"))
+    }
+
     @Test func htmlRuntimeEmbedsAndUpdatesRuntimeCSS() {
         let factory = ReaderCSSFactory()
         let html = factory.makeHTMLDocument(

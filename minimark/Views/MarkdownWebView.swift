@@ -645,7 +645,7 @@ struct MarkdownWebView: NSViewRepresentable {
             }
 
             switch scheme {
-            case "http", "https", "mailto", "file":
+            case "http", "https", "mailto":
                 return true
             default:
                 return false
