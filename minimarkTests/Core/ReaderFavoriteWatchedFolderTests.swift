@@ -925,7 +925,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     // MARK: - Deleted file filtering (#278)
 
-    @Test func resolvedURLsFilteredByExistenceExcludesDeletedFiles() throws {
+    @Test func existingOpenDocumentFileURLsExcludesDeletedFiles() throws {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("minimarkTest-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -944,9 +944,9 @@ struct ReaderFavoriteWatchedFolderTests {
         )
 
         let allResolved = entry.resolvedOpenDocumentFileURLs(relativeTo: tempDir)
-        #expect(allResolved.count == 2, "Model returns both existing and deleted paths")
+        #expect(allResolved.count == 2, "Unfiltered method returns both existing and deleted paths")
 
-        let existingOnly = allResolved.filter { FileManager.default.fileExists(atPath: $0.path) }
+        let existingOnly = entry.existingOpenDocumentFileURLs(relativeTo: tempDir)
         #expect(existingOnly.count == 1)
         #expect(existingOnly[0].lastPathComponent == "exists.md")
     }

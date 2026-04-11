@@ -191,6 +191,11 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         }
     }
 
+    func existingOpenDocumentFileURLs(relativeTo folderURL: URL) -> [URL] {
+        resolvedOpenDocumentFileURLs(relativeTo: folderURL)
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
     static func scopedOpenDocumentRelativePaths(
         from fileURLs: [URL],
         relativeTo folderURL: URL,
