@@ -1243,4 +1243,49 @@ struct ReaderSidebarDocumentControllerTests {
 
         #expect(harness.controller.document(for: nonCanonicalURL) != nil)
     }
+
+    // MARK: - Lazy folder-watch controller (#280)
+
+    @Test @MainActor func folderWatchControllerIsNotCreatedUntilNeeded() throws {
+        var controllerCreated = false
+        let settingsStore = ReaderSettingsStore(
+            storage: TestSettingsKeyValueStorage(),
+            storageKey: "reader.settings.lazy-test.\(UUID().uuidString)"
+        )
+        let controller = ReaderSidebarDocumentController(
+            settingsStore: settingsStore,
+            makeReaderStore: {
+                let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                return ReaderStore(
+                    renderer: TestMarkdownRenderer(),
+                    differ: TestChangedRegionDiffer(),
+                    fileWatcher: TestFileWatcher(),
+                    folderWatcher: TestFolderWatcher(),
+                    settingsStore: settingsStore,
+                    securityScope: TestSecurityScopeAccess(),
+                    fileActions: TestReaderFileActions(),
+                    systemNotifier: TestReaderSystemNotifier(),
+                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                    settler: settler,
+                    requestWatchedFolderReauthorization: { _ in nil }
+                )
+            },
+            makeFolderWatchController: {
+                controllerCreated = true
+                return ReaderFolderWatchController(
+                    folderWatcher: TestFolderWatcher(),
+                    settingsStore: settingsStore,
+                    securityScope: TestSecurityScopeAccess(),
+                    systemNotifier: TestReaderSystemNotifier(),
+                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                )
+            }
+        )
+
+        #expect(!controllerCreated)
+        #expect(controller.activeFolderWatchSession == nil)
+        #expect(!controller.isFolderWatchInitialScanInProgress)
+        #expect(controller.documents.count == 1)
+        _ = controller
+    }
 }
