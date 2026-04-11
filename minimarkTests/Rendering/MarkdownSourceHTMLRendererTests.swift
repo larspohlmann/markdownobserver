@@ -93,7 +93,7 @@ struct MarkdownSourceHTMLRendererTests {
 
         #expect(html.contains("Content-Security-Policy"))
         #expect(html.contains("default-src 'none'"))
-        #expect(html.contains("script-src 'unsafe-inline'"))
+        #expect(html.contains("script-src 'unsafe-inline' file:"))
         #expect(html.contains("img-src data:"))
     }
 
