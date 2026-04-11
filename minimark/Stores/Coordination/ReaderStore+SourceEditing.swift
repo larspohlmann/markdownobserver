@@ -10,7 +10,7 @@ extension ReaderStore {
             return
         }
 
-        let transition = sourceEditingCoordinator.beginSession(markdown: document.savedMarkdown)
+        let transition = sourceEditingCoordinator.beginSession(markdown: content.savedMarkdown)
         applySourceEditingTransition(transition)
         clearLastError()
     }
@@ -21,13 +21,13 @@ extension ReaderStore {
         }
 
         let unsavedChangedRegions = changedRegions(
-            diffBaselineMarkdown: document.savedMarkdown,
+            diffBaselineMarkdown: content.savedMarkdown,
             newMarkdown: markdown
         )
         let transition = sourceEditingCoordinator.updateDraft(
             markdown: markdown,
             sourceEditorSeedMarkdown: sourceEditorSeedMarkdown,
-            diffBaselineMarkdown: document.savedMarkdown,
+            diffBaselineMarkdown: content.savedMarkdown,
             unsavedChangedRegions: unsavedChangedRegions
         )
         applySourceEditingTransition(transition)
@@ -37,7 +37,7 @@ extension ReaderStore {
 
     func saveSourceDraft() {
         guard isSourceEditing,
-              let draftMarkdown = document.draftMarkdown,
+              let draftMarkdown = editing.draftMarkdown,
               let fileURL else {
             logSaveError("save requested without active editable document: \(saveLogContext(for: fileURL))")
             handle(ReaderError.noOpenFileInReader)
@@ -49,7 +49,7 @@ extension ReaderStore {
                 "save requested: \(saveLogContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
             )
             cancelPendingDraftPreviewRender()
-            let diffBaselineMarkdown = document.savedMarkdown
+            let diffBaselineMarkdown = content.savedMarkdown
             try persistSourceDraft(
                 draftMarkdown,
                 to: fileURL,
@@ -75,7 +75,7 @@ extension ReaderStore {
             return
         }
 
-        let transition = sourceEditingCoordinator.finishSession(markdown: document.savedMarkdown)
+        let transition = sourceEditingCoordinator.finishSession(markdown: content.savedMarkdown)
         applySourceEditingTransition(transition)
 
         do {

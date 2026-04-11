@@ -12,35 +12,64 @@ final class ReaderStore {
         category: "ReaderStore"
     )
 
-    var document = ReaderDocumentState.empty
+    var identity = DocumentIdentity.empty
+    var content = DocumentContent.empty
+    var editing = DocumentEditing.empty
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     private(set) var lastWatchedFolderEventAt: Date?
     private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
 
-    // MARK: - Forwarding computed properties (backward compat for views)
+    // MARK: - Identity forwarding
 
-    var fileURL: URL? { document.fileURL }
-    var fileDisplayName: String { document.fileDisplayName }
-    var sourceMarkdown: String { document.sourceMarkdown }
-    var sourceEditorSeedMarkdown: String { document.sourceEditorSeedMarkdown }
-    var renderedHTMLDocument: String { document.renderedHTMLDocument }
-    var documentViewMode: ReaderDocumentViewMode { document.documentViewMode }
-    var documentLoadState: ReaderDocumentLoadState { document.documentLoadState }
-    var changedRegions: [ChangedRegion] { document.changedRegions }
-    var unsavedChangedRegions: [ChangedRegion] { document.unsavedChangedRegions }
-    var lastRefreshAt: Date? { document.lastRefreshAt }
-    var lastExternalChangeAt: Date? { document.lastExternalChangeAt }
-    var fileLastModifiedAt: Date? { document.fileLastModifiedAt }
-    var hasUnacknowledgedExternalChange: Bool { document.hasUnacknowledgedExternalChange }
-    var openInApplications: [ReaderExternalApplication] { document.openInApplications }
-    var lastError: ReaderPresentableError? { document.lastError }
-    var isCurrentFileMissing: Bool { document.isCurrentFileMissing }
-    var isSourceEditing: Bool { document.isSourceEditing }
-    var hasUnsavedDraftChanges: Bool { document.hasUnsavedDraftChanges }
-    var needsImageDirectoryAccess: Bool { document.needsImageDirectoryAccess }
-    var windowTitle: String { document.windowTitle }
-    var decoratedWindowTitle: String { document.decoratedWindowTitle }
+    var fileURL: URL? { identity.fileURL }
+    var fileDisplayName: String { identity.fileDisplayName }
+    var documentLoadState: ReaderDocumentLoadState { identity.documentLoadState }
+    var isCurrentFileMissing: Bool { identity.isCurrentFileMissing }
+    var lastError: ReaderPresentableError? { identity.lastError }
+    var openInApplications: [ReaderExternalApplication] { identity.openInApplications }
+    var needsImageDirectoryAccess: Bool { identity.needsImageDirectoryAccess }
+    var hasOpenDocument: Bool { identity.hasOpenDocument }
+    var isDeferredDocument: Bool { identity.isDeferredDocument }
+    var windowTitle: String { identity.windowTitle }
+
+    // MARK: - Content forwarding
+
+    var sourceMarkdown: String { content.sourceMarkdown }
+    var renderedHTMLDocument: String { content.renderedHTMLDocument }
+    var changedRegions: [ChangedRegion] { content.changedRegions }
+    var lastRefreshAt: Date? { content.lastRefreshAt }
+    var lastExternalChangeAt: Date? { content.lastExternalChangeAt }
+    var fileLastModifiedAt: Date? { content.fileLastModifiedAt }
+    var hasUnacknowledgedExternalChange: Bool { content.hasUnacknowledgedExternalChange }
+
+    // MARK: - Editing forwarding
+
+    var documentViewMode: ReaderDocumentViewMode { editing.documentViewMode }
+    var sourceEditorSeedMarkdown: String { editing.sourceEditorSeedMarkdown }
+    var unsavedChangedRegions: [ChangedRegion] { editing.unsavedChangedRegions }
+    var isSourceEditing: Bool { editing.isSourceEditing }
+    var hasUnsavedDraftChanges: Bool { editing.hasUnsavedDraftChanges }
+    var canSaveSourceDraft: Bool { editing.canSaveSourceDraft }
+    var canDiscardSourceDraft: Bool { editing.canDiscardSourceDraft }
+
+    // MARK: - Cross-group computed properties
+
+    var canStartSourceEditing: Bool {
+        identity.hasOpenDocument && !identity.isCurrentFileMissing && !editing.isSourceEditing
+    }
+
+    var statusBarTimestamp: ReaderStatusBarTimestamp? {
+        if let date = content.lastExternalChangeAt { return .updated(date) }
+        if let date = content.fileLastModifiedAt { return .lastModified(date) }
+        if let date = content.lastRefreshAt { return .updated(date) }
+        return nil
+    }
+
+    var decoratedWindowTitle: String {
+        (content.hasUnacknowledgedExternalChange || editing.hasUnsavedDraftChanges)
+            ? "* \(identity.windowTitle)" : identity.windowTitle
+    }
 
     // MARK: - Table of Contents
     var tocHeadings: [TOCHeading] = []
@@ -148,7 +177,7 @@ final class ReaderStore {
                 }
             },
             onLoadStateChanged: { [weak self] state in
-                self?.document.documentLoadState = state
+                self?.identity.documentLoadState = state
             }
         )
     }
@@ -156,13 +185,6 @@ final class ReaderStore {
     var isWatchingFolder: Bool {
         activeFolderWatchSession != nil
     }
-
-    var hasOpenDocument: Bool { document.hasOpenDocument }
-    var isDeferredDocument: Bool { document.isDeferredDocument }
-    var canStartSourceEditing: Bool { document.canStartSourceEditing }
-    var canSaveSourceDraft: Bool { document.canSaveSourceDraft }
-    var canDiscardSourceDraft: Bool { document.canDiscardSourceDraft }
-    var statusBarTimestamp: ReaderStatusBarTimestamp? { document.statusBarTimestamp }
 
     var currentSettings: ReaderSettings {
         settingsStore.currentSettings
@@ -176,7 +198,7 @@ final class ReaderStore {
 
     func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
         guard hasOpenDocument else {
-            document.documentViewMode = .preview
+            editing.documentViewMode = .preview
             return
         }
 
@@ -184,7 +206,7 @@ final class ReaderStore {
             return
         }
 
-        document.documentViewMode = mode
+        editing.documentViewMode = mode
     }
 
     func toggleDocumentViewMode() {
@@ -212,31 +234,31 @@ final class ReaderStore {
     }
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
-        let previousKind = document.unacknowledgedExternalChangeKind
-        let wasAcknowledged = !document.hasUnacknowledgedExternalChange
-        document.lastExternalChangeAt = Date()
-        document.hasUnacknowledgedExternalChange = true
-        document.unacknowledgedExternalChangeKind = kind
+        let previousKind = content.unacknowledgedExternalChangeKind
+        let wasAcknowledged = !content.hasUnacknowledgedExternalChange
+        content.lastExternalChangeAt = Date()
+        content.hasUnacknowledgedExternalChange = true
+        content.unacknowledgedExternalChangeKind = kind
         if !wasAcknowledged && previousKind != kind {
             onExternalChangeKindChanged?()
         }
     }
 
     func clearExternalChangeIndicator() {
-        document.hasUnacknowledgedExternalChange = false
-        document.unacknowledgedExternalChangeKind = .modified
+        content.hasUnacknowledgedExternalChange = false
+        content.unacknowledgedExternalChangeKind = .modified
     }
 
     func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
         let normalizedURL = Self.normalizedFileURL(url)
-        document.fileURL = normalizedURL
-        document.fileDisplayName = normalizedURL.lastPathComponent
-        document.documentLoadState = .deferred
-        document.currentOpenOrigin = origin
-        document.lastError = nil
-        document.isCurrentFileMissing = false
+        identity.fileURL = normalizedURL
+        identity.fileDisplayName = normalizedURL.lastPathComponent
+        identity.documentLoadState = .deferred
+        identity.currentOpenOrigin = origin
+        identity.lastError = nil
+        identity.isCurrentFileMissing = false
         let modificationDate = documentIO.modificationDate(for: normalizedURL)
-        document.fileLastModifiedAt = modificationDate == .distantPast ? nil : modificationDate
+        content.fileLastModifiedAt = modificationDate == .distantPast ? nil : modificationDate
         if let folderWatchSession {
             activeFolderWatchSession = folderWatchSession
         }
@@ -244,12 +266,12 @@ final class ReaderStore {
 
     func transitionToLoading() {
         guard documentLoadState == .deferred || documentLoadState == .ready else { return }
-        document.documentLoadState = .loading
+        identity.documentLoadState = .loading
     }
 
     func clearLoadingState() {
         guard documentLoadState == .loading else { return }
-        document.documentLoadState = .ready
+        identity.documentLoadState = .ready
     }
 
     @ObservationIgnored private var loadingOverlayHoldGeneration: UInt = 0
@@ -281,7 +303,9 @@ final class ReaderStore {
         fileWatcher.stopWatching()
         scopeContext.endFileAndDirectoryAccess()
 
-        document = .empty
+        identity = .empty
+        content = .empty
+        editing = .empty
 
         settler.clearSettling()
     }
@@ -299,20 +323,20 @@ final class ReaderStore {
         do {
             let accessibleURL = effectiveAccessibleFileURL(for: fileURL, reason: "write")
             try documentIO.write(draftMarkdown, to: accessibleURL)
-            document.savedMarkdown = draftMarkdown
+            content.savedMarkdown = draftMarkdown
             let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
             applySourceEditingTransition(transition)
-            document.changedRegions = changedRegions(
+            content.changedRegions = changedRegions(
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
             )
-            document.fileLastModifiedAt = documentIO.modificationDate(for: fileURL)
-            document.pendingSavedDraftDiffBaselineMarkdown = document.changedRegions.isEmpty ? nil : diffBaselineMarkdown
-            document.hasUnacknowledgedExternalChange = false
-            document.unacknowledgedExternalChangeKind = .modified
-            document.isCurrentFileMissing = false
+            content.fileLastModifiedAt = documentIO.modificationDate(for: fileURL)
+            editing.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
+            content.hasUnacknowledgedExternalChange = false
+            content.unacknowledgedExternalChangeKind = .modified
+            identity.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
-            document.lastError = nil
+            identity.lastError = nil
             let modifiedAtDescription = fileLastModifiedAt?.description ?? "nil"
             logSaveInfo(
                 "save succeeded: \(saveLogContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
@@ -340,12 +364,12 @@ final class ReaderStore {
     }
 
     func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
-        document.draftMarkdown = transition.draftMarkdown
-        document.sourceMarkdown = transition.sourceMarkdown
-        document.sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
-        document.unsavedChangedRegions = transition.unsavedChangedRegions
-        document.isSourceEditing = transition.isSourceEditing
-        document.hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
+        editing.draftMarkdown = transition.draftMarkdown
+        content.sourceMarkdown = transition.sourceMarkdown
+        editing.sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
+        editing.unsavedChangedRegions = transition.unsavedChangedRegions
+        editing.isSourceEditing = transition.isSourceEditing
+        editing.hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
     }
 
     func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
@@ -429,14 +453,14 @@ final class ReaderStore {
 
     func refreshOpenInApplications() {
         guard let fileURL else {
-            document.openInApplications = []
+            identity.openInApplications = []
             return
         }
 
         do {
-            document.openInApplications = try fileActions.registeredApplications(for: fileURL)
+            identity.openInApplications = try fileActions.registeredApplications(for: fileURL)
         } catch {
-            document.openInApplications = []
+            identity.openInApplications = []
             handle(error)
         }
     }
@@ -449,7 +473,7 @@ final class ReaderStore {
 
         do {
             try fileActions.open(fileURL: fileURL, in: application)
-            document.lastError = nil
+            identity.lastError = nil
         } catch {
             handle(error)
         }
@@ -463,7 +487,7 @@ final class ReaderStore {
 
         do {
             try fileActions.revealInFinder(fileURL: fileURL)
-            document.lastError = nil
+            identity.lastError = nil
         } catch {
             handle(error)
         }
@@ -507,7 +531,7 @@ final class ReaderStore {
 
             do {
                 try self.renderCurrentMarkdownImmediately()
-                self.document.lastError = nil
+                self.identity.lastError = nil
             } catch {
                 self.handle(error)
             }
@@ -522,7 +546,7 @@ final class ReaderStore {
     func renderCurrentMarkdownImmediately() throws {
         cancelPendingDraftPreviewRender()
         try renderCurrentMarkdown()
-        document.lastRefreshAt = Date()
+        content.lastRefreshAt = Date()
     }
 
     func renderWithAppearance(_ appearance: LockedAppearance) throws {
@@ -530,7 +554,7 @@ final class ReaderStore {
         cancelPendingDraftPreviewRender()
         try renderCurrentMarkdown()
         needsAppearanceRender = false
-        document.lastRefreshAt = Date()
+        content.lastRefreshAt = Date()
     }
 
     func setAppearanceOverride(_ appearance: LockedAppearance) {
@@ -558,7 +582,7 @@ final class ReaderStore {
             documentDirectoryURL: docDir
         )
 
-        document.needsImageDirectoryAccess = imageResult.needsDirectoryAccess
+        identity.needsImageDirectoryAccess = imageResult.needsDirectoryAccess
 
         let rendered = try renderer.render(
             markdown: imageResult.markdown,
@@ -569,7 +593,7 @@ final class ReaderStore {
             baseFontSize: effectiveFontSize
         )
 
-        document.renderedHTMLDocument = rendered.htmlDocument
+        content.renderedHTMLDocument = rendered.htmlDocument
         needsAppearanceRender = false
     }
 
@@ -589,11 +613,11 @@ final class ReaderStore {
         )
         try renderCurrentMarkdownImmediately()
         if acknowledgeExternalChange {
-            document.hasUnacknowledgedExternalChange = false
-            document.unacknowledgedExternalChangeKind = .modified
+            content.hasUnacknowledgedExternalChange = false
+            content.unacknowledgedExternalChangeKind = .modified
         }
-        document.isCurrentFileMissing = false
-        document.lastError = nil
+        identity.isCurrentFileMissing = false
+        identity.lastError = nil
     }
 
     private func applyLoadedDocumentState(
@@ -602,37 +626,37 @@ final class ReaderStore {
         diffBaselineMarkdown: String?,
         resetDocumentViewMode: Bool
     ) {
-        document.fileURL = fileURL
-        document.fileDisplayName = fileURL.lastPathComponent
-        document.savedMarkdown = loaded.markdown
-        document.draftMarkdown = nil
-        document.pendingSavedDraftDiffBaselineMarkdown = nil
-        document.sourceMarkdown = loaded.markdown
-        document.sourceEditorSeedMarkdown = loaded.markdown
-        document.fileLastModifiedAt = loaded.modificationDate
+        identity.fileURL = fileURL
+        identity.fileDisplayName = fileURL.lastPathComponent
+        content.savedMarkdown = loaded.markdown
+        editing.draftMarkdown = nil
+        editing.pendingSavedDraftDiffBaselineMarkdown = nil
+        content.sourceMarkdown = loaded.markdown
+        editing.sourceEditorSeedMarkdown = loaded.markdown
+        content.fileLastModifiedAt = loaded.modificationDate
 
         if resetDocumentViewMode {
-            document.documentViewMode = .preview
+            editing.documentViewMode = .preview
         }
 
-        document.changedRegions = changedRegions(
+        content.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
-        document.unsavedChangedRegions = []
-        document.isSourceEditing = false
-        document.hasUnsavedDraftChanges = false
+        editing.unsavedChangedRegions = []
+        editing.isSourceEditing = false
+        editing.hasUnsavedDraftChanges = false
         tocHeadings = []
         isTOCVisible = false
     }
 
     func presentMissingDocument(at fileURL: URL, error: Error) {
-        document.fileURL = fileURL
-        document.fileDisplayName = fileURL.lastPathComponent
-        document.fileLastModifiedAt = nil
-        document.openInApplications = []
-        document.isCurrentFileMissing = true
-        document.lastError = ReaderPresentableError(from: error)
+        identity.fileURL = fileURL
+        identity.fileDisplayName = fileURL.lastPathComponent
+        content.fileLastModifiedAt = nil
+        identity.openInApplications = []
+        identity.isCurrentFileMissing = true
+        identity.lastError = ReaderPresentableError(from: error)
         settler.clearSettling()
     }
 
@@ -651,7 +675,7 @@ final class ReaderStore {
     }
 
     func handlePendingSavedDraftChangeIfNeeded() -> Bool {
-        guard let diffBaselineMarkdown = document.pendingSavedDraftDiffBaselineMarkdown,
+        guard let diffBaselineMarkdown = editing.pendingSavedDraftDiffBaselineMarkdown,
               let fileURL,
               !isSourceEditing else {
             return false
@@ -666,22 +690,22 @@ final class ReaderStore {
             Self.logger.error(
                 "draft baseline load failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
             )
-            document.pendingSavedDraftDiffBaselineMarkdown = nil
+            editing.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
 
         guard loaded.markdown == sourceMarkdown else {
-            document.pendingSavedDraftDiffBaselineMarkdown = nil
+            editing.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
 
-        document.fileLastModifiedAt = loaded.modificationDate
-        document.changedRegions = changedRegions(
+        content.fileLastModifiedAt = loaded.modificationDate
+        content.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
-        document.unsavedChangedRegions = []
-        document.pendingSavedDraftDiffBaselineMarkdown = nil
+        editing.unsavedChangedRegions = []
+        editing.pendingSavedDraftDiffBaselineMarkdown = nil
         return true
     }
 
@@ -696,7 +720,7 @@ final class ReaderStore {
         let fileScopeURL = redactedPathText(for: scopeContext.fileToken?.url)
         let folderScopeURL = redactedPathText(for: scopeContext.folderToken?.url)
         let accessibleFilePath = redactedPathText(for: scopeContext.accessibleFileURL)
-        return "file=\(filePath) origin=\(document.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(scopeContext.fileToken != nil) fileScopeStarted=\(scopeContext.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(scopeContext.folderToken != nil) folderScopeStarted=\(scopeContext.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        return "file=\(filePath) origin=\(identity.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(scopeContext.fileToken != nil) fileScopeStarted=\(scopeContext.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(scopeContext.folderToken != nil) folderScopeStarted=\(scopeContext.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
     func redactedPathText(for url: URL?) -> String {
@@ -719,11 +743,11 @@ final class ReaderStore {
     }
 
     func handle(_ error: Error) {
-        document.lastError = ReaderPresentableError(from: error)
+        identity.lastError = ReaderPresentableError(from: error)
     }
 
     func clearLastError() {
-        document.lastError = nil
+        identity.lastError = nil
     }
 
     static func normalizedFileURL(_ url: URL) -> URL {
@@ -737,10 +761,10 @@ final class ReaderStore {
     // MARK: - Test Helpers
 
     #if DEBUG
-    func testSetFileURL(_ url: URL?) { document.fileURL = url }
-    func testSetFileDisplayName(_ name: String) { document.fileDisplayName = name }
-    func testSetFileLastModifiedAt(_ date: Date?) { document.fileLastModifiedAt = date }
-    func testSetHasUnacknowledgedExternalChange(_ value: Bool) { document.hasUnacknowledgedExternalChange = value }
-    func testSetIsCurrentFileMissing(_ value: Bool) { document.isCurrentFileMissing = value }
+    func testSetFileURL(_ url: URL?) { identity.fileURL = url }
+    func testSetFileDisplayName(_ name: String) { identity.fileDisplayName = name }
+    func testSetFileLastModifiedAt(_ date: Date?) { content.fileLastModifiedAt = date }
+    func testSetHasUnacknowledgedExternalChange(_ value: Bool) { content.hasUnacknowledgedExternalChange = value }
+    func testSetIsCurrentFileMissing(_ value: Bool) { identity.isCurrentFileMissing = value }
     #endif
 }
