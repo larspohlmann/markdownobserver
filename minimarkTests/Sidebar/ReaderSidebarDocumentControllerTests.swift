@@ -1206,4 +1206,41 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(document != nil)
         #expect(document?.normalizedFileURL == ReaderFileRouting.normalizedFileURL(harness.primaryFileURL))
     }
+
+    @Test @MainActor func documentForURLReturnsNilAfterClosingDocument() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .manual
+        ))
+
+        let primaryDoc = harness.controller.document(for: harness.primaryFileURL)
+        #expect(primaryDoc != nil)
+
+        harness.controller.closeDocument(primaryDoc!.id)
+
+        #expect(harness.controller.document(for: harness.primaryFileURL) == nil)
+        #expect(harness.controller.document(for: harness.secondaryFileURL) != nil)
+    }
+
+    @Test @MainActor func documentForURLFindsDocumentWithNonCanonicalPath() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual
+        ))
+
+        // Construct a non-canonical path with a redundant "./" component
+        let nonCanonicalURL = harness.temporaryDirectoryURL
+            .appendingPathComponent(".")
+            .appendingPathComponent("alpha.md")
+
+        #expect(harness.controller.document(for: nonCanonicalURL) != nil)
+    }
 }
