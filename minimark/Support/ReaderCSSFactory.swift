@@ -34,7 +34,7 @@ struct ReaderCSSFactory {
         <head>
           <meta charset=\"utf-8\" />
           <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-          <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' file:; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'\" />
+          <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' file:; style-src 'unsafe-inline'; img-src data: https:; frame-ancestors 'none'\" />
           <meta name="minimark-runtime-payload-base64" content="\(payloadBase64)" />
           <meta name="minimark-runtime-css-base64" content="\(cssBase64)" />
           \(themeJSBase64.map { "<meta name=\"minimark-runtime-theme-js-base64\" content=\"\($0)\" />" } ?? "")

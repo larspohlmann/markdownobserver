@@ -165,7 +165,7 @@ struct RenderingAndDiffTests {
         #expect(html.contains("Content-Security-Policy"))
         #expect(html.contains("default-src 'none'"))
         #expect(html.contains("script-src 'unsafe-inline' file:"))
-        #expect(html.contains("img-src data:"))
+        #expect(html.contains("img-src data: https:"))
     }
 
     @Test func htmlRuntimeEmbedsAndUpdatesRuntimeCSS() {
