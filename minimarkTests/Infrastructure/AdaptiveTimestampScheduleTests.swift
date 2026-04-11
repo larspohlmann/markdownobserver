@@ -94,13 +94,16 @@ struct AdaptiveTimestampScheduleTests {
 
     // MARK: - Edge cases
 
-    @Test func nilLastModifiedUsesLargeInterval() {
+    @Test func nilLastModifiedStopsAfterFirstEntry() {
         let now = Date()
-        let gaps = intervals(lastModified: nil, startDate: now, count: 3)
+        let schedule = AdaptiveTimestampSchedule(lastModified: nil)
+        var entries = schedule.entries(from: now, mode: .normal)
 
-        for gap in gaps {
-            #expect(gap == 86_400)
-        }
+        let first = entries.next()
+        #expect(first == now)
+
+        let second = entries.next()
+        #expect(second == nil)
     }
 
     @Test func futureLastModifiedTreatedAsRecent() {
