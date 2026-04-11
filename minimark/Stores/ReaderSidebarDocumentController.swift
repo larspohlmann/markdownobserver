@@ -7,6 +7,7 @@ final class ReaderSidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
+        internal(set) var normalizedFileURL: URL?
 
         static func == (lhs: Document, rhs: Document) -> Bool {
             lhs.id == rhs.id
@@ -85,7 +86,7 @@ final class ReaderSidebarDocumentController {
             )
         )
 
-        let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore())
+        let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore(), normalizedFileURL: nil)
         documents = [initialDocument]
         selectedDocumentID = initialDocument.id
         selectedWindowTitle = initialDocument.readerStore.windowTitle
@@ -260,9 +261,14 @@ final class ReaderSidebarDocumentController {
                 continue
             }
 
+            var documentToInsert = targetDocument
+            documentToInsert.normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+
             if shouldAppendDocument {
-                documents.append(targetDocument)
+                documents.append(documentToInsert)
                 didAppendDocuments = true
+            } else if let index = documents.firstIndex(where: { $0.id == targetDocument.id }) {
+                documents[index].normalizedFileURL = documentToInsert.normalizedFileURL
             }
 
             selectedDocumentID = targetDocument.id
@@ -497,7 +503,7 @@ final class ReaderSidebarDocumentController {
     }
 
     private func makeDocument() -> Document {
-        Document(id: UUID(), readerStore: makeReaderStore())
+        Document(id: UUID(), readerStore: makeReaderStore(), normalizedFileURL: nil)
     }
 
     private func deriveIndicatorState(from store: ReaderStore) -> ReaderDocumentIndicatorState {

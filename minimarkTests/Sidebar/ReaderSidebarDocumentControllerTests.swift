@@ -1189,4 +1189,21 @@ struct ReaderSidebarDocumentControllerTests {
             #expect(!document.readerStore.hasUnacknowledgedExternalChange)
         }
     }
+
+    @Test @MainActor func documentExposesNormalizedFileURLAfterOpen() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual
+        ))
+
+        let document = harness.controller.documents.first {
+            $0.readerStore.fileURL != nil
+        }
+        #expect(document != nil)
+        #expect(document?.normalizedFileURL == ReaderFileRouting.normalizedFileURL(harness.primaryFileURL))
+    }
 }
