@@ -425,16 +425,24 @@ final class ReaderSidebarDocumentController {
     }
 
     func stopWatchingFolders(_ documentIDs: Set<UUID>) {
-        guard documentIDs.contains(where: { documentID in
-            guard let document = documents.first(where: { $0.id == documentID }) else {
-                return false
-            }
-
-            return folderWatchController.watchApplies(to: document.readerStore.fileURL)
-        }) else {
+        guard let session = activeFolderWatchSession else {
             return
         }
 
+        let normalizedFolder = ReaderFileRouting.normalizedFileURL(session.folderURL)
+        let hasWatchedDocument = documentIDs.contains { documentID in
+            guard let document = documents.first(where: { $0.id == documentID }),
+                  let normalizedFileURL = document.normalizedFileURL else {
+                return false
+            }
+            return folderWatchController.watchApplies(
+                normalizedFileURL: normalizedFileURL,
+                toNormalizedFolderAt: normalizedFolder,
+                scope: session.options.scope
+            )
+        }
+
+        guard hasWatchedDocument else { return }
         folderWatchController.stopWatching()
     }
 
@@ -460,8 +468,20 @@ final class ReaderSidebarDocumentController {
     }
 
     func watchedDocumentIDs() -> Set<UUID> {
-        Set(documents.compactMap { document in
-            folderWatchController.watchApplies(to: document.readerStore.fileURL) ? document.id : nil
+        guard let session = activeFolderWatchSession else {
+            return []
+        }
+
+        let normalizedFolder = ReaderFileRouting.normalizedFileURL(session.folderURL)
+        return Set(documents.compactMap { document in
+            guard let normalizedFileURL = document.normalizedFileURL else {
+                return nil
+            }
+            return folderWatchController.watchApplies(
+                normalizedFileURL: normalizedFileURL,
+                toNormalizedFolderAt: normalizedFolder,
+                scope: session.options.scope
+            ) ? document.id : nil
         })
     }
 

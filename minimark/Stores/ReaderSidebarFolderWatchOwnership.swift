@@ -245,6 +245,18 @@ final class ReaderFolderWatchController {
         }
     }
 
+    func watchApplies(normalizedFileURL: URL, toNormalizedFolderAt normalizedFolderURL: URL, scope: ReaderFolderWatchScope) -> Bool {
+        switch scope {
+        case .selectedFolderOnly:
+            return normalizedFileURL.deletingLastPathComponent().path == normalizedFolderURL.path
+        case .includeSubfolders:
+            let folderPath = normalizedFolderURL.path.hasSuffix("/")
+                ? normalizedFolderURL.path
+                : normalizedFolderURL.path + "/"
+            return normalizedFileURL.path.hasPrefix(folderPath)
+        }
+    }
+
     func scanCurrentMarkdownFiles(completion: @escaping @MainActor ([URL]) -> Void) {
         guard let session = activeFolderWatchSession else {
             completion([])
