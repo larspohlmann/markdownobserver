@@ -231,10 +231,15 @@ final class ReaderFolderWatchController {
             return false
         }
 
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(session.folderURL)
+        return watchApplies(
+            normalizedFileURL: ReaderFileRouting.normalizedFileURL(fileURL),
+            toNormalizedFolderAt: session.folderURL,
+            scope: session.options.scope
+        )
+    }
 
-        switch session.options.scope {
+    func watchApplies(normalizedFileURL: URL, toNormalizedFolderAt normalizedFolderURL: URL, scope: ReaderFolderWatchScope) -> Bool {
+        switch scope {
         case .selectedFolderOnly:
             return normalizedFileURL.deletingLastPathComponent().path == normalizedFolderURL.path
         case .includeSubfolders:

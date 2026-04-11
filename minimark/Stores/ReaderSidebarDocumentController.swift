@@ -7,6 +7,7 @@ final class ReaderSidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
+        internal(set) var normalizedFileURL: URL?
 
         static func == (lhs: Document, rhs: Document) -> Bool {
             lhs.id == rhs.id
@@ -14,6 +15,7 @@ final class ReaderSidebarDocumentController {
     }
 
     private(set) var documents: [Document]
+    @ObservationIgnored private var documentsByNormalizedURL: [URL: UUID] = [:]
     var selectedDocumentID: UUID
     private(set) var selectedWindowTitle: String
     private(set) var selectedFileURL: URL?
@@ -85,7 +87,7 @@ final class ReaderSidebarDocumentController {
             )
         )
 
-        let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore())
+        let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore(), normalizedFileURL: nil)
         documents = [initialDocument]
         selectedDocumentID = initialDocument.id
         selectedWindowTitle = initialDocument.readerStore.windowTitle
@@ -97,6 +99,7 @@ final class ReaderSidebarDocumentController {
         didFolderWatchInitialScanFail = false
         contentScanProgress = nil
         scannedFileCount = nil
+        rebuildDocumentURLIndex()
         synchronizeDocumentChangeObservers()
         configureFolderWatchController()
         bindSelectedStore()
@@ -260,9 +263,17 @@ final class ReaderSidebarDocumentController {
                 continue
             }
 
+            var documentToInsert = targetDocument
+            documentToInsert.normalizedFileURL = fileURL
+
             if shouldAppendDocument {
-                documents.append(targetDocument)
+                documents.append(documentToInsert)
+                indexDocument(documentToInsert)
                 didAppendDocuments = true
+            } else if let index = documents.firstIndex(where: { $0.id == targetDocument.id }) {
+                unindexDocument(documents[index])
+                documents[index].normalizedFileURL = documentToInsert.normalizedFileURL
+                indexDocument(documents[index])
             }
 
             selectedDocumentID = targetDocument.id
@@ -303,12 +314,14 @@ final class ReaderSidebarDocumentController {
             return
         }
 
+        unindexDocument(documents[index])
         documents.remove(at: index)
         synchronizeDocumentChangeObservers()
 
         if documents.isEmpty {
             let replacement = makeDocument()
             documents = [replacement]
+            rebuildDocumentURLIndex()
             synchronizeDocumentChangeObservers()
             if let storeConfigurator {
                 storeConfigurator(replacement.readerStore)
@@ -337,6 +350,7 @@ final class ReaderSidebarDocumentController {
         }
 
         documents = retainedDocuments
+        rebuildDocumentURLIndex()
         synchronizeDocumentChangeObservers()
 
         if !retainedDocuments.contains(where: { $0.id == selectedDocumentID }) {
@@ -363,6 +377,7 @@ final class ReaderSidebarDocumentController {
 
         let remainingDocuments = documents.filter { !documentIDs.contains($0.id) }
         documents = remainingDocuments
+        rebuildDocumentURLIndex()
         synchronizeDocumentChangeObservers()
 
         if !remainingDocuments.contains(where: { $0.id == selectedDocumentID }) {
@@ -379,6 +394,7 @@ final class ReaderSidebarDocumentController {
         }
 
         documents = [replacement]
+        rebuildDocumentURLIndex()
         synchronizeDocumentChangeObservers()
         selectedDocumentID = replacement.id
         bindSelectedStore()
@@ -409,16 +425,24 @@ final class ReaderSidebarDocumentController {
     }
 
     func stopWatchingFolders(_ documentIDs: Set<UUID>) {
-        guard documentIDs.contains(where: { documentID in
-            guard let document = documents.first(where: { $0.id == documentID }) else {
-                return false
-            }
-
-            return folderWatchController.watchApplies(to: document.readerStore.fileURL)
-        }) else {
+        guard let session = activeFolderWatchSession else {
             return
         }
 
+        let normalizedFolder = session.folderURL
+        let hasWatchedDocument = documentIDs.contains { documentID in
+            guard let document = documents.first(where: { $0.id == documentID }),
+                  let normalizedFileURL = document.normalizedFileURL else {
+                return false
+            }
+            return folderWatchController.watchApplies(
+                normalizedFileURL: normalizedFileURL,
+                toNormalizedFolderAt: normalizedFolder,
+                scope: session.options.scope
+            )
+        }
+
+        guard hasWatchedDocument else { return }
         folderWatchController.stopWatching()
     }
 
@@ -444,20 +468,29 @@ final class ReaderSidebarDocumentController {
     }
 
     func watchedDocumentIDs() -> Set<UUID> {
-        Set(documents.compactMap { document in
-            folderWatchController.watchApplies(to: document.readerStore.fileURL) ? document.id : nil
+        guard let session = activeFolderWatchSession else {
+            return []
+        }
+
+        let normalizedFolder = session.folderURL
+        return Set(documents.compactMap { document in
+            guard let normalizedFileURL = document.normalizedFileURL else {
+                return nil
+            }
+            return folderWatchController.watchApplies(
+                normalizedFileURL: normalizedFileURL,
+                toNormalizedFolderAt: normalizedFolder,
+                scope: session.options.scope
+            ) ? document.id : nil
         })
     }
 
     func document(for fileURL: URL) -> Document? {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        return documents.first(where: { document in
-            guard let fileURL = document.readerStore.fileURL else {
-                return false
-            }
-
-            return ReaderFileRouting.normalizedFileURL(fileURL) == normalizedFileURL
-        })
+        let normalized = ReaderFileRouting.normalizedFileURL(fileURL)
+        guard let documentID = documentsByNormalizedURL[normalized] else {
+            return nil
+        }
+        return documents.first(where: { $0.id == documentID })
     }
 
     private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
@@ -497,7 +530,28 @@ final class ReaderSidebarDocumentController {
     }
 
     private func makeDocument() -> Document {
-        Document(id: UUID(), readerStore: makeReaderStore())
+        Document(id: UUID(), readerStore: makeReaderStore(), normalizedFileURL: nil)
+    }
+
+    private func rebuildDocumentURLIndex() {
+        documentsByNormalizedURL = [:]
+        for document in documents {
+            if let normalizedURL = document.normalizedFileURL {
+                documentsByNormalizedURL[normalizedURL] = document.id
+            }
+        }
+    }
+
+    private func indexDocument(_ document: Document) {
+        if let normalizedURL = document.normalizedFileURL {
+            documentsByNormalizedURL[normalizedURL] = document.id
+        }
+    }
+
+    private func unindexDocument(_ document: Document) {
+        if let normalizedURL = document.normalizedFileURL {
+            documentsByNormalizedURL.removeValue(forKey: normalizedURL)
+        }
     }
 
     private func deriveIndicatorState(from store: ReaderStore) -> ReaderDocumentIndicatorState {
