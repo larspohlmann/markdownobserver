@@ -226,7 +226,7 @@ enum MarkdownSourceHTMLRenderer {
                     width: 100%;
                     min-height: 100vh;
                     box-sizing: border-box;
-                    padding: 14px 16px 32px;
+                    padding: \(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px 16px 32px;
                     border: 0;
                     outline: none;
                     resize: none;
