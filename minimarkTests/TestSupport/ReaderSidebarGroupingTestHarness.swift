@@ -32,7 +32,6 @@ struct ReaderSidebarGroupingTestHarness {
                     renderer: TestMarkdownRenderer(),
                     differ: TestChangedRegionDiffer(),
                     fileWatcher: TestFileWatcher(),
-                    folderWatcher: TestFolderWatcher(),
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     fileActions: TestReaderFileActions(),

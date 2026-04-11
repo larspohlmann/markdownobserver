@@ -80,7 +80,6 @@ final class ReaderStore {
     private let renderer: MarkdownRendering
     private let differ: ChangedRegionDiffering
     let fileWatcher: FileChangeWatching
-    let folderWatcher: FolderChangeWatching
     let settingsStore: ReaderSettingsStoring
     let securityScope: SecurityScopedResourceAccessing
     private let fileActions: ReaderFileActionHandling
@@ -117,7 +116,6 @@ final class ReaderStore {
         renderer: MarkdownRendering,
         differ: ChangedRegionDiffering,
         fileWatcher: FileChangeWatching,
-        folderWatcher: FolderChangeWatching,
         settingsStore: ReaderSettingsStoring,
         securityScope: SecurityScopedResourceAccessing,
         fileActions: ReaderFileActionHandling,
@@ -131,7 +129,6 @@ final class ReaderStore {
         self.renderer = renderer
         self.differ = differ
         self.fileWatcher = fileWatcher
-        self.folderWatcher = folderWatcher
         self.settingsStore = settingsStore
         self.securityScope = securityScope
         self.fileActions = fileActions

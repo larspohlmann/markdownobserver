@@ -159,20 +159,16 @@ struct EditFolderWatchExclusionsTests {
         )
 
         var createdFileWatchers: [TestFileWatcher] = []
-        var createdFolderWatchers: [TestFolderWatcher] = []
         let controllerWatcher = TestFolderWatcher()
         let controller = ReaderSidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
                 let fw = TestFileWatcher()
                 createdFileWatchers.append(fw)
-                let fww = TestFolderWatcher()
-                createdFolderWatchers.append(fww)
                 return ReaderStore(
                     renderer: TestMarkdownRenderer(),
                     differ: TestChangedRegionDiffer(),
                     fileWatcher: fw,
-                    folderWatcher: fww,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     fileActions: TestReaderFileActions(),
