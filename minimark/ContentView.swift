@@ -1184,7 +1184,6 @@ private final class SplitScrollCoordinator: ObservableObject {
         renderer: MarkdownRenderingService(),
         differ: ChangedRegionDiffer(),
         fileWatcher: FileChangeWatcher(),
-        folderWatcher: FolderChangeWatcher(),
         settingsStore: settingsStore,
         securityScope: SecurityScopedResourceAccess(),
         fileActions: ReaderFileActionService(),

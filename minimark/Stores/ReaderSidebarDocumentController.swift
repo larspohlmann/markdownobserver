@@ -72,7 +72,6 @@ final class ReaderSidebarDocumentController {
                 renderer: MarkdownRenderingService(),
                 differ: ChangedRegionDiffer(),
                 fileWatcher: FileChangeWatcher(),
-                folderWatcher: FolderChangeWatcher(),
                 settingsStore: settingsStore,
                 securityScope: SecurityScopedResourceAccess(),
                 fileActions: ReaderFileActionService(),

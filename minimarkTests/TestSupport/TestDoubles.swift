@@ -798,7 +798,6 @@ struct ReaderStoreTestFixture {
     private let renderer = TestMarkdownRenderer()
     let differ: TestChangedRegionDiffer
     let watcher = TestFileWatcher()
-    let folderWatcher = TestFolderWatcher()
     let settings: TestReaderSettingsStore
     let securityScope = TestSecurityScopeAccess()
     private let fileActions = TestReaderFileActions()
@@ -833,7 +832,6 @@ struct ReaderStoreTestFixture {
             renderer: renderer,
             differ: differ,
             fileWatcher: watcher,
-            folderWatcher: folderWatcher,
             settingsStore: settings,
             securityScope: securityScope,
             fileActions: fileActions,
@@ -865,7 +863,6 @@ struct ReaderSidebarControllerTestHarness {
     let controller: ReaderSidebarDocumentController
     let folderWatchControllerWatcher: TestFolderWatcher
     let fileWatchers: [TestFileWatcher]
-    let folderWatchers: [TestFolderWatcher]
     let settingsStore: ReaderSettingsStore
 
     init() throws {
@@ -888,20 +885,16 @@ struct ReaderSidebarControllerTestHarness {
         let controllerWatcher = TestFolderWatcher()
         folderWatchControllerWatcher = controllerWatcher
         var createdFileWatchers: [TestFileWatcher] = []
-        var createdWatchers: [TestFolderWatcher] = []
         controller = ReaderSidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
                 let fileWatcher = TestFileWatcher()
                 createdFileWatchers.append(fileWatcher)
-                let watcher = TestFolderWatcher()
-                createdWatchers.append(watcher)
                 let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
                 let store = ReaderStore(
                     renderer: TestMarkdownRenderer(),
                     differ: TestChangedRegionDiffer(),
                     fileWatcher: fileWatcher,
-                    folderWatcher: watcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     fileActions: TestReaderFileActions(),
@@ -923,7 +916,6 @@ struct ReaderSidebarControllerTestHarness {
             }
         )
         fileWatchers = createdFileWatchers
-        folderWatchers = createdWatchers
     }
 
     func cleanup() {
