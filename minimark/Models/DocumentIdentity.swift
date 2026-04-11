@@ -15,6 +15,8 @@ struct DocumentIdentity {
     var hasOpenDocument: Bool { fileURL != nil }
     var isDeferredDocument: Bool { documentLoadState == .deferred }
     var windowTitle: String {
-        fileDisplayName.isEmpty ? "MarkdownObserver" : "\(fileDisplayName) - MarkdownObserver"
+        fileDisplayName.isEmpty
+            ? ReaderWindowTitleFormatter.appName
+            : "\(fileDisplayName) - \(ReaderWindowTitleFormatter.appName)"
     }
 }

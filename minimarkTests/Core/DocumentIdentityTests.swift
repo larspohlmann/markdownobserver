@@ -32,12 +32,12 @@ struct DocumentIdentityTests {
 
     @Test func windowTitleFallsBackWhenNoFile() {
         let state = DocumentIdentity.empty
-        #expect(state.windowTitle == "MarkdownObserver")
+        #expect(state.windowTitle == ReaderWindowTitleFormatter.appName)
     }
 
     @Test func windowTitleIncludesFileName() {
         var state = DocumentIdentity.empty
         state.fileDisplayName = "README.md"
-        #expect(state.windowTitle == "README.md - MarkdownObserver")
+        #expect(state.windowTitle == "README.md - \(ReaderWindowTitleFormatter.appName)")
     }
 }
