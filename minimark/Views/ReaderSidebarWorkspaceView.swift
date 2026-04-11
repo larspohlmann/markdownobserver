@@ -417,7 +417,7 @@ private struct ReaderSidebarDocumentRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                TimelineView(.periodic(from: .now, by: 5)) { context in
+                TimelineView(AdaptiveTimestampSchedule(lastModified: state.isFileMissing ? nil : state.lastModified)) { context in
                     Text(lastChangedText(currentDate: context.date))
                         .font(.system(size: 10, weight: .regular))
                         .foregroundStyle(lastChangedTextColor)

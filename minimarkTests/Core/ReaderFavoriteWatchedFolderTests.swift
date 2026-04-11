@@ -923,6 +923,34 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(decoded.workspaceState.collapsedGroupIDs == ["group-3"])
     }
 
+    // MARK: - Deleted file filtering (#278)
+
+    @Test func existingOpenDocumentFileURLsExcludesDeletedFiles() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("minimarkTest-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let existingFile = tempDir.appendingPathComponent("exists.md")
+        try Data("# Exists".utf8).write(to: existingFile)
+
+        let entry = ReaderFavoriteWatchedFolder(
+            name: "Test",
+            folderPath: tempDir.path,
+            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            bookmarkData: nil,
+            openDocumentRelativePaths: ["exists.md", "deleted.md"],
+            createdAt: .now
+        )
+
+        let allResolved = entry.resolvedOpenDocumentFileURLs(relativeTo: tempDir)
+        #expect(allResolved.count == 2, "Unfiltered method returns both existing and deleted paths")
+
+        let existingOnly = entry.existingOpenDocumentFileURLs(relativeTo: tempDir)
+        #expect(existingOnly.count == 1)
+        #expect(existingOnly[0].lastPathComponent == "exists.md")
+    }
+
     // MARK: - Helpers
 
     private func makeFavorite(name: String, folderPath: String) -> ReaderFavoriteWatchedFolder {

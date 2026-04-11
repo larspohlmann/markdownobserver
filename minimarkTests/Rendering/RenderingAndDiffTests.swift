@@ -147,6 +147,27 @@ struct RenderingAndDiffTests {
         #expect(html.contains("__minimarkSourceBootstrapStatus"))
     }
 
+    @Test func htmlDocumentContainsContentSecurityPolicy() {
+        let factory = ReaderCSSFactory()
+        let html = factory.makeHTMLDocument(
+            css: "",
+            payloadBase64: "",
+            runtimeAssets: ReaderRuntimeAssets(
+                markdownItScriptPath: "markdown-it.min.js",
+                highlightScriptPath: "highlight.min.js",
+                taskListsScriptPath: nil,
+                footnoteScriptPath: nil,
+                attrsScriptPath: nil,
+                deflistScriptPath: nil
+            )
+        )
+
+        #expect(html.contains("Content-Security-Policy"))
+        #expect(html.contains("default-src 'none'"))
+        #expect(html.contains("script-src 'unsafe-inline' 'unsafe-eval' file:"))
+        #expect(html.contains("img-src data: https:"))
+    }
+
     @Test func htmlRuntimeEmbedsAndUpdatesRuntimeCSS() {
         let factory = ReaderCSSFactory()
         let html = factory.makeHTMLDocument(
@@ -833,5 +854,41 @@ struct RenderingAndDiffTests {
         let editedRegions = regions.filter { $0.kind == .edited }
         #expect(editedRegions.count == 1)
         #expect(editedRegions.first?.lineRange == 3...3)
+    }
+
+    // MARK: - Fenced code block changes (#269)
+
+    @Test @MainActor func changedRegionDifferDetectsEditInsideFencedCodeBlock() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\n```swift\nlet x = 1\nlet y = 2\nlet z = 3\n```\n\n- Next item"
+        let newMarkdown = "# Title\n\n```swift\nlet x = 1\nlet y = 999\nlet z = 3\n```\n\n- Next item"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let editedRegions = regions.filter { $0.kind == .edited }
+        #expect(editedRegions.count == 1)
+        #expect(editedRegions.first?.lineRange == 5...5)
+    }
+
+    @Test @MainActor func changedRegionDifferDoesNotMisattributeCodeBlockChangeToFollowingLine() {
+        let differ = ChangedRegionDiffer()
+
+        let oldMarkdown = "# Title\n\n```swift\nlet x = original\n```\n\n- Item after block"
+        let newMarkdown = "# Title\n\n```swift\nlet x = changed\n```\n\n- Item after block"
+
+        let regions = differ.computeChangedRegions(
+            oldMarkdown: oldMarkdown,
+            newMarkdown: newMarkdown
+        )
+
+        let editedRegions = regions.filter { $0.kind == .edited }
+        #expect(editedRegions.count == 1)
+        let region = editedRegions.first
+        #expect(region?.lineRange == 4...4)
+        #expect(region?.lineRange.contains(7) == false, "Changed region must not include lines after the code block")
     }
 }

@@ -88,6 +88,33 @@
       return defaultRenderToken(tokens, idx, options);
     };
 
+    var defaultFenceRenderer = md.renderer.rules.fence;
+    md.renderer.rules.fence = function (tokens, idx, options, env, slf) {
+      var token = tokens[idx];
+      sanitizeTokenAttributes(token);
+      var result = defaultFenceRenderer(tokens, idx, options, env, slf);
+      if (Array.isArray(token.map) && token.map.length === 2) {
+        var lineStart = String(token.map[0] + 1);
+        var lineEnd = String(token.map[1]);
+        result = result.replace(
+          "<pre>",
+          '<pre class="reader-code-fenced" data-src-line-start="' + lineStart + '" data-src-line-end="' + lineEnd + '">'
+        );
+      }
+      return result;
+    };
+
+    var defaultCodeBlockRenderer = md.renderer.rules.code_block;
+    md.renderer.rules.code_block = function (tokens, idx, options, env, slf) {
+      var token = tokens[idx];
+      sanitizeTokenAttributes(token);
+      if (Array.isArray(token.map) && token.map.length === 2) {
+        token.attrSet("data-src-line-start", String(token.map[0] + 1));
+        token.attrSet("data-src-line-end", String(token.map[1]));
+      }
+      return defaultCodeBlockRenderer(tokens, idx, options, env, slf);
+    };
+
     return md;
   }
 
@@ -961,6 +988,7 @@
     var markers = [];
     var maxTop = Math.max(0, rootHeight - 1);
     var deletedMarkerThickness = 28;
+    var codeLineGutterPadding = 4;
     var placeholderRects = buildDeletedPlaceholderRectMap(root);
 
     for (var i = 0; i < regions.length; i += 1) {
@@ -991,6 +1019,12 @@
           top = Math.min(top, anchor.top);
           bottom = Math.max(bottom, anchor.bottom);
         }
+      }
+
+      if (anchors.length === 1 && anchors[0].element
+          && anchors[0].element.classList.contains("reader-code-line")) {
+        top = Math.max(0, top - codeLineGutterPadding);
+        bottom = bottom + codeLineGutterPadding;
       }
 
       top = clampMarkerTop(top, maxTop);
@@ -1595,6 +1629,7 @@
     }
 
     var lineAnchors = root.querySelectorAll("[data-src-line-start][data-src-line-end]");
+    var matched = [];
     for (var i = 0; i < lineAnchors.length; i += 1) {
       var element = lineAnchors[i];
       var startLine = Number(element.getAttribute("data-src-line-start")) || 0;
@@ -1605,9 +1640,23 @@
         var regionStart = Number(region.lineStart) || 0;
         var regionEnd = Number(region.lineEnd) || regionStart;
         if (startLine <= regionEnd && regionStart <= endLine) {
-          element.classList.add("reader-unsaved-change");
+          matched.push(element);
           break;
         }
+      }
+    }
+
+    // Skip parent elements when a narrower descendant also matched
+    for (var mi = 0; mi < matched.length; mi += 1) {
+      var skip = false;
+      for (var mj = 0; mj < matched.length; mj += 1) {
+        if (mi !== mj && matched[mi].contains(matched[mj])) {
+          skip = true;
+          break;
+        }
+      }
+      if (!skip) {
+        matched[mi].classList.add("reader-unsaved-change");
       }
     }
   }
@@ -1618,6 +1667,104 @@
       window.hljs.highlightAll();
     } catch (_) {
       // Graceful fallback keeps readable code blocks via app CSS.
+    }
+  }
+
+  function splitHTMLIntoLines(html) {
+    var result = [];
+    var currentLine = "";
+    var openTags = []; // { raw: "<span ...>", name: "span" }
+    var i = 0;
+
+    while (i < html.length) {
+      if (html[i] === "<") {
+        var tagEnd = html.indexOf(">", i);
+        if (tagEnd === -1) {
+          currentLine += html.substring(i);
+          break;
+        }
+        var tag = html.substring(i, tagEnd + 1);
+        if (tag.charAt(1) === "/") {
+          openTags.pop();
+        } else if (tag.charAt(tag.length - 2) !== "/") {
+          var nameMatch = tag.match(/^<(\w+)/);
+          openTags.push({ raw: tag, name: nameMatch ? nameMatch[1] : "" });
+        }
+        currentLine += tag;
+        i = tagEnd + 1;
+      } else if (html[i] === "\n") {
+        for (var ci = openTags.length - 1; ci >= 0; ci -= 1) {
+          if (openTags[ci].name) {
+            currentLine += "</" + openTags[ci].name + ">";
+          }
+        }
+        result.push(currentLine);
+        currentLine = "";
+        for (var oi = 0; oi < openTags.length; oi += 1) {
+          currentLine += openTags[oi].raw;
+        }
+        i += 1;
+      } else {
+        // Scan the text run up to the next tag or newline
+        var nextTag = html.indexOf("<", i);
+        var nextNewline = html.indexOf("\n", i);
+        var runEnd = html.length;
+        if (nextTag !== -1) { runEnd = nextTag; }
+        if (nextNewline !== -1 && nextNewline < runEnd) { runEnd = nextNewline; }
+        currentLine += html.substring(i, runEnd);
+        i = runEnd;
+      }
+    }
+
+    for (var fi = openTags.length - 1; fi >= 0; fi -= 1) {
+      if (openTags[fi].name) {
+        currentLine += "</" + openTags[fi].name + ">";
+      }
+    }
+    result.push(currentLine);
+
+    return result;
+  }
+
+  function annotateCodeBlockLines(root) {
+    var pres = root.querySelectorAll("pre[data-src-line-start][data-src-line-end]");
+    for (var pi = 0; pi < pres.length; pi += 1) {
+      var pre = pres[pi];
+      var code = pre.querySelector("code");
+      if (!code) {
+        continue;
+      }
+
+      var blockStart = Number(pre.getAttribute("data-src-line-start"));
+      var blockEnd = Number(pre.getAttribute("data-src-line-end"));
+      if (!Number.isFinite(blockStart) || !Number.isFinite(blockEnd) || blockEnd < blockStart) {
+        continue;
+      }
+
+      // Fenced blocks include delimiter lines; indented blocks start at the first content line
+      var isFenced = pre.classList.contains("reader-code-fenced");
+      var contentStartLine = isFenced ? blockStart + 1 : blockStart;
+      var lines = splitHTMLIntoLines(code.innerHTML);
+
+      if (lines.length === 1 && lines[0] === "") {
+        continue;
+      }
+
+      // Drop trailing empty line from the final newline
+      if (lines.length > 0 && lines[lines.length - 1] === "") {
+        lines.pop();
+      }
+
+      var wrapped = [];
+      for (var li = 0; li < lines.length; li += 1) {
+        var lineNum = contentStartLine + li;
+        wrapped.push(
+          '<span data-src-line-start="' + lineNum +
+          '" data-src-line-end="' + lineNum +
+          '" class="reader-code-line">' + lines[li] + "</span>"
+        );
+      }
+      code.innerHTML = wrapped.join("\n");
     }
   }
 
@@ -1698,6 +1845,7 @@
     var safeHTML = sanitizeRenderedHTML(rawHTML);
     root.innerHTML = safeHTML;
     runHighlighting();
+    annotateCodeBlockLines(root);
     typesetMath(root, function () {
       renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
       renderChangedRegionGutter(root, gutter, payload.changedRegions || []);

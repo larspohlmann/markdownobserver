@@ -200,6 +200,7 @@ enum MarkdownSourceHTMLRenderer {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' file:; style-src 'unsafe-inline'; img-src data: https:; frame-ancestors 'none'">
             <style>
                 \(baseCSS)
 
@@ -219,6 +220,7 @@ enum MarkdownSourceHTMLRenderer {
 
                 #minimark-source-root {
                     min-height: 100vh;
+                    padding-top: \(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px;
                 }
 
                 .minimark-source-editor {
@@ -226,7 +228,7 @@ enum MarkdownSourceHTMLRenderer {
                     width: 100%;
                     min-height: 100vh;
                     box-sizing: border-box;
-                    padding: 14px 16px 32px;
+                    padding: 0 16px 32px;
                     border: 0;
                     outline: none;
                     resize: none;

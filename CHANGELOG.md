@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.3] - 2026-04-11
+
+### Security
+- Added Content Security Policy meta tags to reader and comparison views.
+- Removed file:// from safe URL schemes; bundled scripts and https images are allowlisted explicitly.
+
+### Changed
+- Split ReaderDocumentState into concern-based structs for clearer responsibility boundaries.
+
+### Fixed
+- Fixed TOC button visible in split and source view modes.
+- Fixed deleted files appearing in sidebar when opening a favorite.
+- Fixed scroll-sync bounce-back during change navigation.
+- Fixed overlay-aware top padding in source view.
+- Fixed change highlights showing at wrong line inside code blocks.
+
+### Performance
+- Added dictionary index for O(1) document-by-URL lookup.
+- Eliminated redundant URL normalizations and deduplicated watch-applies hot path.
+- Optimized watchedDocumentIDs and stopWatchingFolders with cached URLs.
+- Used adaptive timestamp intervals in sidebar rows.
+
 ## [1.2.2] - 2026-04-10
 
 ### Added

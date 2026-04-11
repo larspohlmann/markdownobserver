@@ -36,7 +36,7 @@ struct ContentUtilityRail: View {
                     editGroup
                 }
 
-                if hasTOCHeadings {
+                if hasTOCHeadings && documentViewMode == .preview {
                     groupSeparator
                     tocGroup
                 }

@@ -855,6 +855,7 @@ struct ContentView: View {
 
         lastChangedRegionNavigationDirection = direction
         changedRegionNavigationRequestID += 1
+        splitScrollCoordinator.suppressPreviewBounceBack()
     }
 
     private func handleFatalCrash(for surface: DocumentSurfaceRole) {
@@ -1108,6 +1109,7 @@ private final class SplitScrollCoordinator: ObservableObject {
     private var nextRequestID = 0
     private var lastRequestedProgressByRole: [ContentView.DocumentSurfaceRole: Double] = [:]
     private var lastObservedProgressByRole: [ContentView.DocumentSurfaceRole: Double] = [:]
+    private var previewBounceBackSuppressedUntil: Date?
 
     func request(for role: ContentView.DocumentSurfaceRole) -> ScrollSyncRequest? {
         switch role {
@@ -1116,6 +1118,14 @@ private final class SplitScrollCoordinator: ObservableObject {
         case .source:
             return sourceRequest
         }
+    }
+
+    /// Temporarily prevents scroll-sync observations from bouncing back to the
+    /// preview pane. Called when a changed-region navigation scrolls the preview
+    /// to an exact element position — the source pane may still sync forward,
+    /// but its response must not override the navigation scroll.
+    func suppressPreviewBounceBack(for duration: TimeInterval = 0.6) {
+        previewBounceBackSuppressedUntil = Date().addingTimeInterval(duration)
     }
 
     func handleObservation(
@@ -1130,6 +1140,13 @@ private final class SplitScrollCoordinator: ObservableObject {
         }
 
         let targetRole = role.counterpart
+
+        if targetRole == .preview,
+           let suppressedUntil = previewBounceBackSuppressedUntil,
+           Date() < suppressedUntil {
+            return
+        }
+
         if let lastProgress = lastRequestedProgressByRole[targetRole],
            abs(lastProgress - observation.progress) < 0.003 {
             return
@@ -1156,6 +1173,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         sourceRequest = nil
         lastRequestedProgressByRole.removeAll()
         lastObservedProgressByRole.removeAll()
+        previewBounceBackSuppressedUntil = nil
     }
 }
 

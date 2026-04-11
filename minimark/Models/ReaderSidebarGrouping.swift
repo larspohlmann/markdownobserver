@@ -98,7 +98,7 @@ enum ReaderSidebarGrouping: Equatable {
             ReaderDocumentIndicatorState(
                 hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
                 isCurrentFileMissing: document.readerStore.isCurrentFileMissing,
-                unacknowledgedExternalChangeKind: document.readerStore.document.unacknowledgedExternalChangeKind
+                unacknowledgedExternalChangeKind: document.readerStore.content.unacknowledgedExternalChangeKind
             )
         }
 

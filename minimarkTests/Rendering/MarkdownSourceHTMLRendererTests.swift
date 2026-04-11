@@ -73,6 +73,30 @@ struct MarkdownSourceHTMLRendererTests {
         #expect(html.contains("</html>"))
     }
 
+    @Test func sourceRootIncludesOverlayAwareTopPadding() {
+        let html = MarkdownSourceHTMLRenderer.makeHTMLDocument(
+            markdown: "# Hello",
+            settings: defaultSettings,
+            isEditable: true
+        )
+
+        let expectedPadding = Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded())
+        #expect(html.contains("padding-top: \(expectedPadding)px"))
+    }
+
+    @Test func makeHTMLDocumentContainsContentSecurityPolicy() {
+        let html = MarkdownSourceHTMLRenderer.makeHTMLDocument(
+            markdown: "# Hello",
+            settings: defaultSettings,
+            isEditable: true
+        )
+
+        #expect(html.contains("Content-Security-Policy"))
+        #expect(html.contains("default-src 'none'"))
+        #expect(html.contains("script-src 'unsafe-inline' file:"))
+        #expect(html.contains("img-src data: https:"))
+    }
+
     @Test func differentThemesProduceDifferentCSS() {
         var lightSettings = defaultSettings
         lightSettings.readerTheme = .blackOnWhite
