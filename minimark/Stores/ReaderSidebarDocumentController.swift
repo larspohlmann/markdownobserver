@@ -264,7 +264,7 @@ final class ReaderSidebarDocumentController {
             }
 
             var documentToInsert = targetDocument
-            documentToInsert.normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+            documentToInsert.normalizedFileURL = fileURL
 
             if shouldAppendDocument {
                 documents.append(documentToInsert)
@@ -429,7 +429,7 @@ final class ReaderSidebarDocumentController {
             return
         }
 
-        let normalizedFolder = ReaderFileRouting.normalizedFileURL(session.folderURL)
+        let normalizedFolder = session.folderURL
         let hasWatchedDocument = documentIDs.contains { documentID in
             guard let document = documents.first(where: { $0.id == documentID }),
                   let normalizedFileURL = document.normalizedFileURL else {
@@ -472,7 +472,7 @@ final class ReaderSidebarDocumentController {
             return []
         }
 
-        let normalizedFolder = ReaderFileRouting.normalizedFileURL(session.folderURL)
+        let normalizedFolder = session.folderURL
         return Set(documents.compactMap { document in
             guard let normalizedFileURL = document.normalizedFileURL else {
                 return nil
