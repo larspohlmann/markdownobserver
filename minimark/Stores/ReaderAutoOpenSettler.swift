@@ -186,17 +186,12 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
                     continue
                 }
 
-                switch settler.evaluate(
+                _ = settler.evaluate(
                     context: context,
                     loaded: loaded,
                     presentedAs: fileURL,
                     now: now
-                ) {
-                case .unhandled:
-                    continue
-                case .handled:
-                    continue
-                }
+                )
             }
         }
     }
