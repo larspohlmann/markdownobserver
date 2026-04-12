@@ -4,22 +4,21 @@ import WebKit
 
 @Suite(.serialized)
 struct WebKitWarmupTests {
-    @Test @MainActor func processPoolIsNilBeforeWarmup() {
+    @Test @MainActor func hasNotWarmedUpBeforeWarmup() {
         let warmup = WebKitWarmup()
-        #expect(warmup.processPool == nil)
+        #expect(!warmup.hasWarmedUp)
     }
 
-    @Test @MainActor func warmUpCreatesProcessPool() {
+    @Test @MainActor func warmUpSetsFlag() {
         let warmup = WebKitWarmup()
         warmup.warmUp()
-        #expect(warmup.processPool != nil)
+        #expect(warmup.hasWarmedUp)
     }
 
     @Test @MainActor func warmUpIsIdempotent() {
         let warmup = WebKitWarmup()
         warmup.warmUp()
-        let firstPool = warmup.processPool
         warmup.warmUp()
-        #expect(warmup.processPool === firstPool)
+        #expect(warmup.hasWarmedUp)
     }
 }
