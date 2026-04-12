@@ -54,7 +54,7 @@ extension ReaderStore {
         needsAppearanceRender = false
     }
 
-    func renderCurrentMarkdown() throws {
+    private func renderCurrentMarkdown() throws {
         let settings = settingsStore.currentSettings
         let effectiveThemeKind = appearanceOverride?.readerTheme ?? settings.readerTheme
         let effectiveFontSize = appearanceOverride?.baseFontSize ?? settings.baseFontSize

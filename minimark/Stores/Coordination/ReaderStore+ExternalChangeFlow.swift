@@ -61,7 +61,7 @@ extension ReaderStore {
         return Self.normalizedFileURL(fileURL)
     }
 
-    var watchedFolderURLForCurrentFile: URL? {
+    private var watchedFolderURLForCurrentFile: URL? {
         guard let activeFolderWatchSession,
               let fileURL = fileURLForCurrentDocument else {
             return nil
@@ -81,7 +81,7 @@ extension ReaderStore {
         }
     }
 
-    var currentDocumentHasBeenDeleted: Bool {
+    private var currentDocumentHasBeenDeleted: Bool {
         guard let fileURL else {
             return false
         }

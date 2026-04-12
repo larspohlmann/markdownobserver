@@ -34,7 +34,7 @@ extension ReaderStore {
 
     // MARK: - Private Helpers
 
-    func liveFolderWatchAutoOpenPlan(
+    private func liveFolderWatchAutoOpenPlan(
         for markdownFileEvents: [ReaderFolderWatchChangeEvent],
         session: ReaderFolderWatchSession
     ) -> ReaderFolderWatchAutoOpenPlan {
@@ -45,13 +45,13 @@ extension ReaderStore {
         )
     }
 
-    func updateFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
+    private func updateFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
         if let warning {
             folderWatchAutoOpenWarning = warning
         }
     }
 
-    func dispatchLiveFolderWatchAutoOpenEvents(
+    private func dispatchLiveFolderWatchAutoOpenEvents(
         _ plannedEvents: [ReaderFolderWatchChangeEvent],
         session: ReaderFolderWatchSession,
         origin: ReaderOpenOrigin
@@ -69,7 +69,7 @@ extension ReaderStore {
         }
     }
 
-    func openPrimaryFolderWatchAutoOpenEvent(
+    private func openPrimaryFolderWatchAutoOpenEvent(
         _ event: ReaderFolderWatchChangeEvent,
         session: ReaderFolderWatchSession,
         origin: ReaderOpenOrigin
