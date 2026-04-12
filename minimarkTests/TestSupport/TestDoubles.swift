@@ -834,15 +834,15 @@ struct ReaderStoreTestFixture {
         )
         let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
         store = ReaderStore(
-            renderer: renderer,
-            differ: differ,
-            fileWatcher: watcher,
+            rendering: ReaderRenderingDependencies(renderer: renderer, differ: differ),
+            file: ReaderFileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
+            folderWatch: ReaderFolderWatchDependencies(
+                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                settler: settler,
+                systemNotifier: notifier
+            ),
             settingsStore: settings,
-            securityScopeResolver: securityScopeResolver,
-            fileActions: fileActions,
-            systemNotifier: notifier,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            settler: settler
+            securityScopeResolver: securityScopeResolver
         )
     }
 
@@ -901,15 +901,19 @@ struct ReaderSidebarControllerTestHarness {
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
                 let store = ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: fileWatcher,
+                    rendering: ReaderRenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: ReaderFileDependencies(
+                        watcher: fileWatcher, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                    ),
+                    folderWatch: ReaderFolderWatchDependencies(
+                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: settler,
+                        systemNotifier: TestReaderSystemNotifier()
+                    ),
                     settingsStore: settingsStore,
-                    securityScopeResolver: securityScopeResolver,
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: settler
+                    securityScopeResolver: securityScopeResolver
                 )
                 return store
             },

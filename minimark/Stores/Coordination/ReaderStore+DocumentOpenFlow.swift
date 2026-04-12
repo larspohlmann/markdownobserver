@@ -28,7 +28,7 @@ extension ReaderStore {
 
             // Stop previous file-watch callbacks before mutating the active
             // document identity so stale events cannot cross into the new file state.
-            fileWatcher.stopWatching()
+            file.watcher.stopWatching()
 
             try presentLoadedDocument(
                 loaded,
@@ -58,8 +58,8 @@ extension ReaderStore {
         loadedMarkdown: String
     ) {
         let now = Date()
-        settler.beginSettling(
-            settler.makePendingContext(
+        folderWatch.settler.beginSettling(
+            folderWatch.settler.makePendingContext(
                 origin: origin,
                 initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
                 loadedMarkdown: loadedMarkdown,
@@ -102,7 +102,7 @@ extension ReaderStore {
             return
         }
 
-        systemNotifier.notifyFileChanged(
+        folderWatch.systemNotifier.notifyFileChanged(
             normalizedURL,
             changeKind: initialDiffBaselineMarkdown == nil ? .added : .modified,
             watchedFolderURL: activeFolderWatchSession?.folderURL

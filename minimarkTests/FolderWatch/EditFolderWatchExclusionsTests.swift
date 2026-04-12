@@ -171,15 +171,19 @@ struct EditFolderWatchExclusionsTests {
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
                 return ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: fw,
+                    rendering: ReaderRenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: ReaderFileDependencies(
+                        watcher: fw, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                    ),
+                    folderWatch: ReaderFolderWatchDependencies(
+                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                        systemNotifier: TestReaderSystemNotifier()
+                    ),
                     settingsStore: settingsStore,
-                    securityScopeResolver: securityScopeResolver,
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0)
+                    securityScopeResolver: securityScopeResolver
                 )
             },
             makeFolderWatchController: {

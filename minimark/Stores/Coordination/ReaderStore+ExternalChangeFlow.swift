@@ -35,7 +35,7 @@ extension ReaderStore {
     }
 
     func handleObservedFileChange() {
-        if let fileURL, settler.handleChangeIfNeeded(fileURL: fileURL, loader: { url in try self.loadMarkdownFile(at: url) }) {
+        if let fileURL, folderWatch.settler.handleChangeIfNeeded(fileURL: fileURL, loader: { url in try self.loadMarkdownFile(at: url) }) {
             return
         }
 
@@ -46,7 +46,7 @@ extension ReaderStore {
         noteObservedExternalChange(kind: .modified)
         if let fileURL,
            settingsStore.currentSettings.notificationsEnabled {
-            systemNotifier.notifyFileChanged(
+            folderWatch.systemNotifier.notifyFileChanged(
                 fileURL,
                 changeKind: currentDocumentHasBeenDeleted ? .deleted : .modified,
                 watchedFolderURL: watchedFolderURLForCurrentFile
@@ -86,7 +86,7 @@ extension ReaderStore {
                 resetDocumentViewMode: false,
                 acknowledgeExternalChange: acknowledgeExternalChange
             )
-            settler.clearSettling()
+            folderWatch.settler.clearSettling()
         } catch {
             handleDocumentReloadFailure(error, for: fileURL)
         }

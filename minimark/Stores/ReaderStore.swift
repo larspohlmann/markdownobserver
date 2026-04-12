@@ -77,17 +77,12 @@ final class ReaderStore {
     var tocScrollRequest: TOCScrollRequest?
     var tocScrollRequestCounter = 0
 
-    private let renderer: MarkdownRendering
-    private let differ: ChangedRegionDiffering
-    let fileWatcher: FileChangeWatching
+    private let rendering: ReaderRenderingDependencies
+    let file: ReaderFileDependencies
+    let folderWatch: ReaderFolderWatchDependencies
     let settingsStore: ReaderSettingsStoring
     let securityScopeResolver: SecurityScopeResolver
-    private let fileActions: ReaderFileActionHandling
-    let systemNotifier: ReaderSystemNotifying
-    let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
     let sourceEditingCoordinator = ReaderSourceEditingCoordinator()
-    private(set) var settler: ReaderAutoOpenSettling
-    private let documentIO: ReaderDocumentIO
 
     @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
@@ -111,28 +106,18 @@ final class ReaderStore {
     @ObservationIgnored private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
     init(
-        renderer: MarkdownRendering,
-        differ: ChangedRegionDiffering,
-        fileWatcher: FileChangeWatching,
+        rendering: ReaderRenderingDependencies,
+        file: ReaderFileDependencies,
+        folderWatch: ReaderFolderWatchDependencies,
         settingsStore: ReaderSettingsStoring,
         securityScopeResolver: SecurityScopeResolver,
-        fileActions: ReaderFileActionHandling,
-        systemNotifier: ReaderSystemNotifying,
-        folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning,
-        settler: ReaderAutoOpenSettling,
-        documentIO: ReaderDocumentIO = ReaderDocumentIOService(),
         diffBaselineTracker: DiffBaselineTracking? = nil
     ) {
-        self.renderer = renderer
-        self.differ = differ
-        self.fileWatcher = fileWatcher
+        self.rendering = rendering
+        self.file = file
+        self.folderWatch = folderWatch
         self.settingsStore = settingsStore
         self.securityScopeResolver = securityScopeResolver
-        self.fileActions = fileActions
-        self.systemNotifier = systemNotifier
-        self.folderWatchAutoOpenPlanner = folderWatchAutoOpenPlanner
-        self.settler = settler
-        self.documentIO = documentIO
         self.diffBaselineTracker = diffBaselineTracker ?? DiffBaselineTracker(
             minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         )
@@ -150,11 +135,11 @@ final class ReaderStore {
                 let lookbackInterval = settings.diffBaselineLookback.timeInterval
                 if lookbackInterval != self.diffBaselineTracker.currentMinimumAge {
                     self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
-                    self.folderWatchAutoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
+                    self.folderWatch.autoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
                 }
             }
 
-        settler.configure(
+        folderWatch.settler.configure(
             currentFileURL: { [weak self] in self?.fileURL },
             loadFile: { [weak self] url in
                 guard let self else { throw ReaderError.noOpenFileInReader }
@@ -255,7 +240,7 @@ final class ReaderStore {
         identity.currentOpenOrigin = origin
         identity.lastError = nil
         identity.isCurrentFileMissing = false
-        let modificationDate = documentIO.modificationDate(for: normalizedURL)
+        let modificationDate = file.io.modificationDate(for: normalizedURL)
         content.fileLastModifiedAt = modificationDate == .distantPast ? nil : modificationDate
         if let folderWatchSession {
             activeFolderWatchSession = folderWatchSession
@@ -298,14 +283,14 @@ final class ReaderStore {
         // Note: diffBaselineTracker is intentionally NOT reset here.
         // Per-file-URL history is preserved across open/close cycles
         // so the lookback window remains time-based, not session-based.
-        fileWatcher.stopWatching()
+        file.watcher.stopWatching()
         securityScopeResolver.endFileAndDirectoryAccess()
 
         identity = .empty
         content = .empty
         editing = .empty
 
-        settler.clearSettling()
+        folderWatch.settler.clearSettling()
     }
 
     func dismissFolderWatchAutoOpenWarning() {
@@ -322,7 +307,7 @@ final class ReaderStore {
             let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
                 for: fileURL, reason: "write", folderWatchSession: activeFolderWatchSession
             )
-            try documentIO.write(draftMarkdown, to: accessibleURL)
+            try file.io.write(draftMarkdown, to: accessibleURL)
             content.savedMarkdown = draftMarkdown
             let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
             applySourceEditingTransition(transition)
@@ -330,7 +315,7 @@ final class ReaderStore {
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
             )
-            content.fileLastModifiedAt = documentIO.modificationDate(for: fileURL)
+            content.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
             editing.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
             content.hasUnacknowledgedExternalChange = false
             content.unacknowledgedExternalChangeKind = .modified
@@ -400,7 +385,7 @@ final class ReaderStore {
         for markdownFileEvents: [ReaderFolderWatchChangeEvent],
         session: ReaderFolderWatchSession
     ) -> ReaderFolderWatchAutoOpenPlan {
-        folderWatchAutoOpenPlanner.livePlan(
+        folderWatch.autoOpenPlanner.livePlan(
             for: markdownFileEvents,
             activeSession: session,
             currentDocumentFileURL: fileURLForCurrentDocument
@@ -467,7 +452,7 @@ final class ReaderStore {
         }
 
         do {
-            identity.openInApplications = try fileActions.registeredApplications(for: fileURL)
+            identity.openInApplications = try file.actions.registeredApplications(for: fileURL)
         } catch {
             identity.openInApplications = []
             handle(error)
@@ -481,7 +466,7 @@ final class ReaderStore {
         }
 
         do {
-            try fileActions.open(fileURL: fileURL, in: application)
+            try file.actions.open(fileURL: fileURL, in: application)
             identity.lastError = nil
         } catch {
             handle(error)
@@ -495,7 +480,7 @@ final class ReaderStore {
         }
 
         do {
-            try fileActions.revealInFinder(fileURL: fileURL)
+            try file.actions.revealInFinder(fileURL: fileURL)
             identity.lastError = nil
         } catch {
             handle(error)
@@ -522,7 +507,7 @@ final class ReaderStore {
         }
 
         do {
-            try fileWatcher.startWatching(fileURL: fileURL) { [weak self] in
+            try file.watcher.startWatching(fileURL: fileURL) { [weak self] in
                 guard let self else { return }
                 Task { @MainActor [self] in
                     self.handleObservedFileChange()
@@ -605,7 +590,7 @@ final class ReaderStore {
 
         identity.needsImageDirectoryAccess = imageResult.needsDirectoryAccess
 
-        let rendered = try renderer.render(
+        let rendered = try rendering.renderer.render(
             markdown: imageResult.markdown,
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions,
@@ -678,7 +663,7 @@ final class ReaderStore {
         identity.openInApplications = []
         identity.isCurrentFileMissing = true
         identity.lastError = ReaderPresentableError(from: error)
-        settler.clearSettling()
+        folderWatch.settler.clearSettling()
     }
 
     func changedRegions(
@@ -689,7 +674,7 @@ final class ReaderStore {
             return []
         }
 
-        return differ.computeChangedRegions(
+        return rendering.differ.computeChangedRegions(
             oldMarkdown: diffBaselineMarkdown,
             newMarkdown: newMarkdown
         )
@@ -707,7 +692,7 @@ final class ReaderStore {
         )
         let loaded: (markdown: String, modificationDate: Date)
         do {
-            loaded = try documentIO.load(at: accessibleURL)
+            loaded = try file.io.load(at: accessibleURL)
         } catch {
             let nsError = error as NSError
             Self.logger.error(
@@ -736,7 +721,7 @@ final class ReaderStore {
         let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
             for: url, reason: "read", folderWatchSession: activeFolderWatchSession
         )
-        return try documentIO.load(at: accessibleURL)
+        return try file.io.load(at: accessibleURL)
     }
 
     func saveLogContext(for url: URL?) -> String {

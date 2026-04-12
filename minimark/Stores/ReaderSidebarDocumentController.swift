@@ -82,17 +82,24 @@ final class ReaderSidebarDocumentController {
                 }
             )
             let store = ReaderStore(
-                renderer: MarkdownRenderingService(),
-                differ: ChangedRegionDiffer(),
-                fileWatcher: FileChangeWatcher(),
-                settingsStore: settingsStore,
-                securityScopeResolver: securityScopeResolver,
-                fileActions: ReaderFileActionService(),
-                systemNotifier: ReaderSystemNotifier.shared,
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                    minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+                rendering: ReaderRenderingDependencies(
+                    renderer: MarkdownRenderingService(),
+                    differ: ChangedRegionDiffer()
                 ),
-                settler: settler
+                file: ReaderFileDependencies(
+                    watcher: FileChangeWatcher(),
+                    io: ReaderDocumentIOService(),
+                    actions: ReaderFileActionService()
+                ),
+                folderWatch: ReaderFolderWatchDependencies(
+                    autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                        minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+                    ),
+                    settler: settler,
+                    systemNotifier: ReaderSystemNotifier.shared
+                ),
+                settingsStore: settingsStore,
+                securityScopeResolver: securityScopeResolver
             )
             return store
         }
