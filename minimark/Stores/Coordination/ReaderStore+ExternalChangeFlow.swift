@@ -1,21 +1,6 @@
 import Foundation
 
 extension ReaderStore {
-    func reloadCurrentFile(
-        forceHighlight: Bool = true,
-        acknowledgeExternalChange: Bool = true
-    ) {
-        guard let fileURL else {
-            return
-        }
-
-        reloadCurrentFile(
-            at: fileURL,
-            diffBaselineMarkdown: forceHighlight ? sourceMarkdown : nil,
-            acknowledgeExternalChange: acknowledgeExternalChange
-        )
-    }
-
     func refreshFromExternalChange() {
         guard settingsStore.currentSettings.autoRefreshOnExternalChange,
               !isSourceEditing,
@@ -69,29 +54,6 @@ extension ReaderStore {
         refreshFromExternalChange()
     }
 
-    func reloadCurrentFile(
-        at fileURL: URL?,
-        diffBaselineMarkdown: String?,
-        acknowledgeExternalChange: Bool
-    ) {
-        guard let fileURL else {
-            return
-        }
-
-        do {
-            _ = try loadAndPresentDocument(
-                readURL: fileURL,
-                presentedAs: fileURL,
-                diffBaselineMarkdown: diffBaselineMarkdown,
-                resetDocumentViewMode: false,
-                acknowledgeExternalChange: acknowledgeExternalChange
-            )
-            folderWatch.settler.clearSettling()
-        } catch {
-            handleDocumentReloadFailure(error, for: fileURL)
-        }
-    }
-
     var fileURLForCurrentDocument: URL? {
         guard let fileURL else {
             return nil
@@ -99,7 +61,7 @@ extension ReaderStore {
         return Self.normalizedFileURL(fileURL)
     }
 
-    private var watchedFolderURLForCurrentFile: URL? {
+    var watchedFolderURLForCurrentFile: URL? {
         guard let activeFolderWatchSession,
               let fileURL = fileURLForCurrentDocument else {
             return nil
@@ -119,20 +81,11 @@ extension ReaderStore {
         }
     }
 
-    private var currentDocumentHasBeenDeleted: Bool {
+    var currentDocumentHasBeenDeleted: Bool {
         guard let fileURL else {
             return false
         }
 
         return !FileManager.default.fileExists(atPath: fileURL.path)
-    }
-
-    private func handleDocumentReloadFailure(_ error: Error, for fileURL: URL) {
-        guard !FileManager.default.fileExists(atPath: fileURL.path) else {
-            handle(error)
-            return
-        }
-
-        presentMissingDocument(at: fileURL, error: error)
     }
 }

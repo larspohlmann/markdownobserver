@@ -6,8 +6,8 @@ import OSLog
 @MainActor
 @Observable
 final class ReaderStore {
-    private static let draftPreviewRenderDebounceInterval: Duration = .milliseconds(5)
-    private static let logger = Logger(
+    static let draftPreviewRenderDebounceInterval: Duration = .milliseconds(5)
+    static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ReaderStore"
     )
@@ -16,8 +16,8 @@ final class ReaderStore {
     var content = DocumentContent.empty
     var editing = DocumentEditing.empty
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    private(set) var lastWatchedFolderEventAt: Date?
-    private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    var lastWatchedFolderEventAt: Date?
+    var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
 
     // MARK: - Identity forwarding
@@ -77,7 +77,7 @@ final class ReaderStore {
     var tocScrollRequest: TOCScrollRequest?
     var tocScrollRequestCounter = 0
 
-    private let rendering: ReaderRenderingDependencies
+    let rendering: ReaderRenderingDependencies
     let file: ReaderFileDependencies
     let folderWatch: ReaderFolderWatchDependencies
     let settingsStore: ReaderSettingsStoring
@@ -86,8 +86,7 @@ final class ReaderStore {
 
     @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
-    @ObservationIgnored private var appearanceOverride: LockedAppearance?
-    private(set) var needsAppearanceRender = false
+    var needsAppearanceRender = false
 
     // MARK: - Internal: accessible to Coordination extensions
     // These properties exist for coordination extensions in Stores/Coordination/.
@@ -102,8 +101,9 @@ final class ReaderStore {
     private(set) var onFolderWatchStopped: (() -> Void)?
 
     @ObservationIgnored private var hasActivatedDeferredSetup = false
-    @ObservationIgnored private var pendingDraftPreviewRenderTask: Task<Void, Never>?
-    @ObservationIgnored private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
+    @ObservationIgnored var pendingDraftPreviewRenderTask: Task<Void, Never>?
+    @ObservationIgnored var appearanceOverride: LockedAppearance?
+    @ObservationIgnored var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
     init(
         rendering: ReaderRenderingDependencies,
@@ -297,66 +297,6 @@ final class ReaderStore {
         folderWatchAutoOpenWarning = nil
     }
 
-    func persistSourceDraft(
-        _ draftMarkdown: String,
-        to fileURL: URL,
-        diffBaselineMarkdown: String,
-        recoveryAttempted: Bool
-    ) throws {
-        do {
-            let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-                for: fileURL, reason: "write", folderWatchSession: activeFolderWatchSession
-            )
-            try file.io.write(draftMarkdown, to: accessibleURL)
-            content.savedMarkdown = draftMarkdown
-            let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
-            applySourceEditingTransition(transition)
-            content.changedRegions = changedRegions(
-                diffBaselineMarkdown: diffBaselineMarkdown,
-                newMarkdown: draftMarkdown
-            )
-            content.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
-            editing.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
-            content.hasUnacknowledgedExternalChange = false
-            content.unacknowledgedExternalChangeKind = .modified
-            identity.isCurrentFileMissing = false
-            try renderCurrentMarkdownImmediately()
-            identity.lastError = nil
-            let modifiedAtDescription = fileLastModifiedAt?.description ?? "nil"
-            logSaveInfo(
-                "save succeeded: \(saveLogContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
-            )
-        } catch {
-            logSaveError(
-                "save failed: \(saveLogContext(for: fileURL)) error=\(error.localizedDescription) recoveryAttempted=\(recoveryAttempted)"
-            )
-
-            guard !recoveryAttempted else {
-                throw error
-            }
-
-            let result = securityScopeResolver.tryReauthorizeWatchedFolder(
-                after: error, for: fileURL, folderWatchSession: activeFolderWatchSession
-            )
-            guard result.succeeded else {
-                throw error
-            }
-            if let updatedSession = result.updatedSession {
-                setActiveFolderWatchSession(updatedSession)
-            }
-
-            logSaveInfo(
-                "save retrying after watched-folder reauthorization: \(saveLogContext(for: fileURL))"
-            )
-            try persistSourceDraft(
-                draftMarkdown,
-                to: fileURL,
-                diffBaselineMarkdown: diffBaselineMarkdown,
-                recoveryAttempted: true
-            )
-        }
-    }
-
     func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
         editing.draftMarkdown = transition.draftMarkdown
         content.sourceMarkdown = transition.sourceMarkdown
@@ -364,85 +304,6 @@ final class ReaderStore {
         editing.unsavedChangedRegions = transition.unsavedChangedRegions
         editing.isSourceEditing = transition.isSourceEditing
         editing.hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
-    }
-
-    func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
-        guard let session = activeFolderWatchSession else {
-            return
-        }
-
-        lastWatchedFolderEventAt = .now
-        let livePlan = liveFolderWatchAutoOpenPlan(for: markdownFileEvents, session: session)
-        updateFolderWatchAutoOpenWarning(livePlan.warning)
-        dispatchLiveFolderWatchAutoOpenEvents(
-            livePlan.autoOpenEvents,
-            session: session,
-            origin: .folderWatchAutoOpen
-        )
-    }
-
-    private func liveFolderWatchAutoOpenPlan(
-        for markdownFileEvents: [ReaderFolderWatchChangeEvent],
-        session: ReaderFolderWatchSession
-    ) -> ReaderFolderWatchAutoOpenPlan {
-        folderWatch.autoOpenPlanner.livePlan(
-            for: markdownFileEvents,
-            activeSession: session,
-            currentDocumentFileURL: fileURLForCurrentDocument
-        )
-    }
-
-    private func updateFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
-        if let warning {
-            folderWatchAutoOpenWarning = warning
-        }
-    }
-
-    private func dispatchLiveFolderWatchAutoOpenEvents(
-        _ plannedEvents: [ReaderFolderWatchChangeEvent],
-        session: ReaderFolderWatchSession,
-        origin: ReaderOpenOrigin
-    ) {
-        folderWatchEventDispatchCoordinator.dispatchLiveEvents(
-            plannedEvents,
-            session: session,
-            origin: origin
-        ) { [self] event, eventSession, eventOrigin in
-            openPrimaryFolderWatchAutoOpenEvent(
-                event,
-                session: eventSession,
-                origin: eventOrigin
-            )
-        }
-    }
-
-    private func openPrimaryFolderWatchAutoOpenEvent(
-        _ event: ReaderFolderWatchChangeEvent,
-        session: ReaderFolderWatchSession,
-        origin: ReaderOpenOrigin
-    ) {
-        openFile(
-            at: event.fileURL,
-            origin: origin,
-            folderWatchSession: session,
-            initialDiffBaselineMarkdown: event.kind == .modified ? event.previousMarkdown : nil
-        )
-    }
-
-    func openInitialMarkdownFilesFromWatchedFolder(
-        _ markdownFileEvents: [ReaderFolderWatchChangeEvent],
-        session: ReaderFolderWatchSession
-    ) {
-        folderWatchEventDispatchCoordinator.dispatchInitialEvents(
-            markdownFileEvents,
-            session: session
-        ) { [self] event, eventSession, eventOrigin in
-            openPrimaryFolderWatchAutoOpenEvent(
-                event,
-                session: eventSession,
-                origin: eventOrigin
-            )
-        }
     }
 
     func refreshOpenInApplications() {
@@ -487,16 +348,6 @@ final class ReaderStore {
         }
     }
 
-    func grantImageDirectoryAccess(folderURL: URL) {
-        securityScopeResolver.grantImageDirectoryAccess(folderURL: folderURL)
-
-        do {
-            try renderCurrentMarkdownImmediately()
-        } catch {
-            logSaveError("re-render after granting image access failed: \(error.localizedDescription)")
-        }
-    }
-
     func presentError(_ error: Error) {
         handle(error)
     }
@@ -518,240 +369,6 @@ final class ReaderStore {
         }
     }
 
-    func scheduleDraftPreviewRender() {
-        pendingDraftPreviewRenderTask?.cancel()
-        pendingDraftPreviewRenderTask = Task { @MainActor [weak self] in
-            guard let self else {
-                return
-            }
-
-            try? await Task.sleep(for: Self.draftPreviewRenderDebounceInterval)
-
-            guard !Task.isCancelled else {
-                return
-            }
-
-            self.pendingDraftPreviewRenderTask = nil
-
-            do {
-                try self.renderCurrentMarkdownImmediately()
-                self.identity.lastError = nil
-            } catch {
-                self.handle(error)
-            }
-        }
-    }
-
-    func cancelPendingDraftPreviewRender() {
-        pendingDraftPreviewRenderTask?.cancel()
-        pendingDraftPreviewRenderTask = nil
-    }
-
-    func renderCurrentMarkdownImmediately() throws {
-        cancelPendingDraftPreviewRender()
-        try renderCurrentMarkdown()
-        content.lastRefreshAt = Date()
-    }
-
-    func renderWithAppearance(_ appearance: LockedAppearance) throws {
-        appearanceOverride = appearance
-        cancelPendingDraftPreviewRender()
-        try renderCurrentMarkdown()
-        needsAppearanceRender = false
-        content.lastRefreshAt = Date()
-    }
-
-    func setAppearanceOverride(_ appearance: LockedAppearance) {
-        appearanceOverride = appearance
-        needsAppearanceRender = true
-    }
-
-    func clearAppearanceOverride() {
-        appearanceOverride = nil
-        needsAppearanceRender = false
-    }
-
-    private func renderCurrentMarkdown() throws {
-        let settings = settingsStore.currentSettings
-        let effectiveThemeKind = appearanceOverride?.readerTheme ?? settings.readerTheme
-        let effectiveFontSize = appearanceOverride?.baseFontSize ?? settings.baseFontSize
-        let effectiveSyntaxTheme = appearanceOverride?.syntaxTheme ?? settings.syntaxTheme
-        let theme = effectiveThemeKind.themeDefinition
-
-        let docDir = fileURL?.deletingLastPathComponent()
-        securityScopeResolver.activateTrustedImageFolderAccessIfNeeded(
-            for: docDir, folderWatchSession: activeFolderWatchSession
-        )
-
-        let imageResult = MarkdownImageResolver.resolve(
-            markdown: sourceMarkdown,
-            documentDirectoryURL: docDir
-        )
-
-        identity.needsImageDirectoryAccess = imageResult.needsDirectoryAccess
-
-        let rendered = try rendering.renderer.render(
-            markdown: imageResult.markdown,
-            changedRegions: changedRegions,
-            unsavedChangedRegions: unsavedChangedRegions,
-            theme: theme,
-            syntaxTheme: effectiveSyntaxTheme,
-            baseFontSize: effectiveFontSize
-        )
-
-        content.renderedHTMLDocument = rendered.htmlDocument
-        needsAppearanceRender = false
-    }
-
-    func presentLoadedDocument(
-        _ loaded: (markdown: String, modificationDate: Date),
-        at fileURL: URL,
-        diffBaselineMarkdown: String?,
-        resetDocumentViewMode: Bool,
-        acknowledgeExternalChange: Bool
-    ) throws {
-        cancelPendingDraftPreviewRender()
-        applyLoadedDocumentState(
-            loaded,
-            presentedAs: fileURL,
-            diffBaselineMarkdown: diffBaselineMarkdown,
-            resetDocumentViewMode: resetDocumentViewMode
-        )
-        try renderCurrentMarkdownImmediately()
-        if acknowledgeExternalChange {
-            content.hasUnacknowledgedExternalChange = false
-            content.unacknowledgedExternalChangeKind = .modified
-        }
-        identity.isCurrentFileMissing = false
-        identity.lastError = nil
-    }
-
-    private func applyLoadedDocumentState(
-        _ loaded: (markdown: String, modificationDate: Date),
-        presentedAs fileURL: URL,
-        diffBaselineMarkdown: String?,
-        resetDocumentViewMode: Bool
-    ) {
-        identity.fileURL = fileURL
-        identity.fileDisplayName = fileURL.lastPathComponent
-        content.savedMarkdown = loaded.markdown
-        editing.draftMarkdown = nil
-        editing.pendingSavedDraftDiffBaselineMarkdown = nil
-        content.sourceMarkdown = loaded.markdown
-        editing.sourceEditorSeedMarkdown = loaded.markdown
-        content.fileLastModifiedAt = loaded.modificationDate
-
-        if resetDocumentViewMode {
-            editing.documentViewMode = .preview
-        }
-
-        content.changedRegions = changedRegions(
-            diffBaselineMarkdown: diffBaselineMarkdown,
-            newMarkdown: loaded.markdown
-        )
-        editing.unsavedChangedRegions = []
-        editing.isSourceEditing = false
-        editing.hasUnsavedDraftChanges = false
-        tocHeadings = []
-        isTOCVisible = false
-    }
-
-    func presentMissingDocument(at fileURL: URL, error: Error) {
-        identity.fileURL = fileURL
-        identity.fileDisplayName = fileURL.lastPathComponent
-        content.fileLastModifiedAt = nil
-        identity.openInApplications = []
-        identity.isCurrentFileMissing = true
-        identity.lastError = ReaderPresentableError(from: error)
-        folderWatch.settler.clearSettling()
-    }
-
-    func changedRegions(
-        diffBaselineMarkdown: String?,
-        newMarkdown: String
-    ) -> [ChangedRegion] {
-        guard let diffBaselineMarkdown else {
-            return []
-        }
-
-        return rendering.differ.computeChangedRegions(
-            oldMarkdown: diffBaselineMarkdown,
-            newMarkdown: newMarkdown
-        )
-    }
-
-    func handlePendingSavedDraftChangeIfNeeded() -> Bool {
-        guard let diffBaselineMarkdown = editing.pendingSavedDraftDiffBaselineMarkdown,
-              let fileURL,
-              !isSourceEditing else {
-            return false
-        }
-
-        let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-            for: fileURL, reason: "read", folderWatchSession: activeFolderWatchSession
-        )
-        let loaded: (markdown: String, modificationDate: Date)
-        do {
-            loaded = try file.io.load(at: accessibleURL)
-        } catch {
-            let nsError = error as NSError
-            Self.logger.error(
-                "draft baseline load failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
-            )
-            editing.pendingSavedDraftDiffBaselineMarkdown = nil
-            return false
-        }
-
-        guard loaded.markdown == sourceMarkdown else {
-            editing.pendingSavedDraftDiffBaselineMarkdown = nil
-            return false
-        }
-
-        content.fileLastModifiedAt = loaded.modificationDate
-        content.changedRegions = changedRegions(
-            diffBaselineMarkdown: diffBaselineMarkdown,
-            newMarkdown: loaded.markdown
-        )
-        editing.unsavedChangedRegions = []
-        editing.pendingSavedDraftDiffBaselineMarkdown = nil
-        return true
-    }
-
-    func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
-        let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-            for: url, reason: "read", folderWatchSession: activeFolderWatchSession
-        )
-        return try file.io.load(at: accessibleURL)
-    }
-
-    func saveLogContext(for url: URL?) -> String {
-        let filePath = redactedPathText(for: url)
-        let watchedFolderPath = redactedPathText(for: activeFolderWatchSession?.folderURL)
-        let ctx = securityScopeResolver.context
-        let fileScopeURL = redactedPathText(for: ctx.fileToken?.url)
-        let folderScopeURL = redactedPathText(for: ctx.folderToken?.url)
-        let accessibleFilePath = redactedPathText(for: ctx.accessibleFileURL)
-        return "file=\(filePath) origin=\(identity.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
-    }
-
-    func redactedPathText(for url: URL?) -> String {
-        guard let url else {
-            return "none"
-        }
-
-        let normalizedURL = Self.normalizedFileURL(url)
-        let name = normalizedURL.lastPathComponent.isEmpty ? "root" : normalizedURL.lastPathComponent
-        let pathHash = String(normalizedURL.path.hashValue.magnitude, radix: 16)
-        return "\(name)#\(pathHash)"
-    }
-
-    func logSaveInfo(_ message: String) {
-        Self.logger.info("\(message, privacy: .public)")
-    }
-
-    func logSaveError(_ message: String) {
-        Self.logger.error("\(message, privacy: .public)")
-    }
 
     func handle(_ error: Error) {
         identity.lastError = ReaderPresentableError(from: error)
