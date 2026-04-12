@@ -120,11 +120,15 @@ struct ReaderWindowRootView: View {
     }
 
     private var windowShell: some View {
-        DocumentLoadingOverlay(
-            theme: ReaderTheme.theme(for: settingsStore.currentSettings.readerTheme),
-            headline: "Loading document…",
-            subtitle: nil
-        )
+        let theme = ReaderTheme.theme(for: settingsStore.currentSettings.readerTheme)
+        return ZStack {
+            Rectangle()
+                .fill(Color(hex: theme.backgroundHex) ?? .clear)
+            ProgressView()
+                .controlSize(.large)
+                .colorScheme(theme.kind.isDark ? .dark : .light)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 FolderWatchToolbarButton(
