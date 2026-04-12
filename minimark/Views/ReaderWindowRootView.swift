@@ -144,6 +144,8 @@ struct ReaderWindowRootView: View {
                     onClearRecentWatchedFolders: {},
                     compact: true
                 )
+                .disabled(true)
+                .allowsHitTesting(false)
                 .padding(.trailing, 8)
             }
         }

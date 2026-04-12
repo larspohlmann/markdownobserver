@@ -4,9 +4,8 @@ import Testing
 
 @Suite(.serialized)
 struct FileChangeWatcherLazyQueueTests {
-    @Test func queueIsNotCreatedOnInit() {
+    @Test func stopWatchingIsNoOpBeforeStartWatching() {
         let watcher = FileChangeWatcher()
-        // stopWatching() on a never-started watcher should be a no-op.
         watcher.stopWatching()
     }
 
