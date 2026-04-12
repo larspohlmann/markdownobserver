@@ -122,7 +122,7 @@ struct ReaderWindowRootView: View {
     private var windowShell: some View {
         DocumentLoadingOverlay(
             theme: ReaderTheme.theme(for: settingsStore.currentSettings.readerTheme),
-            headline: "Loading document\u{2026}",
+            headline: "Loading document…",
             subtitle: nil
         )
         .toolbar {
@@ -144,7 +144,10 @@ struct ReaderWindowRootView: View {
             }
         }
         .navigationTitle(ReaderWindowTitleFormatter.appName)
-        .task { hasCompletedWindowPhase = true }
+        .task {
+            await Task.yield()
+            hasCompletedWindowPhase = true
+        }
     }
 
     private func windowLifecycleAwareView<Content: View>(_ view: Content) -> some View {
