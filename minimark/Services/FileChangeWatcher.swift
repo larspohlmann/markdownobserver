@@ -7,7 +7,14 @@ protocol FileChangeWatching: AnyObject {
 
 final class FileChangeWatcher: FileChangeWatching {
     private static let queueKey = DispatchSpecificKey<UInt8>()
-    private let queue = DispatchQueue(label: "minimark.filewatcher")
+    private var _queue: DispatchQueue?
+    private var queue: DispatchQueue {
+        if let existing = _queue { return existing }
+        let q = DispatchQueue(label: "minimark.filewatcher")
+        q.setSpecific(key: Self.queueKey, value: 1)
+        _queue = q
+        return q
+    }
     private let pollingInterval: DispatchTimeInterval
     private let fallbackPollingInterval: DispatchTimeInterval
     private let verificationDelay: DispatchTimeInterval
@@ -29,7 +36,6 @@ final class FileChangeWatcher: FileChangeWatching {
         self.pollingInterval = pollingInterval
         self.fallbackPollingInterval = fallbackPollingInterval
         self.verificationDelay = verificationDelay
-        queue.setSpecific(key: Self.queueKey, value: 1)
     }
 
     deinit {
@@ -79,6 +85,8 @@ final class FileChangeWatcher: FileChangeWatching {
     }
 
     func stopWatching() {
+        guard _queue != nil else { return }
+
         let stopWork = {
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
@@ -100,7 +108,7 @@ final class FileChangeWatcher: FileChangeWatching {
         if DispatchQueue.getSpecific(key: Self.queueKey) != nil {
             stopWork()
         } else {
-            queue.sync(execute: stopWork)
+            _queue?.sync(execute: stopWork)
         }
     }
 
