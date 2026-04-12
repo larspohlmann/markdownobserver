@@ -33,6 +33,7 @@ struct ReaderWindowRootView: View {
     @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     @State private var isTitlebarEditingFavorites = false
     @State private var isEditingSubfolders = false
+    @State private var hasCompletedWindowPhase = false
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
@@ -111,7 +112,48 @@ struct ReaderWindowRootView: View {
     }
 
     var body: some View {
-        commandNotificationAwareView(windowLifecycleAwareView(rootContent))
+        if hasCompletedWindowPhase {
+            commandNotificationAwareView(windowLifecycleAwareView(rootContent))
+        } else {
+            windowShell
+        }
+    }
+
+    private var windowShell: some View {
+        let theme = ReaderTheme.theme(for: settingsStore.currentSettings.readerTheme)
+        return ZStack {
+            Rectangle()
+                .fill(Color(hex: theme.backgroundHex) ?? .clear)
+            ProgressView()
+                .controlSize(.large)
+                .colorScheme(theme.kind.isDark ? .dark : .light)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                FolderWatchToolbarButton(
+                    activeFolderWatch: nil,
+                    isInitialScanInProgress: false,
+                    didInitialScanFail: false,
+                    favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                    recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+                    onActivate: {},
+                    onStartFavoriteWatch: { _ in },
+                    onStartRecentFolderWatch: { _ in },
+                    onEditFavoriteWatchedFolders: {},
+                    onClearRecentWatchedFolders: {},
+                    compact: true
+                )
+                .disabled(true)
+                .allowsHitTesting(false)
+                .padding(.trailing, 8)
+            }
+        }
+        .navigationTitle(ReaderWindowTitleFormatter.appName)
+        .task {
+            await Task.yield()
+            hasCompletedWindowPhase = true
+        }
     }
 
     private func windowLifecycleAwareView<Content: View>(_ view: Content) -> some View {

@@ -15,6 +15,10 @@ struct MarkdownObserverApp: App {
 
         NSWindow.allowsAutomaticWindowTabbing = false
         applyAppAppearanceIfAvailable(settingsStore.currentSettings.appAppearance)
+
+        Task { @MainActor in
+            WebKitWarmup.shared.warmUp()
+        }
     }
 
     var body: some Scene {
