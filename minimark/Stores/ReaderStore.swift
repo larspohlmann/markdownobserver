@@ -81,14 +81,13 @@ final class ReaderStore {
     private let differ: ChangedRegionDiffering
     let fileWatcher: FileChangeWatching
     let settingsStore: ReaderSettingsStoring
-    let securityScope: SecurityScopedResourceAccessing
+    let securityScopeResolver: SecurityScopeResolver
     private let fileActions: ReaderFileActionHandling
     let systemNotifier: ReaderSystemNotifying
     let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
     let sourceEditingCoordinator = ReaderSourceEditingCoordinator()
     private(set) var settler: ReaderAutoOpenSettling
     private let documentIO: ReaderDocumentIO
-    let requestWatchedFolderReauthorization: (URL) -> URL?
 
     @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
@@ -101,11 +100,9 @@ final class ReaderStore {
     // cannot see `private` members.  Do not access them from views or other stores.
     //
     // - diffBaselineTracker: read-only (`let`) — used by ExternalChangeFlow
-    // - scopeContext: read/write — used by SecurityScopeFlow, FolderWatchLifecycleFlow
     // - onFolderWatchStarted/Stopped: read-only from extensions (called, never reassigned);
     //   set exclusively through setFolderWatchStateCallbacks(_:onStopped:)
     let diffBaselineTracker: DiffBaselineTracking
-    var scopeContext = SecurityScopeContext()
     private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
     private(set) var onFolderWatchStopped: (() -> Void)?
 
@@ -118,20 +115,19 @@ final class ReaderStore {
         differ: ChangedRegionDiffering,
         fileWatcher: FileChangeWatching,
         settingsStore: ReaderSettingsStoring,
-        securityScope: SecurityScopedResourceAccessing,
+        securityScopeResolver: SecurityScopeResolver,
         fileActions: ReaderFileActionHandling,
         systemNotifier: ReaderSystemNotifying,
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning,
         settler: ReaderAutoOpenSettling,
         documentIO: ReaderDocumentIO = ReaderDocumentIOService(),
-        diffBaselineTracker: DiffBaselineTracking? = nil,
-        requestWatchedFolderReauthorization: @escaping (URL) -> URL?
+        diffBaselineTracker: DiffBaselineTracking? = nil
     ) {
         self.renderer = renderer
         self.differ = differ
         self.fileWatcher = fileWatcher
         self.settingsStore = settingsStore
-        self.securityScope = securityScope
+        self.securityScopeResolver = securityScopeResolver
         self.fileActions = fileActions
         self.systemNotifier = systemNotifier
         self.folderWatchAutoOpenPlanner = folderWatchAutoOpenPlanner
@@ -140,7 +136,6 @@ final class ReaderStore {
         self.diffBaselineTracker = diffBaselineTracker ?? DiffBaselineTracker(
             minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         )
-        self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
     }
 
     func activateDeferredSetupIfNeeded() {
@@ -304,7 +299,7 @@ final class ReaderStore {
         // Per-file-URL history is preserved across open/close cycles
         // so the lookback window remains time-based, not session-based.
         fileWatcher.stopWatching()
-        scopeContext.endFileAndDirectoryAccess()
+        securityScopeResolver.endFileAndDirectoryAccess()
 
         identity = .empty
         content = .empty
@@ -324,7 +319,9 @@ final class ReaderStore {
         recoveryAttempted: Bool
     ) throws {
         do {
-            let accessibleURL = effectiveAccessibleFileURL(for: fileURL, reason: "write")
+            let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
+                for: fileURL, reason: "write", folderWatchSession: activeFolderWatchSession
+            )
             try documentIO.write(draftMarkdown, to: accessibleURL)
             content.savedMarkdown = draftMarkdown
             let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
@@ -349,9 +346,18 @@ final class ReaderStore {
                 "save failed: \(saveLogContext(for: fileURL)) error=\(error.localizedDescription) recoveryAttempted=\(recoveryAttempted)"
             )
 
-            guard !recoveryAttempted,
-                  tryReauthorizeWatchedFolderIfNeeded(after: error, for: fileURL) else {
+            guard !recoveryAttempted else {
                 throw error
+            }
+
+            let result = securityScopeResolver.tryReauthorizeWatchedFolder(
+                after: error, for: fileURL, folderWatchSession: activeFolderWatchSession
+            )
+            guard result.succeeded else {
+                throw error
+            }
+            if let updatedSession = result.updatedSession {
+                setActiveFolderWatchSession(updatedSession)
             }
 
             logSaveInfo(
@@ -496,6 +502,16 @@ final class ReaderStore {
         }
     }
 
+    func grantImageDirectoryAccess(folderURL: URL) {
+        securityScopeResolver.grantImageDirectoryAccess(folderURL: folderURL)
+
+        do {
+            try renderCurrentMarkdownImmediately()
+        } catch {
+            logSaveError("re-render after granting image access failed: \(error.localizedDescription)")
+        }
+    }
+
     func presentError(_ error: Error) {
         handle(error)
     }
@@ -578,7 +594,9 @@ final class ReaderStore {
         let theme = effectiveThemeKind.themeDefinition
 
         let docDir = fileURL?.deletingLastPathComponent()
-        activateTrustedImageFolderAccessIfNeeded(for: docDir)
+        securityScopeResolver.activateTrustedImageFolderAccessIfNeeded(
+            for: docDir, folderWatchSession: activeFolderWatchSession
+        )
 
         let imageResult = MarkdownImageResolver.resolve(
             markdown: sourceMarkdown,
@@ -684,7 +702,9 @@ final class ReaderStore {
             return false
         }
 
-        let accessibleURL = effectiveAccessibleFileURL(for: fileURL, reason: "read")
+        let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
+            for: fileURL, reason: "read", folderWatchSession: activeFolderWatchSession
+        )
         let loaded: (markdown: String, modificationDate: Date)
         do {
             loaded = try documentIO.load(at: accessibleURL)
@@ -713,17 +733,20 @@ final class ReaderStore {
     }
 
     func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
-        let accessibleURL = effectiveAccessibleFileURL(for: url, reason: "read")
+        let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
+            for: url, reason: "read", folderWatchSession: activeFolderWatchSession
+        )
         return try documentIO.load(at: accessibleURL)
     }
 
     func saveLogContext(for url: URL?) -> String {
         let filePath = redactedPathText(for: url)
         let watchedFolderPath = redactedPathText(for: activeFolderWatchSession?.folderURL)
-        let fileScopeURL = redactedPathText(for: scopeContext.fileToken?.url)
-        let folderScopeURL = redactedPathText(for: scopeContext.folderToken?.url)
-        let accessibleFilePath = redactedPathText(for: scopeContext.accessibleFileURL)
-        return "file=\(filePath) origin=\(identity.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(scopeContext.fileToken != nil) fileScopeStarted=\(scopeContext.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(scopeContext.folderToken != nil) folderScopeStarted=\(scopeContext.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        let ctx = securityScopeResolver.context
+        let fileScopeURL = redactedPathText(for: ctx.fileToken?.url)
+        let folderScopeURL = redactedPathText(for: ctx.folderToken?.url)
+        let accessibleFilePath = redactedPathText(for: ctx.accessibleFileURL)
+        return "file=\(filePath) origin=\(identity.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
     func redactedPathText(for url: URL?) -> String {

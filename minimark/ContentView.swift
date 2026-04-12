@@ -1180,19 +1180,23 @@ private final class SplitScrollCoordinator: ObservableObject {
 #Preview {
     let settingsStore = ReaderSettingsStore()
     let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+    let securityScopeResolver = SecurityScopeResolver(
+        securityScope: SecurityScopedResourceAccess(),
+        settingsStore: settingsStore,
+        requestWatchedFolderReauthorization: { _ in nil }
+    )
     let store = ReaderStore(
         renderer: MarkdownRenderingService(),
         differ: ChangedRegionDiffer(),
         fileWatcher: FileChangeWatcher(),
         settingsStore: settingsStore,
-        securityScope: SecurityScopedResourceAccess(),
+        securityScopeResolver: securityScopeResolver,
         fileActions: ReaderFileActionService(),
         systemNotifier: ReaderSystemNotifier.shared,
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
             minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         ),
-        settler: settler,
-        requestWatchedFolderReauthorization: { _ in nil }
+        settler: settler
     )
     return ContentView(
         readerStore: store,

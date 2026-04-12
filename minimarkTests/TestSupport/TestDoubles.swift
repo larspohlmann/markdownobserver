@@ -827,18 +827,22 @@ struct ReaderStoreTestFixture {
             notificationsEnabled: notificationsEnabled,
             diffBaselineLookback: diffBaselineLookback
         )
+        let securityScopeResolver = SecurityScopeResolver(
+            securityScope: securityScope,
+            settingsStore: settings,
+            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+        )
         let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
         store = ReaderStore(
             renderer: renderer,
             differ: differ,
             fileWatcher: watcher,
             settingsStore: settings,
-            securityScope: securityScope,
+            securityScopeResolver: securityScopeResolver,
             fileActions: fileActions,
             systemNotifier: notifier,
             folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            settler: settler,
-            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+            settler: settler
         )
     }
 
@@ -891,17 +895,21 @@ struct ReaderSidebarControllerTestHarness {
                 let fileWatcher = TestFileWatcher()
                 createdFileWatchers.append(fileWatcher)
                 let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                let securityScopeResolver = SecurityScopeResolver(
+                    securityScope: TestSecurityScopeAccess(),
+                    settingsStore: settingsStore,
+                    requestWatchedFolderReauthorization: { _ in nil }
+                )
                 let store = ReaderStore(
                     renderer: TestMarkdownRenderer(),
                     differ: TestChangedRegionDiffer(),
                     fileWatcher: fileWatcher,
                     settingsStore: settingsStore,
-                    securityScope: TestSecurityScopeAccess(),
+                    securityScopeResolver: securityScopeResolver,
                     fileActions: TestReaderFileActions(),
                     systemNotifier: TestReaderSystemNotifier(),
                     folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: settler,
-                    requestWatchedFolderReauthorization: { _ in nil }
+                    settler: settler
                 )
                 return store
             },

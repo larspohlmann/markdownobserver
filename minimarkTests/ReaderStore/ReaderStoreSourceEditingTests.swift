@@ -131,12 +131,16 @@ struct ReaderStoreSourceEditingTests {
         fixture.store.setActiveFolderWatchSession(session)
 
         let permissionDeniedError = NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError)
-        let didReauthorize = fixture.store.tryReauthorizeWatchedFolderIfNeeded(
+        let result = fixture.store.securityScopeResolver.tryReauthorizeWatchedFolder(
             after: permissionDeniedError,
-            for: fixture.primaryFileURL
+            for: fixture.primaryFileURL,
+            folderWatchSession: fixture.store.activeFolderWatchSession
         )
+        if let updatedSession = result.updatedSession {
+            fixture.store.setActiveFolderWatchSession(updatedSession)
+        }
 
-        #expect(didReauthorize)
+        #expect(result.succeeded)
         #expect(requestedFolderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
         #expect(fixture.store.activeFolderWatchSession?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
         #expect(fixture.settings.recordedRecentWatchedFolders.first?.folderPath == fixture.temporaryDirectoryURL.path)

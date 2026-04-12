@@ -263,17 +263,21 @@ struct ReaderSidebarDocumentControllerTests {
             makeReaderStore: {
                 {
                     let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                    let securityScopeResolver = SecurityScopeResolver(
+                        securityScope: TestSecurityScopeAccess(),
+                        settingsStore: settingsStore,
+                        requestWatchedFolderReauthorization: { _ in nil }
+                    )
                     return ReaderStore(
                         renderer: TestMarkdownRenderer(),
                         differ: TestChangedRegionDiffer(),
                         fileWatcher: TestFileWatcher(),
                         settingsStore: settingsStore,
-                        securityScope: TestSecurityScopeAccess(),
+                        securityScopeResolver: securityScopeResolver,
                         fileActions: TestReaderFileActions(),
                         systemNotifier: TestReaderSystemNotifier(),
                         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                        settler: settler,
-                        requestWatchedFolderReauthorization: { _ in nil }
+                        settler: settler
                     )
                 }()
             },
@@ -1255,17 +1259,21 @@ struct ReaderSidebarDocumentControllerTests {
             settingsStore: settingsStore,
             makeReaderStore: {
                 let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                let securityScopeResolver = SecurityScopeResolver(
+                    securityScope: TestSecurityScopeAccess(),
+                    settingsStore: settingsStore,
+                    requestWatchedFolderReauthorization: { _ in nil }
+                )
                 return ReaderStore(
                     renderer: TestMarkdownRenderer(),
                     differ: TestChangedRegionDiffer(),
                     fileWatcher: TestFileWatcher(),
                     settingsStore: settingsStore,
-                    securityScope: TestSecurityScopeAccess(),
+                    securityScopeResolver: securityScopeResolver,
                     fileActions: TestReaderFileActions(),
                     systemNotifier: TestReaderSystemNotifier(),
                     folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: settler,
-                    requestWatchedFolderReauthorization: { _ in nil }
+                    settler: settler
                 )
             },
             makeFolderWatchController: {

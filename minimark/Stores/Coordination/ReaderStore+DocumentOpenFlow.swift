@@ -15,9 +15,13 @@ extension ReaderStore {
         do {
             let accessibleURL = url
             let normalizedURL = Self.normalizedFileURL(accessibleURL)
-            activateFileSecurityScope(for: accessibleURL, reason: "open")
-            bindFolderWatchSessionIfNeeded(folderWatchSession)
-            let readURL = effectiveAccessibleFileURL(for: normalizedURL, reason: "open")
+            securityScopeResolver.activateFileSecurityScope(for: accessibleURL, reason: "open")
+            if let folderWatchSession {
+                setActiveFolderWatchSession(securityScopeResolver.normalizedFolderWatchSession(folderWatchSession))
+            }
+            let readURL = securityScopeResolver.effectiveAccessibleFileURL(
+                for: normalizedURL, reason: "open", folderWatchSession: activeFolderWatchSession
+            )
             identity.currentOpenOrigin = origin
 
             let loaded = try loadMarkdownFile(at: readURL)
