@@ -69,18 +69,9 @@ final class ReaderSidebarDocumentController {
     ) {
         let resolvedMakeReaderStore = makeReaderStore ?? {
             let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
-            let store = ReaderStore(
-                renderer: MarkdownRenderingService(),
-                differ: ChangedRegionDiffer(),
-                fileWatcher: FileChangeWatcher(),
-                settingsStore: settingsStore,
+            let securityScopeResolver = SecurityScopeResolver(
                 securityScope: SecurityScopedResourceAccess(),
-                fileActions: ReaderFileActionService(),
-                systemNotifier: ReaderSystemNotifier.shared,
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                    minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
-                ),
-                settler: settler,
+                settingsStore: settingsStore,
                 requestWatchedFolderReauthorization: { folderURL in
                     MarkdownOpenPanel.pickFolder(
                         directoryURL: folderURL,
@@ -89,6 +80,26 @@ final class ReaderSidebarDocumentController {
                         prompt: "Grant Access"
                     )
                 }
+            )
+            let store = ReaderStore(
+                rendering: ReaderRenderingDependencies(
+                    renderer: MarkdownRenderingService(),
+                    differ: ChangedRegionDiffer()
+                ),
+                file: ReaderFileDependencies(
+                    watcher: FileChangeWatcher(),
+                    io: ReaderDocumentIOService(),
+                    actions: ReaderFileActionService()
+                ),
+                folderWatch: ReaderFolderWatchDependencies(
+                    autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                        minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+                    ),
+                    settler: settler,
+                    systemNotifier: ReaderSystemNotifier.shared
+                ),
+                settingsStore: settingsStore,
+                securityScopeResolver: securityScopeResolver
             )
             return store
         }

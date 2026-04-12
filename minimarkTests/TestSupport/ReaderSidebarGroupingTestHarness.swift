@@ -28,17 +28,25 @@ struct ReaderSidebarGroupingTestHarness {
                 let fileURL = subURL.appendingPathComponent("file\(i).md")
                 try "# File \(i)".write(to: fileURL, atomically: true, encoding: .utf8)
 
-                let store = ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: TestFileWatcher(),
-                    settingsStore: settingsStore,
+                let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                    settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
+                )
+                let store = ReaderStore(
+                    rendering: ReaderRenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: ReaderFileDependencies(
+                        watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                    ),
+                    folderWatch: ReaderFolderWatchDependencies(
+                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                        systemNotifier: TestReaderSystemNotifier()
+                    ),
+                    settingsStore: settingsStore,
+                    securityScopeResolver: securityScopeResolver
                 )
                 store.testSetFileURL(fileURL)
                 store.testSetFileDisplayName(fileURL.lastPathComponent)

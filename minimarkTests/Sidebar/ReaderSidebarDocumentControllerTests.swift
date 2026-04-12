@@ -263,17 +263,25 @@ struct ReaderSidebarDocumentControllerTests {
             makeReaderStore: {
                 {
                     let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
-                    return ReaderStore(
-                        renderer: TestMarkdownRenderer(),
-                        differ: TestChangedRegionDiffer(),
-                        fileWatcher: TestFileWatcher(),
-                        settingsStore: settingsStore,
+                    let securityScopeResolver = SecurityScopeResolver(
                         securityScope: TestSecurityScopeAccess(),
-                        fileActions: TestReaderFileActions(),
-                        systemNotifier: TestReaderSystemNotifier(),
-                        folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                        settler: settler,
+                        settingsStore: settingsStore,
                         requestWatchedFolderReauthorization: { _ in nil }
+                    )
+                    return ReaderStore(
+                        rendering: ReaderRenderingDependencies(
+                            renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                        ),
+                        file: ReaderFileDependencies(
+                            watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                        ),
+                        folderWatch: ReaderFolderWatchDependencies(
+                            autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                            settler: settler,
+                            systemNotifier: TestReaderSystemNotifier()
+                        ),
+                        settingsStore: settingsStore,
+                        securityScopeResolver: securityScopeResolver
                     )
                 }()
             },
@@ -1255,17 +1263,25 @@ struct ReaderSidebarDocumentControllerTests {
             settingsStore: settingsStore,
             makeReaderStore: {
                 let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
-                return ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: TestFileWatcher(),
-                    settingsStore: settingsStore,
+                let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: settler,
+                    settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
+                )
+                return ReaderStore(
+                    rendering: ReaderRenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: ReaderFileDependencies(
+                        watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                    ),
+                    folderWatch: ReaderFolderWatchDependencies(
+                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: settler,
+                        systemNotifier: TestReaderSystemNotifier()
+                    ),
+                    settingsStore: settingsStore,
+                    securityScopeResolver: securityScopeResolver
                 )
             },
             makeFolderWatchController: {

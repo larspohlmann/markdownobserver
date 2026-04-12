@@ -102,7 +102,7 @@ struct ReaderStoreDiffBaselineTests {
         )
 
         // Clear settler (simulates expiry)
-        fixture.store.settler.clearSettling()
+        fixture.store.folderWatch.settler.clearSettling()
         fixture.differ.computeChangedRegionsCalls = []
 
         // External change after settler expired

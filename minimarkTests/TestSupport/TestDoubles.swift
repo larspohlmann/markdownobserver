@@ -827,18 +827,22 @@ struct ReaderStoreTestFixture {
             notificationsEnabled: notificationsEnabled,
             diffBaselineLookback: diffBaselineLookback
         )
+        let securityScopeResolver = SecurityScopeResolver(
+            securityScope: securityScope,
+            settingsStore: settings,
+            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+        )
         let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
         store = ReaderStore(
-            renderer: renderer,
-            differ: differ,
-            fileWatcher: watcher,
+            rendering: ReaderRenderingDependencies(renderer: renderer, differ: differ),
+            file: ReaderFileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
+            folderWatch: ReaderFolderWatchDependencies(
+                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                settler: settler,
+                systemNotifier: notifier
+            ),
             settingsStore: settings,
-            securityScope: securityScope,
-            fileActions: fileActions,
-            systemNotifier: notifier,
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-            settler: settler,
-            requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
+            securityScopeResolver: securityScopeResolver
         )
     }
 
@@ -891,17 +895,25 @@ struct ReaderSidebarControllerTestHarness {
                 let fileWatcher = TestFileWatcher()
                 createdFileWatchers.append(fileWatcher)
                 let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
-                let store = ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: fileWatcher,
-                    settingsStore: settingsStore,
+                let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: settler,
+                    settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
+                )
+                let store = ReaderStore(
+                    rendering: ReaderRenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: ReaderFileDependencies(
+                        watcher: fileWatcher, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                    ),
+                    folderWatch: ReaderFolderWatchDependencies(
+                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: settler,
+                        systemNotifier: TestReaderSystemNotifier()
+                    ),
+                    settingsStore: settingsStore,
+                    securityScopeResolver: securityScopeResolver
                 )
                 return store
             },

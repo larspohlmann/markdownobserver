@@ -165,17 +165,25 @@ struct EditFolderWatchExclusionsTests {
             makeReaderStore: {
                 let fw = TestFileWatcher()
                 createdFileWatchers.append(fw)
-                return ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: fw,
-                    settingsStore: settingsStore,
+                let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                    settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
+                )
+                return ReaderStore(
+                    rendering: ReaderRenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: ReaderFileDependencies(
+                        watcher: fw, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                    ),
+                    folderWatch: ReaderFolderWatchDependencies(
+                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                        systemNotifier: TestReaderSystemNotifier()
+                    ),
+                    settingsStore: settingsStore,
+                    securityScopeResolver: securityScopeResolver
                 )
             },
             makeFolderWatchController: {
