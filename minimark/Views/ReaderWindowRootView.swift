@@ -33,6 +33,7 @@ struct ReaderWindowRootView: View {
     @State var folderWatchWarningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
     @State private var isTitlebarEditingFavorites = false
     @State private var isEditingSubfolders = false
+    @State private var hasCompletedWindowPhase = false
     var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
     }
@@ -111,7 +112,39 @@ struct ReaderWindowRootView: View {
     }
 
     var body: some View {
-        commandNotificationAwareView(windowLifecycleAwareView(rootContent))
+        if hasCompletedWindowPhase {
+            commandNotificationAwareView(windowLifecycleAwareView(rootContent))
+        } else {
+            windowShell
+        }
+    }
+
+    private var windowShell: some View {
+        DocumentLoadingOverlay(
+            theme: ReaderTheme.theme(for: settingsStore.currentSettings.readerTheme),
+            headline: "Loading document\u{2026}",
+            subtitle: nil
+        )
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                FolderWatchToolbarButton(
+                    activeFolderWatch: nil,
+                    isInitialScanInProgress: false,
+                    didInitialScanFail: false,
+                    favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                    recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+                    onActivate: {},
+                    onStartFavoriteWatch: { _ in },
+                    onStartRecentFolderWatch: { _ in },
+                    onEditFavoriteWatchedFolders: {},
+                    onClearRecentWatchedFolders: {},
+                    compact: true
+                )
+                .padding(.trailing, 8)
+            }
+        }
+        .navigationTitle(ReaderWindowTitleFormatter.appName)
+        .task { hasCompletedWindowPhase = true }
     }
 
     private func windowLifecycleAwareView<Content: View>(_ view: Content) -> some View {
