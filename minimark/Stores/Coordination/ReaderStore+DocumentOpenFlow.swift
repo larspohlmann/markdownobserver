@@ -11,6 +11,7 @@ extension ReaderStore {
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
+        activateDeferredSetupIfNeeded()
         do {
             let accessibleURL = url
             let normalizedURL = Self.normalizedFileURL(accessibleURL)

@@ -109,6 +109,7 @@ final class ReaderStore {
     private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
     private(set) var onFolderWatchStopped: (() -> Void)?
 
+    @ObservationIgnored private var hasActivatedDeferredSetup = false
     @ObservationIgnored private var pendingDraftPreviewRenderTask: Task<Void, Never>?
     @ObservationIgnored private var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
@@ -140,6 +141,11 @@ final class ReaderStore {
             minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         )
         self.requestWatchedFolderReauthorization = requestWatchedFolderReauthorization
+    }
+
+    func activateDeferredSetupIfNeeded() {
+        guard !hasActivatedDeferredSetup else { return }
+        hasActivatedDeferredSetup = true
 
         settingsCancellable = settingsStore.settingsPublisher
             .dropFirst()
