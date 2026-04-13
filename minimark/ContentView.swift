@@ -738,11 +738,10 @@ struct ContentView: View {
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
                 onFatalCrash: {
-                    handleFatalCrash(for: surface)
+                    Self.logger.error("preview web surface hit fatal crash and fell back to native text")
+                    previewMode = .nativeFallback
                 },
-                onPostLoadStatus: { status in
-                    handlePostLoadStatus(status, for: surface)
-                },
+                onPostLoadStatus: { _ in },
                 onScrollSyncObservation: { observation in
                     handleScrollSyncObservation(observation, from: surface)
                 },
@@ -782,10 +781,21 @@ struct ContentView: View {
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
                 onFatalCrash: {
-                    handleFatalCrash(for: surface)
+                    Self.logger.error("source web surface hit fatal crash and fell back to plain text")
+                    sourceMode = .plainTextFallback
                 },
                 onPostLoadStatus: { status in
-                    handlePostLoadStatus(status, for: surface)
+                    guard let status else {
+                        Self.logger.error("source post-load status probe returned no status")
+                        sourceMode = .plainTextFallback
+                        return
+                    }
+                    guard status == "ready" else {
+                        Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
+                        sourceMode = .plainTextFallback
+                        return
+                    }
+                    Self.logger.debug("source bootstrap completed successfully")
                 },
                 onScrollSyncObservation: { observation in
                     handleScrollSyncObservation(observation, from: surface)
@@ -818,37 +828,6 @@ struct ContentView: View {
         return "\(path)|source"
     }
 
-
-    private func handleFatalCrash(for surface: DocumentSurfaceRole) {
-        switch surface {
-        case .preview:
-            Self.logger.error("preview web surface hit fatal crash and fell back to native text")
-            previewMode = .nativeFallback
-        case .source:
-            Self.logger.error("source web surface hit fatal crash and fell back to plain text")
-            sourceMode = .plainTextFallback
-        }
-    }
-
-    private func handlePostLoadStatus(_ status: String?, for surface: DocumentSurfaceRole) {
-        guard surface == .source else {
-            return
-        }
-
-        guard let status else {
-            Self.logger.error("source post-load status probe returned no status")
-            sourceMode = .plainTextFallback
-            return
-        }
-
-        guard status == "ready" else {
-            Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
-            sourceMode = .plainTextFallback
-            return
-        }
-
-        Self.logger.debug("source bootstrap completed successfully")
-    }
 
     private func refreshSourceHTML() {
         sourceHTMLCache.refreshIfNeeded(
