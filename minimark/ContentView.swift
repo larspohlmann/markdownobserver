@@ -19,49 +19,6 @@ struct ContentView: View {
         case plainTextFallback
     }
 
-    enum DocumentSurfaceRole: Hashable {
-        case preview
-        case source
-
-        var counterpart: DocumentSurfaceRole {
-            switch self {
-            case .preview:
-                return .source
-            case .source:
-                return .preview
-            }
-        }
-    }
-
-    fileprivate struct DocumentSurfaceConfiguration {
-        let role: DocumentSurfaceRole
-        let usesWebSurface: Bool
-        let htmlDocument: String
-        let documentIdentity: String?
-        let accessibilityIdentifier: String
-        let accessibilityValue: String
-        let reloadToken: Int
-        let diagnosticName: String
-        let postLoadStatusScript: String?
-        let changedRegionNavigationRequest: ChangedRegionNavigationRequest?
-        let scrollSyncRequest: ScrollSyncRequest?
-        let tocScrollRequest: TOCScrollRequest?
-        let supportsInPlaceContentUpdates: Bool
-        let overlayTopInset: CGFloat
-        let reloadAnchorProgress: Double?
-        let minimumWidth: CGFloat?
-        let onFatalCrash: () -> Void
-        let onPostLoadStatus: (String?) -> Void
-        let onScrollSyncObservation: (ScrollSyncObservation) -> Void
-        let onSourceEdit: (String) -> Void
-        let onTOCHeadingsExtracted: ([TOCHeading]) -> Void
-        let onDroppedFileURLs: ([URL]) -> Void
-        let onDropTargetedChange: (DropTargetingUpdate) -> Void
-        let canAcceptDroppedFileURLs: ([URL]) -> Bool
-        let onChangedRegionNavigationResult: (Int, Int) -> Void
-        let onRetryFallback: () -> Void
-    }
-
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ContentView"
@@ -737,29 +694,30 @@ struct ContentView: View {
                 overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: previewReloadAnchorProgress,
                 minimumWidth: minimumSurfaceWidth,
-                onFatalCrash: {
-                    Self.logger.error("preview web surface hit fatal crash and fell back to native text")
-                    previewMode = .nativeFallback
-                },
-                onPostLoadStatus: { _ in },
-                onScrollSyncObservation: { observation in
-                    handleScrollSyncObservation(observation, from: surface)
-                },
-                onSourceEdit: { _ in },
-                onTOCHeadingsExtracted: { headings in
-                    readerStore.updateTOCHeadings(headings)
-                },
-                onDroppedFileURLs: handleDroppedFileURLs,
-                onDropTargetedChange: { update in
-                    dropTargeting.update(for: surface, update: update)
-                },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
-                onChangedRegionNavigationResult: { index, total in
-                    changeNavigation.handleNavigationResult(index: index, total: total)
-                },
-                onRetryFallback: {
-                    previewReloadToken += 1
-                    previewMode = .web
+                onAction: { action in
+                    switch action {
+                    case .fatalCrash:
+                        Self.logger.error("preview web surface hit fatal crash and fell back to native text")
+                        previewMode = .nativeFallback
+                    case .postLoadStatus:
+                        break
+                    case .scrollSyncObservation(let observation):
+                        handleScrollSyncObservation(observation, from: .preview)
+                    case .sourceEdit:
+                        break
+                    case .tocHeadingsExtracted(let headings):
+                        readerStore.updateTOCHeadings(headings)
+                    case .droppedFileURLs(let urls):
+                        handleDroppedFileURLs(urls)
+                    case .dropTargetedChange(let update):
+                        dropTargeting.update(for: .preview, update: update)
+                    case .changedRegionNavigationResult(let index, let total):
+                        changeNavigation.handleNavigationResult(index: index, total: total)
+                    case .retryFallback:
+                        previewReloadToken += 1
+                        previewMode = .web
+                    }
                 }
             )
         case .source:
@@ -780,41 +738,40 @@ struct ContentView: View {
                 overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: nil,
                 minimumWidth: minimumSurfaceWidth,
-                onFatalCrash: {
-                    Self.logger.error("source web surface hit fatal crash and fell back to plain text")
-                    sourceMode = .plainTextFallback
-                },
-                onPostLoadStatus: { status in
-                    guard let status else {
-                        Self.logger.error("source post-load status probe returned no status")
-                        sourceMode = .plainTextFallback
-                        return
-                    }
-                    guard status == "ready" else {
-                        Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
-                        sourceMode = .plainTextFallback
-                        return
-                    }
-                    Self.logger.debug("source bootstrap completed successfully")
-                },
-                onScrollSyncObservation: { observation in
-                    handleScrollSyncObservation(observation, from: surface)
-                },
-                onSourceEdit: { markdown in
-                    readerStore.updateSourceDraft(markdown)
-                },
-                onTOCHeadingsExtracted: { headings in
-                    readerStore.updateTOCHeadings(headings)
-                },
-                onDroppedFileURLs: handleDroppedFileURLs,
-                onDropTargetedChange: { update in
-                    dropTargeting.update(for: surface, update: update)
-                },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
-                onChangedRegionNavigationResult: { _, _ in },
-                onRetryFallback: {
-                    sourceReloadToken += 1
-                    sourceMode = .web
+                onAction: { action in
+                    switch action {
+                    case .fatalCrash:
+                        Self.logger.error("source web surface hit fatal crash and fell back to plain text")
+                        sourceMode = .plainTextFallback
+                    case .postLoadStatus(let status):
+                        guard let status else {
+                            Self.logger.error("source post-load status probe returned no status")
+                            sourceMode = .plainTextFallback
+                            return
+                        }
+                        guard status == "ready" else {
+                            Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
+                            sourceMode = .plainTextFallback
+                            return
+                        }
+                        Self.logger.debug("source bootstrap completed successfully")
+                    case .scrollSyncObservation(let observation):
+                        handleScrollSyncObservation(observation, from: .source)
+                    case .sourceEdit(let markdown):
+                        readerStore.updateSourceDraft(markdown)
+                    case .tocHeadingsExtracted(let headings):
+                        readerStore.updateTOCHeadings(headings)
+                    case .droppedFileURLs(let urls):
+                        handleDroppedFileURLs(urls)
+                    case .dropTargetedChange(let update):
+                        dropTargeting.update(for: .source, update: update)
+                    case .changedRegionNavigationResult:
+                        break
+                    case .retryFallback:
+                        sourceReloadToken += 1
+                        sourceMode = .web
+                    }
                 }
             )
         }
@@ -875,7 +832,7 @@ struct ContentView: View {
 }
 
 private struct DocumentSurfaceHost: View {
-    let configuration: ContentView.DocumentSurfaceConfiguration
+    let configuration: DocumentSurfaceConfiguration
     let fallbackMarkdown: String
 
     var body: some View {
@@ -895,15 +852,15 @@ private struct DocumentSurfaceHost: View {
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
                     overlayTopInset: configuration.overlayTopInset,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
-                    onFatalCrash: configuration.onFatalCrash,
-                    onPostLoadStatus: configuration.onPostLoadStatus,
-                    onScrollSyncObservation: configuration.onScrollSyncObservation,
-                    onSourceEdit: configuration.onSourceEdit,
-                    onTOCHeadingsExtracted: configuration.onTOCHeadingsExtracted,
-                    onDroppedFileURLs: configuration.onDroppedFileURLs,
-                    onDropTargetedChange: configuration.onDropTargetedChange,
+                    onFatalCrash: { configuration.onAction(.fatalCrash) },
+                    onPostLoadStatus: { status in configuration.onAction(.postLoadStatus(status)) },
+                    onScrollSyncObservation: { obs in configuration.onAction(.scrollSyncObservation(obs)) },
+                    onSourceEdit: { md in configuration.onAction(.sourceEdit(md)) },
+                    onTOCHeadingsExtracted: { headings in configuration.onAction(.tocHeadingsExtracted(headings)) },
+                    onDroppedFileURLs: { urls in configuration.onAction(.droppedFileURLs(urls)) },
+                    onDropTargetedChange: { update in configuration.onAction(.dropTargetedChange(update)) },
                     canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs,
-                    onChangedRegionNavigationResult: configuration.onChangedRegionNavigationResult
+                    onChangedRegionNavigationResult: { index, total in configuration.onAction(.changedRegionNavigationResult(index: index, total: total)) }
                 )
             } else {
                 fallbackSurface
@@ -919,12 +876,12 @@ private struct DocumentSurfaceHost: View {
         case .preview:
             NativeMarkdownFallbackView(
                 markdown: fallbackMarkdown,
-                onRetryPreview: configuration.onRetryFallback
+                onRetryPreview: { configuration.onAction(.retryFallback) }
             )
         case .source:
             MarkdownSourceFallbackView(
                 markdown: fallbackMarkdown,
-                onRetryHighlighting: configuration.onRetryFallback
+                onRetryHighlighting: { configuration.onAction(.retryFallback) }
             )
         }
     }
@@ -1015,11 +972,11 @@ private final class SplitScrollCoordinator: ObservableObject {
     @Published private var sourceRequest: ScrollSyncRequest?
 
     private var nextRequestID = 0
-    private var lastRequestedProgressByRole: [ContentView.DocumentSurfaceRole: Double] = [:]
-    private var lastObservedProgressByRole: [ContentView.DocumentSurfaceRole: Double] = [:]
+    private var lastRequestedProgressByRole: [DocumentSurfaceRole: Double] = [:]
+    private var lastObservedProgressByRole: [DocumentSurfaceRole: Double] = [:]
     private var previewBounceBackSuppressedUntil: Date?
 
-    func request(for role: ContentView.DocumentSurfaceRole) -> ScrollSyncRequest? {
+    func request(for role: DocumentSurfaceRole) -> ScrollSyncRequest? {
         switch role {
         case .preview:
             return previewRequest
@@ -1038,7 +995,7 @@ private final class SplitScrollCoordinator: ObservableObject {
 
     func handleObservation(
         _ observation: ScrollSyncObservation,
-        from role: ContentView.DocumentSurfaceRole,
+        from role: DocumentSurfaceRole,
         shouldSync: Bool
     ) {
         lastObservedProgressByRole[role] = observation.progress
@@ -1072,7 +1029,7 @@ private final class SplitScrollCoordinator: ObservableObject {
         }
     }
 
-    func latestObservedProgress(for role: ContentView.DocumentSurfaceRole) -> Double? {
+    func latestObservedProgress(for role: DocumentSurfaceRole) -> Double? {
         lastObservedProgressByRole[role]
     }
 

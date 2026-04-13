@@ -1,13 +1,13 @@
 import Foundation
 
 struct DropTargetingCoordinator {
-    private var dragTargetedSurfaces: Set<ContentView.DocumentSurfaceRole> = []
-    private var blockedFolderDropTargetedSurfaces: Set<ContentView.DocumentSurfaceRole> = []
+    private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
+    private var blockedFolderDropTargetedSurfaces: Set<DocumentSurfaceRole> = []
 
     var isDragTargeted: Bool { !dragTargetedSurfaces.isEmpty }
     var isBlockedFolderDropTargeted: Bool { !blockedFolderDropTargetedSurfaces.isEmpty }
 
-    mutating func update(for surface: ContentView.DocumentSurfaceRole, update: DropTargetingUpdate) {
+    mutating func update(for surface: DocumentSurfaceRole, update: DropTargetingUpdate) {
         if update.isTargeted {
             dragTargetedSurfaces.insert(surface)
         } else {
@@ -22,7 +22,7 @@ struct DropTargetingCoordinator {
         }
     }
 
-    mutating func clear(for surface: ContentView.DocumentSurfaceRole) {
+    mutating func clear(for surface: DocumentSurfaceRole) {
         dragTargetedSurfaces.remove(surface)
         blockedFolderDropTargetedSurfaces.remove(surface)
     }
