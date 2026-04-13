@@ -508,15 +508,8 @@ struct DocumentSurfaceHost: View {
                     supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
                     overlayTopInset: configuration.overlayTopInset,
                     reloadAnchorProgress: configuration.reloadAnchorProgress,
-                    onFatalCrash: { configuration.onAction(.fatalCrash) },
-                    onPostLoadStatus: { status in configuration.onAction(.postLoadStatus(status)) },
-                    onScrollSyncObservation: { obs in configuration.onAction(.scrollSyncObservation(obs)) },
-                    onSourceEdit: { md in configuration.onAction(.sourceEdit(md)) },
-                    onTOCHeadingsExtracted: { headings in configuration.onAction(.tocHeadingsExtracted(headings)) },
-                    onDroppedFileURLs: { urls in configuration.onAction(.droppedFileURLs(urls)) },
-                    onDropTargetedChange: { update in configuration.onAction(.dropTargetedChange(update)) },
                     canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs,
-                    onChangedRegionNavigationResult: { index, total in configuration.onAction(.changedRegionNavigationResult(index: index, total: total)) }
+                    onAction: configuration.onAction
                 )
             } else {
                 fallbackSurface
