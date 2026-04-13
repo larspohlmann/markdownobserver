@@ -24,15 +24,8 @@ struct MarkdownWebView: NSViewRepresentable {
     var supportsInPlaceContentUpdates: Bool = false
     var overlayTopInset: CGFloat = ReaderOverlayInsetCalculator.defaultScrollTargetTopInset
     var reloadAnchorProgress: Double?
-    var onFatalCrash: () -> Void = {}
-    var onPostLoadStatus: (String?) -> Void = { _ in }
-        var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
-    var onSourceEdit: (String) -> Void = { _ in }
-    var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
-    var onDroppedFileURLs: ([URL]) -> Void = { _ in }
-        var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
-        var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
-    var onChangedRegionNavigationResult: (Int, Int) -> Void = { _, _ in }
+    var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
+    var onAction: (DocumentSurfaceAction) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -59,9 +52,8 @@ struct MarkdownWebView: NSViewRepresentable {
         #endif
         let containerView = MarkdownWebContainerView(webView: webView)
         context.coordinator.attach(webView, containerView: containerView)
-        context.coordinator.onDroppedFileURLs = onDroppedFileURLs
-        context.coordinator.onDropTargetedChange = onDropTargetedChange
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
+        context.coordinator.onAction = onAction
         webView.dropDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
@@ -77,15 +69,8 @@ struct MarkdownWebView: NSViewRepresentable {
         let webView = containerView.webView
         context.coordinator.diagnosticName = diagnosticName
         context.coordinator.postLoadStatusScript = postLoadStatusScript
-        context.coordinator.onFatalCrash = onFatalCrash
-        context.coordinator.onPostLoadStatus = onPostLoadStatus
-        context.coordinator.onScrollSyncObservation = onScrollSyncObservation
-        context.coordinator.onSourceEdit = onSourceEdit
-        context.coordinator.onTOCHeadingsExtracted = onTOCHeadingsExtracted
-        context.coordinator.onDroppedFileURLs = onDroppedFileURLs
-        context.coordinator.onDropTargetedChange = onDropTargetedChange
         context.coordinator.canAcceptDroppedFileURLs = canAcceptDroppedFileURLs
-        context.coordinator.onChangedRegionNavigationResult = onChangedRegionNavigationResult
+        context.coordinator.onAction = onAction
         context.coordinator.reloadAnchorProgress = reloadAnchorProgress
         context.coordinator.supportsInPlaceContentUpdates = supportsInPlaceContentUpdates
         context.coordinator.overlayTopInset = max(0, overlayTopInset)
@@ -141,15 +126,8 @@ struct MarkdownWebView: NSViewRepresentable {
         private var lastTOCScrollRequestID: Int?
         private var pendingChangedRegionNavigationRequest: ChangedRegionNavigationRequest?
         private var pendingTOCScrollRequest: TOCScrollRequest?
-        var onFatalCrash: () -> Void = {}
-        var onPostLoadStatus: (String?) -> Void = { _ in }
-        var onScrollSyncObservation: (ScrollSyncObservation) -> Void = { _ in }
-        var onSourceEdit: (String) -> Void = { _ in }
-        var onTOCHeadingsExtracted: ([TOCHeading]) -> Void = { _ in }
-        var onDroppedFileURLs: ([URL]) -> Void = { _ in }
-        var onDropTargetedChange: (DropTargetingUpdate) -> Void = { _ in }
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
-        var onChangedRegionNavigationResult: (Int, Int) -> Void = { _, _ in }
+        var onAction: (DocumentSurfaceAction) -> Void = { _ in }
         var supportsInPlaceContentUpdates = false
         var overlayTopInset: CGFloat = ReaderOverlayInsetCalculator.defaultScrollTargetTopInset
         var reloadAnchorProgress: Double?
@@ -349,7 +327,7 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         func dropAwareWebViewDidChangeTargeting(_ update: DropTargetingUpdate) {
-            onDropTargetedChange(update)
+            onAction(.dropTargetedChange(update))
         }
 
         func dropAwareWebViewCanAcceptDrop(_ fileURLs: [URL]) -> Bool {
@@ -357,7 +335,7 @@ struct MarkdownWebView: NSViewRepresentable {
         }
 
         func dropAwareWebViewDidReceiveDrop(_ fileURLs: [URL]) {
-            onDroppedFileURLs(fileURLs)
+            onAction(.droppedFileURLs(fileURLs))
         }
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
@@ -377,7 +355,7 @@ struct MarkdownWebView: NSViewRepresentable {
                 }
 
             case .lockedOut:
-                onFatalCrash()
+                onAction(.fatalCrash)
                 loadFallbackMessage(
                     "Web content process stopped repeatedly while rendering markdown. " +
                         "Try reopening the file."
@@ -393,7 +371,7 @@ struct MarkdownWebView: NSViewRepresentable {
             scrollSync.cancelPendingRestore()
             crashRecovery.lock()
             logError("navigation failed: \(error.localizedDescription)")
-            onFatalCrash()
+            onAction(.fatalCrash)
             loadFallbackMessage("Failed to render markdown: \(error.localizedDescription)")
         }
 
@@ -405,7 +383,7 @@ struct MarkdownWebView: NSViewRepresentable {
             scrollSync.cancelPendingRestore()
             crashRecovery.lock()
             logError("provisional navigation failed: \(error.localizedDescription)")
-            onFatalCrash()
+            onAction(.fatalCrash)
             loadFallbackMessage("Failed to load markdown preview: \(error.localizedDescription)")
         }
 
@@ -585,7 +563,7 @@ struct MarkdownWebView: NSViewRepresentable {
                    let count = (dict["count"] as? NSNumber)?.intValue {
                     let clampedCount = max(0, count)
                     let clampedIndex = clampedCount > 0 ? min(max(0, index), clampedCount - 1) : 0
-                    self.onChangedRegionNavigationResult(clampedIndex, clampedCount)
+                    self.onAction(.changedRegionNavigationResult(index: clampedIndex))
                 }
             }
         }
@@ -692,7 +670,7 @@ struct MarkdownWebView: NSViewRepresentable {
             if message.name == MarkdownWebView.sourceEditMessageName,
                let payload = message.body as? [String: Any],
                let markdown = payload["markdown"] as? String {
-                onSourceEdit(markdown)
+                onAction(.sourceEdit(markdown))
                 return
             }
 
@@ -712,7 +690,7 @@ struct MarkdownWebView: NSViewRepresentable {
             if message.name == MarkdownWebView.tocMessageName,
                let payload = message.body as? [[String: Any]] {
                 let headings = TOCHeading.fromJavaScriptPayload(payload)
-                onTOCHeadingsExtracted(headings)
+                onAction(.tocHeadingsExtracted(headings))
                 return
             }
 
@@ -732,7 +710,7 @@ struct MarkdownWebView: NSViewRepresentable {
                 progress: progress,
                 suppressionToken: suppressionToken
             ) {
-                onScrollSyncObservation(observation)
+                onAction(.scrollSyncObservation(observation))
             }
         }
 
@@ -783,7 +761,7 @@ struct MarkdownWebView: NSViewRepresentable {
 
                 if let error {
                     self.logDebug("post-load status probe failed: \(error.localizedDescription)")
-                    self.onPostLoadStatus(nil)
+                    self.onAction(.postLoadStatus(nil))
                     return
                 }
 
@@ -793,7 +771,7 @@ struct MarkdownWebView: NSViewRepresentable {
                 } else {
                     self.logDebug("post-load status probe returned no string status")
                 }
-                self.onPostLoadStatus(status)
+                self.onAction(.postLoadStatus(status))
             }
         }
 
