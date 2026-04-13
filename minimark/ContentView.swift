@@ -83,9 +83,7 @@ struct ContentView: View {
     @State private var previewReloadToken = 0
     @State private var sourceMode: SourceMode = .web
     @State private var sourceReloadToken = 0
-    @State private var changedRegionNavigationRequestID = 0
-    @State private var lastChangedRegionNavigationDirection: ReaderChangedRegionNavigationDirection?
-    @State private var currentChangedRegionIndex: Int?
+    @State private var changeNavigation = ChangedRegionNavigationCoordinator()
     @State private var sourceHTMLCache = SourceHTMLDocumentCache()
 
     var body: some View {
@@ -127,7 +125,7 @@ struct ContentView: View {
                 handleFileIdentityChange()
             }
             .onChange(of: readerStore.changedRegions) { _, _ in
-                currentChangedRegionIndex = nil
+                changeNavigation.resetForNewRegions()
             }
             .onChange(of: previewMode) { _, newValue in
                 handlePreviewModeChange(newValue)
@@ -323,7 +321,10 @@ struct ContentView: View {
             \.readerChangedRegionNavigation,
             ReaderChangedRegionNavigationAction(
                 canNavigate: canNavigateChangedRegions,
-                navigate: requestChangedRegionNavigation
+                navigate: { direction in
+                    changeNavigation.requestNavigation(direction)
+                    splitScrollCoordinator.suppressPreviewBounceBack()
+                }
             )
         )
         .focusedValue(
@@ -349,7 +350,7 @@ struct ContentView: View {
     }
 
     private func handleFileIdentityChange() {
-        currentChangedRegionIndex = nil
+        changeNavigation.reset()
         if previewMode == .nativeFallback {
             previewReloadToken += 1
             previewMode = .web
@@ -552,9 +553,12 @@ struct ContentView: View {
             .overlay(alignment: .topLeading) {
                 if canNavigateChangedRegions {
                     ChangeNavigationPill(
-                        currentIndex: currentChangedRegionIndex,
+                        currentIndex: changeNavigation.currentIndex,
                         totalCount: readerStore.changedRegions.count,
-                        onNavigate: requestChangedRegionNavigation
+                        onNavigate: { direction in
+                            changeNavigation.requestNavigation(direction)
+                            splitScrollCoordinator.suppressPreviewBounceBack()
+                        }
                     )
                     .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
                     .padding(.top, overlayInsets.leadingOverlayTopPadding)
@@ -735,7 +739,7 @@ struct ContentView: View {
                 reloadToken: previewReloadToken,
                 diagnosticName: "reader-preview",
                 postLoadStatusScript: nil,
-                changedRegionNavigationRequest: previewChangedRegionNavigationRequest,
+                changedRegionNavigationRequest: canNavigateChangedRegions ? changeNavigation.currentRequest : nil,
                 scrollSyncRequest: splitScrollRequest(for: surface),
                 tocScrollRequest: readerStore.tocScrollRequest,
                 supportsInPlaceContentUpdates: true,
@@ -760,8 +764,8 @@ struct ContentView: View {
                     updateDropTargetState(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
-                onChangedRegionNavigationResult: { index, _ in
-                    currentChangedRegionIndex = index
+                onChangedRegionNavigationResult: { index, total in
+                    changeNavigation.handleNavigationResult(index: index, total: total)
                 },
                 onRetryFallback: {
                     previewReloadToken += 1
@@ -823,27 +827,6 @@ struct ContentView: View {
         return "\(path)|source"
     }
 
-    private var previewChangedRegionNavigationRequest: ChangedRegionNavigationRequest? {
-        guard canNavigateChangedRegions,
-              let lastChangedRegionNavigationDirection else {
-            return nil
-        }
-
-        return ChangedRegionNavigationRequest(
-            id: changedRegionNavigationRequestID,
-            direction: lastChangedRegionNavigationDirection
-        )
-    }
-
-    private func requestChangedRegionNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
-        guard canNavigateChangedRegions else {
-            return
-        }
-
-        lastChangedRegionNavigationDirection = direction
-        changedRegionNavigationRequestID += 1
-        splitScrollCoordinator.suppressPreviewBounceBack()
-    }
 
     private func handleFatalCrash(for surface: DocumentSurfaceRole) {
         switch surface {
