@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentViewFocusedValues: ViewModifier {
-    var readerStore: ReaderStore
+    let readerStore: ReaderStore
     let folderWatchState: ContentViewFolderWatchState
     let callbacks: ContentViewCallbacks
     let canNavigateChangedRegions: Bool
@@ -10,6 +10,16 @@ struct ContentViewFocusedValues: ViewModifier {
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
+
+    private func openOrAppendDocument(_ fileURL: URL) {
+        let strategy: FileOpenRequest.SlotStrategy =
+            readerStore.fileURL == nil ? .replaceSelectedSlot : .alwaysAppend
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: [fileURL],
+            origin: .manual,
+            slotStrategy: strategy
+        ))
+    }
 
     func body(content: Content) -> some View {
         content
@@ -31,39 +41,11 @@ struct ContentViewFocusedValues: ViewModifier {
             )
             .focusedValue(
                 \.readerOpenDocument,
-                ReaderOpenDocumentAction { fileURL in
-                    if readerStore.fileURL == nil {
-                        callbacks.onRequestFileOpen(FileOpenRequest(
-                            fileURLs: [fileURL],
-                            origin: .manual,
-                            slotStrategy: .replaceSelectedSlot
-                        ))
-                    } else {
-                        callbacks.onRequestFileOpen(FileOpenRequest(
-                            fileURLs: [fileURL],
-                            origin: .manual,
-                            slotStrategy: .alwaysAppend
-                        ))
-                    }
-                }
+                ReaderOpenDocumentAction { fileURL in openOrAppendDocument(fileURL) }
             )
             .focusedValue(
                 \.readerOpenAdditionalDocument,
-                ReaderOpenAdditionalDocumentAction { fileURL in
-                    if readerStore.fileURL == nil {
-                        callbacks.onRequestFileOpen(FileOpenRequest(
-                            fileURLs: [fileURL],
-                            origin: .manual,
-                            slotStrategy: .replaceSelectedSlot
-                        ))
-                    } else {
-                        callbacks.onRequestFileOpen(FileOpenRequest(
-                            fileURLs: [fileURL],
-                            origin: .manual,
-                            slotStrategy: .alwaysAppend
-                        ))
-                    }
-                }
+                ReaderOpenAdditionalDocumentAction { fileURL in openOrAppendDocument(fileURL) }
             )
             .focusedValue(
                 \.readerWatchFolder,

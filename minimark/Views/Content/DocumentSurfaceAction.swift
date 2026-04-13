@@ -8,7 +8,7 @@ enum DocumentSurfaceAction {
     case tocHeadingsExtracted([TOCHeading])
     case droppedFileURLs([URL])
     case dropTargetedChange(DropTargetingUpdate)
-    case changedRegionNavigationResult(index: Int, total: Int)
+    case changedRegionNavigationResult(index: Int)
     case retryFallback
 }
 

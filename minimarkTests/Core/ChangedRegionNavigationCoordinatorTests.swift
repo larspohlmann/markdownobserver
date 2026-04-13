@@ -30,14 +30,14 @@ struct ChangedRegionNavigationCoordinatorTests {
     @Test func handleResultUpdatesCurrentIndex() {
         var coordinator = ChangedRegionNavigationCoordinator()
         coordinator.requestNavigation(.next)
-        coordinator.handleNavigationResult(index: 2, total: 5)
+        coordinator.handleNavigationResult(index: 2)
         #expect(coordinator.currentIndex == 2)
     }
 
     @Test func resetOnRegionsChangeClearsIndex() {
         var coordinator = ChangedRegionNavigationCoordinator()
         coordinator.requestNavigation(.next)
-        coordinator.handleNavigationResult(index: 1, total: 3)
+        coordinator.handleNavigationResult(index: 1)
         coordinator.resetForNewRegions()
         #expect(coordinator.currentIndex == nil)
     }
@@ -45,7 +45,7 @@ struct ChangedRegionNavigationCoordinatorTests {
     @Test func resetClearsAllState() {
         var coordinator = ChangedRegionNavigationCoordinator()
         coordinator.requestNavigation(.next)
-        coordinator.handleNavigationResult(index: 0, total: 3)
+        coordinator.handleNavigationResult(index: 0)
         coordinator.reset()
         #expect(coordinator.currentIndex == nil)
         #expect(coordinator.currentRequest == nil)

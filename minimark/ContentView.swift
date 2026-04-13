@@ -483,7 +483,7 @@ struct ContentView: View {
     }
 
     private var isUITestModeEnabled: Bool {
-        ProcessInfo.processInfo.arguments.contains("-minimark-ui-test")
+        ReaderUITestLaunchConfiguration.current.isUITestModeEnabled
     }
 }
 

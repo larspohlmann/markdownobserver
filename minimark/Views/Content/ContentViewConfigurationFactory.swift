@@ -37,27 +37,18 @@ extension ContentView {
                 minimumWidth: minimumSurfaceWidth,
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onAction: { action in
+                    if handleSharedAction(action, for: .preview) { return }
                     switch action {
                     case .fatalCrash:
                         Self.logger.error("preview web surface hit fatal crash and fell back to native text")
                         previewMode = .nativeFallback
-                    case .postLoadStatus:
-                        break
-                    case .scrollSyncObservation(let observation):
-                        handleScrollSyncObservation(observation, from: .preview)
-                    case .sourceEdit:
-                        break
-                    case .tocHeadingsExtracted(let headings):
-                        readerStore.updateTOCHeadings(headings)
-                    case .droppedFileURLs(let urls):
-                        handleDroppedFileURLs(urls)
-                    case .dropTargetedChange(let update):
-                        dropTargeting.update(for: .preview, update: update)
-                    case .changedRegionNavigationResult(let index, let total):
-                        changeNavigation.handleNavigationResult(index: index, total: total)
+                    case .changedRegionNavigationResult(let index):
+                        changeNavigation.handleNavigationResult(index: index)
                     case .retryFallback:
                         previewReloadToken += 1
                         previewMode = .web
+                    default:
+                        break
                     }
                 }
             )
@@ -81,6 +72,7 @@ extension ContentView {
                 minimumWidth: minimumSurfaceWidth,
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onAction: { action in
+                    if handleSharedAction(action, for: .source) { return }
                     switch action {
                     case .fatalCrash:
                         Self.logger.error("source web surface hit fatal crash and fell back to plain text")
@@ -97,21 +89,13 @@ extension ContentView {
                             return
                         }
                         Self.logger.debug("source bootstrap completed successfully")
-                    case .scrollSyncObservation(let observation):
-                        handleScrollSyncObservation(observation, from: .source)
                     case .sourceEdit(let markdown):
                         readerStore.updateSourceDraft(markdown)
-                    case .tocHeadingsExtracted(let headings):
-                        readerStore.updateTOCHeadings(headings)
-                    case .droppedFileURLs(let urls):
-                        handleDroppedFileURLs(urls)
-                    case .dropTargetedChange(let update):
-                        dropTargeting.update(for: .source, update: update)
-                    case .changedRegionNavigationResult:
-                        break
                     case .retryFallback:
                         sourceReloadToken += 1
                         sourceMode = .web
+                    default:
+                        break
                     }
                 }
             )
@@ -134,6 +118,29 @@ extension ContentView {
             settings: readerStore.currentSettings,
             isEditable: readerStore.isSourceEditing
         )
+    }
+
+    // MARK: - Shared action handling
+
+    /// Handles action cases common to both preview and source surfaces.
+    /// Returns `true` if the action was handled.
+    func handleSharedAction(_ action: DocumentSurfaceAction, for surface: DocumentSurfaceRole) -> Bool {
+        switch action {
+        case .scrollSyncObservation(let observation):
+            handleScrollSyncObservation(observation, from: surface)
+            return true
+        case .tocHeadingsExtracted(let headings):
+            readerStore.updateTOCHeadings(headings)
+            return true
+        case .droppedFileURLs(let urls):
+            handleDroppedFileURLs(urls)
+            return true
+        case .dropTargetedChange(let update):
+            dropTargeting.update(for: surface, update: update)
+            return true
+        default:
+            return false
+        }
     }
 
     // MARK: - File drop and pick handlers

@@ -15,7 +15,7 @@ struct ChangedRegionNavigationCoordinator {
         requestID += 1
     }
 
-    mutating func handleNavigationResult(index: Int, total: Int) {
+    mutating func handleNavigationResult(index: Int) {
         currentIndex = index
     }
 

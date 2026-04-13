@@ -563,7 +563,7 @@ struct MarkdownWebView: NSViewRepresentable {
                    let count = (dict["count"] as? NSNumber)?.intValue {
                     let clampedCount = max(0, count)
                     let clampedIndex = clampedCount > 0 ? min(max(0, index), clampedCount - 1) : 0
-                    self.onAction(.changedRegionNavigationResult(index: clampedIndex, total: clampedCount))
+                    self.onAction(.changedRegionNavigationResult(index: clampedIndex))
                 }
             }
         }
