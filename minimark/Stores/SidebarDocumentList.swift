@@ -38,9 +38,10 @@ final class SidebarDocumentList {
     func updateNormalizedURL(for documentID: UUID, to url: URL?) {
         guard let index = documents.firstIndex(where: { $0.id == documentID }) else { return }
         unindexDocument(documents[index])
-        documents[index].normalizedFileURL = url
-        if let url {
-            documentsByNormalizedURL[url] = documentID
+        let normalized = url.map(ReaderFileRouting.normalizedFileURL)
+        documents[index].normalizedFileURL = normalized
+        if let normalized {
+            documentsByNormalizedURL[normalized] = documentID
         }
     }
 
@@ -64,20 +65,20 @@ final class SidebarDocumentList {
         documentsByNormalizedURL = [:]
         for document in documents {
             if let url = document.normalizedFileURL {
-                documentsByNormalizedURL[url] = document.id
+                documentsByNormalizedURL[ReaderFileRouting.normalizedFileURL(url)] = document.id
             }
         }
     }
 
     private func indexDocument(_ document: Document) {
         if let url = document.normalizedFileURL {
-            documentsByNormalizedURL[url] = document.id
+            documentsByNormalizedURL[ReaderFileRouting.normalizedFileURL(url)] = document.id
         }
     }
 
     private func unindexDocument(_ document: Document) {
         if let url = document.normalizedFileURL {
-            documentsByNormalizedURL.removeValue(forKey: url)
+            documentsByNormalizedURL.removeValue(forKey: ReaderFileRouting.normalizedFileURL(url))
         }
     }
 }

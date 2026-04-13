@@ -16,8 +16,8 @@ final class ReaderSidebarDocumentController {
 
     // MARK: - Extracted components
 
-    let documentList: SidebarDocumentList
-    let rowStateComputer = SidebarRowStateComputer()
+    @ObservationIgnored private let documentList: SidebarDocumentList
+    @ObservationIgnored private let rowStateComputer = SidebarRowStateComputer()
     @ObservationIgnored private let observationManager = SidebarObservationManager()
 
     // MARK: - Selection state
