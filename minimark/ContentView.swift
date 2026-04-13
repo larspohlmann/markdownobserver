@@ -43,7 +43,20 @@ struct ContentView: View {
     @State private var sourceHTMLCache = SourceHTMLDocumentCache()
 
     var body: some View {
-        interactionAwareView(baseBody)
+        baseBody.modifier(ContentViewFocusedValues(
+            readerStore: readerStore,
+            folderWatchState: folderWatchState,
+            callbacks: callbacks,
+            canNavigateChangedRegions: canNavigateChangedRegions,
+            onNavigateChangedRegion: { direction in
+                changeNavigation.requestNavigation(direction)
+                splitScrollCoordinator.suppressPreviewBounceBack()
+            },
+            isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
+            pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
+            pendingFolderWatchScope: $pendingFolderWatchScope,
+            pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
+        ))
     }
 
     private var baseBody: some View {
@@ -164,147 +177,6 @@ struct ContentView: View {
         .contentShape(Rectangle())
     }
 
-    private func interactionAwareView<Content: View>(_ view: Content) -> some View {
-        view
-        .focusedValue(
-            \.readerOpenDocumentInCurrentWindow,
-            ReaderOpenDocumentInCurrentWindowAction { fileURL in
-                let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-                let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
-                if readerStore.hasUnsavedDraftChanges, currentURL != normalizedURL {
-                    readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
-                    return
-                }
-                callbacks.onRequestFileOpen(FileOpenRequest(
-                    fileURLs: [fileURL],
-                    origin: .manual,
-                    slotStrategy: .replaceSelectedSlot
-                ))
-            }
-        )
-        .focusedValue(
-            \.readerOpenDocument,
-            ReaderOpenDocumentAction { fileURL in
-                if readerStore.fileURL == nil {
-                    callbacks.onRequestFileOpen(FileOpenRequest(
-                        fileURLs: [fileURL],
-                        origin: .manual,
-                        slotStrategy: .replaceSelectedSlot
-                    ))
-                } else {
-                    callbacks.onRequestFileOpen(FileOpenRequest(
-                        fileURLs: [fileURL],
-                        origin: .manual,
-                        slotStrategy: .alwaysAppend
-                    ))
-                }
-            }
-        )
-        .focusedValue(
-            \.readerOpenAdditionalDocument,
-            ReaderOpenAdditionalDocumentAction { fileURL in
-                if readerStore.fileURL == nil {
-                    callbacks.onRequestFileOpen(FileOpenRequest(
-                        fileURLs: [fileURL],
-                        origin: .manual,
-                        slotStrategy: .replaceSelectedSlot
-                    ))
-                } else {
-                    callbacks.onRequestFileOpen(FileOpenRequest(
-                        fileURLs: [fileURL],
-                        origin: .manual,
-                        slotStrategy: .alwaysAppend
-                    ))
-                }
-            }
-        )
-        .focusedValue(
-            \.readerWatchFolder,
-            ReaderWatchFolderAction { folderURL in
-                callbacks.onRequestFolderWatch(folderURL)
-            }
-        )
-        .focusedValue(
-            \.readerStartRecentFolderWatch,
-            ReaderStartRecentFolderWatchAction { entry in
-                callbacks.onStartRecentFolderWatch(entry)
-            }
-        )
-        .focusedValue(
-            \.readerStopFolderWatch,
-            ReaderStopFolderWatchAction {
-                guard folderWatchState.canStopFolderWatch else {
-                    return
-                }
-                callbacks.onStopFolderWatch()
-            }
-        )
-        .focusedValue(
-            \.readerHasActiveFolderWatch,
-            folderWatchState.canStopFolderWatch
-        )
-        .focusedValue(
-            \.readerDocumentViewModeContext,
-            ReaderDocumentViewModeContext(
-                currentMode: readerStore.documentViewMode,
-                canSetMode: readerStore.hasOpenDocument,
-                setMode: { mode in
-                    readerStore.setDocumentViewMode(mode)
-                },
-                toggleMode: {
-                    readerStore.toggleDocumentViewMode()
-                }
-            )
-        )
-        .focusedValue(
-            \.readerSourceEditingContext,
-            ReaderSourceEditingContext(
-                canStartEditing: readerStore.canStartSourceEditing,
-                canSave: readerStore.canSaveSourceDraft,
-                canDiscard: readerStore.canDiscardSourceDraft,
-                startEditing: {
-                    readerStore.startEditingSource()
-                },
-                save: {
-                    readerStore.saveSourceDraft()
-                },
-                discard: {
-                    readerStore.discardSourceDraft()
-                }
-            )
-        )
-        .focusedValue(
-            \.readerChangedRegionNavigation,
-            ReaderChangedRegionNavigationAction(
-                canNavigate: canNavigateChangedRegions,
-                navigate: { direction in
-                    changeNavigation.requestNavigation(direction)
-                    splitScrollCoordinator.suppressPreviewBounceBack()
-                }
-            )
-        )
-        .focusedValue(
-            \.readerToggleTOC,
-            ReaderToggleTOCAction(
-                canToggle: !readerStore.tocHeadings.isEmpty,
-                toggle: { readerStore.toggleTOC() }
-            )
-        )
-        .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
-            handleFolderWatchOptionsPresentationChange(isPresented)
-        }
-        .sheet(isPresented: $isFolderWatchOptionsPresented) {
-            FolderWatchOptionsSheet(
-                folderURL: folderWatchState.pendingFolderWatchURL,
-                openMode: $pendingFolderWatchOpenMode,
-                scope: $pendingFolderWatchScope,
-                excludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths,
-                onCancel: callbacks.onCancelFolderWatch,
-                onConfirm: callbacks.onConfirmFolderWatch
-            )
-        }
-    }
-
     private func handleFileIdentityChange() {
         changeNavigation.reset()
         if previewMode == .nativeFallback {
@@ -357,14 +229,6 @@ struct ContentView: View {
             sourceReloadToken += 1
             sourceMode = .web
         }
-    }
-
-    private func handleFolderWatchOptionsPresentationChange(_ isPresented: Bool) {
-        guard !isPresented else {
-            return
-        }
-
-        callbacks.onCancelFolderWatch()
     }
 
     private func promptForImageDirectoryAccess() {
