@@ -33,12 +33,6 @@ struct ContentView: View {
         }
     }
 
-    private struct SourceHTMLInputs: Equatable {
-        let markdown: String
-        let settings: ReaderSettings
-        let isEditable: Bool
-    }
-
     fileprivate struct DocumentSurfaceConfiguration {
         let role: DocumentSurfaceRole
         let usesWebSurface: Bool
@@ -92,8 +86,7 @@ struct ContentView: View {
     @State private var changedRegionNavigationRequestID = 0
     @State private var lastChangedRegionNavigationDirection: ReaderChangedRegionNavigationDirection?
     @State private var currentChangedRegionIndex: Int?
-    @State private var cachedSourceHTMLInputs: SourceHTMLInputs?
-    @State private var cachedSourceHTMLDocument = ""
+    @State private var sourceHTMLCache = SourceHTMLDocumentCache()
 
     var body: some View {
         interactionAwareView(baseBody)
@@ -145,8 +138,14 @@ struct ContentView: View {
             .onChange(of: readerStore.documentViewMode) { _, newValue in
                 handleDocumentViewModeChange(newValue)
             }
-            .onChange(of: sourceHTMLInputs) { _, _ in
-                handleSourceHTMLInputsChange()
+            .onChange(of: readerStore.sourceEditorSeedMarkdown) { _, _ in
+                refreshSourceHTML()
+            }
+            .onChange(of: readerStore.currentSettings) { _, _ in
+                refreshSourceHTML()
+            }
+            .onChange(of: readerStore.isSourceEditing) { _, _ in
+                refreshSourceHTML()
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
                 clearDropTargetState()
@@ -389,12 +388,8 @@ struct ContentView: View {
         splitScrollCoordinator.reset()
     }
 
-    private func handleSourceHTMLInputsChange() {
-        refreshSourceHTMLDocumentIfNeeded()
-    }
-
     private func handleSurfaceAppear() {
-        refreshSourceHTMLDocumentIfNeeded()
+        refreshSourceHTML()
 
         if previewMode == .nativeFallback, !readerStore.renderedHTMLDocument.isEmpty {
             previewReloadToken += 1
@@ -720,14 +715,6 @@ struct ContentView: View {
         readerStore.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
     }
 
-    private var sourceHTMLInputs: SourceHTMLInputs {
-        SourceHTMLInputs(
-            markdown: readerStore.sourceEditorSeedMarkdown,
-            settings: readerStore.currentSettings,
-            isEditable: readerStore.isSourceEditing
-        )
-    }
-
     private func documentSurfacePane(for surface: DocumentSurfaceRole) -> some View {
         DocumentSurfaceHost(
             configuration: documentSurfaceConfiguration(for: surface),
@@ -785,7 +772,7 @@ struct ContentView: View {
             return DocumentSurfaceConfiguration(
                 role: surface,
                 usesWebSurface: sourceMode == .web,
-                htmlDocument: cachedSourceHTMLDocument,
+                htmlDocument: sourceHTMLCache.document,
                 documentIdentity: sourceDocumentIdentity,
                 accessibilityIdentifier: "reader-source",
                 accessibilityValue: sourceAccessibilityValue,
@@ -889,17 +876,11 @@ struct ContentView: View {
         Self.logger.debug("source bootstrap completed successfully")
     }
 
-    private func refreshSourceHTMLDocumentIfNeeded() {
-        let inputs = sourceHTMLInputs
-        guard cachedSourceHTMLInputs != inputs else {
-            return
-        }
-
-        cachedSourceHTMLInputs = inputs
-        cachedSourceHTMLDocument = MarkdownSourceHTMLRenderer.makeHTMLDocument(
-            markdown: inputs.markdown,
-            settings: inputs.settings,
-            isEditable: inputs.isEditable
+    private func refreshSourceHTML() {
+        sourceHTMLCache.refreshIfNeeded(
+            markdown: readerStore.sourceEditorSeedMarkdown,
+            settings: readerStore.currentSettings,
+            isEditable: readerStore.isSourceEditing
         )
     }
 
