@@ -14,12 +14,21 @@ final class ReaderSidebarDocumentController {
         }
     }
 
-    private(set) var documents: [Document]
-    @ObservationIgnored private var documentsByNormalizedURL: [URL: UUID] = [:]
+    // MARK: - Extracted components
+
+    @ObservationIgnored private let documentList: SidebarDocumentList
+    @ObservationIgnored private let rowStateComputer = SidebarRowStateComputer()
+    @ObservationIgnored private let observationManager = SidebarObservationManager()
+
+    // MARK: - Selection state
+
     var selectedDocumentID: UUID
     private(set) var selectedWindowTitle: String
     private(set) var selectedFileURL: URL?
     private(set) var selectedHasUnacknowledgedExternalChange: Bool
+
+    // MARK: - Folder watch state
+
     private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
@@ -27,11 +36,39 @@ final class ReaderSidebarDocumentController {
     private(set) var didFolderWatchInitialScanFail: Bool
     private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
     private(set) var scannedFileCount: Int?
-    private(set) var rowStates: [UUID: SidebarRowState] = [:]
+
+    // MARK: - Dependencies
 
     private let makeReaderStore: () -> ReaderStore
     @ObservationIgnored private var _folderWatchController: ReaderFolderWatchController?
     @ObservationIgnored private let _makeFolderWatchController: () -> ReaderFolderWatchController
+    @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
+    @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
+
+    // MARK: - Forwarding API
+
+    var documents: [Document] { documentList.documents }
+    var rowStates: [UUID: SidebarRowState] { rowStateComputer.rowStates }
+
+    @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)? {
+        get { rowStateComputer.onRowStatesChanged }
+        set { rowStateComputer.onRowStatesChanged = newValue }
+    }
+
+    @ObservationIgnored var onDockTileRowStatesChanged: (([UUID: SidebarRowState]) -> Void)? {
+        get { rowStateComputer.onDockTileRowStatesChanged }
+        set { rowStateComputer.onDockTileRowStatesChanged = newValue }
+    }
+
+    func deriveRowState(from document: Document) -> SidebarRowState {
+        rowStateComputer.deriveRowState(from: document)
+    }
+
+    func document(for fileURL: URL) -> Document? {
+        documentList.document(for: fileURL)
+    }
+
+    // MARK: - Folder watch controller (lazy)
 
     private var folderWatchController: ReaderFolderWatchController {
         if let existing = _folderWatchController {
@@ -47,20 +84,8 @@ final class ReaderSidebarDocumentController {
     private var folderWatchControllerIfCreated: ReaderFolderWatchController? {
         _folderWatchController
     }
-    @ObservationIgnored private var selectedStoreObservationTask: Task<Void, Never>?
-    @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
-    @ObservationIgnored var onRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
-    @ObservationIgnored var onDockTileRowStatesChanged: (([UUID: SidebarRowState]) -> Void)?
-    @ObservationIgnored private var selectedStoreBindingGeneration: UInt = 0
-    @ObservationIgnored private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
-    @ObservationIgnored private var needsInitialObservationSetup = true
-    @ObservationIgnored private var rowIndicatorPulseTokens: [UUID: Int] = [:]
-    @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
-    deinit {
-        selectedStoreObservationTask?.cancel()
-        for task in documentObservationTasks.values { task.cancel() }
-    }
+    // MARK: - Init
 
     init(
         settingsStore: ReaderSettingsStore,
@@ -117,7 +142,7 @@ final class ReaderSidebarDocumentController {
         }
 
         let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore(), normalizedFileURL: nil)
-        documents = [initialDocument]
+        documentList = SidebarDocumentList(initialDocument: initialDocument)
         selectedDocumentID = initialDocument.id
         selectedWindowTitle = initialDocument.readerStore.windowTitle
         selectedFileURL = initialDocument.readerStore.fileURL
@@ -128,9 +153,10 @@ final class ReaderSidebarDocumentController {
         didFolderWatchInitialScanFail = false
         contentScanProgress = nil
         scannedFileCount = nil
-        rebuildDocumentURLIndex()
-        rebuildAllRowStates()
+        rowStateComputer.rebuildAllRowStates(from: documentList.documents)
     }
+
+    // MARK: - Selection
 
     var selectedDocument: Document? {
         documents.first(where: { $0.id == selectedDocumentID })
@@ -152,7 +178,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func selectDocument(_ documentID: UUID?) {
-        ensureObservationSetup()
+        observationManager.ensureSetup(for: documents, onStoreChanged: makeStoreChangedHandler())
         guard let documentID,
               documents.contains(where: { $0.id == documentID }) else {
             return
@@ -180,7 +206,6 @@ final class ReaderSidebarDocumentController {
         guard let existingDocument = document(for: fileURL) else {
             return false
         }
-
         selectDocument(existingDocument.id)
         return true
     }
@@ -212,14 +237,15 @@ final class ReaderSidebarDocumentController {
         selectDocumentWithNewestModificationDate()
     }
 
+    // MARK: - Plan execution
+
     func executePlan(_ plan: FileOpenPlan) {
-        ensureObservationSetup()
+        observationManager.ensureSetup(for: documents, onStoreChanged: makeStoreChangedHandler())
         guard !plan.assignments.isEmpty else { return }
 
         var didAppendDocuments = false
 
         for assignment in plan.assignments {
-            // assignment.fileURL is already normalized by FileOpenCoordinator.deduplicateAndSort
             let fileURL = assignment.fileURL
 
             if let existingDocument = document(for: fileURL) {
@@ -292,24 +318,20 @@ final class ReaderSidebarDocumentController {
                 continue
             }
 
-            var documentToInsert = targetDocument
-            documentToInsert.normalizedFileURL = fileURL
-
             if shouldAppendDocument {
-                documents.append(documentToInsert)
-                indexDocument(documentToInsert)
+                var documentToInsert = targetDocument
+                documentToInsert.normalizedFileURL = fileURL
+                documentList.append(documentToInsert)
                 didAppendDocuments = true
-            } else if let index = documents.firstIndex(where: { $0.id == targetDocument.id }) {
-                unindexDocument(documents[index])
-                documents[index].normalizedFileURL = documentToInsert.normalizedFileURL
-                indexDocument(documents[index])
+            } else {
+                documentList.updateNormalizedURL(for: targetDocument.id, to: fileURL)
             }
 
             selectedDocumentID = targetDocument.id
         }
 
         if didAppendDocuments {
-            synchronizeDocumentChangeObservers()
+            synchronizeAndRebuild()
         }
 
         // In screenshot mode, override selection to a specific document by filename
@@ -338,33 +360,31 @@ final class ReaderSidebarDocumentController {
         }
     }
 
+    // MARK: - Document close
+
     func closeDocument(_ documentID: UUID) {
-        guard let index = documents.firstIndex(where: { $0.id == documentID }) else {
+        guard let removed = documentList.remove(documentID: documentID) else {
             return
         }
 
-        unindexDocument(documents[index])
-        documents.remove(at: index)
-        synchronizeDocumentChangeObservers()
-
         if documents.isEmpty {
             let replacement = makeDocument()
-            documents = [replacement]
-            rebuildDocumentURLIndex()
-            synchronizeDocumentChangeObservers()
+            documentList.replaceAll(with: [replacement])
             if let storeConfigurator {
                 storeConfigurator(replacement.readerStore)
             }
             selectedDocumentID = replacement.id
+            synchronizeAndRebuild()
             bindSelectedStore()
             return
         }
 
         if selectedDocumentID == documentID {
-            let nextIndex = min(index, documents.count - 1)
+            let nextIndex = min(removed.index, documents.count - 1)
             selectedDocumentID = documents[nextIndex].id
         }
 
+        synchronizeAndRebuild()
         bindSelectedStore()
     }
 
@@ -378,14 +398,13 @@ final class ReaderSidebarDocumentController {
             return
         }
 
-        documents = retainedDocuments
-        rebuildDocumentURLIndex()
-        synchronizeDocumentChangeObservers()
+        documentList.replaceAll(with: retainedDocuments)
 
         if !retainedDocuments.contains(where: { $0.id == selectedDocumentID }) {
             selectedDocumentID = retainedDocuments[0].id
         }
 
+        synchronizeAndRebuild()
         bindSelectedStore()
     }
 
@@ -405,14 +424,13 @@ final class ReaderSidebarDocumentController {
         }
 
         let remainingDocuments = documents.filter { !documentIDs.contains($0.id) }
-        documents = remainingDocuments
-        rebuildDocumentURLIndex()
-        synchronizeDocumentChangeObservers()
+        documentList.replaceAll(with: remainingDocuments)
 
         if !remainingDocuments.contains(where: { $0.id == selectedDocumentID }) {
             selectedDocumentID = remainingDocuments[0].id
         }
 
+        synchronizeAndRebuild()
         bindSelectedStore()
     }
 
@@ -422,12 +440,13 @@ final class ReaderSidebarDocumentController {
             storeConfigurator(replacement.readerStore)
         }
 
-        documents = [replacement]
-        rebuildDocumentURLIndex()
-        synchronizeDocumentChangeObservers()
+        documentList.replaceAll(with: [replacement])
         selectedDocumentID = replacement.id
+        synchronizeAndRebuild()
         bindSelectedStore()
     }
+
+    // MARK: - Folder watch
 
     func startWatchingFolder(
         folderURL: URL,
@@ -477,13 +496,13 @@ final class ReaderSidebarDocumentController {
     }
 
     func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
-        for document in orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
+        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
             document.readerStore.openCurrentFileInApplication(application)
         }
     }
 
     func revealDocumentsInFinder(_ documentIDs: Set<UUID>) {
-        for document in orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
+        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
             document.readerStore.revealCurrentFileInFinder()
         }
     }
@@ -516,12 +535,10 @@ final class ReaderSidebarDocumentController {
         })
     }
 
-    func document(for fileURL: URL) -> Document? {
-        let normalized = ReaderFileRouting.normalizedFileURL(fileURL)
-        guard let documentID = documentsByNormalizedURL[normalized] else {
-            return nil
-        }
-        return documents.first(where: { $0.id == documentID })
+    // MARK: - Private helpers
+
+    private func makeDocument() -> Document {
+        Document(id: UUID(), readerStore: makeReaderStore(), normalizedFileURL: nil)
     }
 
     private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
@@ -533,158 +550,30 @@ final class ReaderSidebarDocumentController {
         }
     }
 
-    private func ensureObservationSetup() {
-        guard needsInitialObservationSetup else { return }
-        needsInitialObservationSetup = false
-        synchronizeDocumentChangeObservers()
-    }
-
     private func bindSelectedStore() {
-        selectedStoreBindingGeneration &+= 1
-        let bindingGeneration = selectedStoreBindingGeneration
         let store = selectedReaderStore
-
         selectedWindowTitle = store.windowTitle
         selectedFileURL = store.fileURL
         selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
 
-        selectedStoreObservationTask?.cancel()
-        selectedStoreObservationTask = Task { [weak self] in
-            while !Task.isCancelled {
-                let cancelled = await Self.awaitObservationChange {
-                    _ = store.windowTitle
-                    _ = store.fileURL
-                    _ = store.hasUnacknowledgedExternalChange
-                }
-                if cancelled { break }
-                guard let self,
-                      self.selectedStoreBindingGeneration == bindingGeneration else { break }
-                self.selectedWindowTitle = store.windowTitle
-                self.selectedFileURL = store.fileURL
-                self.selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
-            }
+        observationManager.bindSelectedStore(store) { [weak self] in
+            guard let self else { return }
+            self.selectedWindowTitle = store.windowTitle
+            self.selectedFileURL = store.fileURL
+            self.selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
         }
     }
 
-    private func makeDocument() -> Document {
-        Document(id: UUID(), readerStore: makeReaderStore(), normalizedFileURL: nil)
+    private func synchronizeAndRebuild() {
+        observationManager.synchronize(for: documents, onStoreChanged: makeStoreChangedHandler())
+        rowStateComputer.rebuildAllRowStates(from: documents)
     }
 
-    private func rebuildDocumentURLIndex() {
-        documentsByNormalizedURL = [:]
-        for document in documents {
-            if let normalizedURL = document.normalizedFileURL {
-                documentsByNormalizedURL[normalizedURL] = document.id
-            }
+    private func makeStoreChangedHandler() -> @MainActor (UUID) -> Void {
+        return { [weak self] documentID in
+            guard let self else { return }
+            self.rowStateComputer.updateRowStateIfNeeded(for: documentID, in: self.documents)
         }
-    }
-
-    private func indexDocument(_ document: Document) {
-        if let normalizedURL = document.normalizedFileURL {
-            documentsByNormalizedURL[normalizedURL] = document.id
-        }
-    }
-
-    private func unindexDocument(_ document: Document) {
-        if let normalizedURL = document.normalizedFileURL {
-            documentsByNormalizedURL.removeValue(forKey: normalizedURL)
-        }
-    }
-
-    private func deriveIndicatorState(from store: ReaderStore) -> ReaderDocumentIndicatorState {
-        ReaderDocumentIndicatorState(
-            hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
-            isCurrentFileMissing: store.isCurrentFileMissing,
-            unacknowledgedExternalChangeKind: store.content.unacknowledgedExternalChangeKind
-        )
-    }
-
-    func deriveRowState(from document: Document) -> SidebarRowState {
-        let store = document.readerStore
-        let indicatorState = deriveIndicatorState(from: store)
-        return SidebarRowState(
-            id: document.id,
-            title: store.fileDisplayName.isEmpty ? "Untitled" : store.fileDisplayName,
-            lastModified: store.fileLastModifiedAt,
-            sortDate: store.fileLastModifiedAt ?? store.lastExternalChangeAt ?? store.lastRefreshAt,
-            isFileMissing: store.isCurrentFileMissing,
-            indicatorState: indicatorState,
-            indicatorPulseToken: rowIndicatorPulseTokens[document.id] ?? 0
-        )
-    }
-
-    private func rebuildAllRowStates() {
-        var states: [UUID: SidebarRowState] = [:]
-        for document in documents {
-            let previousIndicatorState = rowStates[document.id]?.indicatorState
-            let currentIndicatorState = deriveIndicatorState(from: document.readerStore)
-            if let previousIndicatorState,
-               previousIndicatorState != currentIndicatorState,
-               currentIndicatorState.showsIndicator {
-                rowIndicatorPulseTokens[document.id, default: 0] += 1
-            }
-            states[document.id] = deriveRowState(from: document)
-        }
-        rowIndicatorPulseTokens = rowIndicatorPulseTokens.filter { states[$0.key] != nil }
-        guard states != rowStates else { return }
-        rowStates = states
-        onRowStatesChanged?(states)
-        onDockTileRowStatesChanged?(states)
-    }
-
-    private func synchronizeDocumentChangeObservers() {
-        let currentDocumentIDs = Set(documents.map(\.id))
-
-        for documentID in documentObservationTasks.keys where !currentDocumentIDs.contains(documentID) {
-            documentObservationTasks[documentID]?.cancel()
-            documentObservationTasks[documentID] = nil
-        }
-
-        for document in documents where documentObservationTasks[document.id] == nil {
-            let documentID = document.id
-            document.readerStore.onExternalChangeKindChanged = { [weak self] in
-                self?.updateRowStateIfNeeded(for: documentID)
-            }
-            documentObservationTasks[document.id] = Task { [weak self] in
-                let store = document.readerStore
-                defer { store.onExternalChangeKindChanged = nil }
-                while !Task.isCancelled {
-                    let cancelled = await Self.awaitObservationChange {
-                        _ = store.fileDisplayName
-                        _ = store.fileLastModifiedAt
-                        _ = store.lastExternalChangeAt
-                        _ = store.lastRefreshAt
-                        _ = store.isCurrentFileMissing
-                        _ = store.hasUnacknowledgedExternalChange
-                    }
-                    if cancelled { break }
-                    self?.updateRowStateIfNeeded(for: document.id)
-                }
-            }
-        }
-
-        rebuildAllRowStates()
-    }
-
-    private func updateRowStateIfNeeded(for documentID: UUID) {
-        guard let document = documents.first(where: { $0.id == documentID }) else { return }
-        let previousIndicatorState = rowStates[documentID]?.indicatorState
-        let currentIndicatorState = deriveIndicatorState(from: document.readerStore)
-        if let previousIndicatorState,
-           previousIndicatorState != currentIndicatorState,
-           currentIndicatorState.showsIndicator {
-            rowIndicatorPulseTokens[documentID, default: 0] += 1
-        }
-        let state = deriveRowState(from: document)
-        if rowStates[documentID] != state {
-            rowStates[documentID] = state
-            onRowStatesChanged?(rowStates)
-            onDockTileRowStatesChanged?(rowStates)
-        }
-    }
-
-    private func orderedDocuments(matching documentIDs: Set<UUID>) -> [Document] {
-        documents.filter { documentIDs.contains($0.id) }
     }
 
     private func resolvedFolderWatchSession(
@@ -701,52 +590,6 @@ final class ReaderSidebarDocumentController {
         }
 
         return activeFolderWatchSession
-    }
-
-
-    // MARK: - Observation helpers
-
-    /// Suspends until any property accessed inside `tracking` changes, or the enclosing Task is cancelled.
-    /// Returns `true` if the wait was terminated by cancellation rather than a property change.
-    private static func awaitObservationChange(
-        tracking: @escaping @MainActor () -> Void
-    ) async -> Bool {
-        let box = ObservationContinuationBox()
-        return await withTaskCancellationHandler {
-            await withUnsafeContinuation { continuation in
-                box.store(continuation)
-                if Task.isCancelled {
-                    box.resume(returning: true)
-                    return
-                }
-                withObservationTracking {
-                    tracking()
-                } onChange: {
-                    box.resume(returning: false)
-                }
-            }
-        } onCancel: {
-            box.resume(returning: true)
-        }
-    }
-
-    private final class ObservationContinuationBox: @unchecked Sendable {
-        private var continuation: UnsafeContinuation<Bool, Never>?
-        private let lock = NSLock()
-
-        func store(_ continuation: UnsafeContinuation<Bool, Never>) {
-            lock.lock()
-            self.continuation = continuation
-            lock.unlock()
-        }
-
-        func resume(returning value: Bool) {
-            lock.lock()
-            let c = continuation
-            continuation = nil
-            lock.unlock()
-            c?.resume(returning: value)
-        }
     }
 
     private func synchronizeFolderWatchState() {
@@ -769,6 +612,8 @@ final class ReaderSidebarDocumentController {
         scannedFileCount = controller.scannedFileCount
     }
 }
+
+// MARK: - ReaderFolderWatchControllerDelegate
 
 extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
     func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
@@ -797,9 +642,6 @@ extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
             }
         )
 
-        // For initial batch auto-open, the folder-watch planner sends defer
-        // and load events separately, managing materialization itself via
-        // folderWatchControllerShouldSelectNewestDocument. Use .deferOnly so the planner stays in control.
         let materializationStrategy: FileOpenRequest.MaterializationStrategy =
             origin == .folderWatchInitialBatchAutoOpen ? .deferOnly : .loadAll
 
