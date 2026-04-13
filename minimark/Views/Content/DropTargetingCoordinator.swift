@@ -1,5 +1,3 @@
-import Foundation
-
 struct DropTargetingCoordinator {
     private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
     private var blockedFolderDropTargetedSurfaces: Set<DocumentSurfaceRole> = []

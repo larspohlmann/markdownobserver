@@ -3,7 +3,6 @@
 //  minimarkTests
 //
 
-import Foundation
 import Testing
 @testable import minimark
 

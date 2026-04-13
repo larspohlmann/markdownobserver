@@ -1,5 +1,3 @@
-import Foundation
-
 struct ChangedRegionNavigationCoordinator {
     private var requestID = 0
     private var lastDirection: ReaderChangedRegionNavigationDirection?
