@@ -136,6 +136,18 @@ struct SidebarDocumentListTests {
         #expect(list.document(for: oldURL) == nil)
     }
 
+    @Test @MainActor func updateNormalizedURLToNilRemovesFromIndex() {
+        let settings = makeSettingsStore()
+        let url = URL(fileURLWithPath: "/tmp/existing.md")
+        let doc = makeDocument(normalizedURL: url, settingsStore: settings)
+        let list = SidebarDocumentList(initialDocument: doc)
+
+        list.updateNormalizedURL(for: doc.id, to: nil)
+
+        #expect(list.document(for: url) == nil)
+        #expect(list.documents.first?.normalizedFileURL == nil)
+    }
+
     // MARK: - Ordered documents
 
     @Test @MainActor func orderedDocumentsPreservesInsertionOrder() {
