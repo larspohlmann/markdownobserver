@@ -1,6 +1,6 @@
 import AppKit
-import Foundation
 import Combine
+import Foundation
 import OSLog
 import SwiftUI
 
@@ -411,7 +411,7 @@ struct ContentView: View {
                 TOCPopoverView(
                     headings: readerStore.tocHeadings,
                     onSelect: { heading in
-                        handleTOCHeadingSelection(heading)
+                        readerStore.scrollToTOCHeading(heading)
                     }
                 )
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -427,9 +427,6 @@ struct ContentView: View {
         }
     }
 
-    private func handleTOCHeadingSelection(_ heading: TOCHeading) {
-        readerStore.scrollToTOCHeading(heading)
-    }
 
     var canNavigateChangedRegions: Bool {
         readerStore.documentViewMode != .source &&
