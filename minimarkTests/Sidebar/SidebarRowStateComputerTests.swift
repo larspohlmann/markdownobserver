@@ -107,18 +107,24 @@ struct SidebarRowStateComputerTests {
         #expect(computer.rowStates[doc.id]?.indicatorState == .externalChange)
     }
 
-    @Test @MainActor func rebuildAllCleansUpStaleTokens() {
+    @Test @MainActor func rebuildAllRemovesRowStateForRemovedDocument() {
         let settings = makeSettingsStore()
         let docA = makeDocument(settingsStore: settings)
         let docB = makeDocument(settingsStore: settings)
         let computer = SidebarRowStateComputer()
 
         computer.rebuildAllRowStates(from: [docA, docB])
-        // Remove docB — its token should be cleaned up
+        #expect(computer.rowStates.count == 2)
+
+        // Remove docB
         computer.rebuildAllRowStates(from: [docA])
 
         #expect(computer.rowStates.count == 1)
         #expect(computer.rowStates[docB.id] == nil)
+
+        // Re-add docB — pulse token should start fresh at 0
+        computer.rebuildAllRowStates(from: [docA, docB])
+        #expect(computer.rowStates[docB.id]?.indicatorPulseToken == 0)
     }
 
     @Test @MainActor func rebuildAllSkipsCallbackWhenUnchanged() {
@@ -136,18 +142,21 @@ struct SidebarRowStateComputerTests {
         #expect(callbackCount == 0)
     }
 
-    @Test @MainActor func rebuildAllFiresCallbackWhenChanged() {
+    @Test @MainActor func rebuildAllFiresBothCallbacksWhenChanged() {
         let settings = makeSettingsStore()
         let doc = makeDocument(settingsStore: settings)
         let computer = SidebarRowStateComputer()
 
         var receivedStates: [UUID: SidebarRowState]?
+        var dockTileCallbackFired = false
         computer.onRowStatesChanged = { states in receivedStates = states }
+        computer.onDockTileRowStatesChanged = { _ in dockTileCallbackFired = true }
 
         computer.rebuildAllRowStates(from: [doc])
 
         #expect(receivedStates != nil)
         #expect(receivedStates?.count == 1)
+        #expect(dockTileCallbackFired)
     }
 
     // MARK: - Update single row
@@ -175,12 +184,15 @@ struct SidebarRowStateComputerTests {
         computer.rebuildAllRowStates(from: [doc])
 
         var callbackFired = false
+        var dockTileCallbackFired = false
         computer.onRowStatesChanged = { _ in callbackFired = true }
+        computer.onDockTileRowStatesChanged = { _ in dockTileCallbackFired = true }
 
         doc.readerStore.noteObservedExternalChange()
         computer.updateRowStateIfNeeded(for: doc.id, in: [doc])
 
         #expect(callbackFired)
+        #expect(dockTileCallbackFired)
         #expect(computer.rowStates[doc.id]?.indicatorState == .externalChange)
     }
 }
