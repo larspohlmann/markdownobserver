@@ -19,7 +19,7 @@ struct ContentView: View {
         case plainTextFallback
     }
 
-    fileprivate enum DocumentSurfaceRole: Hashable {
+    enum DocumentSurfaceRole: Hashable {
         case preview
         case source
 
@@ -77,8 +77,7 @@ struct ContentView: View {
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
     @StateObject private var splitScrollCoordinator = SplitScrollCoordinator()
-    @State private var dragTargetedSurfaces: Set<DocumentSurfaceRole> = []
-    @State private var blockedFolderDropTargetedSurfaces: Set<DocumentSurfaceRole> = []
+    @State private var dropTargeting = DropTargetingCoordinator()
     @State private var previewMode: PreviewMode = .web
     @State private var previewReloadToken = 0
     @State private var sourceMode: SourceMode = .web
@@ -110,11 +109,11 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
-                if isBlockedFolderDropTargeted {
+                if dropTargeting.isBlockedFolderDropTargeted {
                     FolderDropBlockedOverlayView()
                         .padding(10)
                         .allowsHitTesting(false)
-                } else if isDragTargeted {
+                } else if dropTargeting.isDragTargeted {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(Color.accentColor.opacity(0.65), lineWidth: 2)
                         .padding(10)
@@ -146,7 +145,7 @@ struct ContentView: View {
                 refreshSourceHTML()
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
-                clearDropTargetState()
+                dropTargeting.clearAll()
             }
             .onAppear {
                 handleSurfaceAppear()
@@ -359,7 +358,7 @@ struct ContentView: View {
             sourceReloadToken += 1
             sourceMode = .web
         }
-        clearDropTargetState()
+        dropTargeting.clearAll()
         splitScrollCoordinator.reset()
     }
 
@@ -368,7 +367,7 @@ struct ContentView: View {
             return
         }
 
-        clearDropTargetState(for: .preview)
+        dropTargeting.clear(for: .preview)
         splitScrollCoordinator.reset()
     }
 
@@ -377,7 +376,7 @@ struct ContentView: View {
             return
         }
 
-        clearDropTargetState(for: .source)
+        dropTargeting.clear(for: .source)
         splitScrollCoordinator.reset()
     }
 
@@ -707,14 +706,6 @@ struct ContentView: View {
         }
     }
 
-    private var isDragTargeted: Bool {
-        !dragTargetedSurfaces.isEmpty
-    }
-
-    private var isBlockedFolderDropTargeted: Bool {
-        !blockedFolderDropTargetedSurfaces.isEmpty
-    }
-
     private var minimumSurfaceWidth: CGFloat? {
         readerStore.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
     }
@@ -761,7 +752,7 @@ struct ContentView: View {
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
-                    updateDropTargetState(for: surface, update: update)
+                    dropTargeting.update(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onChangedRegionNavigationResult: { index, total in
@@ -807,7 +798,7 @@ struct ContentView: View {
                 },
                 onDroppedFileURLs: handleDroppedFileURLs,
                 onDropTargetedChange: { update in
-                    updateDropTargetState(for: surface, update: update)
+                    dropTargeting.update(for: surface, update: update)
                 },
                 canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
                 onChangedRegionNavigationResult: { _, _ in },
@@ -865,32 +856,6 @@ struct ContentView: View {
             settings: readerStore.currentSettings,
             isEditable: readerStore.isSourceEditing
         )
-    }
-
-    private func updateDropTargetState(for surface: DocumentSurfaceRole, update: DropTargetingUpdate) {
-        if update.isTargeted {
-            dragTargetedSurfaces.insert(surface)
-        } else {
-            dragTargetedSurfaces.remove(surface)
-        }
-
-        let isBlockedFolderDrop = update.isTargeted && !update.canDrop && update.containsDirectoryHint
-        if isBlockedFolderDrop {
-            blockedFolderDropTargetedSurfaces.insert(surface)
-        } else {
-            blockedFolderDropTargetedSurfaces.remove(surface)
-        }
-    }
-
-    private func clearDropTargetState(for surface: DocumentSurfaceRole? = nil) {
-        guard let surface else {
-            dragTargetedSurfaces.removeAll()
-            blockedFolderDropTargetedSurfaces.removeAll()
-            return
-        }
-
-        dragTargetedSurfaces.remove(surface)
-        blockedFolderDropTargetedSurfaces.remove(surface)
     }
 
     private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
