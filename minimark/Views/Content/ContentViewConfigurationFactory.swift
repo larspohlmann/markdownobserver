@@ -1,0 +1,230 @@
+import AppKit
+import OSLog
+import SwiftUI
+
+/// Document surface configuration builders, file drop/pick handlers, and scroll sync wiring.
+/// Split out from ContentView to keep that struct focused on layout and overlay composition.
+extension ContentView {
+
+    // MARK: - Document surface panes
+
+    func documentSurfacePane(for surface: DocumentSurfaceRole) -> some View {
+        DocumentSurfaceHost(
+            configuration: documentSurfaceConfiguration(for: surface),
+            fallbackMarkdown: readerStore.sourceMarkdown
+        )
+    }
+
+    func documentSurfaceConfiguration(for surface: DocumentSurfaceRole) -> DocumentSurfaceConfiguration {
+        switch surface {
+        case .preview:
+            return DocumentSurfaceConfiguration(
+                role: surface,
+                usesWebSurface: previewMode == .web,
+                htmlDocument: readerStore.renderedHTMLDocument,
+                documentIdentity: readerStore.fileURL?.standardizedFileURL.path,
+                accessibilityIdentifier: "reader-preview",
+                accessibilityValue: previewAccessibilityValue,
+                reloadToken: previewReloadToken,
+                diagnosticName: "reader-preview",
+                postLoadStatusScript: nil,
+                changedRegionNavigationRequest: canNavigateChangedRegions ? changeNavigation.currentRequest : nil,
+                scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
+                supportsInPlaceContentUpdates: true,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
+                reloadAnchorProgress: previewReloadAnchorProgress,
+                minimumWidth: minimumSurfaceWidth,
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onAction: { action in
+                    switch action {
+                    case .fatalCrash:
+                        Self.logger.error("preview web surface hit fatal crash and fell back to native text")
+                        previewMode = .nativeFallback
+                    case .postLoadStatus:
+                        break
+                    case .scrollSyncObservation(let observation):
+                        handleScrollSyncObservation(observation, from: .preview)
+                    case .sourceEdit:
+                        break
+                    case .tocHeadingsExtracted(let headings):
+                        readerStore.updateTOCHeadings(headings)
+                    case .droppedFileURLs(let urls):
+                        handleDroppedFileURLs(urls)
+                    case .dropTargetedChange(let update):
+                        dropTargeting.update(for: .preview, update: update)
+                    case .changedRegionNavigationResult(let index, let total):
+                        changeNavigation.handleNavigationResult(index: index, total: total)
+                    case .retryFallback:
+                        previewReloadToken += 1
+                        previewMode = .web
+                    }
+                }
+            )
+        case .source:
+            return DocumentSurfaceConfiguration(
+                role: surface,
+                usesWebSurface: sourceMode == .web,
+                htmlDocument: sourceHTMLCache.document,
+                documentIdentity: sourceDocumentIdentity,
+                accessibilityIdentifier: "reader-source",
+                accessibilityValue: sourceAccessibilityValue,
+                reloadToken: sourceReloadToken,
+                diagnosticName: "reader-source",
+                postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
+                changedRegionNavigationRequest: nil,
+                scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: readerStore.tocScrollRequest,
+                supportsInPlaceContentUpdates: false,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
+                reloadAnchorProgress: nil,
+                minimumWidth: minimumSurfaceWidth,
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onAction: { action in
+                    switch action {
+                    case .fatalCrash:
+                        Self.logger.error("source web surface hit fatal crash and fell back to plain text")
+                        sourceMode = .plainTextFallback
+                    case .postLoadStatus(let status):
+                        guard let status else {
+                            Self.logger.error("source post-load status probe returned no status")
+                            sourceMode = .plainTextFallback
+                            return
+                        }
+                        guard status == "ready" else {
+                            Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
+                            sourceMode = .plainTextFallback
+                            return
+                        }
+                        Self.logger.debug("source bootstrap completed successfully")
+                    case .scrollSyncObservation(let observation):
+                        handleScrollSyncObservation(observation, from: .source)
+                    case .sourceEdit(let markdown):
+                        readerStore.updateSourceDraft(markdown)
+                    case .tocHeadingsExtracted(let headings):
+                        readerStore.updateTOCHeadings(headings)
+                    case .droppedFileURLs(let urls):
+                        handleDroppedFileURLs(urls)
+                    case .dropTargetedChange(let update):
+                        dropTargeting.update(for: .source, update: update)
+                    case .changedRegionNavigationResult:
+                        break
+                    case .retryFallback:
+                        sourceReloadToken += 1
+                        sourceMode = .web
+                    }
+                }
+            )
+        }
+    }
+
+    // MARK: - Source document identity and HTML refresh
+
+    var sourceDocumentIdentity: String? {
+        guard let path = readerStore.fileURL?.standardizedFileURL.path else {
+            return nil
+        }
+
+        return "\(path)|source"
+    }
+
+    func refreshSourceHTML() {
+        sourceHTMLCache.refreshIfNeeded(
+            markdown: readerStore.sourceEditorSeedMarkdown,
+            settings: readerStore.currentSettings,
+            isEditable: readerStore.isSourceEditing
+        )
+    }
+
+    // MARK: - File drop and pick handlers
+
+    func handleDroppedFileURLs(_ fileURLs: [URL]) {
+        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
+            guard folderWatchState.activeFolderWatch == nil else {
+                return
+            }
+
+            callbacks.onRequestFolderWatch(droppedFolderURL)
+            return
+        }
+
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard !markdownURLs.isEmpty else {
+            return
+        }
+
+        let slotStrategy: FileOpenRequest.SlotStrategy =
+            readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: markdownURLs,
+            origin: .manual,
+            slotStrategy: slotStrategy
+        ))
+    }
+
+    func handlePickedFileURLs(_ fileURLs: [URL]) {
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard !markdownURLs.isEmpty else {
+            return
+        }
+
+        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
+        let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
+        if readerStore.hasUnsavedDraftChanges,
+           currentURL != normalizedIncomingURL {
+            readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
+            return
+        }
+
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: [markdownURLs[0]],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        ))
+
+        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
+        guard !additionalMarkdownURLs.isEmpty else {
+            return
+        }
+
+        callbacks.onRequestFileOpen(FileOpenRequest(
+            fileURLs: additionalMarkdownURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        ))
+    }
+
+    func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || folderWatchState.activeFolderWatch == nil
+    }
+
+    // MARK: - Scroll sync wiring
+
+    func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
+        guard canSynchronizeSplitScroll else {
+            return nil
+        }
+
+        return splitScrollCoordinator.request(for: surface)
+    }
+
+    var previewReloadAnchorProgress: Double? {
+        guard canSynchronizeSplitScroll,
+              readerStore.isSourceEditing else {
+            return nil
+        }
+
+        return splitScrollCoordinator.latestObservedProgress(for: .source)
+    }
+
+    func handleScrollSyncObservation(
+        _ observation: ScrollSyncObservation,
+        from surface: DocumentSurfaceRole
+    ) {
+        splitScrollCoordinator.handleObservation(
+            observation,
+            from: surface,
+            shouldSync: canSynchronizeSplitScroll
+        )
+    }
+}

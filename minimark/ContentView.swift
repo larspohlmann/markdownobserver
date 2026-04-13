@@ -9,17 +9,17 @@ struct ContentView: View {
         static let splitPaneMinimumWidth: CGFloat = 320
     }
 
-    private enum PreviewMode {
+    enum PreviewMode {
         case web
         case nativeFallback
     }
 
-    private enum SourceMode {
+    enum SourceMode {
         case web
         case plainTextFallback
     }
 
-    private static let logger = Logger(
+    static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ContentView"
     )
@@ -33,14 +33,18 @@ struct ContentView: View {
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
-    @StateObject private var splitScrollCoordinator = SplitScrollCoordinator()
-    @State private var dropTargeting = DropTargetingCoordinator()
-    @State private var previewMode: PreviewMode = .web
-    @State private var previewReloadToken = 0
-    @State private var sourceMode: SourceMode = .web
-    @State private var sourceReloadToken = 0
-    @State private var changeNavigation = ChangedRegionNavigationCoordinator()
-    @State private var sourceHTMLCache = SourceHTMLDocumentCache()
+    // MARK: - Internal: accessible to factory extension in ContentViewConfigurationFactory.swift
+    // These properties must be at least `internal` because Swift extensions in separate files
+    // cannot see `private` members.
+
+    @StateObject var splitScrollCoordinator = SplitScrollCoordinator()
+    @State var dropTargeting = DropTargetingCoordinator()
+    @State var previewMode: PreviewMode = .web
+    @State var previewReloadToken = 0
+    @State var sourceMode: SourceMode = .web
+    @State var sourceReloadToken = 0
+    @State var changeNavigation = ChangedRegionNavigationCoordinator()
+    @State var sourceHTMLCache = SourceHTMLDocumentCache()
 
     var body: some View {
         baseBody.modifier(ContentViewFocusedValues(
@@ -253,68 +257,12 @@ struct ContentView: View {
         readerStore.grantImageDirectoryAccess(folderURL: selectedURL)
     }
 
-    private func handleDroppedFileURLs(_ fileURLs: [URL]) {
-        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
-            guard folderWatchState.activeFolderWatch == nil else {
-                return
-            }
-
-            callbacks.onRequestFolderWatch(droppedFolderURL)
-            return
-        }
-
-        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
-        guard !markdownURLs.isEmpty else {
-            return
-        }
-
-        let slotStrategy: FileOpenRequest.SlotStrategy =
-            readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
-        callbacks.onRequestFileOpen(FileOpenRequest(
-            fileURLs: markdownURLs,
-            origin: .manual,
-            slotStrategy: slotStrategy
-        ))
-    }
-
-    private func handlePickedFileURLs(_ fileURLs: [URL]) {
-        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
-        guard !markdownURLs.isEmpty else {
-            return
-        }
-
-        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
-        let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
-        if readerStore.hasUnsavedDraftChanges,
-           currentURL != normalizedIncomingURL {
-            readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
-            return
-        }
-
-        callbacks.onRequestFileOpen(FileOpenRequest(
-            fileURLs: [markdownURLs[0]],
-            origin: .manual,
-            slotStrategy: .replaceSelectedSlot
-        ))
-
-        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
-        guard !additionalMarkdownURLs.isEmpty else {
-            return
-        }
-
-        callbacks.onRequestFileOpen(FileOpenRequest(
-            fileURLs: additionalMarkdownURLs,
-            origin: .manual,
-            slotStrategy: .alwaysAppend
-        ))
-    }
-
-    private var previewAccessibilityValue: String {
+    var previewAccessibilityValue: String {
         let fileName = readerStore.fileURL?.lastPathComponent ?? "none"
         return "file=\(fileName)|regions=\(readerStore.changedRegions.count)|mode=\(readerStore.documentViewMode.rawValue)|surface=preview"
     }
 
-    private var sourceAccessibilityValue: String {
+    var sourceAccessibilityValue: String {
         let fileName = readerStore.fileURL?.lastPathComponent ?? "none"
         return "file=\(fileName)|mode=\(readerStore.documentViewMode.rawValue)|surface=source"
     }
@@ -350,7 +298,7 @@ struct ContentView: View {
         readerStore.isCurrentFileMissing || readerStore.needsImageDirectoryAccess
     }
 
-    private var overlayInsets: ReaderOverlayInsetValues {
+    var overlayInsets: ReaderOverlayInsetValues {
         ReaderOverlayInsetCalculator.compute(
             topBarInset: overlayTopInset,
             hasStatusBanner: isStatusBannerVisible
@@ -370,54 +318,60 @@ struct ContentView: View {
                     tocOverlay(buttonAnchor: anchor)
                 }
             }
-            .overlay(alignment: .topLeading) {
-                if canNavigateChangedRegions {
-                    ChangeNavigationPill(
-                        currentIndex: changeNavigation.currentIndex,
-                        totalCount: readerStore.changedRegions.count,
-                        onNavigate: { direction in
-                            changeNavigation.requestNavigation(direction)
-                            splitScrollCoordinator.suppressPreviewBounceBack()
-                        }
-                    )
-                    .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
-                    .padding(.top, overlayInsets.leadingOverlayTopPadding)
-                    .padding(.leading, 8)
-                    .environment(\.colorScheme, overlayColorScheme)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity
-                    ))
-                }
-            }
+            .overlay(alignment: .topLeading) { changeNavigationOverlay }
             .animation(.easeOut(duration: 0.25), value: canNavigateChangedRegions)
-            .overlay(alignment: .top) {
-                if let activeWatch = folderWatchState.activeFolderWatch {
-                    WatchPill(
-                        activeFolderWatch: activeWatch,
-                        isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
-                        canStop: folderWatchState.canStopFolderWatch,
-                        onStop: callbacks.onStopFolderWatch,
-                        onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
-                        onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
-                        onRevealInFinder: {
-                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                        },
-                        isAppearanceLocked: folderWatchState.isAppearanceLocked,
-                        onToggleAppearanceLock: callbacks.onToggleAppearanceLock,
-                        onEditSubfolders: callbacks.onEditSubfolders
-                    )
-                    .padding(.top, overlayInsets.leadingOverlayTopPadding)
-                    .padding(.leading, canNavigateChangedRegions ? 150 : 60)
-                    .padding(.trailing, 70)
-                    .environment(\.colorScheme, overlayColorScheme)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity
-                    ))
-                }
-            }
+            .overlay(alignment: .top) { watchPillOverlay }
             .animation(.easeOut(duration: 0.25), value: folderWatchState.activeFolderWatch != nil)
+    }
+
+    @ViewBuilder
+    private var changeNavigationOverlay: some View {
+        if canNavigateChangedRegions {
+            ChangeNavigationPill(
+                currentIndex: changeNavigation.currentIndex,
+                totalCount: readerStore.changedRegions.count,
+                onNavigate: { direction in
+                    changeNavigation.requestNavigation(direction)
+                    splitScrollCoordinator.suppressPreviewBounceBack()
+                }
+            )
+            .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
+            .padding(.top, overlayInsets.leadingOverlayTopPadding)
+            .padding(.leading, 8)
+            .environment(\.colorScheme, overlayColorScheme)
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .top)),
+                removal: .opacity
+            ))
+        }
+    }
+
+    @ViewBuilder
+    private var watchPillOverlay: some View {
+        if let activeWatch = folderWatchState.activeFolderWatch {
+            WatchPill(
+                activeFolderWatch: activeWatch,
+                isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
+                canStop: folderWatchState.canStopFolderWatch,
+                onStop: callbacks.onStopFolderWatch,
+                onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
+                onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
+                onRevealInFinder: {
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                },
+                isAppearanceLocked: folderWatchState.isAppearanceLocked,
+                onToggleAppearanceLock: callbacks.onToggleAppearanceLock,
+                onEditSubfolders: callbacks.onEditSubfolders
+            )
+            .padding(.top, overlayInsets.leadingOverlayTopPadding)
+            .padding(.leading, canNavigateChangedRegions ? 150 : 60)
+            .padding(.trailing, 70)
+            .environment(\.colorScheme, overlayColorScheme)
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .top)),
+                removal: .opacity
+            ))
+        }
     }
 
     private var contentUtilityRail: some View {
@@ -477,7 +431,7 @@ struct ContentView: View {
         readerStore.scrollToTOCHeading(heading)
     }
 
-    private var canNavigateChangedRegions: Bool {
+    var canNavigateChangedRegions: Bool {
         readerStore.documentViewMode != .source &&
             previewMode == .web &&
             !readerStore.changedRegions.isEmpty
@@ -488,7 +442,7 @@ struct ContentView: View {
             (readerStore.documentViewMode != .preview || readerStore.isSourceEditing)
     }
 
-    private var canSynchronizeSplitScroll: Bool {
+    var canSynchronizeSplitScroll: Bool {
         readerStore.documentViewMode == .split &&
             previewMode == .web &&
             sourceMode == .web
@@ -527,167 +481,8 @@ struct ContentView: View {
         }
     }
 
-    private var minimumSurfaceWidth: CGFloat? {
+    var minimumSurfaceWidth: CGFloat? {
         readerStore.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
-    }
-
-    private func documentSurfacePane(for surface: DocumentSurfaceRole) -> some View {
-        DocumentSurfaceHost(
-            configuration: documentSurfaceConfiguration(for: surface),
-            fallbackMarkdown: readerStore.sourceMarkdown
-        )
-    }
-
-    private func documentSurfaceConfiguration(for surface: DocumentSurfaceRole) -> DocumentSurfaceConfiguration {
-        switch surface {
-        case .preview:
-            return DocumentSurfaceConfiguration(
-                role: surface,
-                usesWebSurface: previewMode == .web,
-                htmlDocument: readerStore.renderedHTMLDocument,
-                documentIdentity: readerStore.fileURL?.standardizedFileURL.path,
-                accessibilityIdentifier: "reader-preview",
-                accessibilityValue: previewAccessibilityValue,
-                reloadToken: previewReloadToken,
-                diagnosticName: "reader-preview",
-                postLoadStatusScript: nil,
-                changedRegionNavigationRequest: canNavigateChangedRegions ? changeNavigation.currentRequest : nil,
-                scrollSyncRequest: splitScrollRequest(for: surface),
-                tocScrollRequest: readerStore.tocScrollRequest,
-                supportsInPlaceContentUpdates: true,
-                overlayTopInset: overlayInsets.scrollTargetTopInset,
-                reloadAnchorProgress: previewReloadAnchorProgress,
-                minimumWidth: minimumSurfaceWidth,
-                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
-                onAction: { action in
-                    switch action {
-                    case .fatalCrash:
-                        Self.logger.error("preview web surface hit fatal crash and fell back to native text")
-                        previewMode = .nativeFallback
-                    case .postLoadStatus:
-                        break
-                    case .scrollSyncObservation(let observation):
-                        handleScrollSyncObservation(observation, from: .preview)
-                    case .sourceEdit:
-                        break
-                    case .tocHeadingsExtracted(let headings):
-                        readerStore.updateTOCHeadings(headings)
-                    case .droppedFileURLs(let urls):
-                        handleDroppedFileURLs(urls)
-                    case .dropTargetedChange(let update):
-                        dropTargeting.update(for: .preview, update: update)
-                    case .changedRegionNavigationResult(let index, let total):
-                        changeNavigation.handleNavigationResult(index: index, total: total)
-                    case .retryFallback:
-                        previewReloadToken += 1
-                        previewMode = .web
-                    }
-                }
-            )
-        case .source:
-            return DocumentSurfaceConfiguration(
-                role: surface,
-                usesWebSurface: sourceMode == .web,
-                htmlDocument: sourceHTMLCache.document,
-                documentIdentity: sourceDocumentIdentity,
-                accessibilityIdentifier: "reader-source",
-                accessibilityValue: sourceAccessibilityValue,
-                reloadToken: sourceReloadToken,
-                diagnosticName: "reader-source",
-                postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
-                changedRegionNavigationRequest: nil,
-                scrollSyncRequest: splitScrollRequest(for: surface),
-                tocScrollRequest: readerStore.tocScrollRequest,
-                supportsInPlaceContentUpdates: false,
-                overlayTopInset: overlayInsets.scrollTargetTopInset,
-                reloadAnchorProgress: nil,
-                minimumWidth: minimumSurfaceWidth,
-                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
-                onAction: { action in
-                    switch action {
-                    case .fatalCrash:
-                        Self.logger.error("source web surface hit fatal crash and fell back to plain text")
-                        sourceMode = .plainTextFallback
-                    case .postLoadStatus(let status):
-                        guard let status else {
-                            Self.logger.error("source post-load status probe returned no status")
-                            sourceMode = .plainTextFallback
-                            return
-                        }
-                        guard status == "ready" else {
-                            Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
-                            sourceMode = .plainTextFallback
-                            return
-                        }
-                        Self.logger.debug("source bootstrap completed successfully")
-                    case .scrollSyncObservation(let observation):
-                        handleScrollSyncObservation(observation, from: .source)
-                    case .sourceEdit(let markdown):
-                        readerStore.updateSourceDraft(markdown)
-                    case .tocHeadingsExtracted(let headings):
-                        readerStore.updateTOCHeadings(headings)
-                    case .droppedFileURLs(let urls):
-                        handleDroppedFileURLs(urls)
-                    case .dropTargetedChange(let update):
-                        dropTargeting.update(for: .source, update: update)
-                    case .changedRegionNavigationResult:
-                        break
-                    case .retryFallback:
-                        sourceReloadToken += 1
-                        sourceMode = .web
-                    }
-                }
-            )
-        }
-    }
-
-    private var sourceDocumentIdentity: String? {
-        guard let path = readerStore.fileURL?.standardizedFileURL.path else {
-            return nil
-        }
-
-        return "\(path)|source"
-    }
-
-
-    private func refreshSourceHTML() {
-        sourceHTMLCache.refreshIfNeeded(
-            markdown: readerStore.sourceEditorSeedMarkdown,
-            settings: readerStore.currentSettings,
-            isEditable: readerStore.isSourceEditing
-        )
-    }
-
-    private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
-        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || folderWatchState.activeFolderWatch == nil
-    }
-
-    private func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
-        guard canSynchronizeSplitScroll else {
-            return nil
-        }
-
-        return splitScrollCoordinator.request(for: surface)
-    }
-
-    private var previewReloadAnchorProgress: Double? {
-        guard canSynchronizeSplitScroll,
-              readerStore.isSourceEditing else {
-            return nil
-        }
-
-        return splitScrollCoordinator.latestObservedProgress(for: .source)
-    }
-
-    private func handleScrollSyncObservation(
-        _ observation: ScrollSyncObservation,
-        from surface: DocumentSurfaceRole
-    ) {
-        splitScrollCoordinator.handleObservation(
-            observation,
-            from: surface,
-            shouldSync: canSynchronizeSplitScroll
-        )
     }
 
     private var isUITestModeEnabled: Bool {
@@ -695,7 +490,7 @@ struct ContentView: View {
     }
 }
 
-private struct DocumentSurfaceHost: View {
+struct DocumentSurfaceHost: View {
     let configuration: DocumentSurfaceConfiguration
     let fallbackMarkdown: String
 
@@ -831,7 +626,7 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
 }
 
 @MainActor
-private final class SplitScrollCoordinator: ObservableObject {
+final class SplitScrollCoordinator: ObservableObject {
     @Published private var previewRequest: ScrollSyncRequest?
     @Published private var sourceRequest: ScrollSyncRequest?
 
