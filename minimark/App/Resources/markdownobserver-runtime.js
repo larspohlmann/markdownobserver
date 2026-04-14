@@ -1857,37 +1857,48 @@
 
       btn.setAttribute("aria-label", language ? "Copy " + language.toLowerCase() + " code" : "Copy code");
 
-      (function (codeEl, preEl) {
+      (function (codeEl, preEl, overlayBtn) {
         btn.addEventListener("click", function (e) {
           e.preventDefault();
           e.stopPropagation();
           var textContent = codeEl.textContent || "";
-          var pureCode = textContent.trim();
-          navigator.clipboard.writeText(pureCode).then(function () {
-            showCopyToast(preEl);
+          var lines = textContent.split("\n");
+          var minIndent = Infinity;
+          for (var j = 0; j < lines.length; j += 1) {
+            if (lines[j].trim() === "") { continue; }
+            var indent = lines[j].match(/^(\s*)/)[1].length;
+            if (indent < minIndent) { minIndent = indent; }
+          }
+          if (minIndent === Infinity) { minIndent = 0; }
+          var normalized = lines.map(function (line) {
+            return line.substring(minIndent);
+          }).join("\n").trim();
+          navigator.clipboard.writeText(normalized).then(function () {
+            showCopyToast(preEl, overlayBtn);
           }).catch(function () {
             var ta = document.createElement("textarea");
-            ta.value = pureCode;
+            ta.value = normalized;
             ta.style.position = "fixed";
             ta.style.opacity = "0";
             document.body.appendChild(ta);
             ta.select();
             document.execCommand("copy");
             document.body.removeChild(ta);
-            showCopyToast(preEl);
+            showCopyToast(preEl, overlayBtn);
           });
         });
-      })(code, pre);
+      })(code, pre, btn);
 
       pre.appendChild(btn);
     }
   }
 
-  function showCopyToast(preEl) {
+  function showCopyToast(preEl, overlayBtn) {
     var existing = preEl.querySelector(".code-block-toast");
     if (existing) {
       existing.remove();
     }
+    overlayBtn.style.display = "none";
     var toast = document.createElement("div");
     toast.className = "code-block-toast";
     toast.textContent = "Copied!";
@@ -1896,6 +1907,7 @@
       if (toast.parentNode) {
         toast.remove();
       }
+      overlayBtn.style.display = "";
     }, 1600);
   }
 

@@ -381,8 +381,8 @@ enum ReaderCSSThemeGenerator {
           border: 1px solid var(--reader-border);
           border-radius: 6px;
           padding: 2px 8px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          font-size: 11px;
+          font-family: "SF Mono", Menlo, ui-monospace, monospace;
+          font-size: inherit;
           line-height: 1;
           color: var(--reader-syntax-keyword);
           opacity: 0.6;
@@ -410,14 +410,14 @@ enum ReaderCSSThemeGenerator {
 
         .code-block-toast {
           position: absolute;
-          top: -20px;
+          top: 6px;
           right: 6px;
-          background: color-mix(in srgb, var(--reader-code-bg) 90%, transparent);
-          border: 1px solid color-mix(in srgb, var(--reader-border) 60%, transparent);
+          background: var(--reader-code-bg);
+          border: 1px solid var(--reader-border);
           border-radius: 6px;
-          padding: 3px 10px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          font-size: 11px;
+          padding: 2px 8px;
+          font-family: "SF Mono", Menlo, ui-monospace, monospace;
+          font-size: inherit;
           line-height: 1;
           color: var(--reader-syntax-keyword);
           white-space: nowrap;
