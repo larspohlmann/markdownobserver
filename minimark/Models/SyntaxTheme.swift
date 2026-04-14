@@ -79,6 +79,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                     --reader-blockquote-accent: \(palette.blockquoteAccentHex);
                     --reader-blockquote-bg: \(palette.blockquoteBackgroundHex);
                     --reader-blockquote-fg: \(palette.blockquoteForegroundHex);
+                    --reader-syntax-keyword: \(palette.keywordHex);
                 }
 
         pre {
