@@ -28,6 +28,7 @@ final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private let folderWatchOpenCoordinator = ReaderFolderWatchOpenCoordinator()
+    let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
     var hostWindow: NSWindow?
@@ -330,6 +331,7 @@ final class ReaderWindowCoordinator {
             sidebarDocumentController.documents,
             rowStates: sidebarDocumentController.rowStates
         )
+        openDocumentPathTracker.update(from: sidebarDocumentController.documents)
     }
 
     func handleWindowAppear() {
@@ -342,6 +344,7 @@ final class ReaderWindowCoordinator {
             rowStates: sidebarDocumentController.rowStates
         )
         groupStateController?.observeRowStates(from: sidebarDocumentController)
+        openDocumentPathTracker.update(from: sidebarDocumentController.documents)
         DockTileController.shared.configureDockTileIfNeeded()
         let token = dockTileWindowToken
         sidebarDocumentController.onDockTileRowStatesChanged = { rowStates in
