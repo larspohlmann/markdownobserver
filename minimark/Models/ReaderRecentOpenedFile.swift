@@ -15,21 +15,7 @@ nonisolated struct ReaderRecentOpenedFile: Equatable, Hashable, Codable, Sendabl
     }
 
     nonisolated var resolvedFileURL: URL {
-        guard let bookmarkData else {
-            return fileURL
-        }
-
-        var bookmarkIsStale = false
-        guard let resolvedURL = try? URL(
-            resolvingBookmarkData: bookmarkData,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &bookmarkIsStale
-        ) else {
-            return fileURL
-        }
-
-        return resolvedURL
+        SecurityScopedBookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: fileURL)
     }
 
     nonisolated var displayName: String {

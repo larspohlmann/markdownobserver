@@ -8,7 +8,7 @@ nonisolated enum ReaderRecentHistory {
         func title(displayName: String, pathText: String) -> String {
             let siblingPaths = siblingPathsByDisplayName[displayName] ?? []
             guard siblingPaths.count > 1,
-                  let suffix = uniqueParentSuffix(
+                  let suffix = PathDisambiguator.uniqueParentSuffix(
                     for: pathText,
                     among: siblingPaths,
                     parentComponentsByPath: parentComponentsByPath
@@ -149,48 +149,12 @@ nonisolated enum ReaderRecentHistory {
 
         let allPaths = siblingPathsByDisplayName.values.flatMap { $0 }
         let parentComponentsByPath = Dictionary(allPaths.map { path in
-            (path, parentComponents(for: path))
+            (path, PathDisambiguator.parentComponents(for: path))
         }, uniquingKeysWith: { first, _ in first })
 
         return MenuDisambiguationContext(
             siblingPathsByDisplayName: siblingPathsByDisplayName,
             parentComponentsByPath: parentComponentsByPath
         )
-    }
-
-    private static func uniqueParentSuffix(
-        for path: String,
-        among siblingPaths: [String],
-        parentComponentsByPath: [String: [String]]
-    ) -> String? {
-        let siblingParentComponents = siblingPaths.map { parentComponentsByPath[$0] ?? parentComponents(for: $0) }
-        let targetParentComponents = parentComponentsByPath[path] ?? parentComponents(for: path)
-        guard !targetParentComponents.isEmpty else {
-            return nil
-        }
-
-        let maximumDepth = siblingParentComponents.map(\.count).max() ?? 0
-        for suffixLength in 1...maximumDepth {
-            let targetSuffix = suffix(parentComponents: targetParentComponents, count: suffixLength)
-            let siblingSuffixes = siblingParentComponents.map { suffix(parentComponents: $0, count: suffixLength) }
-
-            if siblingSuffixes.filter({ $0 == targetSuffix }).count == 1 {
-                return targetSuffix
-            }
-        }
-
-        return targetParentComponents.joined(separator: "/")
-    }
-
-    private static func parentComponents(for path: String) -> [String] {
-        URL(fileURLWithPath: path)
-            .deletingLastPathComponent()
-            .pathComponents
-            .filter { $0 != "/" && !$0.isEmpty }
-    }
-
-    private static func suffix(parentComponents: [String], count: Int) -> String {
-        let suffixCount = min(count, parentComponents.count)
-        return parentComponents.suffix(suffixCount).joined(separator: "/")
     }
 }

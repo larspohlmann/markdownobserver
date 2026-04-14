@@ -5,42 +5,6 @@ import Testing
 @Suite
 struct ReaderSidebarGroupingTests {
 
-    // MARK: - Display Name Disambiguation
-
-    @Test @MainActor func disambiguatedDisplayNamesReturnsFolderNamesForDistinctDirectories() {
-        let paths = ["/Users/me/project/src", "/Users/me/project/tests"]
-        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
-
-        #expect(names["/Users/me/project/src"] == "src")
-        #expect(names["/Users/me/project/tests"] == "tests")
-    }
-
-    @Test @MainActor func disambiguatedDisplayNamesAddsParentWhenFolderNamesCollide() {
-        let paths = [
-            "/Users/me/project/a/docs",
-            "/Users/me/project/b/docs"
-        ]
-        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
-
-        #expect(names["/Users/me/project/a/docs"] == "a/docs")
-        #expect(names["/Users/me/project/b/docs"] == "b/docs")
-    }
-
-    @Test @MainActor func disambiguatedDisplayNamesHandlesSinglePath() {
-        let paths = ["/Users/me/project/src"]
-        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
-
-        #expect(names["/Users/me/project/src"] == "src")
-    }
-
-    @Test @MainActor func disambiguatedDisplayNamesHandlesEmptyPathForUntitled() {
-        let paths = ["", "/Users/me/project/src"]
-        let names = ReaderSidebarGrouping.disambiguatedDisplayNames(for: paths)
-
-        #expect(names[""] == "Untitled")
-        #expect(names["/Users/me/project/src"] == "src")
-    }
-
     // MARK: - Grouping Logic
 
     @Test @MainActor func singleDirectoryReturnsFlat() throws {

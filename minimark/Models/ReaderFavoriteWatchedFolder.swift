@@ -204,7 +204,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         let folderPath = normalizedFolderURL.path
         let folderPathWithSlash = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
-        let excludedDirectoryPaths = excludedDirectoryPaths(
+        let excludedPaths = excludedPathSet(
             relativeTo: normalizedFolderURL,
             options: options,
             folderPathWithSlash: folderPathWithSlash
@@ -217,7 +217,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
                 options: options,
                 folderPath: folderPath,
                 folderPathWithSlash: folderPathWithSlash,
-                excludedDirectoryPaths: excludedDirectoryPaths
+                excludedPathSet: excludedPaths
             ) else {
                 return nil
             }
@@ -259,7 +259,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         options: ReaderFolderWatchOptions,
         folderPath: String,
         folderPathWithSlash: String,
-        excludedDirectoryPaths: [String]
+        excludedPathSet: Set<String>
     ) -> Bool {
         guard ReaderFileRouting.isSupportedMarkdownFileURL(fileURL) else {
             return false
@@ -274,46 +274,29 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
                 return false
             }
 
-            return !filePathIsExcluded(
+            return !FolderWatchExclusionCalculator.isPathExcludedBySelfOrAncestor(
                 filePath,
-                excludedDirectoryPaths: excludedDirectoryPaths
+                excludedSet: excludedPathSet
             )
         }
     }
 
-    private static func filePathIsExcluded(
-        _ filePath: String,
-        excludedDirectoryPaths: [String]
-    ) -> Bool {
-        for excludedPath in excludedDirectoryPaths {
-            if filePath == excludedPath {
-                return true
-            }
-
-            let excludedPathWithSlash = excludedPath.hasSuffix("/")
-                ? excludedPath
-                : excludedPath + "/"
-            if filePath.hasPrefix(excludedPathWithSlash) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private static func excludedDirectoryPaths(
+    private static func excludedPathSet(
         relativeTo folderURL: URL,
         options: ReaderFolderWatchOptions,
         folderPathWithSlash: String
-    ) -> [String] {
+    ) -> Set<String> {
         guard options.scope == .includeSubfolders else {
             return []
         }
 
-        return options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
+        let paths = options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
             .map(ReaderFileRouting.normalizedFileURL)
             .map(\.path)
             .filter { $0.hasPrefix(folderPathWithSlash) }
+            .map(FolderWatchExclusionCalculator.normalizedDirectoryPath)
+
+        return Set(paths)
     }
 
     nonisolated var excludedSubdirectoryRelativePaths: [String] {

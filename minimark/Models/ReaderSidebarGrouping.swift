@@ -56,7 +56,7 @@ enum ReaderSidebarGrouping: Equatable {
             return .flat(documents)
         }
 
-        let displayNames = disambiguatedDisplayNames(for: Array(grouped.keys))
+        let displayNames = PathDisambiguator.disambiguatedDisplayNames(for: Array(grouped.keys))
 
         let groups: [Group] = orderedDirectoryPaths.compactMap { directoryPath in
             guard let docs = grouped[directoryPath] else {
@@ -244,58 +244,4 @@ enum ReaderSidebarGrouping: Equatable {
         }
     }
 
-    static func disambiguatedDisplayNames(
-        for directoryPaths: [String]
-    ) -> [String: String] {
-        guard !directoryPaths.isEmpty else { return [:] }
-
-        let nonEmpty = directoryPaths.filter { !$0.isEmpty }
-        let untitled = directoryPaths.filter { $0.isEmpty }
-
-        guard nonEmpty.count > 1 || !untitled.isEmpty else {
-            if let single = nonEmpty.first {
-                let name = (single as NSString).lastPathComponent
-                return [single: name]
-            }
-            return untitled.isEmpty ? [:] : ["": "Untitled"]
-        }
-
-        let components: [String: [String]] = Dictionary(uniqueKeysWithValues:
-            nonEmpty.map { path in
-                let parts = path.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
-                return (path, parts)
-            }
-        )
-
-        // Start with just the last component (folder name)
-        var names: [String: String] = Dictionary(uniqueKeysWithValues:
-            nonEmpty.map { ($0, components[$0]?.last ?? $0) }
-        )
-
-        // If there are duplicates, add parent components until unique
-        let maxDepth = components.values.map(\.count).max() ?? 1
-        var depth = 1
-
-        while depth < maxDepth {
-            let duplicateNames = Dictionary(grouping: nonEmpty, by: { names[$0]! })
-                .filter { $0.value.count > 1 }
-
-            if duplicateNames.isEmpty { break }
-
-            depth += 1
-            for (_, paths) in duplicateNames {
-                for path in paths {
-                    guard let parts = components[path] else { continue }
-                    let startIndex = max(0, parts.count - depth)
-                    names[path] = parts[startIndex...].joined(separator: "/")
-                }
-            }
-        }
-
-        if !untitled.isEmpty {
-            names[""] = "Untitled"
-        }
-
-        return names
-    }
 }

@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Used by both `FolderWatchOptionsSheet` and `LargeFolderExclusionDialog` to avoid
 /// duplicating the exclusion counting logic.
-enum FolderWatchExclusionCalculator {
+nonisolated enum FolderWatchExclusionCalculator {
 
     /// Returns the number of paths in `paths` that are effectively excluded,
     /// either by direct membership in `excludedPaths` or by having an ancestor in the set.
