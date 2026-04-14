@@ -3,17 +3,21 @@ import SwiftUI
 
 // MARK: - FolderWatchToolbarButton
 
+enum FolderWatchToolbarAction {
+    case activate
+    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
+    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case editFavoriteWatchedFolders
+    case clearRecentWatchedFolders
+}
+
 struct FolderWatchToolbarButton: View {
     let activeFolderWatch: ReaderFolderWatchSession?
     let isInitialScanInProgress: Bool
     let didInitialScanFail: Bool
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let onActivate: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onEditFavoriteWatchedFolders: () -> Void
-    let onClearRecentWatchedFolders: () -> Void
+    let onAction: (FolderWatchToolbarAction) -> Void
     var compact: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
@@ -46,7 +50,7 @@ struct FolderWatchToolbarButton: View {
     var body: some View {
         HStack(spacing: 0) {
             Button {
-                onActivate()
+                onAction(.activate)
             } label: {
                 mainButtonLabel
             }
@@ -128,7 +132,7 @@ struct FolderWatchToolbarButton: View {
                 ForEach(favoriteWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false
-                        onStartFavoriteWatch(entry)
+                        onAction(.startFavoriteWatch(entry))
                     } label: {
                         Label {
                             Text(entry.name)
@@ -150,7 +154,7 @@ struct FolderWatchToolbarButton: View {
 
                 Button("Edit Favorites\u{2026}") {
                     isMenuPresented = false
-                    onEditFavoriteWatchedFolders()
+                    onAction(.editFavoriteWatchedFolders)
                 }
                 .accessibilityIdentifier("edit-favorites-button")
                 .buttonStyle(.plain)
@@ -173,7 +177,7 @@ struct FolderWatchToolbarButton: View {
                 ForEach(recentWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false
-                        onStartRecentFolderWatch(entry)
+                        onAction(.startRecentFolderWatch(entry))
                     } label: {
                         Text(titlesByPath[entry.folderPath] ?? entry.displayName)
                             .lineLimit(1)
@@ -187,7 +191,7 @@ struct FolderWatchToolbarButton: View {
 
                 Button("Clear History") {
                     isMenuPresented = false
-                    onClearRecentWatchedFolders()
+                    onAction(.clearRecentWatchedFolders)
                 }
                 .buttonStyle(.plain)
                 .font(.system(size: 12))

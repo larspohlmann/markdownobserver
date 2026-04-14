@@ -137,11 +137,7 @@ struct ReaderWindowRootView: View {
                     didInitialScanFail: false,
                     favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
                     recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
-                    onActivate: {},
-                    onStartFavoriteWatch: { _ in },
-                    onStartRecentFolderWatch: { _ in },
-                    onEditFavoriteWatchedFolders: {},
-                    onClearRecentWatchedFolders: {},
+                    onAction: { _ in },
                     compact: true
                 )
                 .disabled(true)
@@ -559,20 +555,19 @@ struct ReaderWindowRootView: View {
                     didInitialScanFail: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
                     favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
                     recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
-                    onActivate: {
-                        promptForFolderWatch()
-                    },
-                    onStartFavoriteWatch: { favorite in
-                        startFavoriteWatch(favorite)
-                    },
-                    onStartRecentFolderWatch: { recent in
-                        startRecentFolderWatch(recent)
-                    },
-                    onEditFavoriteWatchedFolders: {
-                        isTitlebarEditingFavorites = true
-                    },
-                    onClearRecentWatchedFolders: {
-                        clearRecentWatchedFolders()
+                    onAction: { action in
+                        switch action {
+                        case .activate:
+                            promptForFolderWatch()
+                        case .startFavoriteWatch(let favorite):
+                            startFavoriteWatch(favorite)
+                        case .startRecentFolderWatch(let recent):
+                            startRecentFolderWatch(recent)
+                        case .editFavoriteWatchedFolders:
+                            isTitlebarEditingFavorites = true
+                        case .clearRecentWatchedFolders:
+                            clearRecentWatchedFolders()
+                        }
                     },
                     compact: true
                 )
