@@ -397,6 +397,11 @@ enum ReaderCSSThemeGenerator {
           border-color: var(--reader-fg-secondary);
         }
 
+        .code-block-overlay:focus-visible {
+          outline: 2px solid var(--reader-link);
+          outline-offset: 1px;
+        }
+
         .code-block-overlay-icon {
           padding: 4px 5px;
           line-height: 0;

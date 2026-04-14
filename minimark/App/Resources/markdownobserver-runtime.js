@@ -1872,20 +1872,25 @@
           if (minIndent === Infinity) { minIndent = 0; }
           var normalized = lines.map(function (line) {
             return line.substring(minIndent);
-          }).join("\n").trim();
-          navigator.clipboard.writeText(normalized).then(function () {
-            showCopyToast(preEl, overlayBtn);
-          }).catch(function () {
-            var ta = document.createElement("textarea");
-            ta.value = normalized;
-            ta.style.position = "fixed";
-            ta.style.opacity = "0";
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand("copy");
-            document.body.removeChild(ta);
-            showCopyToast(preEl, overlayBtn);
-          });
+          }).join("\n");
+          if (normalized.charCodeAt(normalized.length - 1) === 10) {
+            normalized = normalized.substring(0, normalized.length - 1);
+          }
+          var doShowToast = function () { showCopyToast(preEl, overlayBtn); };
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            try {
+              navigator.clipboard.writeText(normalized).then(doShowToast).catch(function () {
+                fallbackCopy(normalized);
+                doShowToast();
+              });
+            } catch (_) {
+              fallbackCopy(normalized);
+              doShowToast();
+            }
+          } else {
+            fallbackCopy(normalized);
+            doShowToast();
+          }
         });
       })(code, pre, btn);
 
@@ -1893,21 +1898,37 @@
     }
   }
 
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+
   function showCopyToast(preEl, overlayBtn) {
     var existing = preEl.querySelector(".code-block-toast");
     if (existing) {
       existing.remove();
+    }
+    if (preEl._minimarkToastTimer) {
+      clearTimeout(preEl._minimarkToastTimer);
+      preEl._minimarkToastTimer = null;
     }
     overlayBtn.style.display = "none";
     var toast = document.createElement("div");
     toast.className = "code-block-toast";
     toast.textContent = "Copied!";
     preEl.appendChild(toast);
-    setTimeout(function () {
+    preEl._minimarkToastTimer = setTimeout(function () {
       if (toast.parentNode) {
         toast.remove();
       }
       overlayBtn.style.display = "";
+      preEl._minimarkToastTimer = null;
     }, 1600);
   }
 
