@@ -25,21 +25,7 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
     }
 
     nonisolated var resolvedFolderURL: URL {
-        guard let bookmarkData else {
-            return folderURL
-        }
-
-        var bookmarkIsStale = false
-        guard let resolvedURL = try? URL(
-            resolvingBookmarkData: bookmarkData,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &bookmarkIsStale
-        ) else {
-            return folderURL
-        }
-
-        return resolvedURL
+        BookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: folderURL)
     }
 
     init(folderURL: URL, options: ReaderFolderWatchOptions) {
