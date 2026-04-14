@@ -1828,6 +1828,110 @@
     } catch (_) {}
   }
 
+  function addCodeBlockOverlays(root) {
+    var pres = root.querySelectorAll("pre");
+    for (var i = 0; i < pres.length; i += 1) {
+      var pre = pres[i];
+      var code = pre.querySelector("code");
+      if (!code) { continue; }
+
+      var text = code.textContent || "";
+      if (text.trim() === "") { continue; }
+
+      var language = null;
+      var classes = code.className || "";
+      var langMatch = classes.match(/(?:^|\s)language-(\S+)/);
+      if (langMatch) {
+        language = langMatch[1];
+      }
+
+      var btn = document.createElement("button");
+      btn.className = "code-block-overlay" + (language ? "" : " code-block-overlay-icon");
+      btn.type = "button";
+
+      if (language) {
+        btn.textContent = language.toLowerCase();
+      } else {
+        btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M3 11V3a1.5 1.5 0 011.5-1.5H11"/></svg>';
+      }
+
+      btn.setAttribute("aria-label", language ? "Copy " + language.toLowerCase() + " code" : "Copy code");
+
+      (function (codeEl, preEl, overlayBtn) {
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var textContent = codeEl.textContent || "";
+          var lines = textContent.split("\n");
+          var minIndent = Infinity;
+          for (var j = 0; j < lines.length; j += 1) {
+            if (lines[j].trim() === "") { continue; }
+            var indent = lines[j].match(/^(\s*)/)[1].length;
+            if (indent < minIndent) { minIndent = indent; }
+          }
+          if (minIndent === Infinity) { minIndent = 0; }
+          var normalized = lines.map(function (line) {
+            return line.substring(minIndent);
+          }).join("\n");
+          if (normalized.charCodeAt(normalized.length - 1) === 10) {
+            normalized = normalized.substring(0, normalized.length - 1);
+          }
+          var doShowToast = function () { showCopyToast(preEl, overlayBtn); };
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            try {
+              navigator.clipboard.writeText(normalized).then(doShowToast).catch(function () {
+                fallbackCopy(normalized);
+                doShowToast();
+              });
+            } catch (_) {
+              fallbackCopy(normalized);
+              doShowToast();
+            }
+          } else {
+            fallbackCopy(normalized);
+            doShowToast();
+          }
+        });
+      })(code, pre, btn);
+
+      pre.appendChild(btn);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+
+  function showCopyToast(preEl, overlayBtn) {
+    var existing = preEl.querySelector(".code-block-toast");
+    if (existing) {
+      existing.remove();
+    }
+    if (preEl._minimarkToastTimer) {
+      clearTimeout(preEl._minimarkToastTimer);
+      preEl._minimarkToastTimer = null;
+    }
+    overlayBtn.style.display = "none";
+    var toast = document.createElement("div");
+    toast.className = "code-block-toast";
+    toast.textContent = "Copied!";
+    preEl.appendChild(toast);
+    preEl._minimarkToastTimer = setTimeout(function () {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+      overlayBtn.style.display = "";
+      preEl._minimarkToastTimer = null;
+    }, 1600);
+  }
+
   function renderMarkdown(scrollAnchorProgress) {
     var root = document.getElementById("reader-root");
     var gutter = document.getElementById("reader-change-gutter");
@@ -1846,6 +1950,7 @@
     root.innerHTML = safeHTML;
     runHighlighting();
     annotateCodeBlockLines(root);
+    addCodeBlockOverlays(root);
     typesetMath(root, function () {
       renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
       renderChangedRegionGutter(root, gutter, payload.changedRegions || []);

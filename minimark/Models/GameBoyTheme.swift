@@ -64,6 +64,7 @@ enum GameBoyTheme {
 
     :root {
         --reader-mark-signal: #0F380F;
+        --reader-syntax-keyword: #0F380F;
         --reader-blockquote-accent: #306230;
         --reader-blockquote-bg: rgba(15, 56, 15, 0.08);
         --reader-blockquote-fg: #306230;
