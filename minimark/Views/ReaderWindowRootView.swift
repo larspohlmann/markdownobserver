@@ -14,10 +14,6 @@ struct ReaderWindowRootView: View {
     @State var favoriteWorkspaceController = FavoriteWorkspaceController()
     @State var folderWatchFlowController: FolderWatchFlowController
 
-    var fileOpenCoordinator: FileOpenCoordinator {
-        sidebarDocumentController.fileOpenCoordinator
-    }
-
     init(
         seed: ReaderWindowSeed?,
         settingsStore: ReaderSettingsStore,
@@ -48,7 +44,7 @@ struct ReaderWindowRootView: View {
     }
 
     private var openSidebarDocumentPathSnapshot: Set<String> {
-        Set(currentSidebarOpenDocumentFileURLs().map(\.path))
+        Set(windowCoordinator.currentSidebarOpenDocumentFileURLs().map(\.path))
     }
 
     private var pendingFolderWatchOpenModeBinding: Binding<ReaderFolderWatchOpenMode> {
@@ -142,15 +138,15 @@ struct ReaderWindowRootView: View {
         @Bindable var folderWatchFlow = folderWatchFlowController
         return view
             .sheet(item: $warningCoord.activeFlow, onDismiss: {
-                dismissFolderWatchAutoOpenWarning()
+                windowCoordinator.dismissFolderWatchAutoOpenWarning()
             }) { flow in
                 FolderWatchAutoOpenWarningFlowSheet(
                     flow: flow,
                     onKeepCurrentFiles: {
-                        dismissFolderWatchAutoOpenWarning()
+                        windowCoordinator.dismissFolderWatchAutoOpenWarning()
                     },
                     onOpenSelectedFiles: {
-                        openSelectedFolderWatchAutoOpenFiles()
+                        windowCoordinator.openSelectedFolderWatchAutoOpenFiles()
                     }
                 )
             }
@@ -164,14 +160,13 @@ struct ReaderWindowRootView: View {
                     },
                     onConfirm: { selectedFileURLs in
                         sidebarDocumentController.folderWatchCoordinator.dismissPendingFileSelectionRequest()
-                        fileOpenCoordinator.open(FileOpenRequest(
+                        windowCoordinator.openFileRequest(FileOpenRequest(
                             fileURLs: selectedFileURLs,
                             origin: .folderWatchInitialBatchAutoOpen,
                             folderWatchSession: request.session,
                             slotStrategy: .reuseEmptySlotForFirst,
                             materializationStrategy: .deferThenMaterializeSelected
                         ))
-                        refreshWindowPresentation()
                     }
                 )
             }
@@ -198,7 +193,7 @@ struct ReaderWindowRootView: View {
                         folderURL: session.folderURL,
                         currentExcludedSubdirectoryPaths: session.options.excludedSubdirectoryPaths,
                         onConfirm: { newExclusions in
-                            if updateFolderWatchExclusions(newExclusions) {
+                            if windowCoordinator.updateFolderWatchExclusions(newExclusions) {
                                 windowCoordinator.isEditingSubfolders = false
                             }
                         },
@@ -218,13 +213,13 @@ struct ReaderWindowRootView: View {
                 performInitialSetupIfNeeded()
             }
             .onOpenURL { url in
-                openIncomingURL(url)
+                windowCoordinator.openIncomingURL(url)
             }
             .onChange(of: windowCoordinator.hostWindow) { _, _ in
                 handleHostWindowStateChange()
             }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
-                applyWindowTitlePresentation()
+                windowCoordinator.applyWindowTitlePresentation()
                 renderSelectedDocumentIfNeeded()
             }
             .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
@@ -264,27 +259,27 @@ struct ReaderWindowRootView: View {
                 }
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
-                applyWindowTitlePresentation()
+                windowCoordinator.applyWindowTitlePresentation()
             }
             .onChange(of: sidebarDocumentController.selectedHasUnacknowledgedExternalChange) { _, _ in
-                applyWindowTitlePresentation()
+                windowCoordinator.applyWindowTitlePresentation()
             }
             .onChange(of: folderWatchFlowController.sharedFolderWatchSession) { _, _ in
-                refreshWindowShellRegistrationAndTitle()
-                syncSharedFavoriteOpenDocumentsIfNeeded()
+                windowCoordinator.refreshWindowShellRegistrationAndTitle()
+                windowCoordinator.syncSharedFavoriteOpenDocumentsIfNeeded()
             }
             .onChange(of: openSidebarDocumentPathSnapshot) { _, _ in
-                syncSharedFavoriteOpenDocumentsIfNeeded()
+                windowCoordinator.syncSharedFavoriteOpenDocumentsIfNeeded()
             }
     }
 
     private func windowLifecycleChangeObservers<Content: View>(_ view: Content) -> some View {
         view
             .onChange(of: sidebarDocumentController.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning) { _, warning in
-                handleFolderWatchAutoOpenWarningChange(warning)
+                windowCoordinator.handleFolderWatchAutoOpenWarningChange(warning)
             }
             .onChange(of: sidebarDocumentController.folderWatchCoordinator.activeFolderWatchSession) { _, _ in
-                refreshWindowShellState()
+                windowCoordinator.refreshWindowShellState()
             }
             .onChange(of: folderWatchFlowController.isFolderWatchOptionsPresented) { _, isPresented in
                 handleFolderWatchOptionsPresentationChange(isPresented)
@@ -392,33 +387,20 @@ struct ReaderWindowRootView: View {
             folderWatchFlowController: folderWatchFlowController
         )
         configureStoreCallbacks()
-        applyInitialSeedIfNeeded()
-        refreshSharedFolderWatchState()
+        windowCoordinator.applyInitialSeedIfNeeded(seed: seed)
+        windowCoordinator.refreshSharedFolderWatchState()
     }
 
     private func configureStoreCallbacks() {
         windowCoordinator.configureStoreCallbacks(
             lockedAppearanceProvider: { [appearanceController] in appearanceController.lockedAppearance }
-        ) { [self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
-            let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-            if ReaderWindowRegistry.shared.focusDocumentIfAlreadyOpen(at: normalizedFileURL) {
-                return
-            }
-            if folderWatchSession != nil {
-                enqueueFolderWatchOpen(
-                    folderWatchChangeEvent(for: normalizedFileURL, initialDiffBaselineMarkdown: initialDiffBaselineMarkdown),
-                    folderWatchSession: folderWatchSession,
-                    origin: origin
-                )
-                return
-            }
-            fileOpenCoordinator.open(FileOpenRequest(
-                fileURLs: [normalizedFileURL],
+        ) { [windowCoordinator] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
+            windowCoordinator.openAdditionalDocumentInCurrentWindow(
+                fileURL,
+                folderWatchSession: folderWatchSession,
                 origin: origin,
-                initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedFileURL: $0] } ?? [:],
-                slotStrategy: .reuseEmptySlotForFirst
-            ))
-            applyWindowTitlePresentation()
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
         }
     }
 
@@ -436,7 +418,7 @@ struct ReaderWindowRootView: View {
             return
         }
 
-        refreshFolderWatchAutoOpenWarningPresentation()
+        windowCoordinator.refreshFolderWatchAutoOpenWarningPresentation()
     }
 
     private func handleWindowDidBecomeKey(_ notification: Notification) {
@@ -445,8 +427,8 @@ struct ReaderWindowRootView: View {
             return
         }
 
-        refreshWindowPresentation()
-        refreshFolderWatchAutoOpenWarningPresentation()
+        windowCoordinator.refreshWindowPresentation()
+        windowCoordinator.refreshFolderWatchAutoOpenWarningPresentation()
     }
 
     private func commandNotificationAwareView<Content: View>(_ view: Content) -> some View {
@@ -462,13 +444,7 @@ struct ReaderWindowRootView: View {
                 }
 
                 let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-                fileOpenCoordinator.open(FileOpenRequest(
-                    fileURLs: [resolvedURL],
-                    origin: .manual,
-                    folderWatchSession: folderWatchFlowController.sharedFolderWatchSession,
-                    slotStrategy: .replaceSelectedSlot
-                ))
-                applyWindowTitlePresentation()
+                windowCoordinator.openDocumentInCurrentWindow(resolvedURL)
             }
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
                 guard let payload = ReaderCommandNotification.Payload(notification: notification),
@@ -480,7 +456,7 @@ struct ReaderWindowRootView: View {
                     return
                 }
 
-                prepareRecentFolderWatch(entry)
+                windowCoordinator.prepareRecentFolderWatch(entry)
             }
     }
 
@@ -503,28 +479,28 @@ struct ReaderWindowRootView: View {
                 contentView(for: store)
             },
             onToggleSidebarPlacement: {
-                toggleSidebarPlacement()
+                windowCoordinator.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
             },
             onOpenInDefaultApp: { documentIDs in
-                openSidebarDocumentsInDefaultApp(documentIDs)
+                windowCoordinator.openSidebarDocumentsInDefaultApp(documentIDs)
             },
             onOpenInApplication: { application, documentIDs in
-                openSidebarDocumentsInApplication(application, documentIDs)
+                windowCoordinator.openSidebarDocumentsInApplication(application, documentIDs)
             },
             onRevealInFinder: { documentIDs in
-                revealSidebarDocumentsInFinder(documentIDs)
+                windowCoordinator.revealSidebarDocumentsInFinder(documentIDs)
             },
             onStopWatchingFolders: { documentIDs in
-                stopWatchingSidebarFolders(documentIDs)
+                windowCoordinator.stopWatchingSidebarFolders(documentIDs)
             },
             onCloseDocuments: { documentIDs in
-                closeSelectedSidebarDocuments(documentIDs)
+                windowCoordinator.closeSelectedSidebarDocuments(documentIDs)
             },
             onCloseOtherDocuments: { documentIDs in
-                closeOtherSidebarDocuments(keeping: documentIDs)
+                windowCoordinator.closeOtherSidebarDocuments(keeping: documentIDs)
             },
             onCloseAllDocuments: {
-                closeAllSidebarDocuments()
+                windowCoordinator.closeAllSidebarDocuments()
             }
         )
         .toolbar {
@@ -540,13 +516,13 @@ struct ReaderWindowRootView: View {
                         case .activate:
                             promptForFolderWatch()
                         case .startFavoriteWatch(let favorite):
-                            startFavoriteWatch(favorite)
+                            windowCoordinator.startFavoriteWatch(favorite)
                         case .startRecentFolderWatch(let recent):
-                            startRecentFolderWatch(recent)
+                            windowCoordinator.startRecentFolderWatch(recent)
                         case .editFavoriteWatchedFolders:
                             windowCoordinator.isTitlebarEditingFavorites = true
                         case .clearRecentWatchedFolders:
-                            clearRecentWatchedFolders()
+                            windowCoordinator.clearRecentWatchedFolders()
                         }
                     },
                     compact: true
@@ -557,7 +533,7 @@ struct ReaderWindowRootView: View {
             ToolbarItem(placement: .primaryAction) {
                 if sidebarDocumentController.documents.count > 1 {
                     Button(action: {
-                        toggleSidebarPlacement()
+                        windowCoordinator.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
                     }) {
                         Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
                             .font(.system(size: 12))
@@ -581,23 +557,22 @@ struct ReaderWindowRootView: View {
             sharedFolderWatchSession: folderWatchFlowController.sharedFolderWatchSession,
             canStopSharedFolderWatch: folderWatchFlowController.canStopSharedFolderWatch,
             pendingFolderWatchURL: folderWatchFlowController.pendingFolderWatchURL,
-            onAction: { [self] action in
+            onAction: { [windowCoordinator] action in
                 switch action {
                 case .requestFileOpen(let request):
-                    fileOpenCoordinator.open(request)
-                    refreshWindowPresentation()
+                    windowCoordinator.openFileRequest(request)
                 case .requestFolderWatch(let url):
-                    prepareFolderWatchOptions(for: url)
+                    windowCoordinator.prepareFolderWatchOptions(for: url)
                 case .confirmFolderWatch(let options):
-                    confirmFolderWatch(options)
+                    windowCoordinator.confirmFolderWatch(options)
                 case .cancelFolderWatch:
-                    cancelFolderWatch()
+                    windowCoordinator.cancelFolderWatch()
                 case .stopFolderWatch:
-                    stopFolderWatch()
+                    windowCoordinator.stopFolderWatch()
                 case .saveFolderWatchAsFavorite(let name):
-                    saveSharedFolderWatchAsFavorite(name: name)
+                    windowCoordinator.saveSharedFolderWatchAsFavorite(name: name)
                 case .removeCurrentWatchFromFavorites:
-                    removeSharedFolderWatchFromFavorites()
+                    windowCoordinator.removeSharedFolderWatchFromFavorites()
                 case .toggleAppearanceLock:
                     if appearanceController.isLocked {
                         appearanceController.unlock()
@@ -618,9 +593,9 @@ struct ReaderWindowRootView: View {
                         }
                     }
                 case .startFavoriteWatch(let fav):
-                    startFavoriteWatch(fav)
+                    windowCoordinator.startFavoriteWatch(fav)
                 case .clearFavoriteWatchedFolders:
-                    clearFavoriteWatchedFolders()
+                    windowCoordinator.clearFavoriteWatchedFolders()
                 case .renameFavoriteWatchedFolder(let id, let name):
                     settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
                 case .removeFavoriteWatchedFolder(let id):
@@ -629,19 +604,13 @@ struct ReaderWindowRootView: View {
                     settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
                 case .startRecentManuallyOpenedFile(let entry):
                     let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-                    fileOpenCoordinator.open(FileOpenRequest(
-                        fileURLs: [resolvedURL],
-                        origin: .manual,
-                        folderWatchSession: folderWatchFlowController.sharedFolderWatchSession,
-                        slotStrategy: .replaceSelectedSlot
-                    ))
-                    applyWindowTitlePresentation()
+                    windowCoordinator.openDocumentInCurrentWindow(resolvedURL)
                 case .startRecentFolderWatch(let entry):
-                    startRecentFolderWatch(entry)
+                    windowCoordinator.startRecentFolderWatch(entry)
                 case .clearRecentWatchedFolders:
-                    clearRecentWatchedFolders()
+                    windowCoordinator.clearRecentWatchedFolders()
                 case .clearRecentManuallyOpenedFiles:
-                    clearRecentManuallyOpenedFiles()
+                    windowCoordinator.clearRecentManuallyOpenedFiles()
                 case .editSubfolders:
                     windowCoordinator.isEditingSubfolders = true
                 }
@@ -654,7 +623,7 @@ struct ReaderWindowRootView: View {
     }
 
     private func handleHostWindowStateChange() {
-        refreshWindowShellState()
+        windowCoordinator.refreshWindowShellState()
         applyUITestLaunchConfigurationIfNeeded()
 
         guard windowCoordinator.hostWindow != nil,
@@ -662,7 +631,7 @@ struct ReaderWindowRootView: View {
             return
         }
 
-        flushQueuedFolderWatchOpens()
+        windowCoordinator.flushQueuedFolderWatchOpens()
     }
 
     private func promptForFolderWatch() {
@@ -672,7 +641,7 @@ struct ReaderWindowRootView: View {
         ) else {
             return
         }
-        prepareFolderWatchOptions(for: folderURL)
+        windowCoordinator.prepareFolderWatchOptions(for: folderURL)
     }
 
     private func applyUITestLaunchConfigurationIfNeeded() {
@@ -699,10 +668,10 @@ struct ReaderWindowRootView: View {
                 ] == "includeSubfolders" {
                     options.scope = .includeSubfolders
                 }
-                presentFolderWatchOptions(for: watchFolderURL, options: options)
+                windowCoordinator.presentFolderWatchOptions(for: watchFolderURL, options: options)
                 windowCoordinator.hasAppliedUITestLaunchConfiguration = true
             case .startWatchingFolder(let watchFolderURL):
-                startWatchingFolder(folderURL: watchFolderURL, options: .default)
+                windowCoordinator.startWatchingFolder(folderURL: watchFolderURL, options: .default)
                 windowCoordinator.hasAppliedUITestLaunchConfiguration = true
             }
             return
@@ -736,19 +705,18 @@ struct ReaderWindowRootView: View {
     }
 
     private func startUITestGroupedSidebarFlow() {
-        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { fileURLs in
-            fileOpenCoordinator.open(FileOpenRequest(
+        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { [windowCoordinator] fileURLs in
+            windowCoordinator.openFileRequest(FileOpenRequest(
                 fileURLs: fileURLs,
                 origin: .manual
             ))
-            refreshWindowPresentation()
         }
     }
 
     private func startUITestAutoOpenWatchFlow() {
         ReaderWindowUITestFlowSupport.startAutoOpenWatchFlow(
-            startWatchingFolder: { watchFolderURL in
-                startWatchingFolder(folderURL: watchFolderURL, options: .default)
+            startWatchingFolder: { [windowCoordinator] watchFolderURL in
+                windowCoordinator.startWatchingFolder(folderURL: watchFolderURL, options: .default)
             },
             cancelExistingTask: { [windowCoordinator] in
                 windowCoordinator.uiTestWatchFlowTask?.cancel()
