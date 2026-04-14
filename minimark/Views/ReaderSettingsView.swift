@@ -305,6 +305,13 @@ struct ThemePreviewCard: View {
         return settings.syntaxTheme.previewPalette
     }
 
+    private var effectiveBlockBackgroundHex: String {
+        SyntaxBackgroundAdjuster.effectiveBlockBackgroundHex(
+            theme: settings.readerTheme.themeDefinition,
+            syntaxTheme: settings.syntaxTheme
+        )
+    }
+
     private var readerColorSamples: [ThemePreviewColorSample] {
         ThemePreviewReaderTextExamples.reader(theme: theme)
     }
@@ -324,7 +331,7 @@ struct ThemePreviewCard: View {
             readerTextExamples
 
             RoundedRectangle(cornerRadius: 8)
-                .fill(color(syntaxPalette.blockBackgroundHex))
+                .fill(color(effectiveBlockBackgroundHex))
                 .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
                 .overlay(alignment: .topLeading) {
                     VStack(alignment: .leading, spacing: 6) {

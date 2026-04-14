@@ -21,6 +21,12 @@ enum ReaderCSSThemeGenerator {
         let variables = theme.colors.cssVariables(baseFontSize: baseFontSize)
         let syntaxLayer = theme.providesSyntaxHighlighting ? (theme.syntaxCSS ?? syntaxTheme.css) : syntaxTheme.css
         let themeLayer = theme.customCSS ?? ""
+
+        let effectiveBg = SyntaxBackgroundAdjuster.effectiveBlockBackgroundHex(theme: theme, syntaxTheme: syntaxTheme)
+        let needsOverride = !theme.providesSyntaxHighlighting
+            && effectiveBg != syntaxTheme.previewPalette.blockBackgroundHex
+        let backgroundAdjustment = needsOverride ? "pre { background: \(effectiveBg); }" : ""
+
         return """
         \(variables)
 
@@ -623,6 +629,8 @@ enum ReaderCSSThemeGenerator {
         }
 
         \(syntaxLayer)
+
+        \(backgroundAdjustment)
 
         \(themeLayer)
         """
