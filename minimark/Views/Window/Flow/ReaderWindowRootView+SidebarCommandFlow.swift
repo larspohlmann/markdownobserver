@@ -143,7 +143,7 @@ extension ReaderWindowRootView {
         _ entry: ReaderFavoriteWatchedFolder,
         resolvedFolderURL: URL
     ) {
-        sidebarDocumentController.scanCurrentMarkdownFiles { scannedURLs in
+        sidebarDocumentController.folderWatchCoordinator.scanCurrentMarkdownFiles { scannedURLs in
             guard let session = sharedFolderWatchSession else {
                 return
             }
@@ -243,7 +243,7 @@ extension ReaderWindowRootView {
         }
 
         do {
-            try sidebarDocumentController.startWatchingFolder(
+            try sidebarDocumentController.folderWatchCoordinator.startWatchingFolder(
                 folderURL: folderURL,
                 options: options,
                 performInitialAutoOpen: performInitialAutoOpen
@@ -280,7 +280,7 @@ extension ReaderWindowRootView {
 
     func stopWatchingSidebarFolders(_ documentIDs: Set<UUID>) {
         performSidebarMutation {
-            sidebarDocumentController.stopWatchingFolders(documentIDs)
+            sidebarDocumentController.folderWatchCoordinator.stopWatchingFolders(documentIDs)
         }
     }
 
@@ -331,7 +331,7 @@ extension ReaderWindowRootView {
         syncFavoriteExclusionsIfNeeded(newExcludedPaths)
 
         do {
-            try sidebarDocumentController.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
+            try sidebarDocumentController.folderWatchCoordinator.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
         } catch {
             sidebarDocumentController.selectedReaderStore.presentError(error)
             return false
@@ -389,7 +389,7 @@ extension ReaderWindowRootView {
             return normalized.hasSuffix("/") ? normalized : normalized + "/"
         }
 
-        sidebarDocumentController.scanCurrentMarkdownFiles { [self] scannedURLs in
+        sidebarDocumentController.folderWatchCoordinator.scanCurrentMarkdownFiles { [self] scannedURLs in
             guard let session = sharedFolderWatchSession else { return }
 
             let alreadyOpenPaths = Set(

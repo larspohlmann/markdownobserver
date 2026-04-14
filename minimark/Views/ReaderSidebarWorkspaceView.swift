@@ -88,7 +88,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private var watchedDocumentIDs: Set<UUID> {
-        controller.watchedDocumentIDs()
+        controller.folderWatchCoordinator.watchedDocumentIDs()
     }
 
     private var sidebarColumn: some View {

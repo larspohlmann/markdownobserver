@@ -19,6 +19,7 @@ final class ReaderSidebarDocumentController {
     @ObservationIgnored private let documentList: SidebarDocumentList
     @ObservationIgnored private let rowStateComputer = SidebarRowStateComputer()
     @ObservationIgnored private let observationManager = SidebarObservationManager()
+    let folderWatchCoordinator: FolderWatchSessionCoordinator
 
     // MARK: - Selection state
 
@@ -27,21 +28,9 @@ final class ReaderSidebarDocumentController {
     private(set) var selectedFileURL: URL?
     private(set) var selectedHasUnacknowledgedExternalChange: Bool
 
-    // MARK: - Folder watch state
-
-    private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
-    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    private(set) var isFolderWatchInitialScanInProgress: Bool
-    private(set) var didFolderWatchInitialScanFail: Bool
-    private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
-    private(set) var scannedFileCount: Int?
-
     // MARK: - Dependencies
 
     private let makeReaderStore: () -> ReaderStore
-    @ObservationIgnored private var _folderWatchController: ReaderFolderWatchController?
-    @ObservationIgnored private let _makeFolderWatchController: () -> ReaderFolderWatchController
     @ObservationIgnored private var storeConfigurator: ((ReaderStore) -> Void)?
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
@@ -66,23 +55,6 @@ final class ReaderSidebarDocumentController {
 
     func document(for fileURL: URL) -> Document? {
         documentList.document(for: fileURL)
-    }
-
-    // MARK: - Folder watch controller (lazy)
-
-    private var folderWatchController: ReaderFolderWatchController {
-        if let existing = _folderWatchController {
-            return existing
-        }
-        let controller = _makeFolderWatchController()
-        controller.delegate = self
-        _folderWatchController = controller
-        synchronizeFolderWatchState()
-        return controller
-    }
-
-    private var folderWatchControllerIfCreated: ReaderFolderWatchController? {
-        _folderWatchController
     }
 
     // MARK: - Init
@@ -129,7 +101,7 @@ final class ReaderSidebarDocumentController {
             return store
         }
         self.makeReaderStore = resolvedMakeReaderStore
-        self._makeFolderWatchController = makeFolderWatchController ?? {
+        let resolvedMakeFolderWatchController = makeFolderWatchController ?? {
             ReaderFolderWatchController(
                 folderWatcher: FolderChangeWatcher(),
                 settingsStore: settingsStore,
@@ -140,6 +112,9 @@ final class ReaderSidebarDocumentController {
                 )
             )
         }
+        folderWatchCoordinator = FolderWatchSessionCoordinator(
+            makeFolderWatchController: resolvedMakeFolderWatchController
+        )
 
         let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore(), normalizedFileURL: nil)
         documentList = SidebarDocumentList(initialDocument: initialDocument)
@@ -147,13 +122,8 @@ final class ReaderSidebarDocumentController {
         selectedWindowTitle = initialDocument.readerStore.windowTitle
         selectedFileURL = initialDocument.readerStore.fileURL
         selectedHasUnacknowledgedExternalChange = initialDocument.readerStore.hasUnacknowledgedExternalChange
-        selectedFolderWatchAutoOpenWarning = nil
-        activeFolderWatchSession = nil
-        isFolderWatchInitialScanInProgress = false
-        didFolderWatchInitialScanFail = false
-        contentScanProgress = nil
-        scannedFileCount = nil
         rowStateComputer.rebuildAllRowStates(from: documentList.documents)
+        folderWatchCoordinator.delegate = self
     }
 
     // MARK: - Selection
@@ -164,10 +134,6 @@ final class ReaderSidebarDocumentController {
 
     var selectedReaderStore: ReaderStore {
         selectedDocument?.readerStore ?? documents[0].readerStore
-    }
-
-    var canStopFolderWatch: Bool {
-        activeFolderWatchSession != nil
     }
 
     func setStoreConfigurator(_ configurator: @escaping (ReaderStore) -> Void) {
@@ -251,7 +217,7 @@ final class ReaderSidebarDocumentController {
             if let existingDocument = document(for: fileURL) {
                 if existingDocument.readerStore.isDeferredDocument, assignment.loadMode == .loadFully {
                     let store = existingDocument.readerStore
-                    let effectiveSession = resolvedFolderWatchSession(
+                    let effectiveSession = folderWatchCoordinator.resolvedFolderWatchSession(
                         for: fileURL,
                         requestedSession: plan.folderWatchSession
                     )
@@ -267,7 +233,7 @@ final class ReaderSidebarDocumentController {
                 continue
             }
 
-            let effectiveFolderWatchSession = resolvedFolderWatchSession(
+            let effectiveFolderWatchSession = folderWatchCoordinator.resolvedFolderWatchSession(
                 for: fileURL,
                 requestedSession: plan.folderWatchSession
             )
@@ -446,54 +412,7 @@ final class ReaderSidebarDocumentController {
         bindSelectedStore()
     }
 
-    // MARK: - Folder watch
-
-    func startWatchingFolder(
-        folderURL: URL,
-        options: ReaderFolderWatchOptions,
-        performInitialAutoOpen: Bool = true
-    ) throws {
-        try folderWatchController.startWatching(
-            folderURL: folderURL,
-            options: options,
-            performInitialAutoOpen: performInitialAutoOpen
-        )
-    }
-
-    func scanCurrentMarkdownFiles(completion: @escaping @MainActor ([URL]) -> Void) {
-        folderWatchController.scanCurrentMarkdownFiles(completion: completion)
-    }
-
-    func stopFolderWatch() {
-        folderWatchController.stopWatching()
-    }
-
-    func updateFolderWatchExcludedSubdirectories(_ paths: [String]) throws {
-        try folderWatchController.updateExcludedSubdirectories(paths)
-    }
-
-    func stopWatchingFolders(_ documentIDs: Set<UUID>) {
-        guard let session = activeFolderWatchSession,
-              let watchController = folderWatchControllerIfCreated else {
-            return
-        }
-
-        let normalizedFolder = session.folderURL
-        let hasWatchedDocument = documentIDs.contains { documentID in
-            guard let document = documents.first(where: { $0.id == documentID }),
-                  let normalizedFileURL = document.normalizedFileURL else {
-                return false
-            }
-            return watchController.watchApplies(
-                normalizedFileURL: normalizedFileURL,
-                toNormalizedFolderAt: normalizedFolder,
-                scope: session.options.scope
-            )
-        }
-
-        guard hasWatchedDocument else { return }
-        watchController.stopWatching()
-    }
+    // MARK: - Document actions
 
     func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
         for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
@@ -505,34 +424,6 @@ final class ReaderSidebarDocumentController {
         for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
             document.readerStore.revealCurrentFileInFinder()
         }
-    }
-
-    func dismissFolderWatchAutoOpenWarnings() {
-        folderWatchController.dismissFolderWatchAutoOpenWarning()
-    }
-
-    func dismissPendingFileSelectionRequest() {
-        folderWatchController.pendingFileSelectionRequest = nil
-        pendingFileSelectionRequest = nil
-    }
-
-    func watchedDocumentIDs() -> Set<UUID> {
-        guard let session = activeFolderWatchSession,
-              let watchController = folderWatchControllerIfCreated else {
-            return []
-        }
-
-        let normalizedFolder = session.folderURL
-        return Set(documents.compactMap { document in
-            guard let normalizedFileURL = document.normalizedFileURL else {
-                return nil
-            }
-            return watchController.watchApplies(
-                normalizedFileURL: normalizedFileURL,
-                toNormalizedFolderAt: normalizedFolder,
-                scope: session.options.scope
-            ) ? document.id : nil
-        })
     }
 
     // MARK: - Private helpers
@@ -576,98 +467,12 @@ final class ReaderSidebarDocumentController {
         }
     }
 
-    private func resolvedFolderWatchSession(
-        for fileURL: URL,
-        requestedSession: ReaderFolderWatchSession?
-    ) -> ReaderFolderWatchSession? {
-        if let requestedSession {
-            return requestedSession
-        }
-
-        guard let watchController = folderWatchControllerIfCreated,
-              watchController.watchApplies(to: fileURL) else {
-            return nil
-        }
-
-        return activeFolderWatchSession
-    }
-
-    private func synchronizeFolderWatchState() {
-        guard let controller = _folderWatchController else {
-            activeFolderWatchSession = nil
-            selectedFolderWatchAutoOpenWarning = nil
-            pendingFileSelectionRequest = nil
-            isFolderWatchInitialScanInProgress = false
-            didFolderWatchInitialScanFail = false
-            contentScanProgress = nil
-            scannedFileCount = nil
-            return
-        }
-        activeFolderWatchSession = controller.activeFolderWatchSession
-        selectedFolderWatchAutoOpenWarning = controller.folderWatchAutoOpenWarning
-        pendingFileSelectionRequest = controller.pendingFileSelectionRequest
-        isFolderWatchInitialScanInProgress = controller.isInitialMarkdownScanInProgress
-        didFolderWatchInitialScanFail = controller.didInitialMarkdownScanFail
-        contentScanProgress = controller.contentScanProgress
-        scannedFileCount = controller.scannedFileCount
-    }
 }
 
-// MARK: - ReaderFolderWatchControllerDelegate
+// MARK: - FolderWatchSessionCoordinatorDelegate
 
-extension ReaderSidebarDocumentController: ReaderFolderWatchControllerDelegate {
-    func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
-        selectedReaderStore.fileURL
-    }
-
-    func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
-        documents.compactMap { document in
-            document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
-        }
-    }
-
-    func folderWatchController(
-        _ controller: ReaderFolderWatchController,
-        handleEvents events: [ReaderFolderWatchChangeEvent],
-        in session: ReaderFolderWatchSession,
-        origin: ReaderOpenOrigin
-    ) {
-        let coordinator = fileOpenCoordinator
-        let diffBaselineByURL: [URL: String] = Dictionary(
-            uniqueKeysWithValues: events.compactMap { event in
-                guard let previousMarkdown = event.previousMarkdown else {
-                    return nil
-                }
-                return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
-            }
-        )
-
-        let materializationStrategy: FileOpenRequest.MaterializationStrategy =
-            origin == .folderWatchInitialBatchAutoOpen ? .deferOnly : .loadAll
-
-        coordinator.open(FileOpenRequest(
-            fileURLs: events.map(\.fileURL),
-            origin: origin,
-            folderWatchSession: session,
-            initialDiffBaselineMarkdownByURL: diffBaselineByURL,
-            slotStrategy: .reuseEmptySlotForFirst,
-            materializationStrategy: materializationStrategy
-        ))
-    }
-
-    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
-        for url in urls {
-            if let doc = document(for: url) {
-                doc.readerStore.noteObservedExternalChange(kind: .added)
-            }
-        }
-    }
-
-    func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
-        selectDocumentWithNewestModificationDate()
-    }
-
-    func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController) {
-        synchronizeFolderWatchState()
+extension ReaderSidebarDocumentController: FolderWatchSessionCoordinatorDelegate {
+    func handleFolderWatchOpenRequest(_ request: FileOpenRequest) {
+        fileOpenCoordinator.open(request)
     }
 }

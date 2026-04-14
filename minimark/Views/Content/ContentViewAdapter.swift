@@ -36,8 +36,8 @@ struct ContentViewAdapter: View {
             settingsStore: settingsStore,
             folderWatchState: ContentViewFolderWatchState(
                 activeFolderWatch: sharedFolderWatchSession,
-                isFolderWatchInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
-                isFolderWatchInitialScanFailed: sidebarDocumentController.didFolderWatchInitialScanFail,
+                isFolderWatchInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
+                isFolderWatchInitialScanFailed: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
                 canStopFolderWatch: canStopSharedFolderWatch,
                 pendingFolderWatchURL: pendingFolderWatchURL,
                 isCurrentWatchAFavorite: isCurrentWatchAFavorite,

@@ -101,7 +101,7 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: .default
         )
@@ -115,14 +115,14 @@ struct ReaderSidebarDocumentControllerTests {
         coordinator.open(FileOpenRequest(
             fileURLs: [missingFileURL],
             origin: .folderWatchAutoOpen,
-            folderWatchSession: harness.controller.activeFolderWatchSession,
+            folderWatchSession: harness.controller.folderWatchCoordinator.activeFolderWatchSession,
             slotStrategy: .alwaysAppend
         ))
 
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.selectedReaderStore.fileURL == nil)
-        #expect(harness.controller.canStopFolderWatch)
-        #expect(harness.controller.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
+        #expect(harness.controller.folderWatchCoordinator.canStopFolderWatch)
+        #expect(harness.controller.folderWatchCoordinator.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
         #expect(harness.folderWatchControllerWatcher.stopCallCount == stopCallCountBeforeFailedOpen)
     }
 
@@ -135,7 +135,7 @@ struct ReaderSidebarDocumentControllerTests {
             code: 91
         )
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
@@ -143,9 +143,9 @@ struct ReaderSidebarDocumentControllerTests {
             )
         )
 
-        #expect(harness.controller.isFolderWatchInitialScanInProgress)
+        #expect(harness.controller.folderWatchCoordinator.isFolderWatchInitialScanInProgress)
         #expect(await waitUntil(timeout: .seconds(2)) {
-            harness.controller.didFolderWatchInitialScanFail && !harness.controller.isFolderWatchInitialScanInProgress
+            harness.controller.folderWatchCoordinator.didFolderWatchInitialScanFail && !harness.controller.folderWatchCoordinator.isFolderWatchInitialScanInProgress
         })
     }
 
@@ -153,17 +153,17 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: .default
         )
 
-        #expect(harness.controller.canStopFolderWatch)
+        #expect(harness.controller.folderWatchCoordinator.canStopFolderWatch)
 
-        harness.controller.stopFolderWatch()
+        harness.controller.folderWatchCoordinator.stopFolderWatch()
 
-        #expect(!harness.controller.canStopFolderWatch)
-        #expect(harness.controller.activeFolderWatchSession == nil)
+        #expect(!harness.controller.folderWatchCoordinator.canStopFolderWatch)
+        #expect(harness.controller.folderWatchCoordinator.activeFolderWatchSession == nil)
         #expect(harness.folderWatchControllerWatcher.stopCallCount >= 1)
     }
 
@@ -171,7 +171,7 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: .default
         )
@@ -191,7 +191,7 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: .default
         )
@@ -222,7 +222,7 @@ struct ReaderSidebarDocumentControllerTests {
             origin: .manual
         ))
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
@@ -235,14 +235,14 @@ struct ReaderSidebarDocumentControllerTests {
 
             return document.id
         })
-        #expect(harness.controller.watchedDocumentIDs() == topLevelDocumentIDs)
+        #expect(harness.controller.folderWatchCoordinator.watchedDocumentIDs() == topLevelDocumentIDs)
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
         )
 
-        #expect(harness.controller.watchedDocumentIDs() == Set(harness.controller.documents.map(\.id)))
+        #expect(harness.controller.folderWatchCoordinator.watchedDocumentIDs() == Set(harness.controller.documents.map(\.id)))
     }
 
     @Test @MainActor func sidebarControllerWatchChangesOnlyWithIncludedSubfoldersDoesNotCreateInitialDocuments() async throws {
@@ -309,7 +309,7 @@ struct ReaderSidebarDocumentControllerTests {
         try "# Top Level".write(to: topLevelFileURL, atomically: false, encoding: .utf8)
         try "# Nested".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
-        try controller.startWatchingFolder(
+        try controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: directoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
         )
@@ -340,7 +340,7 @@ struct ReaderSidebarDocumentControllerTests {
             ]
         )
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: favoriteEntry.options
         )
@@ -349,7 +349,7 @@ struct ReaderSidebarDocumentControllerTests {
         coordinator.open(FileOpenRequest(
             fileURLs: favoriteEntry.resolvedOpenDocumentFileURLs(relativeTo: harness.temporaryDirectoryURL),
             origin: .folderWatchInitialBatchAutoOpen,
-            folderWatchSession: harness.controller.activeFolderWatchSession,
+            folderWatchSession: harness.controller.folderWatchCoordinator.activeFolderWatchSession,
             materializationStrategy: .deferThenMaterializeSelected
         ))
 
@@ -427,14 +427,14 @@ struct ReaderSidebarDocumentControllerTests {
         }
         harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
-        #expect(harness.controller.pendingFileSelectionRequest != nil)
-        #expect(harness.controller.pendingFileSelectionRequest?.allFileURLs.count == performanceLimit + 1)
-        #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
+        #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest != nil)
+        #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest?.allFileURLs.count == performanceLimit + 1)
+        #expect(harness.controller.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning == nil)
     }
 
     @Test @MainActor func sidebarControllerCanSkipInitialAutoOpenPromptForFavoriteRestore() throws {
@@ -447,13 +447,13 @@ struct ReaderSidebarDocumentControllerTests {
         }
         harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             performInitialAutoOpen: false
         )
 
-        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.selectedReaderStore.fileURL == nil)
     }
@@ -468,7 +468,7 @@ struct ReaderSidebarDocumentControllerTests {
             origin: .manual
         ))
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
@@ -487,7 +487,7 @@ struct ReaderSidebarDocumentControllerTests {
         await Task.yield()
 
         #expect(harness.controller.documents.count == autoOpenLimit + 1)
-        #expect(harness.controller.selectedFolderWatchAutoOpenWarning == nil)
+        #expect(harness.controller.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning == nil)
     }
 
     @Test @MainActor func sidebarControllerCloseOtherDocumentsKeepsRequestedDocumentOnly() throws {
@@ -558,7 +558,7 @@ struct ReaderSidebarDocumentControllerTests {
         ))
         harness.controller.selectDocument(harness.controller.documents[0].id)
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: .default
         )
@@ -570,8 +570,8 @@ struct ReaderSidebarDocumentControllerTests {
 
         #expect(harness.controller.documents.count == 1)
         #expect(harness.controller.selectedReaderStore.fileURL == nil)
-        #expect(harness.controller.canStopFolderWatch)
-        #expect(harness.controller.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
+        #expect(harness.controller.folderWatchCoordinator.canStopFolderWatch)
+        #expect(harness.controller.folderWatchCoordinator.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
         #expect(watcher.stopCallCount == stopCallCountBeforeCloseAll)
     }
 
@@ -587,7 +587,7 @@ struct ReaderSidebarDocumentControllerTests {
             thirdFileURL
         ]
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
@@ -597,8 +597,8 @@ struct ReaderSidebarDocumentControllerTests {
 
         harness.controller.closeDocuments(documentIDsToClose)
 
-        #expect(harness.controller.canStopFolderWatch)
-        #expect(harness.controller.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
+        #expect(harness.controller.folderWatchCoordinator.canStopFolderWatch)
+        #expect(harness.controller.folderWatchCoordinator.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
         #expect(harness.controller.documents.map(\.id) == [remainingDocumentID])
     }
 
@@ -617,16 +617,16 @@ struct ReaderSidebarDocumentControllerTests {
             subfolderFileURL
         ]
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
         )
 
         // The includeSubfolders path runs the scan asynchronously.
-        #expect(harness.controller.isFolderWatchInitialScanInProgress)
+        #expect(harness.controller.folderWatchCoordinator.isFolderWatchInitialScanInProgress)
 
         #expect(await waitUntil(timeout: .seconds(2)) {
-            !harness.controller.isFolderWatchInitialScanInProgress
+            !harness.controller.folderWatchCoordinator.isFolderWatchInitialScanInProgress
         })
 
         #expect(harness.controller.documents.count == 3)
@@ -634,7 +634,7 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(openFileURLPaths.contains(harness.primaryFileURL.path))
         #expect(openFileURLPaths.contains(harness.secondaryFileURL.path))
         #expect(openFileURLPaths.contains(subfolderFileURL.path))
-        #expect(!harness.controller.didFolderWatchInitialScanFail)
+        #expect(!harness.controller.folderWatchCoordinator.didFolderWatchInitialScanFail)
     }
 
     @Test @MainActor func sidebarControllerFileSelectionBurstReusesInitialEmptyDocument() throws {
@@ -725,12 +725,12 @@ struct ReaderSidebarDocumentControllerTests {
         }
         harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
-        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
         #expect(harness.controller.documents.count == fileCount)
 
         let loadedDocs = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument }
@@ -824,12 +824,12 @@ struct ReaderSidebarDocumentControllerTests {
         }
         harness.folderWatchControllerWatcher.markdownFilesToReturn = fileURLs
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
-        #expect(harness.controller.pendingFileSelectionRequest == nil)
+        #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
         #expect(harness.controller.documents.count == fileCount)
 
         // All files should be fully loaded (none deferred)
@@ -1081,7 +1081,7 @@ struct ReaderSidebarDocumentControllerTests {
             origin: .manual
         ))
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
@@ -1120,7 +1120,7 @@ struct ReaderSidebarDocumentControllerTests {
             origin: .manual
         ))
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
@@ -1187,7 +1187,7 @@ struct ReaderSidebarDocumentControllerTests {
             harness.secondaryFileURL
         ]
 
-        try harness.controller.startWatchingFolder(
+        try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
             options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
@@ -1297,8 +1297,8 @@ struct ReaderSidebarDocumentControllerTests {
         )
 
         #expect(!controllerCreated)
-        #expect(controller.activeFolderWatchSession == nil)
-        #expect(!controller.isFolderWatchInitialScanInProgress)
+        #expect(controller.folderWatchCoordinator.activeFolderWatchSession == nil)
+        #expect(!controller.folderWatchCoordinator.isFolderWatchInitialScanInProgress)
         #expect(controller.documents.count == 1)
         _ = controller
     }
