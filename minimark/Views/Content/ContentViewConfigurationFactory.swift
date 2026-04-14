@@ -150,7 +150,7 @@ extension ContentView {
                 return
             }
 
-            callbacks.onRequestFolderWatch(droppedFolderURL)
+            onAction(.requestFolderWatch(droppedFolderURL))
             return
         }
 
@@ -161,11 +161,11 @@ extension ContentView {
 
         let slotStrategy: FileOpenRequest.SlotStrategy =
             readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
-        callbacks.onRequestFileOpen(FileOpenRequest(
+        onAction(.requestFileOpen(FileOpenRequest(
             fileURLs: markdownURLs,
             origin: .manual,
             slotStrategy: slotStrategy
-        ))
+        )))
     }
 
     func handlePickedFileURLs(_ fileURLs: [URL]) {
@@ -182,22 +182,22 @@ extension ContentView {
             return
         }
 
-        callbacks.onRequestFileOpen(FileOpenRequest(
+        onAction(.requestFileOpen(FileOpenRequest(
             fileURLs: [markdownURLs[0]],
             origin: .manual,
             slotStrategy: .replaceSelectedSlot
-        ))
+        )))
 
         let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
         guard !additionalMarkdownURLs.isEmpty else {
             return
         }
 
-        callbacks.onRequestFileOpen(FileOpenRequest(
+        onAction(.requestFileOpen(FileOpenRequest(
             fileURLs: additionalMarkdownURLs,
             origin: .manual,
             slotStrategy: .alwaysAppend
-        ))
+        )))
     }
 
     func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {

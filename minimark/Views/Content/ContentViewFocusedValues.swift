@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentViewFocusedValues: ViewModifier {
     let readerStore: ReaderStore
     let folderWatchState: ContentViewFolderWatchState
-    let callbacks: ContentViewCallbacks
+    let onAction: (ContentViewAction) -> Void
     let canNavigateChangedRegions: Bool
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
@@ -14,11 +14,11 @@ struct ContentViewFocusedValues: ViewModifier {
     private func openOrAppendDocument(_ fileURL: URL) {
         let strategy: FileOpenRequest.SlotStrategy =
             readerStore.fileURL == nil ? .replaceSelectedSlot : .alwaysAppend
-        callbacks.onRequestFileOpen(FileOpenRequest(
+        onAction(.requestFileOpen(FileOpenRequest(
             fileURLs: [fileURL],
             origin: .manual,
             slotStrategy: strategy
-        ))
+        )))
     }
 
     func body(content: Content) -> some View {
@@ -32,11 +32,11 @@ struct ContentViewFocusedValues: ViewModifier {
                         readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
                         return
                     }
-                    callbacks.onRequestFileOpen(FileOpenRequest(
+                    onAction(.requestFileOpen(FileOpenRequest(
                         fileURLs: [fileURL],
                         origin: .manual,
                         slotStrategy: .replaceSelectedSlot
-                    ))
+                    )))
                 }
             )
             .focusedValue(
@@ -50,13 +50,13 @@ struct ContentViewFocusedValues: ViewModifier {
             .focusedValue(
                 \.readerWatchFolder,
                 ReaderWatchFolderAction { folderURL in
-                    callbacks.onRequestFolderWatch(folderURL)
+                    onAction(.requestFolderWatch(folderURL))
                 }
             )
             .focusedValue(
                 \.readerStartRecentFolderWatch,
                 ReaderStartRecentFolderWatchAction { entry in
-                    callbacks.onStartRecentFolderWatch(entry)
+                    onAction(.startRecentFolderWatch(entry))
                 }
             )
             .focusedValue(
@@ -65,7 +65,7 @@ struct ContentViewFocusedValues: ViewModifier {
                     guard folderWatchState.canStopFolderWatch else {
                         return
                     }
-                    callbacks.onStopFolderWatch()
+                    onAction(.stopFolderWatch)
                 }
             )
             .focusedValue(
@@ -118,7 +118,7 @@ struct ContentViewFocusedValues: ViewModifier {
             )
             .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
                 guard !isPresented else { return }
-                callbacks.onCancelFolderWatch()
+                onAction(.cancelFolderWatch)
             }
             .sheet(isPresented: $isFolderWatchOptionsPresented) {
                 FolderWatchOptionsSheet(
@@ -126,8 +126,8 @@ struct ContentViewFocusedValues: ViewModifier {
                     openMode: $pendingFolderWatchOpenMode,
                     scope: $pendingFolderWatchScope,
                     excludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths,
-                    onCancel: callbacks.onCancelFolderWatch,
-                    onConfirm: callbacks.onConfirmFolderWatch
+                    onCancel: { onAction(.cancelFolderWatch) },
+                    onConfirm: { options in onAction(.confirmFolderWatch(options)) }
                 )
             }
     }

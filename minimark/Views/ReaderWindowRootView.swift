@@ -600,22 +600,24 @@ struct ReaderWindowRootView: View {
             sharedFolderWatchSession: sharedFolderWatchSession,
             canStopSharedFolderWatch: canStopSharedFolderWatch,
             pendingFolderWatchURL: pendingFolderWatchURL,
-            callbacks: ContentViewCallbacks(
-                onRequestFileOpen: { [self] request in
+            onAction: { [self] action in
+                switch action {
+                case .requestFileOpen(let request):
                     fileOpenCoordinator.open(request)
                     refreshWindowPresentation()
-                },
-                onRequestFolderWatch: prepareFolderWatchOptions,
-                onConfirmFolderWatch: confirmFolderWatch,
-                onCancelFolderWatch: cancelFolderWatch,
-                onStopFolderWatch: stopFolderWatch,
-                onSaveFolderWatchAsFavorite: { name in
+                case .requestFolderWatch(let url):
+                    prepareFolderWatchOptions(for: url)
+                case .confirmFolderWatch(let options):
+                    confirmFolderWatch(options)
+                case .cancelFolderWatch:
+                    cancelFolderWatch()
+                case .stopFolderWatch:
+                    stopFolderWatch()
+                case .saveFolderWatchAsFavorite(let name):
                     saveSharedFolderWatchAsFavorite(name: name)
-                },
-                onRemoveCurrentWatchFromFavorites: {
+                case .removeCurrentWatchFromFavorites:
                     removeSharedFolderWatchFromFavorites()
-                },
-                onToggleAppearanceLock: {
+                case .toggleAppearanceLock:
                     if appearanceController.isLocked {
                         appearanceController.unlock()
                         for document in sidebarDocumentController.documents {
@@ -634,19 +636,17 @@ struct ReaderWindowRootView: View {
                             activeFavoriteWorkspaceState?.lockedAppearance = appearanceController.lockedAppearance
                         }
                     }
-                },
-                onStartFavoriteWatch: startFavoriteWatch,
-                onClearFavoriteWatchedFolders: clearFavoriteWatchedFolders,
-                onRenameFavoriteWatchedFolder: { id, newName in
-                    settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
-                },
-                onRemoveFavoriteWatchedFolder: { id in
+                case .startFavoriteWatch(let fav):
+                    startFavoriteWatch(fav)
+                case .clearFavoriteWatchedFolders:
+                    clearFavoriteWatchedFolders()
+                case .renameFavoriteWatchedFolder(let id, let name):
+                    settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
+                case .removeFavoriteWatchedFolder(let id):
                     settingsStore.removeFavoriteWatchedFolder(id: id)
-                },
-                onReorderFavoriteWatchedFolders: { orderedIDs in
-                    settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
-                },
-                onStartRecentManuallyOpenedFile: { entry in
+                case .reorderFavoriteWatchedFolders(let ids):
+                    settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
+                case .startRecentManuallyOpenedFile(let entry):
                     let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
                     fileOpenCoordinator.open(FileOpenRequest(
                         fileURLs: [resolvedURL],
@@ -655,14 +655,16 @@ struct ReaderWindowRootView: View {
                         slotStrategy: .replaceSelectedSlot
                     ))
                     applyWindowTitlePresentation()
-                },
-                onStartRecentFolderWatch: startRecentFolderWatch,
-                onClearRecentWatchedFolders: clearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: clearRecentManuallyOpenedFiles,
-                onEditSubfolders: {
+                case .startRecentFolderWatch(let entry):
+                    startRecentFolderWatch(entry)
+                case .clearRecentWatchedFolders:
+                    clearRecentWatchedFolders()
+                case .clearRecentManuallyOpenedFiles:
+                    clearRecentManuallyOpenedFiles()
+                case .editSubfolders:
                     isEditingSubfolders = true
                 }
-            ),
+            },
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
             pendingFolderWatchScope: pendingFolderWatchScopeBinding,

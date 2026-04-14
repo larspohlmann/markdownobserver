@@ -27,7 +27,7 @@ struct ContentView: View {
     var readerStore: ReaderStore
     let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
-    let callbacks: ContentViewCallbacks
+    let onAction: (ContentViewAction) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
@@ -50,7 +50,7 @@ struct ContentView: View {
         baseBody.modifier(ContentViewFocusedValues(
             readerStore: readerStore,
             folderWatchState: folderWatchState,
-            callbacks: callbacks,
+            onAction: onAction,
             canNavigateChangedRegions: canNavigateChangedRegions,
             onNavigateChangedRegion: { direction in
                 changeNavigation.requestNavigation(direction)
@@ -146,27 +146,27 @@ struct ContentView: View {
                     case .discardSourceDraft:
                         readerStore.discardSourceDraft()
                     case .requestFolderWatch(let url):
-                        callbacks.onRequestFolderWatch(url)
+                        onAction(.requestFolderWatch(url))
                     case .stopFolderWatch:
-                        callbacks.onStopFolderWatch()
+                        onAction(.stopFolderWatch)
                     case .startFavoriteWatch(let fav):
-                        callbacks.onStartFavoriteWatch(fav)
+                        onAction(.startFavoriteWatch(fav))
                     case .clearFavoriteWatchedFolders:
-                        callbacks.onClearFavoriteWatchedFolders()
+                        onAction(.clearFavoriteWatchedFolders)
                     case .renameFavoriteWatchedFolder(let id, let name):
-                        callbacks.onRenameFavoriteWatchedFolder(id, name)
+                        onAction(.renameFavoriteWatchedFolder(id: id, name: name))
                     case .removeFavoriteWatchedFolder(let id):
-                        callbacks.onRemoveFavoriteWatchedFolder(id)
+                        onAction(.removeFavoriteWatchedFolder(id))
                     case .reorderFavoriteWatchedFolders(let ids):
-                        callbacks.onReorderFavoriteWatchedFolders(ids)
+                        onAction(.reorderFavoriteWatchedFolders(ids))
                     case .startRecentManuallyOpenedFile(let entry):
-                        callbacks.onStartRecentManuallyOpenedFile(entry)
+                        onAction(.startRecentManuallyOpenedFile(entry))
                     case .startRecentFolderWatch(let entry):
-                        callbacks.onStartRecentFolderWatch(entry)
+                        onAction(.startRecentFolderWatch(entry))
                     case .clearRecentWatchedFolders:
-                        callbacks.onClearRecentWatchedFolders()
+                        onAction(.clearRecentWatchedFolders)
                     case .clearRecentManuallyOpenedFiles:
-                        callbacks.onClearRecentManuallyOpenedFiles()
+                        onAction(.clearRecentManuallyOpenedFiles)
                     }
                 }
             )
@@ -367,17 +367,17 @@ struct ContentView: View {
                 onAction: { action in
                     switch action {
                     case .stop:
-                        callbacks.onStopFolderWatch()
+                        onAction(.stopFolderWatch)
                     case .saveFavorite(let name):
-                        callbacks.onSaveFolderWatchAsFavorite(name)
+                        onAction(.saveFolderWatchAsFavorite(name))
                     case .removeFavorite:
-                        callbacks.onRemoveCurrentWatchFromFavorites()
+                        onAction(.removeCurrentWatchFromFavorites)
                     case .revealInFinder:
                         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
                     case .toggleAppearanceLock:
-                        callbacks.onToggleAppearanceLock()
+                        onAction(.toggleAppearanceLock)
                     case .editSubfolders:
-                        callbacks.onEditSubfolders()
+                        onAction(.editSubfolders)
                     }
                 }
             )
@@ -753,26 +753,7 @@ final class SplitScrollCoordinator: ObservableObject {
             isAppearanceLocked: false,
             effectiveReaderTheme: .blackOnWhite
         ),
-        callbacks: ContentViewCallbacks(
-            onRequestFileOpen: { _ in },
-            onRequestFolderWatch: { _ in },
-            onConfirmFolderWatch: { _ in },
-            onCancelFolderWatch: {},
-            onStopFolderWatch: {},
-            onSaveFolderWatchAsFavorite: { _ in },
-            onRemoveCurrentWatchFromFavorites: {},
-            onToggleAppearanceLock: {},
-            onStartFavoriteWatch: { _ in },
-            onClearFavoriteWatchedFolders: {},
-            onRenameFavoriteWatchedFolder: { _, _ in },
-            onRemoveFavoriteWatchedFolder: { _ in },
-            onReorderFavoriteWatchedFolders: { _ in },
-            onStartRecentManuallyOpenedFile: { _ in },
-            onStartRecentFolderWatch: { _ in },
-            onClearRecentWatchedFolders: {},
-            onClearRecentManuallyOpenedFiles: {},
-            onEditSubfolders: {}
-        ),
+        onAction: { _ in },
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
