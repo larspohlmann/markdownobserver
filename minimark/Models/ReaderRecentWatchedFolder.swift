@@ -25,7 +25,7 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
     }
 
     nonisolated var resolvedFolderURL: URL {
-        BookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: folderURL)
+        SecurityScopedBookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: folderURL)
     }
 
     init(folderURL: URL, options: ReaderFolderWatchOptions) {

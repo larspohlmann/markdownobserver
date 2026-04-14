@@ -4,7 +4,7 @@ import Foundation
 /// original URL when bookmark data is absent or resolution fails.
 ///
 /// Shared by `ReaderRecentOpenedFile` and `ReaderRecentWatchedFolder`.
-nonisolated enum BookmarkResolver {
+nonisolated enum SecurityScopedBookmarkResolver {
 
     /// Resolve security-scoped bookmark data to a URL.
     ///

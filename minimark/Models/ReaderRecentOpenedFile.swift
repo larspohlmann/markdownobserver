@@ -15,7 +15,7 @@ nonisolated struct ReaderRecentOpenedFile: Equatable, Hashable, Codable, Sendabl
     }
 
     nonisolated var resolvedFileURL: URL {
-        BookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: fileURL)
+        SecurityScopedBookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: fileURL)
     }
 
     nonisolated var displayName: String {
