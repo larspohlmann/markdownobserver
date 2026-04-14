@@ -123,6 +123,7 @@ enum Commodore64Theme {
 
     :root {
         --reader-mark-signal: #FFFFFF;
+        --reader-syntax-keyword: #FFFFFF;
         --reader-blockquote-accent: #7069C4;
         --reader-blockquote-bg: rgba(112, 105, 196, 0.1);
         --reader-blockquote-fg: #A0A0FF;

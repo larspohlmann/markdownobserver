@@ -137,6 +137,7 @@ enum GreenTerminalTheme {
 
     :root {
         --reader-mark-signal: #00FF41;
+        --reader-syntax-keyword: #00FF41;
         --reader-blockquote-accent: #008F11;
         --reader-blockquote-bg: rgba(0, 255, 65, 0.06);
         --reader-blockquote-fg: #008F11;

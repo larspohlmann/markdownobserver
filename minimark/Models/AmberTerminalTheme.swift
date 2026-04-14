@@ -120,6 +120,7 @@ enum AmberTerminalTheme {
 
     :root {
         --reader-mark-signal: #FFCC00;
+        --reader-syntax-keyword: #FFCC00;
         --reader-blockquote-accent: #CC8800;
         --reader-blockquote-bg: rgba(255, 176, 0, 0.06);
         --reader-blockquote-fg: #CC8800;
