@@ -128,10 +128,18 @@ struct ReaderTopBar: View {
         .sheet(isPresented: $isEditingFavorites) {
             EditFavoritesSheet(
                 favorites: favoriteWatchedFolders,
-                onRename: onRenameFavoriteWatchedFolder,
-                onDelete: onRemoveFavoriteWatchedFolder,
-                onReorder: onReorderFavoriteWatchedFolders,
-                onDismiss: { isEditingFavorites = false }
+                onAction: { action in
+                    switch action {
+                    case .rename(let id, let name):
+                        onRenameFavoriteWatchedFolder(id, name)
+                    case .delete(let id):
+                        onRemoveFavoriteWatchedFolder(id)
+                    case .reorder(let ids):
+                        onReorderFavoriteWatchedFolders(ids)
+                    case .dismiss:
+                        isEditingFavorites = false
+                    }
+                }
             )
         }
     }

@@ -1,11 +1,15 @@
 import SwiftUI
 
+enum EditFavoritesAction {
+    case rename(id: UUID, name: String)
+    case delete(UUID)
+    case reorder([UUID])
+    case dismiss
+}
+
 struct EditFavoritesSheet: View {
     let favorites: [ReaderFavoriteWatchedFolder]
-    let onRename: (UUID, String) -> Void
-    let onDelete: (UUID) -> Void
-    let onReorder: ([UUID]) -> Void
-    let onDismiss: () -> Void
+    let onAction: (EditFavoritesAction) -> Void
 
     @State private var draftNames: [UUID: String] = [:]
     @State private var localOrder: [ReaderFavoriteWatchedFolder] = []
@@ -116,9 +120,9 @@ struct EditFavoritesSheet: View {
                 commitAllPendingRenames()
                 let newIDs = localOrder.map(\.id)
                 if newIDs != favorites.map(\.id) {
-                    onReorder(newIDs)
+                    onAction(.reorder(newIDs))
                 }
-                onDismiss()
+                onAction(.dismiss)
             }
             .keyboardShortcut(.defaultAction)
         }
@@ -145,7 +149,7 @@ struct EditFavoritesSheet: View {
         guard let draft = draftNames[entry.id] else { return }
         let trimmed = draft.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, trimmed != entry.name else { return }
-        onRename(entry.id, trimmed)
+        onAction(.rename(id: entry.id, name: trimmed))
         if let index = localOrder.firstIndex(where: { $0.id == entry.id }) {
             localOrder[index].name = trimmed
         }
@@ -160,7 +164,7 @@ struct EditFavoritesSheet: View {
     private func deleteEntry(_ entry: ReaderFavoriteWatchedFolder) {
         localOrder.removeAll { $0.id == entry.id }
         draftNames.removeValue(forKey: entry.id)
-        onDelete(entry.id)
+        onAction(.delete(entry.id))
     }
 
     private func moveEntries(from source: IndexSet, to destination: Int) {

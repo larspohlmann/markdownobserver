@@ -201,16 +201,18 @@ struct ReaderWindowRootView: View {
             .sheet(isPresented: $isTitlebarEditingFavorites) {
                 EditFavoritesSheet(
                     favorites: settingsStore.currentSettings.favoriteWatchedFolders,
-                    onRename: { id, newName in
-                        settingsStore.renameFavoriteWatchedFolder(id: id, newName: newName)
-                    },
-                    onDelete: { id in
-                        settingsStore.removeFavoriteWatchedFolder(id: id)
-                    },
-                    onReorder: { orderedIDs in
-                        settingsStore.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
-                    },
-                    onDismiss: { isTitlebarEditingFavorites = false }
+                    onAction: { action in
+                        switch action {
+                        case .rename(let id, let name):
+                            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
+                        case .delete(let id):
+                            settingsStore.removeFavoriteWatchedFolder(id: id)
+                        case .reorder(let ids):
+                            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
+                        case .dismiss:
+                            isTitlebarEditingFavorites = false
+                        }
+                    }
                 )
             }
             .sheet(isPresented: $isEditingSubfolders) {
