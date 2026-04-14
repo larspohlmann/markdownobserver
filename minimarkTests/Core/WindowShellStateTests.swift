@@ -96,4 +96,67 @@ struct WindowShellStateTests {
         coordinator.handleWindowAccessorUpdate(nil)
         #expect(coordinator.hostWindow == nil)
     }
+
+    @Test @MainActor
+    func registerWindowIfNeededIsIdempotent() throws {
+        ReaderWindowRegistry.shared.resetForTesting()
+        defer { ReaderWindowRegistry.shared.resetForTesting() }
+
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+
+        coordinator.handleWindowAccessorUpdate(window)
+
+        // Calling registerWindowIfNeeded multiple times should not fail or cause issues.
+        // We verify by checking the window is still properly registered after multiple calls.
+        coordinator.registerWindowIfNeeded()
+        coordinator.registerWindowIfNeeded()
+        coordinator.registerWindowIfNeeded()
+
+        // Window should still be registered and functional
+        #expect(coordinator.hostWindow === window)
+    }
+
+    @Test @MainActor
+    func registrationIdentityClearedOnNilWindow() throws {
+        ReaderWindowRegistry.shared.resetForTesting()
+        defer { ReaderWindowRegistry.shared.resetForTesting() }
+
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+
+        // Register with a window
+        coordinator.handleWindowAccessorUpdate(window)
+
+        // Unregister by setting nil
+        coordinator.handleWindowAccessorUpdate(nil)
+
+        // Re-registering the same window should work (identity was cleared)
+        coordinator.handleWindowAccessorUpdate(window)
+        #expect(coordinator.hostWindow === window)
+    }
 }

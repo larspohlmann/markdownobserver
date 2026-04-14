@@ -42,6 +42,18 @@ final class ReaderWindowCoordinator {
     var lastAppliedSidebarDelta: CGFloat = 0
     var isTitlebarEditingFavorites = false
     var isEditingSubfolders = false
+    private var registeredWindowIdentity: RegisteredWindowIdentity?
+
+    private struct RegisteredWindowIdentity: Equatable {
+        let windowID: ObjectIdentifier
+        let folderWatchSession: ReaderFolderWatchSession?
+
+        init?(window: NSWindow?, folderWatchSession: ReaderFolderWatchSession?) {
+            guard let window else { return nil }
+            self.windowID = ObjectIdentifier(window)
+            self.folderWatchSession = folderWatchSession
+        }
+    }
 
     // Controller references (set via configure())
     private(set) var appearanceController: WindowAppearanceController?
@@ -210,6 +222,12 @@ final class ReaderWindowCoordinator {
     }
 
     func registerWindowIfNeeded() {
+        let currentIdentity = RegisteredWindowIdentity(
+            window: hostWindow,
+            folderWatchSession: folderWatchFlowController?.sharedFolderWatchSession
+        )
+        guard currentIdentity != registeredWindowIdentity else { return }
+        registeredWindowIdentity = currentIdentity
         registerWindow(
             hostWindow,
             activeFolderWatch: folderWatchFlowController?.sharedFolderWatchSession
@@ -274,6 +292,7 @@ final class ReaderWindowCoordinator {
     func handleWindowAccessorUpdate(_ window: NSWindow?) {
         if window == nil, let existingWindow = hostWindow {
             ReaderWindowRegistry.shared.unregisterWindow(existingWindow)
+            registeredWindowIdentity = nil
         }
         guard hostWindow !== window else { return }
         hostWindow = window
