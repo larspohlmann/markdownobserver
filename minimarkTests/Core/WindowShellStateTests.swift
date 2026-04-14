@@ -12,6 +12,7 @@ struct WindowShellStateTests {
 
     @MainActor
     private func makeCoordinator() throws -> (ReaderWindowCoordinator, ReaderSidebarControllerTestHarness) {
+        ReaderWindowRegistry.shared.resetForTesting()
         let harness = try ReaderSidebarControllerTestHarness()
         let coordinator = ReaderWindowCoordinator(
             settingsStore: harness.settingsStore,
@@ -63,9 +64,6 @@ struct WindowShellStateTests {
 
     @Test @MainActor
     func handleWindowAccessorUpdateNilUnregistersAndProcesses() throws {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
-
         let (coordinator, harness) = try makeCoordinator()
         defer { harness.cleanup() }
 
@@ -80,9 +78,6 @@ struct WindowShellStateTests {
 
     @Test @MainActor
     func registerWindowIfNeededIsIdempotent() throws {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
-
         let (coordinator, harness) = try makeCoordinator()
         defer { harness.cleanup() }
 
@@ -112,9 +107,6 @@ struct WindowShellStateTests {
 
     @Test @MainActor
     func registrationIdentityClearedOnNilWindow() throws {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
-
         let (coordinator, harness) = try makeCoordinator()
         defer { harness.cleanup() }
 

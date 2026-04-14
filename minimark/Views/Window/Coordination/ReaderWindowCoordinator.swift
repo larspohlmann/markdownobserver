@@ -217,8 +217,8 @@ final class ReaderWindowCoordinator {
     }
 
     func refreshWindowShellState() {
-        registerWindowIfNeeded()
         refreshSharedFolderWatchState()
+        registerWindowIfNeeded()
         applyWindowTitlePresentation()
     }
 
@@ -289,11 +289,11 @@ final class ReaderWindowCoordinator {
     }
 
     func handleWindowAccessorUpdate(_ window: NSWindow?) {
-        if window == nil, let existingWindow = hostWindow {
+        guard hostWindow !== window else { return }
+        if let existingWindow = hostWindow {
             ReaderWindowRegistry.shared.unregisterWindow(existingWindow)
             registeredWindowIdentity = nil
         }
-        guard hostWindow !== window else { return }
         hostWindow = window
         handleHostWindowChange()
     }
