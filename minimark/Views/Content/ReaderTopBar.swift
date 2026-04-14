@@ -80,18 +80,34 @@ struct ReaderTopBar: View {
                     recentWatchedFolders: recentWatchedFolders,
                     recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                     iconProvider: iconProvider,
-                    onOpenFiles: onOpenFiles,
-                    onOpenApp: onOpenApp,
-                    onRevealInFinder: onRevealInFinder,
-                    onRequestFolderWatch: onRequestFolderWatch,
-                    onStopFolderWatch: onStopFolderWatch,
-                    onStartFavoriteWatch: onStartFavoriteWatch,
-                    onClearFavoriteWatchedFolders: onClearFavoriteWatchedFolders,
-                    onEditFavoriteWatchedFolders: { isEditingFavorites = true },
-                    onStartRecentManuallyOpenedFile: onStartRecentManuallyOpenedFile,
-                    onStartRecentFolderWatch: onStartRecentFolderWatch,
-                    onClearRecentWatchedFolders: onClearRecentWatchedFolders,
-                    onClearRecentManuallyOpenedFiles: onClearRecentManuallyOpenedFiles
+                    onAction: { action in
+                        switch action {
+                        case .editFavoriteWatchedFolders:
+                            isEditingFavorites = true
+                        case .openFiles(let urls):
+                            onOpenFiles(urls)
+                        case .openInApp(let app):
+                            onOpenApp(app)
+                        case .revealInFinder:
+                            onRevealInFinder()
+                        case .requestFolderWatch(let url):
+                            onRequestFolderWatch(url)
+                        case .stopFolderWatch:
+                            onStopFolderWatch()
+                        case .startFavoriteWatch(let fav):
+                            onStartFavoriteWatch(fav)
+                        case .clearFavoriteWatchedFolders:
+                            onClearFavoriteWatchedFolders()
+                        case .startRecentManuallyOpenedFile(let entry):
+                            onStartRecentManuallyOpenedFile(entry)
+                        case .startRecentFolderWatch(let entry):
+                            onStartRecentFolderWatch(entry)
+                        case .clearRecentWatchedFolders:
+                            onClearRecentWatchedFolders()
+                        case .clearRecentManuallyOpenedFiles:
+                            onClearRecentManuallyOpenedFiles()
+                        }
+                    }
                 )
                 .frame(width: 28, height: 28)
             }
