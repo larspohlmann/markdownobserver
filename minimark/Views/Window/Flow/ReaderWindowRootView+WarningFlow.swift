@@ -24,7 +24,7 @@ extension ReaderWindowRootView {
         groupStateController.pinnedGroupIDs = []
         groupStateController.collapsedGroupIDs = []
         sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
-        sidebarDocumentController.stopFolderWatch()
+        sidebarDocumentController.folderWatchCoordinator.stopFolderWatch()
         refreshWindowPresentation()
         cancelFolderWatch()
     }
@@ -36,13 +36,13 @@ extension ReaderWindowRootView {
     }
 
     func refreshFolderWatchAutoOpenWarningPresentation() {
-        let warning = sidebarDocumentController.selectedFolderWatchAutoOpenWarning
+        let warning = sidebarDocumentController.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning
         handleFolderWatchAutoOpenWarningChange(warning)
     }
 
     func dismissFolderWatchAutoOpenWarning() {
         folderWatchWarningCoordinator.dismiss {
-            sidebarDocumentController.dismissFolderWatchAutoOpenWarnings()
+            sidebarDocumentController.folderWatchCoordinator.dismissFolderWatchAutoOpenWarnings()
         }
     }
 

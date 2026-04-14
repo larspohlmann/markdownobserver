@@ -55,8 +55,8 @@ final class ReaderWindowCoordinator {
 
     func sharedFolderWatchState() -> (session: ReaderFolderWatchSession?, canStop: Bool) {
         (
-            sidebarDocumentController.activeFolderWatchSession,
-            sidebarDocumentController.canStopFolderWatch
+            sidebarDocumentController.folderWatchCoordinator.activeFolderWatchSession,
+            sidebarDocumentController.folderWatchCoordinator.canStopFolderWatch
         )
     }
 

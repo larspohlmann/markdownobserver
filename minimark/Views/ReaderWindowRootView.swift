@@ -162,7 +162,7 @@ struct ReaderWindowRootView: View {
 
     private func windowLifecycleBaseView<Content: View>(_ view: Content) -> some View {
         @Bindable var warningCoordinator = folderWatchWarningCoordinator
-        @Bindable var sidebarController = sidebarDocumentController
+        @Bindable var folderWatchCoordinator = sidebarDocumentController.folderWatchCoordinator
         return view
             .sheet(item: $warningCoordinator.activeFlow, onDismiss: {
                 dismissFolderWatchAutoOpenWarning()
@@ -177,16 +177,16 @@ struct ReaderWindowRootView: View {
                     }
                 )
             }
-            .sheet(item: $sidebarController.pendingFileSelectionRequest, onDismiss: {
-                sidebarDocumentController.dismissPendingFileSelectionRequest()
+            .sheet(item: $folderWatchCoordinator.pendingFileSelectionRequest, onDismiss: {
+                sidebarDocumentController.folderWatchCoordinator.dismissPendingFileSelectionRequest()
             }) { request in
                 FolderWatchFileSelectionSheetWrapper(
                     request: request,
                     onSkip: {
-                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                        sidebarDocumentController.folderWatchCoordinator.dismissPendingFileSelectionRequest()
                     },
                     onConfirm: { selectedFileURLs in
-                        sidebarDocumentController.dismissPendingFileSelectionRequest()
+                        sidebarDocumentController.folderWatchCoordinator.dismissPendingFileSelectionRequest()
                         fileOpenCoordinator.open(FileOpenRequest(
                             fileURLs: selectedFileURLs,
                             origin: .folderWatchInitialBatchAutoOpen,
@@ -301,10 +301,10 @@ struct ReaderWindowRootView: View {
 
     private func windowLifecycleChangeObservers<Content: View>(_ view: Content) -> some View {
         view
-            .onChange(of: sidebarDocumentController.selectedFolderWatchAutoOpenWarning) { _, warning in
+            .onChange(of: sidebarDocumentController.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning) { _, warning in
                 handleFolderWatchAutoOpenWarningChange(warning)
             }
-            .onChange(of: sidebarDocumentController.activeFolderWatchSession) { _, _ in
+            .onChange(of: sidebarDocumentController.folderWatchCoordinator.activeFolderWatchSession) { _, _ in
                 refreshWindowShellState()
             }
             .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
@@ -553,8 +553,8 @@ struct ReaderWindowRootView: View {
             ToolbarItem(placement: .navigation) {
                 FolderWatchToolbarButton(
                     activeFolderWatch: sharedFolderWatchSession,
-                    isInitialScanInProgress: sidebarDocumentController.isFolderWatchInitialScanInProgress,
-                    didInitialScanFail: sidebarDocumentController.didFolderWatchInitialScanFail,
+                    isInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
+                    didInitialScanFail: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
                     favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
                     recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
                     onActivate: {

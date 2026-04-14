@@ -198,7 +198,7 @@ struct EditFolderWatchExclusionsTests {
         )
 
         let coordinator = FileOpenCoordinator(controller: controller)
-        try controller.startWatchingFolder(
+        try controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: tempDir,
             options: ReaderFolderWatchOptions(
                 openMode: .watchChangesOnly,
