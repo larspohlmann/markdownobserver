@@ -83,6 +83,7 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                 }
 
         pre {
+          position: relative;
           background: \(palette.blockBackgroundHex);
           border: 1px solid \(palette.blockBorderHex);
         }

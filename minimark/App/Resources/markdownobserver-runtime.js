@@ -1865,6 +1865,16 @@
           var pureCode = textContent.trim();
           navigator.clipboard.writeText(pureCode).then(function () {
             showCopyToast(preEl);
+          }).catch(function () {
+            var ta = document.createElement("textarea");
+            ta.value = pureCode;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            showCopyToast(preEl);
           });
         });
       })(code, pre);
