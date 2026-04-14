@@ -44,32 +44,7 @@ struct ReaderSettingsView: View {
                     }
                 }
 
-                Picker("Reader theme", selection: Binding(
-                    get: { settingsStore.currentSettings.readerTheme },
-                    set: { settingsStore.updateTheme($0) }
-                )) {
-                    ForEach(ReaderThemeKind.allCases, id: \.self) { kind in
-                        Text(kind.displayName).tag(kind)
-                    }
-                }
-
-                Picker("Syntax theme", selection: Binding(
-                    get: { settingsStore.currentSettings.syntaxTheme },
-                    set: { settingsStore.updateSyntaxTheme($0) }
-                )) {
-                    ForEach(SyntaxThemeKind.allCases, id: \.self) { kind in
-                        Text(kind.displayName).tag(kind)
-                    }
-                }
-                .disabled(syntaxHighlightingControlledByTheme)
-
-                if syntaxHighlightingControlledByTheme {
-                    Text("Syntax highlighting is controlled by the active theme.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-
-                lockedWindowsHint
+                ThemeSelectorView(settingsStore: settingsStore)
             }
 
             Section("Window Layout") {
@@ -133,11 +108,6 @@ struct ReaderSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Preview") {
-                ThemePreviewCard(settings: settingsStore.currentSettings)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Theme preview")
-            }
         }
         .formStyle(.grouped)
         .frame(minWidth: 560, minHeight: 720)
@@ -148,23 +118,6 @@ struct ReaderSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             notificationNotifier.refreshNotificationStatus()
         }
-    }
-
-    @ViewBuilder
-    private var lockedWindowsHint: some View {
-        if WindowAppearanceController.lockedWindowCount > 0 {
-            HStack(spacing: 4) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9))
-                Text("Appearance is locked for some windows. Changes won't apply to them.")
-            }
-            .font(.callout)
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    private var syntaxHighlightingControlledByTheme: Bool {
-        settingsStore.currentSettings.readerTheme.themeDefinition.providesSyntaxHighlighting
     }
 
     private var layoutHelpText: String {
@@ -234,7 +187,7 @@ extension Color {
 
 }
 
-private struct ThemePreviewCard: View {
+struct ThemePreviewCard: View {
     let settings: ReaderSettings
 
     private var theme: ReaderTheme {
