@@ -298,14 +298,23 @@ final class ReaderWindowCoordinator {
         oldSnapshot: SidebarGroupStateController.WorkspaceStateSnapshot,
         newSnapshot: SidebarGroupStateController.WorkspaceStateSnapshot
     ) {
-        if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
-            favoriteWorkspaceController?.updateGroupState(
-                pinnedGroupIDs: newSnapshot.pinnedGroupIDs,
-                collapsedGroupIDs: newSnapshot.collapsedGroupIDs,
-                groupSortMode: newSnapshot.sortMode,
-                fileSortMode: newSnapshot.fileSortMode,
-                manualGroupOrder: newSnapshot.manualGroupOrder
-            )
+        if let favoriteController = favoriteWorkspaceController, favoriteController.isActive {
+            let needsUpdate =
+                favoriteController.activeFavoriteWorkspaceState?.pinnedGroupIDs != newSnapshot.pinnedGroupIDs ||
+                favoriteController.activeFavoriteWorkspaceState?.collapsedGroupIDs != newSnapshot.collapsedGroupIDs ||
+                favoriteController.activeFavoriteWorkspaceState?.groupSortMode != newSnapshot.sortMode ||
+                favoriteController.activeFavoriteWorkspaceState?.fileSortMode != newSnapshot.fileSortMode ||
+                favoriteController.activeFavoriteWorkspaceState?.manualGroupOrder != newSnapshot.manualGroupOrder
+
+            if needsUpdate {
+                favoriteController.updateGroupState(
+                    pinnedGroupIDs: newSnapshot.pinnedGroupIDs,
+                    collapsedGroupIDs: newSnapshot.collapsedGroupIDs,
+                    groupSortMode: newSnapshot.sortMode,
+                    fileSortMode: newSnapshot.fileSortMode,
+                    manualGroupOrder: newSnapshot.manualGroupOrder
+                )
+            }
         } else {
             if oldSnapshot.sortMode != newSnapshot.sortMode {
                 settingsStore.updateSidebarGroupSortMode(newSnapshot.sortMode)
@@ -559,11 +568,7 @@ final class ReaderWindowCoordinator {
             workspaceState: workspaceState
         )
 
-        // Track this as the active favorite
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
-        if let created = settingsStore.currentSettings.favoriteWatchedFolders.first(where: {
-            $0.matches(folderPath: normalizedPath, options: session.options)
-        }) {
+        if let created = favoriteMatchingSharedFolderWatchSession() {
             favoriteWorkspaceController?.activate(id: created.id, workspaceState: created.workspaceState)
         }
     }
@@ -817,83 +822,16 @@ final class ReaderWindowCoordinator {
 
         let newlyExcludedPaths = normalizedNew.subtracting(normalizedOld)
         if !newlyExcludedPaths.isEmpty {
-            closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
+            folderWatchFlowController?.closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
         }
 
         let newlyIncludedPaths = normalizedOld.subtracting(normalizedNew)
         if !newlyIncludedPaths.isEmpty, session.options.openMode == .openAllMarkdownFiles {
-            openFilesInNewlyIncludedPaths(Array(newlyIncludedPaths))
+            folderWatchFlowController?.openFilesInNewlyIncludedPaths(Array(newlyIncludedPaths), fileOpenCoordinator: fileOpenCoordinator)
         }
 
         refreshWindowPresentation()
         return true
-    }
-
-    private func closeDocumentsInExcludedPaths(_ excludedPaths: [String]) {
-        let excludedPrefixes = excludedPaths.map { path in
-            let normalized = ReaderFileRouting.normalizedFileURL(
-                URL(fileURLWithPath: path, isDirectory: true)
-            ).path
-            return normalized.hasSuffix("/") ? normalized : normalized + "/"
-        }
-
-        let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
-            doc.readerStore.fileURL.map { url in
-                let normalized = ReaderFileRouting.normalizedFileURL(url).path
-                return excludedPrefixes.contains { normalized.hasPrefix($0) }
-            }
-        } ?? false
-
-        let documentsToClose = sidebarDocumentController.documents.filter { doc in
-            guard let fileURL = doc.readerStore.fileURL else { return false }
-            let normalized = ReaderFileRouting.normalizedFileURL(fileURL).path
-            return excludedPrefixes.contains { normalized.hasPrefix($0) }
-        }
-
-        for doc in documentsToClose {
-            sidebarDocumentController.closeDocument(doc.id)
-        }
-
-        if wasSelectedExcluded {
-            sidebarDocumentController.selectDocumentWithNewestModificationDate()
-        }
-    }
-
-    private func openFilesInNewlyIncludedPaths(_ includedPaths: [String]) {
-        let includedPrefixes = includedPaths.map { path in
-            let normalized = ReaderFileRouting.normalizedFileURL(
-                URL(fileURLWithPath: path, isDirectory: true)
-            ).path
-            return normalized.hasSuffix("/") ? normalized : normalized + "/"
-        }
-
-        sidebarDocumentController.folderWatchCoordinator.scanCurrentMarkdownFiles { [weak self] scannedURLs in
-            guard let self,
-                  let session = folderWatchFlowController?.sharedFolderWatchSession else { return }
-
-            let alreadyOpenPaths = Set(
-                sidebarDocumentController.documents.compactMap {
-                    $0.readerStore.fileURL.map { ReaderFileRouting.normalizedFileURL($0).path }
-                }
-            )
-
-            let newFileURLs = scannedURLs.filter { url in
-                let normalized = ReaderFileRouting.normalizedFileURL(url).path
-                guard !alreadyOpenPaths.contains(normalized) else { return false }
-                return includedPrefixes.contains { normalized.hasPrefix($0) }
-            }
-
-            if !newFileURLs.isEmpty {
-                fileOpenCoordinator.open(FileOpenRequest(
-                    fileURLs: newFileURLs,
-                    origin: .folderWatchInitialBatchAutoOpen,
-                    folderWatchSession: session,
-                    slotStrategy: .alwaysAppend,
-                    materializationStrategy: .deferThenMaterializeNewest(count: 1)
-                ))
-                refreshWindowPresentation()
-            }
-        }
     }
 
     private func syncFavoriteExclusionsIfNeeded(_ excludedPaths: [String]) {

@@ -28,24 +28,6 @@ final class FolderWatchFlowController {
         self.sidebarDocumentController = sidebarDocumentController
     }
 
-    // MARK: - Watch Lifecycle
-
-    func startWatch(
-        folderURL: URL,
-        options: ReaderFolderWatchOptions,
-        performInitialAutoOpen: Bool = true
-    ) throws {
-        try sidebarDocumentController.folderWatchCoordinator.startWatchingFolder(
-            folderURL: folderURL,
-            options: options,
-            performInitialAutoOpen: performInitialAutoOpen
-        )
-    }
-
-    func stopWatch() {
-        sidebarDocumentController.folderWatchCoordinator.stopFolderWatch()
-    }
-
     // MARK: - Presentation State
 
     func presentOptions(for folderURL: URL, options: ReaderFolderWatchOptions) {
@@ -118,28 +100,6 @@ final class FolderWatchFlowController {
     }
 
     // MARK: - Exclusions
-
-    @discardableResult
-    func updateExclusions(_ newExcludedPaths: [String]) throws -> Bool {
-        guard let session = sharedFolderWatchSession else { return false }
-
-        let normalizedOld = Set(
-            session.options.encodedForFolder(session.folderURL).excludedSubdirectoryPaths
-        )
-        let normalizedNew = Set(
-            ReaderFolderWatchOptions(
-                openMode: session.options.openMode,
-                scope: session.options.scope,
-                excludedSubdirectoryPaths: newExcludedPaths
-            ).encodedForFolder(session.folderURL).excludedSubdirectoryPaths
-        )
-
-        guard normalizedOld != normalizedNew else { return true }
-
-        try sidebarDocumentController.folderWatchCoordinator.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
-
-        return true
-    }
 
     func closeDocumentsInExcludedPaths(_ excludedPaths: [String]) {
         let excludedPrefixes = excludedPaths.map { path in
