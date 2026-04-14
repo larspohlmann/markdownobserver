@@ -52,11 +52,13 @@ struct WatchPill: View {
     }
 
     var body: some View {
+        let saveFavorite: (String) -> Void = { name in onAction(.saveFavorite(name)) }
+
         HStack(spacing: 8) {
             WatchPillFavoriteStarToggle(
                 isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                 folderDisplayName: activeFolderWatch.detailSummaryTitle,
-                onSave: { name in onAction(.saveFavorite(name)) },
+                onSave: saveFavorite,
                 onRemove: { onAction(.removeFavorite) }
             )
 
@@ -74,7 +76,7 @@ struct WatchPill: View {
                 FolderWatchDetailsPopover(
                     activeFolderWatch: activeFolderWatch,
                     isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                    onSaveFolderWatchAsFavorite: { name in onAction(.saveFavorite(name)) }
+                    onSaveFolderWatchAsFavorite: saveFavorite
                 )
             }
             .help(activeFolderWatch.tooltipText)
