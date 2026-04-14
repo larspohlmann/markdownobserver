@@ -18,7 +18,7 @@ extension ReaderWindowRootView {
         fileOpenCoordinator.open(FileOpenRequest(
             fileURLs: [fileURL],
             origin: .manual,
-            folderWatchSession: sharedFolderWatchSession,
+            folderWatchSession: folderWatchFlowController.sharedFolderWatchSession,
             slotStrategy: .replaceSelectedSlot
         ))
         applyWindowTitlePresentation()
@@ -68,30 +68,20 @@ extension ReaderWindowRootView {
     }
 
     func prepareFolderWatchOptions(for folderURL: URL) {
-        presentFolderWatchOptions(for: folderURL, options: .default)
+        folderWatchFlowController.prepareOptions(for: folderURL)
     }
 
     func presentFolderWatchOptions(for folderURL: URL, options: ReaderFolderWatchOptions) {
-        pendingFolderWatchRequest = PendingFolderWatchRequest(
-            folderURL: folderURL,
-            options: options
-        )
-        isFolderWatchOptionsPresented = true
+        folderWatchFlowController.presentOptions(for: folderURL, options: options)
     }
 
     func prepareRecentFolderWatch(_ entry: ReaderRecentWatchedFolder) {
-        let resolvedFolderURL = settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
-        presentFolderWatchOptions(for: resolvedFolderURL, options: entry.options)
+        folderWatchFlowController.prepareRecentWatch(entry, settingsStore: settingsStore)
     }
 
     func updatePendingFolderWatchRequest(
-        _ update: (inout PendingFolderWatchRequest) -> Void
+        _ update: (inout FolderWatchFlowController.PendingFolderWatchRequest) -> Void
     ) {
-        guard var request = pendingFolderWatchRequest else {
-            return
-        }
-
-        update(&request)
-        pendingFolderWatchRequest = request
+        folderWatchFlowController.updatePendingRequest(update)
     }
 }

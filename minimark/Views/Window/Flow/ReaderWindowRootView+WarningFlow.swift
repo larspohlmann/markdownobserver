@@ -3,12 +3,11 @@ import Foundation
 
 extension ReaderWindowRootView {
     func cancelFolderWatch() {
-        isFolderWatchOptionsPresented = false
-        pendingFolderWatchRequest = nil
+        folderWatchFlowController.cancelPendingWatch()
     }
 
     func confirmFolderWatch(_ options: ReaderFolderWatchOptions) {
-        guard let folderURL = pendingFolderWatchRequest?.folderURL else {
+        guard let folderURL = folderWatchFlowController.pendingFolderWatchRequest?.folderURL else {
             return
         }
 
@@ -18,19 +17,18 @@ extension ReaderWindowRootView {
 
     func stopFolderWatch() {
         dismissFolderWatchAutoOpenWarning()
-        persistFinalWorkspaceStateIfNeeded()
-        activeFavoriteID = nil
-        activeFavoriteWorkspaceState = nil
+        favoriteWorkspaceController.persistFinalState(to: settingsStore)
+        favoriteWorkspaceController.deactivate()
         groupStateController.pinnedGroupIDs = []
         groupStateController.collapsedGroupIDs = []
-        sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+        windowCoordinator.sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
         sidebarDocumentController.folderWatchCoordinator.stopFolderWatch()
         refreshWindowPresentation()
         cancelFolderWatch()
     }
 
     func handleFolderWatchAutoOpenWarningChange(_ warning: ReaderFolderWatchAutoOpenWarning?) {
-        folderWatchWarningCoordinator.handleWarningChange(warning) {
+        folderWatchFlowController.warningCoordinator.handleWarningChange(warning) {
             isFolderWatchWarningPresentationAllowed()
         }
     }
@@ -41,13 +39,13 @@ extension ReaderWindowRootView {
     }
 
     func dismissFolderWatchAutoOpenWarning() {
-        folderWatchWarningCoordinator.dismiss {
+        folderWatchFlowController.warningCoordinator.dismiss {
             sidebarDocumentController.folderWatchCoordinator.dismissFolderWatchAutoOpenWarnings()
         }
     }
 
     func openSelectedFolderWatchAutoOpenFiles() {
-        let selectedFileURLs = folderWatchWarningCoordinator.selectedFileURLs()
+        let selectedFileURLs = folderWatchFlowController.warningCoordinator.selectedFileURLs()
         guard !selectedFileURLs.isEmpty else {
             dismissFolderWatchAutoOpenWarning()
             return
@@ -63,7 +61,7 @@ extension ReaderWindowRootView {
     }
 
     func isFolderWatchWarningPresentationAllowed() -> Bool {
-        let targetWindow = hostWindow ?? NSApp.keyWindow
-        return !isFolderWatchOptionsPresented && targetWindow?.attachedSheet == nil
+        let targetWindow = windowCoordinator.hostWindow ?? NSApp.keyWindow
+        return !folderWatchFlowController.isFolderWatchOptionsPresented && targetWindow?.attachedSheet == nil
     }
 }

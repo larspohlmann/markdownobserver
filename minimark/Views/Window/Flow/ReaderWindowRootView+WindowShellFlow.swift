@@ -3,17 +3,17 @@ import Foundation
 
 extension ReaderWindowRootView {
     func applyWindowTitlePresentation() {
-        let resolvedTitle = windowCoordinator.resolveWindowTitle(activeFolderWatch: sharedFolderWatchSession)
+        let resolvedTitle = windowCoordinator.resolveWindowTitle(activeFolderWatch: folderWatchFlowController.sharedFolderWatchSession)
         let mutation = ReaderWindowTitleFormatter.mutation(
             resolvedTitle: resolvedTitle,
-            currentEffectiveTitle: effectiveWindowTitle,
-            currentHostWindowTitle: hostWindow?.title
+            currentEffectiveTitle: windowCoordinator.effectiveWindowTitle,
+            currentHostWindowTitle: windowCoordinator.hostWindow?.title
         )
         if mutation.shouldUpdateEffectiveTitle {
-            effectiveWindowTitle = mutation.effectiveTitle
+            windowCoordinator.effectiveWindowTitle = mutation.effectiveTitle
         }
         if mutation.shouldWriteHostWindowTitle {
-            hostWindow?.title = mutation.effectiveTitle
+            windowCoordinator.hostWindow?.title = mutation.effectiveTitle
         }
     }
 
@@ -44,7 +44,7 @@ extension ReaderWindowRootView {
 
     func flushQueuedFolderWatchOpens() {
         let batch = windowCoordinator.consumeQueuedFolderWatchOpenBatchIfPossible(
-            canFlushImmediately: hostWindow != nil
+            canFlushImmediately: windowCoordinator.hostWindow != nil
         ) { [self] in
             flushQueuedFolderWatchOpens()
         }
@@ -65,9 +65,7 @@ extension ReaderWindowRootView {
 
 
     func refreshSharedFolderWatchState() {
-        let state = windowCoordinator.sharedFolderWatchState()
-        sharedFolderWatchSession = state.session
-        canStopSharedFolderWatch = state.canStop
+        folderWatchFlowController.refreshSharedState()
     }
 
     func refreshWindowPresentation() {
@@ -87,8 +85,8 @@ extension ReaderWindowRootView {
 
     func registerWindowIfNeeded() {
         windowCoordinator.registerWindow(
-            hostWindow,
-            activeFolderWatch: sharedFolderWatchSession
+            windowCoordinator.hostWindow,
+            activeFolderWatch: folderWatchFlowController.sharedFolderWatchSession
         )
     }
 }
