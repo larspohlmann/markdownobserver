@@ -139,6 +139,13 @@ struct ReaderCommands: Commands {
                 openWindow(id: AppWindowID.about.rawValue)
             }
         }
+
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings...") {
+                openWindow(id: AppWindowID.settings.rawValue)
+            }
+            .keyboardShortcut(",", modifiers: [.command])
+        }
     }
 
     private func openMarkdown() {

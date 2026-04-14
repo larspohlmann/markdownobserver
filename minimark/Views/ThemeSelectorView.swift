@@ -1,8 +1,9 @@
 import SwiftUI
 
-private enum ColumnLayout {
-    static let selectorRatio: CGFloat = 0.25
-    static let previewRatio: CGFloat = 0.50
+struct ThemeSelectorColumnWidths {
+    static let readerMin: CGFloat = 180
+    static let syntaxMin: CGFloat = 180
+    static let previewMin: CGFloat = 320
 }
 
 struct ThemeSelectorView: View {
@@ -26,26 +27,22 @@ struct ThemeSelectorView: View {
             threeColumnLayout
             applyBar
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var threeColumnLayout: some View {
-        GeometryReader { geometry in
-            let totalWidth = geometry.size.width
-            let selectorWidth = totalWidth * ColumnLayout.selectorRatio
-            let previewWidth = totalWidth * ColumnLayout.previewRatio
+        HStack(alignment: .top, spacing: 12) {
+            readerThemesColumn
+                .frame(minWidth: ThemeSelectorColumnWidths.readerMin, maxWidth: .infinity)
 
-            HStack(spacing: 12) {
-                readerThemesColumn
-                    .frame(width: selectorWidth)
+            syntaxThemesColumn
+                .frame(minWidth: ThemeSelectorColumnWidths.syntaxMin, maxWidth: .infinity)
 
-                syntaxThemesColumn
-                    .frame(width: selectorWidth)
-
-                previewColumn
-                    .frame(width: previewWidth)
-            }
+            previewColumn
+                .frame(minWidth: ThemeSelectorColumnWidths.previewMin, maxWidth: .infinity)
+                .layoutPriority(1)
         }
-        .frame(minHeight: 340)
+        .frame(maxWidth: .infinity, minHeight: 340)
     }
 
     private var readerThemesColumn: some View {
@@ -76,9 +73,12 @@ struct ThemeSelectorView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
@@ -114,10 +114,13 @@ struct ThemeSelectorView: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
@@ -128,11 +131,16 @@ struct ThemeSelectorView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
 
-            ThemePreviewCard(settings: previewSettings)
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Theme preview")
+            ScrollView {
+                ThemePreviewCard(settings: previewSettings)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Theme preview")
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }

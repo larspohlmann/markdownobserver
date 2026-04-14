@@ -41,18 +41,18 @@ struct MarkdownObserverApp: App {
             ReaderCommands(settingsStore: settingsStore, multiFileDisplayMode: activeMultiFileDisplayMode)
         }
 
-        Settings {
+        Window("MarkdownObserver Settings", id: AppWindowID.settings.rawValue) {
             ReaderSettingsView(settingsStore: settingsStore)
             .appAppearance(appAppearance)
         }
-        .defaultSize(width: 640, height: 700)
-        .windowResizability(.contentSize)
+        .defaultSize(width: 1000, height: 720)
+        .windowResizability(.contentMinSize)
 
         Window("About MarkdownObserver", id: AppWindowID.about.rawValue) {
             AboutWindowView()
                 .appAppearance(appAppearance)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
     }
 }
 
