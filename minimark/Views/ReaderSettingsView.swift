@@ -14,134 +14,24 @@ struct ReaderSettingsView: View {
     }
 
     var body: some View {
-        Form {
-            Section("Typography") {
-                HStack {
-                    Text("Font size")
-                    Slider(
-                        value: Binding(
-                            get: { settingsStore.currentSettings.baseFontSize },
-                            set: { settingsStore.updateBaseFontSize($0) }
-                        ),
-                        in: 10...48,
-                        step: 1
-                    )
-                    .accessibilityLabel("Font size")
-                    Text("\(Int(settingsStore.currentSettings.baseFontSize)) pt")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .frame(width: 58, alignment: .trailing)
+        GeometryReader { geometry in
+            let contentWidth = min(max(geometry.size.width - 40, 0), 1040)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    typographySection
+                    themeSection
+                    windowLayoutSection
+                    changeHighlightingSection
+                    notificationsSection
                 }
+                .frame(width: contentWidth, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding(20)
             }
-
-            Section("Theme") {
-                Picker("App theme", selection: Binding(
-                    get: { settingsStore.currentSettings.appAppearance },
-                    set: { settingsStore.updateAppAppearance($0) }
-                )) {
-                    ForEach(AppAppearance.allCases, id: \.self) { appearance in
-                        Text(appearance.displayName).tag(appearance)
-                    }
-                }
-
-                Picker("Reader theme", selection: Binding(
-                    get: { settingsStore.currentSettings.readerTheme },
-                    set: { settingsStore.updateTheme($0) }
-                )) {
-                    ForEach(ReaderThemeKind.allCases, id: \.self) { kind in
-                        Text(kind.displayName).tag(kind)
-                    }
-                }
-
-                Picker("Syntax theme", selection: Binding(
-                    get: { settingsStore.currentSettings.syntaxTheme },
-                    set: { settingsStore.updateSyntaxTheme($0) }
-                )) {
-                    ForEach(SyntaxThemeKind.allCases, id: \.self) { kind in
-                        Text(kind.displayName).tag(kind)
-                    }
-                }
-                .disabled(syntaxHighlightingControlledByTheme)
-
-                if syntaxHighlightingControlledByTheme {
-                    Text("Syntax highlighting is controlled by the active theme.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-
-                lockedWindowsHint
-            }
-
-            Section("Window Layout") {
-                Picker("Open multiple files in", selection: Binding(
-                    get: { settingsStore.currentSettings.multiFileDisplayMode },
-                    set: { updateMultiFileDisplayMode($0) }
-                )) {
-                    ForEach(ReaderMultiFileDisplayMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-
-                Text(layoutHelpText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Change Highlighting") {
-                Picker("Diff lookback", selection: Binding(
-                    get: { settingsStore.currentSettings.diffBaselineLookback },
-                    set: { settingsStore.updateDiffBaselineLookback($0) }
-                )) {
-                    ForEach(DiffBaselineLookback.allCases) { lookback in
-                        Text(lookback.displayName).tag(lookback)
-                    }
-                }
-
-                Text("How far back MarkdownObserver looks for the previous version of a file when highlighting changes. Longer values show more accumulated changes, which works better with AI tools that make many incremental edits.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Notifications") {
-                Toggle("System notifications", isOn: Binding(
-                    get: { settingsStore.currentSettings.notificationsEnabled },
-                    set: { updateNotificationsEnabled($0) }
-                ))
-
-                NotificationStatusCard(status: notificationNotifier.notificationStatus)
-
-                HStack {
-                    if notificationNotifier.notificationStatus.canRequestAuthorization {
-                        Button("Allow Notifications") {
-                            notificationNotifier.requestAuthorizationIfNeeded()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-
-                    Button("Open Notification Settings") {
-                        notificationNotifier.openSystemNotificationSettings()
-                    }
-
-                    Button("Send Background Test") {
-                        notificationNotifier.sendTestNotification()
-                    }
-                    .disabled(!settingsStore.currentSettings.notificationsEnabled)
-                }
-
-                Text("Test notifications fire after 5 seconds so you can switch to another app and verify background delivery.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Preview") {
-                ThemePreviewCard(settings: settingsStore.currentSettings)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Theme preview")
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .formStyle(.grouped)
-        .frame(minWidth: 560, minHeight: 720)
-        .padding(16)
+        .frame(minWidth: 780, minHeight: 720)
         .task {
             notificationNotifier.refreshNotificationStatus()
         }
@@ -150,21 +40,162 @@ struct ReaderSettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private var lockedWindowsHint: some View {
-        if WindowAppearanceController.lockedWindowCount > 0 {
-            HStack(spacing: 4) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9))
-                Text("Appearance is locked for some windows. Changes won't apply to them.")
+    private var typographySection: some View {
+        SettingsSectionContainer(title: "Typography") {
+            HStack(spacing: 14) {
+                Text("Font size")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 120, alignment: .leading)
+
+                Slider(
+                    value: Binding(
+                        get: { settingsStore.currentSettings.baseFontSize },
+                        set: { settingsStore.updateBaseFontSize($0) }
+                    ),
+                    in: 10...48,
+                    step: 1
+                )
+                .frame(maxWidth: 440)
+                .accessibilityLabel("Font size")
+
+                Text("\(Int(settingsStore.currentSettings.baseFontSize)) pt")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(width: 58, alignment: .trailing)
+
+                Spacer(minLength: 0)
             }
-            .font(.callout)
-            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private var syntaxHighlightingControlledByTheme: Bool {
-        settingsStore.currentSettings.readerTheme.themeDefinition.providesSyntaxHighlighting
+    private var themeSection: some View {
+        SettingsSectionContainer(title: "Theme") {
+            HStack(spacing: 14) {
+                Text("App theme")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 120, alignment: .leading)
+
+                Spacer(minLength: 12)
+                Picker("App theme", selection: Binding(
+                    get: { settingsStore.currentSettings.appAppearance },
+                    set: { settingsStore.updateAppAppearance($0) }
+                )) {
+                    ForEach(AppAppearance.allCases, id: \.self) { appearance in
+                        Text(appearance.displayName).tag(appearance)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 190)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            ThemeSelectorView(settingsStore: settingsStore)
+                .frame(maxWidth: .infinity, minHeight: 420, alignment: .leading)
+        }
+    }
+
+    private var windowLayoutSection: some View {
+        SettingsSectionContainer(title: "Window Layout") {
+            HStack(spacing: 14) {
+                Text("Open multiple files in")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 180, alignment: .leading)
+
+                Spacer(minLength: 12)
+                Picker("Open multiple files in", selection: Binding(
+                    get: { settingsStore.currentSettings.multiFileDisplayMode },
+                    set: { updateMultiFileDisplayMode($0) }
+                )) {
+                    ForEach(ReaderMultiFileDisplayMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 190)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(layoutHelpText)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var changeHighlightingSection: some View {
+        SettingsSectionContainer(title: "Change Highlighting") {
+            HStack(spacing: 14) {
+                Text("Diff lookback")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 180, alignment: .leading)
+
+                Spacer(minLength: 12)
+                Picker("Diff lookback", selection: Binding(
+                    get: { settingsStore.currentSettings.diffBaselineLookback },
+                    set: { settingsStore.updateDiffBaselineLookback($0) }
+                )) {
+                    ForEach(DiffBaselineLookback.allCases) { lookback in
+                        Text(lookback.displayName).tag(lookback)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 190)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("How far back MarkdownObserver looks for the previous version of a file when highlighting changes. Longer values show more accumulated changes, which works better with AI tools that make many incremental edits.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var notificationsSection: some View {
+        SettingsSectionContainer(title: "Notifications") {
+            HStack(spacing: 14) {
+                Text("System notifications")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 180, alignment: .leading)
+
+                Spacer(minLength: 12)
+
+                Toggle("System notifications", isOn: Binding(
+                    get: { settingsStore.currentSettings.notificationsEnabled },
+                    set: { updateNotificationsEnabled($0) }
+                ))
+                .labelsHidden()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            NotificationStatusCard(status: notificationNotifier.notificationStatus)
+
+            HStack(spacing: 10) {
+                if notificationNotifier.notificationStatus.canRequestAuthorization {
+                    Button("Allow Notifications") {
+                        notificationNotifier.requestAuthorizationIfNeeded()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+
+                Button("Open Notification Settings") {
+                    notificationNotifier.openSystemNotificationSettings()
+                }
+
+                Button("Send Background Test") {
+                    notificationNotifier.sendTestNotification()
+                }
+                .disabled(!settingsStore.currentSettings.notificationsEnabled)
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Test notifications fire after 5 seconds so you can switch to another app and verify background delivery.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private var layoutHelpText: String {
@@ -183,6 +214,31 @@ struct ReaderSettingsView: View {
         }
 
         notificationNotifier.requestAuthorizationIfNeeded()
+    }
+}
+
+private struct SettingsSectionContainer<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -234,7 +290,7 @@ extension Color {
 
 }
 
-private struct ThemePreviewCard: View {
+struct ThemePreviewCard: View {
     let settings: ReaderSettings
 
     private var theme: ReaderTheme {
@@ -249,6 +305,10 @@ private struct ThemePreviewCard: View {
         return settings.syntaxTheme.previewPalette
     }
 
+    private var readerColorSamples: [ThemePreviewColorSample] {
+        ThemePreviewReaderTextExamples.reader(theme: theme)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Live preview")
@@ -260,6 +320,8 @@ private struct ThemePreviewCard: View {
             Text("Body text in the selected reader theme.")
                 .font(.system(size: settings.baseFontSize))
                 .foregroundStyle(color(theme.secondaryForegroundHex))
+
+            readerTextExamples
 
             RoundedRectangle(cornerRadius: 8)
                 .fill(color(syntaxPalette.blockBackgroundHex))
@@ -334,5 +396,48 @@ private struct ThemePreviewCard: View {
     private func token(_ value: String, hex: String? = nil) -> Text {
         Text(value).foregroundStyle(color(hex ?? syntaxPalette.blockTextHex))
     }
+
+    private var readerTextExamples: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Reader text colors")
+                .font(.caption)
+                .foregroundStyle(color(theme.secondaryForegroundHex))
+
+            ForEach(readerColorSamples) { sample in
+                Text(sample.text)
+                    .font(sample.role == .heading
+                          ? .system(size: max(settings.baseFontSize + 1, 13), weight: .semibold)
+                          : .system(size: max(settings.baseFontSize - 1, 11)))
+                    .foregroundStyle(color(sample.hex))
+            }
+        }
+    }
 }
 
+struct ThemePreviewColorSample: Equatable, Identifiable, Sendable {
+    let text: String
+    let role: ThemePreviewTextRole
+    let hex: String
+
+    var id: String {
+        role.rawValue
+    }
+}
+
+enum ThemePreviewTextRole: String, Sendable {
+    case heading
+    case body
+    case secondary
+    case link
+}
+
+enum ThemePreviewReaderTextExamples {
+    static func reader(theme: ReaderTheme) -> [ThemePreviewColorSample] {
+        [
+            ThemePreviewColorSample(text: "Heading accent sample", role: .heading, hex: theme.h1Hex ?? theme.foregroundHex),
+            ThemePreviewColorSample(text: "Primary body sample text", role: .body, hex: theme.foregroundHex),
+            ThemePreviewColorSample(text: "Secondary helper sample", role: .secondary, hex: theme.secondaryForegroundHex),
+            ThemePreviewColorSample(text: "Link sample text", role: .link, hex: theme.linkHex)
+        ]
+    }
+}
