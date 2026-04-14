@@ -353,15 +353,23 @@ struct ContentView: View {
                 activeFolderWatch: activeWatch,
                 isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
                 canStop: folderWatchState.canStopFolderWatch,
-                onStop: callbacks.onStopFolderWatch,
-                onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
-                onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
-                onRevealInFinder: {
-                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                },
                 isAppearanceLocked: folderWatchState.isAppearanceLocked,
-                onToggleAppearanceLock: callbacks.onToggleAppearanceLock,
-                onEditSubfolders: callbacks.onEditSubfolders
+                onAction: { action in
+                    switch action {
+                    case .stop:
+                        callbacks.onStopFolderWatch()
+                    case .saveFavorite(let name):
+                        callbacks.onSaveFolderWatchAsFavorite(name)
+                    case .removeFavorite:
+                        callbacks.onRemoveCurrentWatchFromFavorites()
+                    case .revealInFinder:
+                        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                    case .toggleAppearanceLock:
+                        callbacks.onToggleAppearanceLock()
+                    case .editSubfolders:
+                        callbacks.onEditSubfolders()
+                    }
+                }
             )
             .padding(.top, overlayInsets.leadingOverlayTopPadding)
             .padding(.leading, canNavigateChangedRegions ? 150 : 60)
