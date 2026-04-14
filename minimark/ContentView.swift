@@ -133,31 +133,41 @@ struct ContentView: View {
                 recentWatchedFolders: folderWatchState.recentWatchedFolders,
                 recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
                 iconProvider: appIconImage(for:),
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
-                onOpenApp: { app in
-                    readerStore.openCurrentFileInApplication(app)
-                },
-                onRevealInFinder: {
-                    readerStore.revealCurrentFileInFinder()
-                },
-                onRequestFolderWatch: callbacks.onRequestFolderWatch,
-                onStopFolderWatch: callbacks.onStopFolderWatch,
-                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
-                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
-                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
-                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
-                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
-                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
-                onSaveSourceDraft: {
-                    readerStore.saveSourceDraft()
-                },
-                onDiscardSourceDraft: {
-                    readerStore.discardSourceDraft()
+                onAction: { action in
+                    switch action {
+                    case .openFiles(let urls):
+                        handlePickedFileURLs(urls)
+                    case .openInApp(let app):
+                        readerStore.openCurrentFileInApplication(app)
+                    case .revealInFinder:
+                        readerStore.revealCurrentFileInFinder()
+                    case .saveSourceDraft:
+                        readerStore.saveSourceDraft()
+                    case .discardSourceDraft:
+                        readerStore.discardSourceDraft()
+                    case .requestFolderWatch(let url):
+                        callbacks.onRequestFolderWatch(url)
+                    case .stopFolderWatch:
+                        callbacks.onStopFolderWatch()
+                    case .startFavoriteWatch(let fav):
+                        callbacks.onStartFavoriteWatch(fav)
+                    case .clearFavoriteWatchedFolders:
+                        callbacks.onClearFavoriteWatchedFolders()
+                    case .renameFavoriteWatchedFolder(let id, let name):
+                        callbacks.onRenameFavoriteWatchedFolder(id, name)
+                    case .removeFavoriteWatchedFolder(let id):
+                        callbacks.onRemoveFavoriteWatchedFolder(id)
+                    case .reorderFavoriteWatchedFolders(let ids):
+                        callbacks.onReorderFavoriteWatchedFolders(ids)
+                    case .startRecentManuallyOpenedFile(let entry):
+                        callbacks.onStartRecentManuallyOpenedFile(entry)
+                    case .startRecentFolderWatch(let entry):
+                        callbacks.onStartRecentFolderWatch(entry)
+                    case .clearRecentWatchedFolders:
+                        callbacks.onClearRecentWatchedFolders()
+                    case .clearRecentManuallyOpenedFiles:
+                        callbacks.onClearRecentManuallyOpenedFiles()
+                    }
                 }
             )
             .environment(\.colorScheme, overlayColorScheme)

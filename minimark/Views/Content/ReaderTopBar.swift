@@ -29,6 +29,25 @@ enum ReaderTopBarMetrics {
     static let sourceEditingBarHeight: CGFloat = 22
 }
 
+enum ReaderTopBarAction {
+    case openFiles([URL])
+    case openInApp(ReaderExternalApplication)
+    case revealInFinder
+    case requestFolderWatch(URL)
+    case stopFolderWatch
+    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
+    case clearFavoriteWatchedFolders
+    case renameFavoriteWatchedFolder(id: UUID, name: String)
+    case removeFavoriteWatchedFolder(UUID)
+    case reorderFavoriteWatchedFolders([UUID])
+    case startRecentManuallyOpenedFile(ReaderRecentOpenedFile)
+    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case clearRecentWatchedFolders
+    case clearRecentManuallyOpenedFiles
+    case saveSourceDraft
+    case discardSourceDraft
+}
+
 struct ReaderTopBar: View {
     var readerStore: ReaderStore
     let canStopFolderWatch: Bool
@@ -37,22 +56,7 @@ struct ReaderTopBar: View {
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onOpenFiles: ([URL]) -> Void
-    let onOpenApp: (ReaderExternalApplication) -> Void
-    let onRevealInFinder: () -> Void
-    let onRequestFolderWatch: (URL) -> Void
-    let onStopFolderWatch: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
-    let onRenameFavoriteWatchedFolder: (UUID, String) -> Void
-    let onRemoveFavoriteWatchedFolder: (UUID) -> Void
-    let onReorderFavoriteWatchedFolders: ([UUID]) -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
-    let onSaveSourceDraft: () -> Void
-    let onDiscardSourceDraft: () -> Void
+    let onAction: (ReaderTopBarAction) -> Void
 
     private enum Metrics {
         static let barHorizontalPadding: CGFloat = 12
@@ -68,7 +72,7 @@ struct ReaderTopBar: View {
             HStack(spacing: 0) {
                 BreadcrumbDocumentContext(
                     projection: projection,
-                    onRevealInFinder: onRevealInFinder
+                    onRevealInFinder: { onAction(.revealInFinder) }
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -85,27 +89,27 @@ struct ReaderTopBar: View {
                         case .editFavoriteWatchedFolders:
                             isEditingFavorites = true
                         case .openFiles(let urls):
-                            onOpenFiles(urls)
+                            onAction(.openFiles(urls))
                         case .openInApp(let app):
-                            onOpenApp(app)
+                            onAction(.openInApp(app))
                         case .revealInFinder:
-                            onRevealInFinder()
+                            onAction(.revealInFinder)
                         case .requestFolderWatch(let url):
-                            onRequestFolderWatch(url)
+                            onAction(.requestFolderWatch(url))
                         case .stopFolderWatch:
-                            onStopFolderWatch()
+                            onAction(.stopFolderWatch)
                         case .startFavoriteWatch(let fav):
-                            onStartFavoriteWatch(fav)
+                            onAction(.startFavoriteWatch(fav))
                         case .clearFavoriteWatchedFolders:
-                            onClearFavoriteWatchedFolders()
+                            onAction(.clearFavoriteWatchedFolders)
                         case .startRecentManuallyOpenedFile(let entry):
-                            onStartRecentManuallyOpenedFile(entry)
+                            onAction(.startRecentManuallyOpenedFile(entry))
                         case .startRecentFolderWatch(let entry):
-                            onStartRecentFolderWatch(entry)
+                            onAction(.startRecentFolderWatch(entry))
                         case .clearRecentWatchedFolders:
-                            onClearRecentWatchedFolders()
+                            onAction(.clearRecentWatchedFolders)
                         case .clearRecentManuallyOpenedFiles:
-                            onClearRecentManuallyOpenedFiles()
+                            onAction(.clearRecentManuallyOpenedFiles)
                         }
                     }
                 )
@@ -119,8 +123,8 @@ struct ReaderTopBar: View {
                     hasUnsavedChanges: projection.hasUnsavedDraftChanges,
                     canSave: projection.canSaveSourceDraft,
                     canDiscard: projection.canDiscardSourceDraft,
-                    onSave: onSaveSourceDraft,
-                    onDiscard: onDiscardSourceDraft
+                    onSave: { onAction(.saveSourceDraft) },
+                    onDiscard: { onAction(.discardSourceDraft) }
                 )
             }
         }
@@ -147,11 +151,11 @@ struct ReaderTopBar: View {
                 onAction: { action in
                     switch action {
                     case .rename(let id, let name):
-                        onRenameFavoriteWatchedFolder(id, name)
+                        onAction(.renameFavoriteWatchedFolder(id: id, name: name))
                     case .delete(let id):
-                        onRemoveFavoriteWatchedFolder(id)
+                        onAction(.removeFavoriteWatchedFolder(id))
                     case .reorder(let ids):
-                        onReorderFavoriteWatchedFolders(ids)
+                        onAction(.reorderFavoriteWatchedFolders(ids))
                     case .dismiss:
                         isEditingFavorites = false
                     }
