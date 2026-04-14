@@ -198,9 +198,6 @@ struct ReaderWindowRootView: View {
             .onOpenURL { url in
                 windowCoordinator.openIncomingURL(url)
             }
-            .onChange(of: windowCoordinator.hostWindow) { _, _ in
-                windowCoordinator.handleHostWindowChange()
-            }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
                 windowCoordinator.applyWindowTitlePresentation()
                 windowCoordinator.renderSelectedDocumentIfNeeded()
