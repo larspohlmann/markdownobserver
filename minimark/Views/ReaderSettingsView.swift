@@ -77,7 +77,7 @@ struct ReaderSettingsView: View {
                     .frame(width: 120, alignment: .leading)
 
                 Spacer(minLength: 12)
-                Picker("", selection: Binding(
+                Picker("App theme", selection: Binding(
                     get: { settingsStore.currentSettings.appAppearance },
                     set: { settingsStore.updateAppAppearance($0) }
                 )) {
@@ -103,7 +103,7 @@ struct ReaderSettingsView: View {
                     .frame(width: 180, alignment: .leading)
 
                 Spacer(minLength: 12)
-                Picker("", selection: Binding(
+                Picker("Open multiple files in", selection: Binding(
                     get: { settingsStore.currentSettings.multiFileDisplayMode },
                     set: { updateMultiFileDisplayMode($0) }
                 )) {
@@ -131,7 +131,7 @@ struct ReaderSettingsView: View {
                     .frame(width: 180, alignment: .leading)
 
                 Spacer(minLength: 12)
-                Picker("", selection: Binding(
+                Picker("Diff lookback", selection: Binding(
                     get: { settingsStore.currentSettings.diffBaselineLookback },
                     set: { settingsStore.updateDiffBaselineLookback($0) }
                 )) {
@@ -160,7 +160,7 @@ struct ReaderSettingsView: View {
 
                 Spacer(minLength: 12)
 
-                Toggle("", isOn: Binding(
+                Toggle("System notifications", isOn: Binding(
                     get: { settingsStore.currentSettings.notificationsEnabled },
                     set: { updateNotificationsEnabled($0) }
                 ))

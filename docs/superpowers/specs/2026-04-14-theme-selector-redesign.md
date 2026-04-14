@@ -2,118 +2,82 @@
 
 ## Problem
 
-The current theme selector in `ReaderSettingsView.swift` uses standard macOS `Picker` dropdowns for reader themes and syntax themes. This provides a poor browsing experience — you can't see what a theme looks like without selecting it, and the small preview card at the bottom of the form is disconnected from the selection controls.
+The previous settings UI used compact `Picker` controls for reader and syntax themes.
+That made browsing themes slow because users could not compare options visually before
+committing a change.
 
-## Design
+## Implemented Design
 
-Replace the picker-based theme section with a **three-column layout** inline in the existing settings view:
+The Theme section now uses a dedicated three-column selector embedded in
+`ReaderSettingsView`:
 
-```
-┌──────────────┬──────────────┬──────────────────────────┐
-│ Reader Theme │ Syntax Theme │        Preview           │
-│  (25%)       │  (25%)       │        (50%)             │
-│              │              │                          │
-│ ☀ Light      │ ■ Monokai   │  Chapter One             │
-│ 🌙 Dark      │ ■ Dracula   │  It was a bright cold... │
-│              │ ■ Nord      │                          │
-│ ■ White/Black│ ■ GitHub    │  func greet(name:) {     │
-│ ■ Light Gray │ ■ One Light │    print("Hello")        │
-│ ■ Newspaper  │ ■ One Dark  │  }                       │
-│ ■ Focus      │             │                          │
-├──────────────┴──────────────┴──────────────────────────┤
-│ Current: White/Black + Monokai      [Reset]  [Apply]   │
-└─────────────────────────────────────────────────────────┘
-```
+1. Reader theme column with light/dark filtering tabs.
+2. Syntax theme column with cards (or a disabled explanatory state when syntax is
+   controlled by the selected reader theme).
+3. Live preview column showing staged changes immediately.
 
-### Column Layout
+An apply bar below the columns shows current applied values, unsaved state,
+window-lock hints, and `Reset` / `Apply` actions.
 
-Proportions are defined in a single configurable constant for easy adjustment:
+## Column Sizing Strategy
+
+The implementation uses minimum widths, not fixed proportional ratios.
+Columns are configured through `ThemeSelectorColumnWidths` in
+`minimark/Views/ThemeSelectorView.swift`:
 
 ```swift
-private enum ColumnLayout {
-    static let selectorRatio: CGFloat = 0.25
-    static let previewRatio: CGFloat = 0.50
+struct ThemeSelectorColumnWidths {
+    static let readerMin: CGFloat = 180
+    static let syntaxMin: CGFloat = 180
+    static let previewMin: CGFloat = 320
 }
 ```
 
-### Column 1: Reader Themes
+Each column uses `.frame(minWidth: ..., maxWidth: .infinity)` so the layout can
+expand with the available window width while preserving practical minimums.
 
-- **Segmented control** at the top: ☀ Light / 🌙 Dark, filtering the 11 `ReaderThemeKind` cases by `hasLightBackground`.
-- **Scrollable list** of theme cards below. Each card shows:
-  - A color swatch filled with the theme's background color.
-  - Theme display name.
-  - Short description tagline.
-- Selected theme highlighted with a purple border.
-- Clicking a theme **stages** it (updates the preview instantly but does not apply to reader windows).
+## State and Data Flow
 
-### Column 2: Syntax Themes
+Staging state is held directly in `ThemeSelectorView` via `@State`:
 
-- **Scrollable list** of all 12 `SyntaxThemeKind` cases. Each card shows:
-  - A gradient color strip representing the palette.
-  - Theme name.
-- Selected theme highlighted with a purple border.
-- **When the staged reader theme provides its own syntax highlighting** (`providesSyntaxHighlighting == true`), the entire column is replaced with a centered disabled-state message: *"Syntax highlighting is controlled by the active theme."* The staged syntax selection is preserved but hidden.
+- `stagedReaderTheme`
+- `stagedSyntaxTheme`
+- `selectedBackgroundTab`
 
-### Column 3: Preview
+Behavior:
 
-- Renders the existing `ThemePreviewCard` content (heading, body text, code block with syntax-colored tokens) using the **staged** reader theme and syntax theme.
-- Updates instantly as the user browses — no need to press Apply to see the preview.
+- Preview reads staged values immediately.
+- `Apply` writes staged values to `ReaderSettingsStore` via
+  `updateTheme` / `updateSyntaxTheme`.
+- `Reset` restores staged values from currently applied settings.
 
-### Apply / Reset Bar
+No separate `ThemeSelectorViewModel` file is used.
 
-- Spans the full width below the three columns.
-- **"Unsaved changes" indicator** appears when staged values differ from the currently applied values.
-- **Apply button**: writes staged values to `ReaderSettingsStore`, which triggers the existing Combine pipeline to update all unlocked reader windows.
-- **Reset button**: reverts staged values back to the currently applied values.
-- **Current state label**: shows the currently applied reader + syntax theme names.
+## Preview Behavior
 
-### Staging Mechanism
+`ThemePreviewCard` is used by `ThemeSelectorView` and now includes explicit reader
+text-color samples in addition to heading/body/code examples.
 
-A new `@Observable` view model (e.g. `ThemeSelectorViewModel`) holds:
+## Settings Layout
 
-```swift
-@ObservationIgnored private let settingsStore: ReaderSettingsStore
-var stagedReaderTheme: ReaderThemeKind
-var stagedSyntaxTheme: SyntaxThemeKind
-var hasUnsavedChanges: Bool { ... }
-```
+`ReaderSettingsView` uses a custom `ScrollView` + section container layout for this
+redesign, not the prior `Form` / `.grouped` structure.
 
-- Initialized from `settingsStore.currentSettings`.
-- The preview reads from staged values.
-- Apply writes staged values back to `settingsStore.updateTheme()` / `settingsStore.updateSyntaxTheme()`.
-- Reset copies current settings back to staged values.
+Accessibility labels are preserved on controls, including row pickers and toggle in
+the redesigned layout.
 
-### Theme-Controlled Syntax Behavior
+## Files Changed
 
-When the staged reader theme's `ThemeDefinition.providesSyntaxHighlighting` is true:
-- The syntax column shows a disabled overlay with explanation text.
-- The previously staged syntax theme is preserved internally so it restores if the user switches back to a theme that doesn't control syntax.
+| File | Role |
+|------|------|
+| `minimark/Views/ReaderSettingsView.swift` | Integrates settings sections and embeds `ThemeSelectorView` |
+| `minimark/Views/ThemeSelectorView.swift` | Three-column selector, staged state, apply/reset behavior |
+| `minimark/Views/ThemeCardView.swift` | Reusable reader and syntax theme card rows |
+| `minimarkTests/Core/ThemeSelectorLayoutAndPreviewTests.swift` | Verifies column minimum widths and preview sample output |
 
-### Locked Windows Hint
+## Constraints Preserved
 
-The existing locked windows hint from `ReaderSettingsView` is preserved and displayed in the apply bar area.
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `minimark/Views/ReaderSettingsView.swift` | Replace picker section with new three-column `ThemeSelectorView` |
-| `minimark/Views/ThemeSelectorView.swift` (new) | Main three-column layout, staging logic, apply/reset |
-| `minimark/Views/ThemeCardView.swift` (new) | Reusable card component for theme list items |
-| `minimark/ViewModels/ThemeSelectorViewModel.swift` (new) | Staging state, apply/reset actions |
-
-## Files Unchanged
-
-- `ReaderSettingsStore.swift` — existing `updateTheme` / `updateSyntaxTheme` methods used as-is.
-- All theme model files (`ReaderTheme.swift`, `SyntaxTheme.swift`, `ThemeDefinition.swift`, etc.).
-- All specialized theme files (Amber, Green, etc.).
-- Rendering pipeline (`ReaderStore+Rendering.swift`, `ReaderCSSFactory.swift`, etc.).
-- `ThemePreviewCard` — reused as-is inside the preview column.
-
-## Constraints
-
-- Column proportions must be a single easily-configurable constant, not scattered magic numbers.
-- No changes to the rendering or persistence pipeline — the staging VM calls the same `settingsStore` methods.
-- Preserve the existing `syntaxHighlightingControlledByTheme` behavior.
-- Preserve the locked windows hint.
-- Must work within the existing `Form` / `.grouped` settings style on macOS.
+- No rendering pipeline changes required.
+- Existing `ReaderSettingsStore` update methods remain the integration point.
+- Syntax-theme override behavior from reader theme definitions remains intact.
+- Locked-window hint remains visible in the apply bar.

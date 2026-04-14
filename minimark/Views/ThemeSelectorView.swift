@@ -56,7 +56,7 @@ struct ThemeSelectorView: View {
                 Text("Dark").tag(BackgroundTab.dark)
             }
             .pickerStyle(.segmented)
-            .onChange(of: selectedBackgroundTab) { _, newTab in
+            .onChange(of: selectedBackgroundTab) { _, _ in
                 if !filteredReaderThemes.contains(stagedReaderTheme) {
                     stagedReaderTheme = filteredReaderThemes.first ?? stagedReaderTheme
                 }
