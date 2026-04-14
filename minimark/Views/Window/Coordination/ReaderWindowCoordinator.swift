@@ -62,6 +62,16 @@ final class ReaderWindowCoordinator {
         self.groupStateController = groupStateController
         self.favoriteWorkspaceController = favoriteWorkspaceController
         self.folderWatchFlowController = folderWatchFlowController
+        configureStoreCallbacks(
+            lockedAppearanceProvider: { [weak appearanceController] in appearanceController?.lockedAppearance }
+        ) { [weak self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
+            self?.openAdditionalDocumentInCurrentWindow(
+                fileURL,
+                folderWatchSession: folderWatchSession,
+                origin: origin,
+                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+            )
+        }
     }
 
     init(
@@ -203,6 +213,185 @@ final class ReaderWindowCoordinator {
             hostWindow,
             activeFolderWatch: folderWatchFlowController?.sharedFolderWatchSession
         )
+    }
+
+    func handleFolderWatchToolbarAction(_ action: FolderWatchToolbarAction) {
+        switch action {
+        case .activate:
+            break // Handled by view (requires modal panel)
+        case .startFavoriteWatch(let favorite):
+            startFavoriteWatch(favorite)
+        case .startRecentFolderWatch(let recent):
+            startRecentFolderWatch(recent)
+        case .editFavoriteWatchedFolders:
+            isTitlebarEditingFavorites = true
+        case .clearRecentWatchedFolders:
+            clearRecentWatchedFolders()
+        }
+    }
+
+    func handleEditFavoritesAction(_ action: EditFavoritesAction) {
+        switch action {
+        case .rename(let id, let name):
+            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
+        case .delete(let id):
+            settingsStore.removeFavoriteWatchedFolder(id: id)
+        case .reorder(let ids):
+            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
+        case .dismiss:
+            isTitlebarEditingFavorites = false
+        }
+    }
+
+    func handleOpenRecentFileNotification(_ notification: Notification) {
+        guard let payload = ReaderCommandNotification.Payload(notification: notification),
+              payload.targetWindowNumber == hostWindow?.windowNumber else {
+            return
+        }
+
+        guard let entry = payload.recentFileEntry else {
+            return
+        }
+
+        let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
+        openDocumentInCurrentWindow(resolvedURL)
+    }
+
+    func handlePrepareRecentWatchedFolderNotification(_ notification: Notification) {
+        guard let payload = ReaderCommandNotification.Payload(notification: notification),
+              payload.targetWindowNumber == hostWindow?.windowNumber else {
+            return
+        }
+
+        guard let entry = payload.recentWatchedFolderEntry else {
+            return
+        }
+
+        prepareRecentFolderWatch(entry)
+    }
+
+    func handleWindowAccessorUpdate(_ window: NSWindow?) {
+        if window == nil, let existingWindow = hostWindow {
+            ReaderWindowRegistry.shared.unregisterWindow(existingWindow)
+        }
+        hostWindow = window
+        handleHostWindowChange()
+    }
+
+    func handleHostWindowChange() {
+        refreshWindowShellState()
+        applyUITestLaunchConfigurationIfNeeded()
+        if hostWindow != nil, hasPendingFolderWatchOpenEvents {
+            flushQueuedFolderWatchOpens()
+        }
+    }
+
+    func handleFavoriteWorkspaceStateChange(_ newState: ReaderFavoriteWorkspaceState?) {
+        guard let favoriteID = favoriteWorkspaceController?.activeFavoriteID, var state = newState else {
+            return
+        }
+        state.lockedAppearance = appearanceController?.lockedAppearance
+        settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
+    }
+
+    func handleGroupStateChange(
+        oldSnapshot: SidebarGroupStateController.WorkspaceStateSnapshot,
+        newSnapshot: SidebarGroupStateController.WorkspaceStateSnapshot
+    ) {
+        if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
+            favoriteWorkspaceController?.updateGroupState(
+                pinnedGroupIDs: newSnapshot.pinnedGroupIDs,
+                collapsedGroupIDs: newSnapshot.collapsedGroupIDs,
+                groupSortMode: newSnapshot.sortMode,
+                fileSortMode: newSnapshot.fileSortMode,
+                manualGroupOrder: newSnapshot.manualGroupOrder
+            )
+        } else {
+            if oldSnapshot.sortMode != newSnapshot.sortMode {
+                settingsStore.updateSidebarGroupSortMode(newSnapshot.sortMode)
+            }
+            if oldSnapshot.fileSortMode != newSnapshot.fileSortMode {
+                settingsStore.updateSidebarSortMode(newSnapshot.fileSortMode)
+            }
+        }
+    }
+
+    func handleDocumentListChange() {
+        groupStateController?.updateDocuments(
+            sidebarDocumentController.documents,
+            rowStates: sidebarDocumentController.rowStates
+        )
+    }
+
+    func handleWindowAppear() {
+        groupStateController?.configureSortModes(
+            sortMode: settingsStore.currentSettings.sidebarGroupSortMode,
+            fileSortMode: settingsStore.currentSettings.sidebarSortMode
+        )
+        groupStateController?.updateDocuments(
+            sidebarDocumentController.documents,
+            rowStates: sidebarDocumentController.rowStates
+        )
+        groupStateController?.observeRowStates(from: sidebarDocumentController)
+        DockTileController.shared.configureDockTileIfNeeded()
+        let token = dockTileWindowToken
+        sidebarDocumentController.onDockTileRowStatesChanged = { rowStates in
+            DockTileController.shared.updateRowStates(for: token, rowStates: rowStates)
+        }
+        DockTileController.shared.updateRowStates(
+            for: token,
+            rowStates: sidebarDocumentController.rowStates
+        )
+    }
+
+    func handleWindowDisappear() {
+        sidebarDocumentController.onDockTileRowStatesChanged = nil
+        DockTileController.shared.removeRowStates(for: dockTileWindowToken)
+    }
+
+    func handleSidebarWidthChange(_ newWidth: CGFloat) {
+        sidebarWidth = newWidth
+        if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil,
+           sidebarDocumentController.documents.count > 1 {
+            favoriteWorkspaceController?.updateSidebarWidth(newWidth)
+        }
+    }
+
+    func handleSidebarVisibilityChange(oldCount: Int, newCount: Int) {
+        let isSidebarVisible = newCount > 1
+        let wasVisible = oldCount > 1
+
+        guard isSidebarVisible != wasVisible, let window = hostWindow else {
+            return
+        }
+
+        if isSidebarVisible, let favoriteWidth = favoriteWorkspaceController?.activeFavoriteWorkspaceState?.sidebarWidth {
+            sidebarWidth = favoriteWidth
+        }
+
+        let delta = isSidebarVisible
+            ? sidebarWidth
+            : -lastAppliedSidebarDelta
+
+        guard let screenFrame = window.screen?.visibleFrame else {
+            return
+        }
+
+        let oldWidth = window.frame.width
+        let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
+            windowFrame: window.frame,
+            screenVisibleFrame: screenFrame,
+            sidebarDelta: delta
+        )
+
+        window.setFrame(newFrame, display: true, animate: true)
+
+        if isSidebarVisible {
+            lastAppliedSidebarDelta = newFrame.width - oldWidth
+        } else {
+            lastAppliedSidebarDelta = 0
+            sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+        }
     }
 
     // MARK: - Open and Watch Flow
@@ -769,5 +958,200 @@ final class ReaderWindowCoordinator {
 
     func isFolderWatchWarningPresentationAllowed() -> Bool {
         folderWatchFlowController?.isWarningPresentationAllowed(hostWindow: hostWindow) ?? false
+    }
+
+    // MARK: - Action Dispatch
+
+    func handleContentViewAction(_ action: ContentViewAction) {
+        switch action {
+        case .requestFileOpen(let request):
+            fileOpenCoordinator.open(request)
+            refreshWindowPresentation()
+        case .requestFolderWatch(let url):
+            folderWatchFlowController?.prepareOptions(for: url)
+        case .confirmFolderWatch(let options):
+            confirmFolderWatch(options)
+        case .cancelFolderWatch:
+            folderWatchFlowController?.cancelPendingWatch()
+        case .stopFolderWatch:
+            stopFolderWatch()
+        case .saveFolderWatchAsFavorite(let name):
+            saveSharedFolderWatchAsFavorite(name: name)
+        case .removeCurrentWatchFromFavorites:
+            removeSharedFolderWatchFromFavorites()
+        case .toggleAppearanceLock:
+            toggleAppearanceLock()
+        case .startFavoriteWatch(let fav):
+            startFavoriteWatch(fav)
+        case .clearFavoriteWatchedFolders:
+            clearFavoriteWatchedFolders()
+        case .renameFavoriteWatchedFolder(let id, let name):
+            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
+        case .removeFavoriteWatchedFolder(let id):
+            settingsStore.removeFavoriteWatchedFolder(id: id)
+        case .reorderFavoriteWatchedFolders(let ids):
+            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
+        case .startRecentManuallyOpenedFile(let entry):
+            let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
+            fileOpenCoordinator.open(FileOpenRequest(
+                fileURLs: [resolvedURL], origin: .manual,
+                folderWatchSession: folderWatchFlowController?.sharedFolderWatchSession,
+                slotStrategy: .replaceSelectedSlot
+            ))
+            applyWindowTitlePresentation()
+        case .startRecentFolderWatch(let entry):
+            startRecentFolderWatch(entry)
+        case .clearRecentWatchedFolders:
+            clearRecentWatchedFolders()
+        case .clearRecentManuallyOpenedFiles:
+            clearRecentManuallyOpenedFiles()
+        case .editSubfolders:
+            isEditingSubfolders = true
+        }
+    }
+
+    // MARK: - Appearance Lock
+
+    func toggleAppearanceLock() {
+        guard let appearanceController else { return }
+        if appearanceController.isLocked {
+            appearanceController.unlock()
+            for document in sidebarDocumentController.documents {
+                document.readerStore.clearAppearanceOverride()
+            }
+            if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
+                favoriteWorkspaceController?.updateLockedAppearance(nil)
+            }
+        } else {
+            appearanceController.lock()
+            let appearance = appearanceController.effectiveAppearance
+            for document in sidebarDocumentController.documents {
+                document.readerStore.setAppearanceOverride(appearance)
+            }
+            if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
+                favoriteWorkspaceController?.updateLockedAppearance(appearanceController.lockedAppearance)
+            }
+        }
+    }
+
+    // MARK: - UI Test Flow
+
+    func applyUITestLaunchConfigurationIfNeeded() {
+        guard !hasAppliedUITestLaunchConfiguration else {
+            return
+        }
+
+        let action = resolvedUITestLaunchAction()
+        guard case .none = action else {
+            switch action {
+            case .none:
+                hasAppliedUITestLaunchConfiguration = true
+            case .simulateGroupedSidebar:
+                startUITestGroupedSidebarFlow()
+                hasAppliedUITestLaunchConfiguration = true
+            case .simulateAutoOpenWatchFlow:
+                startUITestAutoOpenWatchFlow()
+                hasAppliedUITestLaunchConfiguration = true
+            case .presentWatchFolderSheet(let watchFolderURL):
+                applyScreenshotWindowSize()
+                var options = ReaderFolderWatchOptions.default
+                if ProcessInfo.processInfo.environment[
+                    ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
+                ] == "includeSubfolders" {
+                    options.scope = .includeSubfolders
+                }
+                presentFolderWatchOptions(for: watchFolderURL, options: options)
+                hasAppliedUITestLaunchConfiguration = true
+            case .startWatchingFolder(let watchFolderURL):
+                startWatchingFolder(folderURL: watchFolderURL, options: .default)
+                hasAppliedUITestLaunchConfiguration = true
+            }
+            return
+        }
+    }
+
+    private func resolvedUITestLaunchAction() -> ReaderWindowUITestLaunchAction {
+        ReaderWindowUITestFlowSupport.resolveLaunchAction(
+            configuration: ReaderUITestLaunchConfiguration.current,
+            hostWindowAvailable: hostWindow != nil
+        )
+    }
+
+    private func applyScreenshotWindowSize() {
+        guard let sizeStr = ProcessInfo.processInfo.environment[
+            ReaderUITestLaunchConfiguration.screenshotWindowSizeEnvironmentKey
+        ], !sizeStr.isEmpty else { return }
+
+        let parts = sizeStr.split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return }
+
+        if let window = hostWindow {
+            let frame = NSRect(
+                x: window.frame.origin.x,
+                y: window.frame.origin.y,
+                width: parts[0],
+                height: parts[1]
+            )
+            window.setFrame(frame, display: true, animate: false)
+        }
+    }
+
+    private func startUITestGroupedSidebarFlow() {
+        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { [self] fileURLs in
+            openFileRequest(FileOpenRequest(
+                fileURLs: fileURLs,
+                origin: .manual
+            ))
+        }
+    }
+
+    private func startUITestAutoOpenWatchFlow() {
+        ReaderWindowUITestFlowSupport.startAutoOpenWatchFlow(
+            startWatchingFolder: { [self] watchFolderURL in
+                startWatchingFolder(folderURL: watchFolderURL, options: .default)
+            },
+            cancelExistingTask: { [self] in
+                uiTestWatchFlowTask?.cancel()
+            },
+            waitForFolderWatchStartup: { [folderWatchFlowController] in
+                await ReaderWindowUITestFlowSupport.waitForFolderWatchStartup {
+                    folderWatchFlowController?.sharedFolderWatchSession != nil
+                }
+            },
+            assignTask: { [self] task in
+                uiTestWatchFlowTask = task
+            }
+        )
+    }
+
+    // MARK: - Appearance Reapplication
+
+    func reapplyAppearance() {
+        guard let appearanceController else { return }
+        // Defer rendering to the next main actor hop to avoid setting @Published
+        // properties on ReaderStore during a SwiftUI view update cycle.
+        Task { @MainActor [sidebarDocumentController] in
+            let appearance = appearanceController.effectiveAppearance
+            for document in sidebarDocumentController.documents {
+                let store = document.readerStore
+                guard store.hasOpenDocument, !store.isDeferredDocument else { continue }
+
+                if document.id == sidebarDocumentController.selectedDocumentID {
+                    try? store.renderWithAppearance(appearance)
+                } else {
+                    store.setAppearanceOverride(appearance)
+                }
+            }
+        }
+    }
+
+    func renderSelectedDocumentIfNeeded() {
+        guard let appearanceController else { return }
+        guard let document = sidebarDocumentController.selectedDocument else { return }
+        let store = document.readerStore
+        guard store.needsAppearanceRender, store.hasOpenDocument, !store.isDeferredDocument else { return }
+        Task { @MainActor in
+            try? store.renderWithAppearance(appearanceController.effectiveAppearance)
+        }
     }
 }
