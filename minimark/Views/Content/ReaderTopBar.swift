@@ -46,6 +46,23 @@ enum ReaderTopBarAction {
     case clearRecentManuallyOpenedFiles
     case saveSourceDraft
     case discardSourceDraft
+
+    init?(_ menuAction: OpenInMenuAction) {
+        switch menuAction {
+        case .openFiles(let urls): self = .openFiles(urls)
+        case .openInApp(let app): self = .openInApp(app)
+        case .revealInFinder: self = .revealInFinder
+        case .requestFolderWatch(let url): self = .requestFolderWatch(url)
+        case .stopFolderWatch: self = .stopFolderWatch
+        case .startFavoriteWatch(let fav): self = .startFavoriteWatch(fav)
+        case .clearFavoriteWatchedFolders: self = .clearFavoriteWatchedFolders
+        case .startRecentManuallyOpenedFile(let entry): self = .startRecentManuallyOpenedFile(entry)
+        case .startRecentFolderWatch(let entry): self = .startRecentFolderWatch(entry)
+        case .clearRecentWatchedFolders: self = .clearRecentWatchedFolders
+        case .clearRecentManuallyOpenedFiles: self = .clearRecentManuallyOpenedFiles
+        case .editFavoriteWatchedFolders: return nil
+        }
+    }
 }
 
 struct ReaderTopBar: View {
@@ -84,32 +101,11 @@ struct ReaderTopBar: View {
                     recentWatchedFolders: recentWatchedFolders,
                     recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                     iconProvider: iconProvider,
-                    onAction: { action in
-                        switch action {
-                        case .editFavoriteWatchedFolders:
+                    onAction: { menuAction in
+                        if let topBarAction = ReaderTopBarAction(menuAction) {
+                            onAction(topBarAction)
+                        } else {
                             isEditingFavorites = true
-                        case .openFiles(let urls):
-                            onAction(.openFiles(urls))
-                        case .openInApp(let app):
-                            onAction(.openInApp(app))
-                        case .revealInFinder:
-                            onAction(.revealInFinder)
-                        case .requestFolderWatch(let url):
-                            onAction(.requestFolderWatch(url))
-                        case .stopFolderWatch:
-                            onAction(.stopFolderWatch)
-                        case .startFavoriteWatch(let fav):
-                            onAction(.startFavoriteWatch(fav))
-                        case .clearFavoriteWatchedFolders:
-                            onAction(.clearFavoriteWatchedFolders)
-                        case .startRecentManuallyOpenedFile(let entry):
-                            onAction(.startRecentManuallyOpenedFile(entry))
-                        case .startRecentFolderWatch(let entry):
-                            onAction(.startRecentFolderWatch(entry))
-                        case .clearRecentWatchedFolders:
-                            onAction(.clearRecentWatchedFolders)
-                        case .clearRecentManuallyOpenedFiles:
-                            onAction(.clearRecentManuallyOpenedFiles)
                         }
                     }
                 )
