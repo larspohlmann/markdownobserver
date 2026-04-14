@@ -12,6 +12,10 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
     case focus
     case commodore64
     case gameBoy
+    case gruvboxDark
+    case gruvboxLight
+    case dracula
+    case monokai
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -39,9 +43,9 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
 
     var isDark: Bool {
         switch self {
-        case .blackOnWhite, .darkGreyOnLightGrey, .newspaper, .focus, .gameBoy:
+        case .blackOnWhite, .darkGreyOnLightGrey, .newspaper, .focus, .gameBoy, .gruvboxLight:
             return false
-        case .whiteOnBlack, .lightGreyOnDarkGrey, .amberTerminal, .greenTerminal, .greenTerminalStatic, .commodore64:
+        case .whiteOnBlack, .lightGreyOnDarkGrey, .amberTerminal, .greenTerminal, .greenTerminalStatic, .commodore64, .gruvboxDark, .dracula, .monokai:
             return true
         }
     }
@@ -70,6 +74,14 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
             return "Commodore 64"
         case .gameBoy:
             return "Game Boy"
+        case .gruvboxDark:
+            return "Gruvbox Dark"
+        case .gruvboxLight:
+            return "Gruvbox Light"
+        case .dracula:
+            return "Dracula"
+        case .monokai:
+            return "Monokai"
         }
     }
 }
@@ -87,6 +99,9 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
     let changeEditedHex: String
     let changeDeletedHex: String
     let hasLightBackground: Bool
+    let h1Hex: String?
+    let h2Hex: String?
+    let h3Hex: String?
 
     static let `default` = ReaderTheme.theme(for: .blackOnWhite)
 
@@ -105,7 +120,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#2DA44E",
                 changeEditedHex: "#BF8700",
                 changeDeletedHex: "#CF222E",
-                hasLightBackground: true
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .whiteOnBlack:
             return ReaderTheme(
@@ -120,7 +136,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#3FB950",
                 changeEditedHex: "#D29922",
                 changeDeletedHex: "#F85149",
-                hasLightBackground: false
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .darkGreyOnLightGrey:
             return ReaderTheme(
@@ -135,7 +152,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#1A7F37",
                 changeEditedHex: "#9A6700",
                 changeDeletedHex: "#CF222E",
-                hasLightBackground: true
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .lightGreyOnDarkGrey:
             return ReaderTheme(
@@ -150,7 +168,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#3FB950",
                 changeEditedHex: "#D29922",
                 changeDeletedHex: "#F85149",
-                hasLightBackground: false
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .amberTerminal:
             return ReaderTheme(
@@ -165,7 +184,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#7A9A40",
                 changeEditedHex: "#CC8800",
                 changeDeletedHex: "#6A4A2A",
-                hasLightBackground: false
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .greenTerminal, .greenTerminalStatic:
             return ReaderTheme(
@@ -180,7 +200,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#00CC33",
                 changeEditedHex: "#7FCC00",
                 changeDeletedHex: "#1A3320",
-                hasLightBackground: false
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .newspaper:
             return ReaderTheme(
@@ -195,7 +216,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#1A7F37",
                 changeEditedHex: "#9A6700",
                 changeDeletedHex: "#CF222E",
-                hasLightBackground: true
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .focus:
             return ReaderTheme(
@@ -210,7 +232,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#5A9A5A",
                 changeEditedHex: "#9A9A5A",
                 changeDeletedHex: "#9A6A6A",
-                hasLightBackground: true
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .commodore64:
             return ReaderTheme(
@@ -225,7 +248,8 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#5CAB5E",
                 changeEditedHex: "#C9D487",
                 changeDeletedHex: "#9F4E44",
-                hasLightBackground: false
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .gameBoy:
             return ReaderTheme(
@@ -240,7 +264,80 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 changeAddedHex: "#0F380F",
                 changeEditedHex: "#306230",
                 changeDeletedHex: "#306230",
-                hasLightBackground: true
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
+            )
+        case .gruvboxDark:
+            return ReaderTheme(
+                kind: .gruvboxDark,
+                backgroundHex: "#282828",
+                foregroundHex: "#EBDBB2",
+                secondaryForegroundHex: "#BDAE93",
+                codeBackgroundHex: "#1D2021",
+                borderHex: "#504945",
+                linkHex: "#FE8019",
+                changedBlockHex: "#2A2820",
+                changeAddedHex: "#B8BB26",
+                changeEditedHex: "#FABD2F",
+                changeDeletedHex: "#FB4934",
+                hasLightBackground: false,
+                h1Hex: "#FB4934",
+                h2Hex: "#B8BB26",
+                h3Hex: "#83A598"
+            )
+        case .gruvboxLight:
+            return ReaderTheme(
+                kind: .gruvboxLight,
+                backgroundHex: "#FBF1C7",
+                foregroundHex: "#3C3836",
+                secondaryForegroundHex: "#504945",
+                codeBackgroundHex: "#EBDBB2",
+                borderHex: "#D5C4A1",
+                linkHex: "#076678",
+                changedBlockHex: "#D5C4A1",
+                changeAddedHex: "#79740E",
+                changeEditedHex: "#B57614",
+                changeDeletedHex: "#9D0006",
+                hasLightBackground: true,
+                h1Hex: "#9D0006",
+                h2Hex: "#79740E",
+                h3Hex: "#076678"
+            )
+        case .dracula:
+            return ReaderTheme(
+                kind: .dracula,
+                backgroundHex: "#282A36",
+                foregroundHex: "#F8F8F2",
+                secondaryForegroundHex: "#BFC0D0",
+                codeBackgroundHex: "#21222C",
+                borderHex: "#44475A",
+                linkHex: "#8BE9FD",
+                changedBlockHex: "#1E3028",
+                changeAddedHex: "#50FA7B",
+                changeEditedHex: "#BD93F9",
+                changeDeletedHex: "#FF79C6",
+                hasLightBackground: false,
+                h1Hex: "#FF79C6",
+                h2Hex: "#50FA7B",
+                h3Hex: "#8BE9FD"
+            )
+        case .monokai:
+            return ReaderTheme(
+                kind: .monokai,
+                backgroundHex: "#272822",
+                foregroundHex: "#F8F8F2",
+                secondaryForegroundHex: "#CFCFC2",
+                codeBackgroundHex: "#1E1F1C",
+                borderHex: "#3A3C33",
+                linkHex: "#A6E22E",
+                changedBlockHex: "#1E2618",
+                changeAddedHex: "#A6E22E",
+                changeEditedHex: "#E6DB74",
+                changeDeletedHex: "#F92672",
+                hasLightBackground: false,
+                h1Hex: "#F92672",
+                h2Hex: "#A6E22E",
+                h3Hex: "#66D9EF"
             )
         }
     }
@@ -260,6 +357,9 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
           --reader-changed-edited: \(changeEditedHex);
           --reader-changed-deleted: \(changeDeletedHex);
           --reader-font-size: \(String(format: "%.1f", clampedSize))px;
+          \(h1Hex.map { "--reader-h1: \($0);" } ?? "")
+          \(h2Hex.map { "--reader-h2: \($0);" } ?? "")
+          \(h3Hex.map { "--reader-h3: \($0);" } ?? "")
         }
         """
     }

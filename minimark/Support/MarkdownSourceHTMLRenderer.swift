@@ -354,6 +354,10 @@ enum MarkdownSourceHTMLRenderer {
         case .focus: return "rgba(44, 44, 44, 0.12)"
         case .commodore64: return "rgba(160, 160, 255, 0.22)"
         case .gameBoy: return "rgba(15, 56, 15, 0.22)"
+        case .gruvboxDark: return "rgba(251, 73, 52, 0.18)"
+        case .gruvboxLight: return "rgba(157, 0, 6, 0.18)"
+        case .dracula: return "rgba(139, 233, 253, 0.22)"
+        case .monokai: return "rgba(166, 226, 46, 0.22)"
         }
     }
 

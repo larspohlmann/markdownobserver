@@ -14,7 +14,7 @@ struct ThemeDefinition: Equatable, Sendable {
 extension ReaderThemeKind {
     var themeDefinition: ThemeDefinition {
         switch self {
-        case .blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey:
+        case .blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey, .gruvboxDark, .gruvboxLight, .dracula, .monokai:
             return ThemeDefinition(
                 kind: self,
                 displayName: displayName,

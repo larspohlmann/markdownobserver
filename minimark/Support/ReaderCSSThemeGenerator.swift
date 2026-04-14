@@ -328,6 +328,24 @@ enum ReaderCSSThemeGenerator {
           color: inherit;
         }
 
+        .markdown-body h1 {
+          color: var(--reader-h1, var(--reader-fg));
+        }
+
+        .markdown-body h2 {
+          color: var(--reader-h2, var(--reader-fg));
+        }
+
+        .markdown-body h3 {
+          color: var(--reader-h3, var(--reader-fg));
+        }
+
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+          color: var(--reader-fg);
+        }
+
         .markdown-body img,
         .markdown-body video,
         .markdown-body canvas,
