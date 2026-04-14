@@ -382,10 +382,9 @@ enum ReaderCSSThemeGenerator {
           border-radius: 6px;
           padding: 2px 8px;
           font-family: "SF Mono", Menlo, ui-monospace, monospace;
-          font-size: inherit;
+          font-size: 12px;
           line-height: 1;
           color: var(--reader-syntax-keyword);
-          opacity: 0.6;
           cursor: pointer;
           transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
           z-index: 1;
@@ -394,7 +393,6 @@ enum ReaderCSSThemeGenerator {
         }
 
         .code-block-overlay:hover {
-          opacity: 1;
           background: var(--reader-border);
           border-color: var(--reader-fg-secondary);
         }
@@ -417,7 +415,7 @@ enum ReaderCSSThemeGenerator {
           border-radius: 6px;
           padding: 2px 8px;
           font-family: "SF Mono", Menlo, ui-monospace, monospace;
-          font-size: inherit;
+          font-size: 12px;
           line-height: 1;
           color: var(--reader-syntax-keyword);
           white-space: nowrap;
