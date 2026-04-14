@@ -275,6 +275,7 @@ final class ReaderWindowCoordinator {
         if window == nil, let existingWindow = hostWindow {
             ReaderWindowRegistry.shared.unregisterWindow(existingWindow)
         }
+        guard hostWindow !== window else { return }
         hostWindow = window
         handleHostWindowChange()
     }
