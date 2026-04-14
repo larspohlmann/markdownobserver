@@ -110,7 +110,7 @@ struct ReaderSettingsView: View {
 
         }
         .formStyle(.grouped)
-        .frame(minWidth: 560, minHeight: 720)
+        .frame(minWidth: 780, minHeight: 720)
         .padding(16)
         .task {
             notificationNotifier.refreshNotificationStatus()
