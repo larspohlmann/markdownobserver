@@ -3,13 +3,15 @@ import Foundation
 nonisolated enum ReaderRecentHistory {
     private struct MenuDisambiguationContext {
         let siblingPathsByDisplayName: [String: [String]]
+        let parentComponentsByPath: [String: [String]]
 
         func title(displayName: String, pathText: String) -> String {
             let siblingPaths = siblingPathsByDisplayName[displayName] ?? []
             guard siblingPaths.count > 1,
                   let suffix = PathDisambiguator.uniqueParentSuffix(
                     for: pathText,
-                    among: siblingPaths
+                    among: siblingPaths,
+                    parentComponentsByPath: parentComponentsByPath
                   ) else {
                 return displayName
             }
@@ -145,8 +147,14 @@ nonisolated enum ReaderRecentHistory {
                 groupedEntries.map { $0[keyPath: pathText] }
             }
 
+        let allPaths = siblingPathsByDisplayName.values.flatMap { $0 }
+        let parentComponentsByPath = Dictionary(allPaths.map { path in
+            (path, PathDisambiguator.parentComponents(for: path))
+        }, uniquingKeysWith: { first, _ in first })
+
         return MenuDisambiguationContext(
-            siblingPathsByDisplayName: siblingPathsByDisplayName
+            siblingPathsByDisplayName: siblingPathsByDisplayName,
+            parentComponentsByPath: parentComponentsByPath
         )
     }
 }

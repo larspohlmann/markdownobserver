@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Used by sidebar group headers and recent-file menu titles to compute
 /// the shortest unique display name for each path.
-enum PathDisambiguator {
+nonisolated enum PathDisambiguator {
 
     /// Batch-disambiguate a set of paths by their leaf component,
     /// progressively adding parent components until every display name is unique.
@@ -68,13 +68,19 @@ enum PathDisambiguator {
     /// For a single path among siblings sharing the same display name,
     /// return the shortest parent-directory suffix that makes it unique.
     ///
+    /// Pass a pre-built `parentComponentsByPath` when calling this repeatedly
+    /// for the same set of paths (e.g. in a batch menu-title pass) to avoid
+    /// recomputing parent components on every call.
+    ///
     /// Returns `nil` if the path has no parent components.
     static func uniqueParentSuffix(
         for path: String,
-        among siblingPaths: [String]
+        among siblingPaths: [String],
+        parentComponentsByPath: [String: [String]]? = nil
     ) -> String? {
-        let siblingParentComponents = siblingPaths.map { parentComponents(for: $0) }
-        let targetParentComponents = parentComponents(for: path)
+        let lookup: (String) -> [String] = { parentComponentsByPath?[$0] ?? parentComponents(for: $0) }
+        let siblingParentComponents = siblingPaths.map(lookup)
+        let targetParentComponents = lookup(path)
         guard !targetParentComponents.isEmpty else {
             return nil
         }

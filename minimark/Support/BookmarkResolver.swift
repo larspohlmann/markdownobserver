@@ -4,12 +4,12 @@ import Foundation
 /// original URL when bookmark data is absent or resolution fails.
 ///
 /// Shared by `ReaderRecentOpenedFile` and `ReaderRecentWatchedFolder`.
-enum BookmarkResolver {
+nonisolated enum BookmarkResolver {
 
     /// Resolve security-scoped bookmark data to a URL.
     ///
     /// Returns `fallbackURL` if `bookmarkData` is nil or resolution fails.
-    nonisolated static func resolveSecurityScopedBookmark(
+    static func resolveSecurityScopedBookmark(
         _ bookmarkData: Data?,
         fallbackURL: URL
     ) -> URL {

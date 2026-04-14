@@ -101,7 +101,7 @@ struct PathDisambiguatorTests {
         #expect(result == "x/shared")
     }
 
-    @Test func returnsNilForSingleSibling() {
+    @Test func returnsSuffixEvenWhenOnlySiblingIsTarget() {
         let result = PathDisambiguator.uniqueParentSuffix(
             for: "/Users/me/docs/readme.md",
             among: ["/Users/me/docs/readme.md"]
