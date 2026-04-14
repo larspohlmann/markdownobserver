@@ -21,6 +21,21 @@ func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
     return icon
 }
 
+enum OpenInMenuAction {
+    case openFiles([URL])
+    case openInApp(ReaderExternalApplication)
+    case revealInFinder
+    case requestFolderWatch(URL)
+    case stopFolderWatch
+    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
+    case clearFavoriteWatchedFolders
+    case editFavoriteWatchedFolders
+    case startRecentManuallyOpenedFile(ReaderRecentOpenedFile)
+    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case clearRecentWatchedFolders
+    case clearRecentManuallyOpenedFiles
+}
+
 struct OpenInMenuButton: NSViewRepresentable {
     let hasFile: Bool
     let hasActiveFolderWatch: Bool
@@ -29,18 +44,7 @@ struct OpenInMenuButton: NSViewRepresentable {
     let recentWatchedFolders: [ReaderRecentWatchedFolder]
     let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
     let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onOpenFiles: ([URL]) -> Void
-    let onOpenApp: (ReaderExternalApplication) -> Void
-    let onRevealInFinder: () -> Void
-    let onRequestFolderWatch: (URL) -> Void
-    let onStopFolderWatch: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
-    let onEditFavoriteWatchedFolders: () -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
+    let onAction: (OpenInMenuAction) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -285,7 +289,7 @@ struct OpenInMenuButton: NSViewRepresentable {
                   let app = appByID[id] else {
                 return
             }
-            parent.onOpenApp(app)
+            parent.onAction(.openInApp(app))
         }
 
         @objc private func openFileFromPicker() {
@@ -293,7 +297,7 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onOpenFiles(fileURLs)
+            parent.onAction(.openFiles(fileURLs))
         }
 
         @objc private func openRecentFile(_ sender: NSMenuItem) {
@@ -302,18 +306,18 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onStartRecentManuallyOpenedFile(entry)
+            parent.onAction(.startRecentManuallyOpenedFile(entry))
         }
 
         @objc private func revealInFinder() {
-            parent.onRevealInFinder()
+            parent.onAction(.revealInFinder)
         }
 
         @objc private func watchFolderFromPicker() {
             guard let folderURL = pickFolder() else {
                 return
             }
-            parent.onRequestFolderWatch(folderURL)
+            parent.onAction(.requestFolderWatch(folderURL))
         }
 
         @objc private func startRecentFolderWatch(_ sender: NSMenuItem) {
@@ -322,15 +326,15 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onStartRecentFolderWatch(entry)
+            parent.onAction(.startRecentFolderWatch(entry))
         }
 
         @objc private func stopWatchingFolder() {
-            parent.onStopFolderWatch()
+            parent.onAction(.stopFolderWatch)
         }
 
         @objc private func clearRecentFiles() {
-            parent.onClearRecentManuallyOpenedFiles()
+            parent.onAction(.clearRecentManuallyOpenedFiles)
         }
 
         @objc private func startFavoriteWatch(_ sender: NSMenuItem) {
@@ -340,19 +344,19 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onStartFavoriteWatch(entry)
+            parent.onAction(.startFavoriteWatch(entry))
         }
 
         @objc private func editFavoriteWatchedFolders() {
-            parent.onEditFavoriteWatchedFolders()
+            parent.onAction(.editFavoriteWatchedFolders)
         }
 
         @objc private func clearFavoriteWatchedFolders() {
-            parent.onClearFavoriteWatchedFolders()
+            parent.onAction(.clearFavoriteWatchedFolders)
         }
 
         @objc private func clearRecentWatchedFolders() {
-            parent.onClearRecentWatchedFolders()
+            parent.onAction(.clearRecentWatchedFolders)
         }
 
         private func pickFolder() -> URL? {

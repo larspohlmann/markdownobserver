@@ -1,16 +1,20 @@
 import SwiftUI
 
+enum WatchPillAction {
+    case stop
+    case saveFavorite(String)
+    case removeFavorite
+    case revealInFinder
+    case toggleAppearanceLock
+    case editSubfolders
+}
+
 struct WatchPill: View {
     let activeFolderWatch: ReaderFolderWatchSession
     let isCurrentWatchAFavorite: Bool
     let canStop: Bool
-    let onStop: () -> Void
-    let onSaveFavorite: (String) -> Void
-    let onRemoveFavorite: () -> Void
-    let onRevealInFinder: () -> Void
     let isAppearanceLocked: Bool
-    let onToggleAppearanceLock: () -> Void
-    let onEditSubfolders: () -> Void
+    let onAction: (WatchPillAction) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
@@ -48,12 +52,14 @@ struct WatchPill: View {
     }
 
     var body: some View {
+        let saveFavorite: (String) -> Void = { name in onAction(.saveFavorite(name)) }
+
         HStack(spacing: 8) {
             WatchPillFavoriteStarToggle(
                 isCurrentWatchAFavorite: isCurrentWatchAFavorite,
                 folderDisplayName: activeFolderWatch.detailSummaryTitle,
-                onSave: onSaveFavorite,
-                onRemove: onRemoveFavorite
+                onSave: saveFavorite,
+                onRemove: { onAction(.removeFavorite) }
             )
 
             Button {
@@ -70,7 +76,7 @@ struct WatchPill: View {
                 FolderWatchDetailsPopover(
                     activeFolderWatch: activeFolderWatch,
                     isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                    onSaveFolderWatchAsFavorite: onSaveFavorite
+                    onSaveFolderWatchAsFavorite: saveFavorite
                 )
             }
             .help(activeFolderWatch.tooltipText)
@@ -79,7 +85,7 @@ struct WatchPill: View {
             .accessibilityHint("Shows details about the watched folder")
 
             Button {
-                onToggleAppearanceLock()
+                onAction(.toggleAppearanceLock)
             } label: {
                 Image(systemName: isAppearanceLocked ? "lock.fill" : "lock.open")
                     .font(.system(size: 11, weight: .medium))
@@ -104,7 +110,7 @@ struct WatchPill: View {
                 .shadow(color: .black.opacity(colorScheme == .dark ? 0.9 : 0), radius: 2, y: 0)
 
             Button {
-                onRevealInFinder()
+                onAction(.revealInFinder)
             } label: {
                 HStack(spacing: 5) {
                     Text(tildeAbbreviatedPath)
@@ -130,7 +136,7 @@ struct WatchPill: View {
 
             if activeFolderWatch.options.scope == .includeSubfolders {
                 Button {
-                    onEditSubfolders()
+                    onAction(.editSubfolders)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "folder.badge.gearshape")
@@ -152,7 +158,7 @@ struct WatchPill: View {
             }
 
             Button {
-                onStop()
+                onAction(.stop)
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "stop.fill")

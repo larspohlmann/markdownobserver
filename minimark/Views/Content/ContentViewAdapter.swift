@@ -16,7 +16,7 @@ struct ContentViewAdapter: View {
     let canStopSharedFolderWatch: Bool
     let pendingFolderWatchURL: URL?
 
-    let callbacks: ContentViewCallbacks
+    let onAction: (ContentViewAction) -> Void
 
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
@@ -47,7 +47,7 @@ struct ContentViewAdapter: View {
                 isAppearanceLocked: appearanceController.isLocked,
                 effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
             ),
-            callbacks: callbacks,
+            onAction: onAction,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
             pendingFolderWatchScope: $pendingFolderWatchScope,

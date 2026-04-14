@@ -27,7 +27,7 @@ struct ContentView: View {
     var readerStore: ReaderStore
     let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
-    let callbacks: ContentViewCallbacks
+    let onAction: (ContentViewAction) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
@@ -50,7 +50,7 @@ struct ContentView: View {
         baseBody.modifier(ContentViewFocusedValues(
             readerStore: readerStore,
             folderWatchState: folderWatchState,
-            callbacks: callbacks,
+            onAction: onAction,
             canNavigateChangedRegions: canNavigateChangedRegions,
             onNavigateChangedRegion: { direction in
                 changeNavigation.requestNavigation(direction)
@@ -133,31 +133,41 @@ struct ContentView: View {
                 recentWatchedFolders: folderWatchState.recentWatchedFolders,
                 recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
                 iconProvider: appIconImage(for:),
-                onOpenFiles: { fileURLs in
-                    handlePickedFileURLs(fileURLs)
-                },
-                onOpenApp: { app in
-                    readerStore.openCurrentFileInApplication(app)
-                },
-                onRevealInFinder: {
-                    readerStore.revealCurrentFileInFinder()
-                },
-                onRequestFolderWatch: callbacks.onRequestFolderWatch,
-                onStopFolderWatch: callbacks.onStopFolderWatch,
-                onStartFavoriteWatch: callbacks.onStartFavoriteWatch,
-                onClearFavoriteWatchedFolders: callbacks.onClearFavoriteWatchedFolders,
-                onRenameFavoriteWatchedFolder: callbacks.onRenameFavoriteWatchedFolder,
-                onRemoveFavoriteWatchedFolder: callbacks.onRemoveFavoriteWatchedFolder,
-                onReorderFavoriteWatchedFolders: callbacks.onReorderFavoriteWatchedFolders,
-                onStartRecentManuallyOpenedFile: callbacks.onStartRecentManuallyOpenedFile,
-                onStartRecentFolderWatch: callbacks.onStartRecentFolderWatch,
-                onClearRecentWatchedFolders: callbacks.onClearRecentWatchedFolders,
-                onClearRecentManuallyOpenedFiles: callbacks.onClearRecentManuallyOpenedFiles,
-                onSaveSourceDraft: {
-                    readerStore.saveSourceDraft()
-                },
-                onDiscardSourceDraft: {
-                    readerStore.discardSourceDraft()
+                onAction: { action in
+                    switch action {
+                    case .openFiles(let urls):
+                        handlePickedFileURLs(urls)
+                    case .openInApp(let app):
+                        readerStore.openCurrentFileInApplication(app)
+                    case .revealInFinder:
+                        readerStore.revealCurrentFileInFinder()
+                    case .saveSourceDraft:
+                        readerStore.saveSourceDraft()
+                    case .discardSourceDraft:
+                        readerStore.discardSourceDraft()
+                    case .requestFolderWatch(let url):
+                        onAction(.requestFolderWatch(url))
+                    case .stopFolderWatch:
+                        onAction(.stopFolderWatch)
+                    case .startFavoriteWatch(let fav):
+                        onAction(.startFavoriteWatch(fav))
+                    case .clearFavoriteWatchedFolders:
+                        onAction(.clearFavoriteWatchedFolders)
+                    case .renameFavoriteWatchedFolder(let id, let name):
+                        onAction(.renameFavoriteWatchedFolder(id: id, name: name))
+                    case .removeFavoriteWatchedFolder(let id):
+                        onAction(.removeFavoriteWatchedFolder(id))
+                    case .reorderFavoriteWatchedFolders(let ids):
+                        onAction(.reorderFavoriteWatchedFolders(ids))
+                    case .startRecentManuallyOpenedFile(let entry):
+                        onAction(.startRecentManuallyOpenedFile(entry))
+                    case .startRecentFolderWatch(let entry):
+                        onAction(.startRecentFolderWatch(entry))
+                    case .clearRecentWatchedFolders:
+                        onAction(.clearRecentWatchedFolders)
+                    case .clearRecentManuallyOpenedFiles:
+                        onAction(.clearRecentManuallyOpenedFiles)
+                    }
                 }
             )
             .environment(\.colorScheme, overlayColorScheme)
@@ -353,15 +363,23 @@ struct ContentView: View {
                 activeFolderWatch: activeWatch,
                 isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
                 canStop: folderWatchState.canStopFolderWatch,
-                onStop: callbacks.onStopFolderWatch,
-                onSaveFavorite: callbacks.onSaveFolderWatchAsFavorite,
-                onRemoveFavorite: callbacks.onRemoveCurrentWatchFromFavorites,
-                onRevealInFinder: {
-                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
-                },
                 isAppearanceLocked: folderWatchState.isAppearanceLocked,
-                onToggleAppearanceLock: callbacks.onToggleAppearanceLock,
-                onEditSubfolders: callbacks.onEditSubfolders
+                onAction: { action in
+                    switch action {
+                    case .stop:
+                        onAction(.stopFolderWatch)
+                    case .saveFavorite(let name):
+                        onAction(.saveFolderWatchAsFavorite(name))
+                    case .removeFavorite:
+                        onAction(.removeCurrentWatchFromFavorites)
+                    case .revealInFinder:
+                        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeWatch.folderURL.path)
+                    case .toggleAppearanceLock:
+                        onAction(.toggleAppearanceLock)
+                    case .editSubfolders:
+                        onAction(.editSubfolders)
+                    }
+                }
             )
             .padding(.top, overlayInsets.leadingOverlayTopPadding)
             .padding(.leading, canNavigateChangedRegions ? 150 : 60)
@@ -735,26 +753,7 @@ final class SplitScrollCoordinator: ObservableObject {
             isAppearanceLocked: false,
             effectiveReaderTheme: .blackOnWhite
         ),
-        callbacks: ContentViewCallbacks(
-            onRequestFileOpen: { _ in },
-            onRequestFolderWatch: { _ in },
-            onConfirmFolderWatch: { _ in },
-            onCancelFolderWatch: {},
-            onStopFolderWatch: {},
-            onSaveFolderWatchAsFavorite: { _ in },
-            onRemoveCurrentWatchFromFavorites: {},
-            onToggleAppearanceLock: {},
-            onStartFavoriteWatch: { _ in },
-            onClearFavoriteWatchedFolders: {},
-            onRenameFavoriteWatchedFolder: { _, _ in },
-            onRemoveFavoriteWatchedFolder: { _ in },
-            onReorderFavoriteWatchedFolders: { _ in },
-            onStartRecentManuallyOpenedFile: { _ in },
-            onStartRecentFolderWatch: { _ in },
-            onClearRecentWatchedFolders: {},
-            onClearRecentManuallyOpenedFiles: {},
-            onEditSubfolders: {}
-        ),
+        onAction: { _ in },
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
