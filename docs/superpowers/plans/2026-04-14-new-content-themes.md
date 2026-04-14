@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add four new reader themes (Gruvbox Dark, Gruvbox Light, Dracula, Monokai) with built-in syntax highlighting and distinct per-level header colors.
+**Goal:** Add four new reader themes (Gruvbox Dark, Gruvbox Light, Dracula, Monokai) as content themes, while preserving user-selected syntax highlighting and supporting distinct per-level header colors.
 
-**Architecture:** Each theme follows the existing "advanced theme" pattern — a caseless enum in its own file providing a `ThemeDefinition` with `providesSyntaxHighlighting = true`. Header colors are passed through new `h1Hex`/`h2Hex`/`h3Hex` fields on `ReaderTheme`, emitted as CSS variables, and applied in the structural CSS.
+**Architecture:** Each theme is added through the existing content-theme flow rather than the "advanced theme" pattern. Syntax highlighting remains user-selectable and is not bundled into the theme definitions. Header colors are passed through new `h1Hex`/`h2Hex`/`h3Hex` fields on `ReaderTheme`, emitted as CSS variables, and applied in the structural CSS.
 
-**Tech Stack:** Swift, SwiftUI, CSS variables, highlight.js syntax tokens.
+**Tech Stack:** Swift, SwiftUI, CSS variables.
 
 ---
 
@@ -221,555 +221,79 @@ git commit -m "Add Gruvbox Dark/Light, Dracula, Monokai reader theme kinds and c
 
 ---
 
-### Task 4: Create GruvboxDarkTheme.swift
-
-**Files:**
-- Create: `minimark/Models/GruvboxDarkTheme.swift`
-
-- [ ] **Step 1: Create the theme file**
-
-```swift
-import Foundation
-
-enum GruvboxDarkTheme {
-    static let definition = ThemeDefinition(
-        kind: .gruvboxDark,
-        displayName: ReaderThemeKind.gruvboxDark.displayName,
-        colors: ReaderTheme.theme(for: .gruvboxDark),
-        customCSS: nil,
-        customJavaScript: nil,
-        providesSyntaxHighlighting: true,
-        syntaxCSS: syntaxCSS,
-        syntaxPreviewPalette: previewPalette
-    )
-
-    static let syntaxCSS: String = """
-    :root {
-        --reader-mark-signal: #FABD2F;
-        --reader-blockquote-accent: #FE8019;
-        --reader-blockquote-bg: rgba(253, 128, 25, 0.08);
-        --reader-blockquote-fg: #BDAE93;
-    }
-
-    pre {
-      background: #1D2021;
-      border: 1px solid #504945;
-    }
-
-    pre code,
-    pre code.hljs,
-    pre code[class*="language-"] {
-      color: #EBDBB2;
-      background: transparent;
-      display: block;
-      padding: 0;
-    }
-
-    pre code .hljs-comment { color: #928374; }
-    pre code .hljs-keyword { color: #FB4934; }
-    pre code .hljs-string { color: #B8BB26; }
-    pre code .hljs-number { color: #D3869B; }
-    pre code .hljs-title { color: #83A598; }
-    pre code .hljs-built_in { color: #FABD2F; }
-    """
-
-    static let previewPalette = SyntaxThemePreviewPalette(
-        blockTextHex: "#EBDBB2",
-        blockBackgroundHex: "#1D2021",
-        blockBorderHex: "#504945",
-        commentHex: "#928374",
-        keywordHex: "#FB4934",
-        stringHex: "#B8BB26",
-        numberHex: "#D3869B",
-        titleHex: "#83A598",
-        builtInHex: "#FABD2F"
-    )
-}
-```
-
-- [ ] **Step 2: Commit**
-
-```bash
-git add minimark/Models/GruvboxDarkTheme.swift
-git commit -m "Add Gruvbox Dark theme definition with syntax highlighting"
-```
-
----
-
-### Task 5: Create GruvboxLightTheme.swift
-
-**Files:**
-- Create: `minimark/Models/GruvboxLightTheme.swift`
-
-- [ ] **Step 1: Create the theme file**
-
-```swift
-import Foundation
-
-enum GruvboxLightTheme {
-    static let definition = ThemeDefinition(
-        kind: .gruvboxLight,
-        displayName: ReaderThemeKind.gruvboxLight.displayName,
-        colors: ReaderTheme.theme(for: .gruvboxLight),
-        customCSS: nil,
-        customJavaScript: nil,
-        providesSyntaxHighlighting: true,
-        syntaxCSS: syntaxCSS,
-        syntaxPreviewPalette: previewPalette
-    )
-
-    static let syntaxCSS: String = """
-    :root {
-        --reader-mark-signal: #B57614;
-        --reader-blockquote-accent: #B57614;
-        --reader-blockquote-bg: rgba(181, 118, 20, 0.08);
-        --reader-blockquote-fg: #504945;
-    }
-
-    pre {
-      background: #EBDBB2;
-      border: 1px solid #D5C4A1;
-    }
-
-    pre code,
-    pre code.hljs,
-    pre code[class*="language-"] {
-      color: #3C3836;
-      background: transparent;
-      display: block;
-      padding: 0;
-    }
-
-    pre code .hljs-comment { color: #928374; }
-    pre code .hljs-keyword { color: #9D0006; }
-    pre code .hljs-string { color: #79740E; }
-    pre code .hljs-number { color: #8F3F71; }
-    pre code .hljs-title { color: #076678; }
-    pre code .hljs-built_in { color: #B57614; }
-    """
-
-    static let previewPalette = SyntaxThemePreviewPalette(
-        blockTextHex: "#3C3836",
-        blockBackgroundHex: "#EBDBB2",
-        blockBorderHex: "#D5C4A1",
-        commentHex: "#928374",
-        keywordHex: "#9D0006",
-        stringHex: "#79740E",
-        numberHex: "#8F3F71",
-        titleHex: "#076678",
-        builtInHex: "#B57614"
-    )
-}
-```
-
-- [ ] **Step 2: Commit**
-
-```bash
-git add minimark/Models/GruvboxLightTheme.swift
-git commit -m "Add Gruvbox Light theme definition with syntax highlighting"
-```
-
----
-
-### Task 6: Create DraculaTheme.swift
-
-**Files:**
-- Create: `minimark/Models/DraculaTheme.swift`
-
-- [ ] **Step 1: Create the theme file**
-
-```swift
-import Foundation
-
-enum DraculaTheme {
-    static let definition = ThemeDefinition(
-        kind: .dracula,
-        displayName: ReaderThemeKind.dracula.displayName,
-        colors: ReaderTheme.theme(for: .dracula),
-        customCSS: nil,
-        customJavaScript: nil,
-        providesSyntaxHighlighting: true,
-        syntaxCSS: syntaxCSS,
-        syntaxPreviewPalette: previewPalette
-    )
-
-    static let syntaxCSS: String = """
-    :root {
-        --reader-mark-signal: #F1FA8C;
-        --reader-blockquote-accent: #BD93F9;
-        --reader-blockquote-bg: rgba(189, 147, 249, 0.08);
-        --reader-blockquote-fg: #BFC0D0;
-    }
-
-    pre {
-      background: #21222C;
-      border: 1px solid #44475A;
-    }
-
-    pre code,
-    pre code.hljs,
-    pre code[class*="language-"] {
-      color: #F8F8F2;
-      background: transparent;
-      display: block;
-      padding: 0;
-    }
-
-    pre code .hljs-comment { color: #6272A4; }
-    pre code .hljs-keyword { color: #FF79C6; }
-    pre code .hljs-string { color: #F1FA8C; }
-    pre code .hljs-number { color: #BD93F9; }
-    pre code .hljs-title { color: #8BE9FD; }
-    pre code .hljs-built_in { color: #50FA7B; }
-    """
-
-    static let previewPalette = SyntaxThemePreviewPalette(
-        blockTextHex: "#F8F8F2",
-        blockBackgroundHex: "#21222C",
-        blockBorderHex: "#44475A",
-        commentHex: "#6272A4",
-        keywordHex: "#FF79C6",
-        stringHex: "#F1FA8C",
-        numberHex: "#BD93F9",
-        titleHex: "#8BE9FD",
-        builtInHex: "#50FA7B"
-    )
-}
-```
-
-- [ ] **Step 2: Commit**
-
-```bash
-git add minimark/Models/DraculaTheme.swift
-git commit -m "Add Dracula theme definition with syntax highlighting"
-```
-
----
-
-### Task 7: Create MonokaiTheme.swift
-
-**Files:**
-- Create: `minimark/Models/MonokaiTheme.swift`
-
-- [ ] **Step 1: Create the theme file**
-
-```swift
-import Foundation
-
-enum MonokaiTheme {
-    static let definition = ThemeDefinition(
-        kind: .monokai,
-        displayName: ReaderThemeKind.monokai.displayName,
-        colors: ReaderTheme.theme(for: .monokai),
-        customCSS: nil,
-        customJavaScript: nil,
-        providesSyntaxHighlighting: true,
-        syntaxCSS: syntaxCSS,
-        syntaxPreviewPalette: previewPalette
-    )
-
-    static let syntaxCSS: String = """
-    :root {
-        --reader-mark-signal: #E6DB74;
-        --reader-blockquote-accent: #A6E22E;
-        --reader-blockquote-bg: rgba(166, 226, 46, 0.06);
-        --reader-blockquote-fg: #CFCFC2;
-    }
-
-    pre {
-      background: #1E1F1C;
-      border: 1px solid #3A3C33;
-    }
-
-    pre code,
-    pre code.hljs,
-    pre code[class*="language-"] {
-      color: #F8F8F2;
-      background: transparent;
-      display: block;
-      padding: 0;
-    }
-
-    pre code .hljs-comment { color: #75715E; }
-    pre code .hljs-keyword { color: #F92672; }
-    pre code .hljs-string { color: #E6DB74; }
-    pre code .hljs-number { color: #AE81FF; }
-    pre code .hljs-title { color: #A6E22E; }
-    pre code .hljs-built_in { color: #66D9EF; }
-    """
-
-    static let previewPalette = SyntaxThemePreviewPalette(
-        blockTextHex: "#F8F8F2",
-        blockBackgroundHex: "#1E1F1C",
-        blockBorderHex: "#3A3C33",
-        commentHex: "#75715E",
-        keywordHex: "#F92672",
-        stringHex: "#E6DB74",
-        numberHex: "#AE81FF",
-        titleHex: "#A6E22E",
-        builtInHex: "#66D9EF"
-    )
-}
-```
-
-- [ ] **Step 2: Commit**
-
-```bash
-git add minimark/Models/MonokaiTheme.swift
-git commit -m "Add Monokai theme definition with syntax highlighting"
-```
-
----
-
-### Task 8: Wire themes into ThemeDefinition mapping
+### Task 4: Wire themes into ThemeDefinition mapping
 
 **Files:**
 - Modify: `minimark/Models/ThemeDefinition.swift`
 
-- [ ] **Step 1: Add cases to the `themeDefinition` switch**
+- [ ] **Step 1: Add the 4 new cases to the shared simple-theme branch**
 
-Add after the `case .gameBoy:` line (line 41), before the closing `}`:
+In `themeDefinition`, extend the existing simple-theme `case` to include all 4 new kinds:
 
 ```swift
-        case .gruvboxDark:
-            return GruvboxDarkTheme.definition
-        case .gruvboxLight:
-            return GruvboxLightTheme.definition
-        case .dracula:
-            return DraculaTheme.definition
-        case .monokai:
-            return MonokaiTheme.definition
+case .blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey,
+     .gruvboxDark, .gruvboxLight, .dracula, .monokai:
+    return ThemeDefinition(
+        kind: self,
+        displayName: displayName,
+        colors: ReaderTheme.theme(for: self),
+        customCSS: nil,
+        customJavaScript: nil,
+        providesSyntaxHighlighting: false,
+        syntaxCSS: nil,
+        syntaxPreviewPalette: nil
+    )
 ```
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add minimark/Models/ThemeDefinition.swift
-git commit -m "Wire Gruvbox Dark/Light, Dracula, Monokai into ThemeDefinition mapping"
+git commit -m "Wire Gruvbox Dark/Light, Dracula, Monokai into shared simple ThemeDefinition path"
 ```
 
 ---
 
-### Task 9: Add tests for new themes
+### Task 5: Add tests for new themes
 
 **Files:**
 - Modify: `minimarkTests/Rendering/ThemeDefinitionTests.swift`
 
-- [ ] **Step 1: Add Gruvbox Dark tests**
+- [ ] **Step 1: Add tests for each new theme**
 
-Add after the Game Boy section (after line 339), before the "Theme Color Scheme Consistency" section:
+Add tests that verify each theme has the correct definition (no built-in syntax highlighting), correct color values, and emits the expected header CSS variables:
 
 ```swift
-    // MARK: - Gruvbox Dark Theme
+func testGruvboxDarkThemeDefinition() {
+    let definition = ReaderThemeKind.gruvboxDark.themeDefinition
+    XCTAssertEqual(definition.displayName, "Gruvbox Dark")
+    XCTAssertTrue(definition.kind.isDark)
+    XCTAssertNil(definition.customCSS)
+    XCTAssertNil(definition.customJavaScript)
+    XCTAssertFalse(definition.providesSyntaxHighlighting)
+    XCTAssertNil(definition.syntaxCSS)
+    XCTAssertNil(definition.syntaxPreviewPalette)
+}
 
-    func testGruvboxDarkThemeDefinition() {
-        let definition = ReaderThemeKind.gruvboxDark.themeDefinition
-        XCTAssertEqual(definition.displayName, "Gruvbox Dark")
-        XCTAssertTrue(definition.kind.isDark)
-        XCTAssertNil(definition.customCSS)
-        XCTAssertNil(definition.customJavaScript)
-        XCTAssertTrue(definition.providesSyntaxHighlighting)
-        XCTAssertNotNil(definition.syntaxCSS)
-        XCTAssertNotNil(definition.syntaxPreviewPalette)
-    }
-
-    func testGruvboxDarkColors() {
-        let definition = ReaderThemeKind.gruvboxDark.themeDefinition
-        XCTAssertEqual(definition.colors.backgroundHex, "#282828")
-        XCTAssertEqual(definition.colors.foregroundHex, "#EBDBB2")
-        XCTAssertEqual(definition.colors.linkHex, "#FE8019")
-        XCTAssertEqual(definition.colors.h1Hex, "#FB4934")
-        XCTAssertEqual(definition.colors.h2Hex, "#B8BB26")
-        XCTAssertEqual(definition.colors.h3Hex, "#83A598")
-    }
-
-    func testGruvboxDarkSyntaxCSSCoversAllTokenTypes() {
-        let css = ReaderThemeKind.gruvboxDark.themeDefinition.syntaxCSS!
-        XCTAssertTrue(css.contains(".hljs-comment"))
-        XCTAssertTrue(css.contains(".hljs-keyword"))
-        XCTAssertTrue(css.contains(".hljs-string"))
-        XCTAssertTrue(css.contains(".hljs-number"))
-        XCTAssertTrue(css.contains(".hljs-title"))
-        XCTAssertTrue(css.contains(".hljs-built_in"))
-    }
-
-    func testGruvboxDarkUsesSyntaxCSSInsteadOfSyntaxTheme() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.gruvboxDark.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
-        XCTAssertTrue(css.contains("color: #FB4934"), "Should contain Gruvbox Dark keyword color")
-        XCTAssertFalse(css.contains("#D73A49"), "Should not contain GitHub keyword color")
-    }
-
-    func testGruvboxDarkCSSContainsHeaderVariables() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.gruvboxDark.themeDefinition
+func testNewThemesCSSContainsHeaderVariables() {
+    let factory = ReaderCSSFactory()
+    let newThemes: [ReaderThemeKind] = [.gruvboxDark, .gruvboxLight, .dracula, .monokai]
+    for kind in newThemes {
+        let theme = kind.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
-        XCTAssertTrue(css.contains("--reader-h1: #FB4934"))
-        XCTAssertTrue(css.contains("--reader-h2: #B8BB26"))
-        XCTAssertTrue(css.contains("--reader-h3: #83A598"))
+        let colors = theme.colors
+        XCTAssertTrue(css.contains("--reader-h1: \(colors.h1Hex!)"), "Missing h1 variable for \(kind)")
+        XCTAssertTrue(css.contains("--reader-h2: \(colors.h2Hex!)"), "Missing h2 variable for \(kind)")
+        XCTAssertTrue(css.contains("--reader-h3: \(colors.h3Hex!)"), "Missing h3 variable for \(kind)")
     }
+}
 
-    // MARK: - Gruvbox Light Theme
-
-    func testGruvboxLightThemeDefinition() {
-        let definition = ReaderThemeKind.gruvboxLight.themeDefinition
-        XCTAssertEqual(definition.displayName, "Gruvbox Light")
-        XCTAssertFalse(definition.kind.isDark)
-        XCTAssertNil(definition.customCSS)
-        XCTAssertNil(definition.customJavaScript)
-        XCTAssertTrue(definition.providesSyntaxHighlighting)
-        XCTAssertNotNil(definition.syntaxCSS)
-        XCTAssertNotNil(definition.syntaxPreviewPalette)
-    }
-
-    func testGruvboxLightColors() {
-        let definition = ReaderThemeKind.gruvboxLight.themeDefinition
-        XCTAssertEqual(definition.colors.backgroundHex, "#FBF1C7")
-        XCTAssertEqual(definition.colors.foregroundHex, "#3C3836")
-        XCTAssertEqual(definition.colors.linkHex, "#076678")
-        XCTAssertEqual(definition.colors.h1Hex, "#9D0006")
-        XCTAssertEqual(definition.colors.h2Hex, "#79740E")
-        XCTAssertEqual(definition.colors.h3Hex, "#076678")
-    }
-
-    func testGruvboxLightSyntaxCSSCoversAllTokenTypes() {
-        let css = ReaderThemeKind.gruvboxLight.themeDefinition.syntaxCSS!
-        XCTAssertTrue(css.contains(".hljs-comment"))
-        XCTAssertTrue(css.contains(".hljs-keyword"))
-        XCTAssertTrue(css.contains(".hljs-string"))
-        XCTAssertTrue(css.contains(".hljs-number"))
-        XCTAssertTrue(css.contains(".hljs-title"))
-        XCTAssertTrue(css.contains(".hljs-built_in"))
-    }
-
-    func testGruvboxLightUsesSyntaxCSSInsteadOfSyntaxTheme() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.gruvboxLight.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
-        XCTAssertTrue(css.contains("color: #9D0006"), "Should contain Gruvbox Light keyword color")
-        XCTAssertFalse(css.contains("#D73A49"), "Should not contain GitHub keyword color")
-    }
-
-    // MARK: - Dracula Theme
-
-    func testDraculaThemeDefinition() {
-        let definition = ReaderThemeKind.dracula.themeDefinition
-        XCTAssertEqual(definition.displayName, "Dracula")
-        XCTAssertTrue(definition.kind.isDark)
-        XCTAssertNil(definition.customCSS)
-        XCTAssertNil(definition.customJavaScript)
-        XCTAssertTrue(definition.providesSyntaxHighlighting)
-        XCTAssertNotNil(definition.syntaxCSS)
-        XCTAssertNotNil(definition.syntaxPreviewPalette)
-    }
-
-    func testDraculaColors() {
-        let definition = ReaderThemeKind.dracula.themeDefinition
-        XCTAssertEqual(definition.colors.backgroundHex, "#282A36")
-        XCTAssertEqual(definition.colors.foregroundHex, "#F8F8F2")
-        XCTAssertEqual(definition.colors.linkHex, "#8BE9FD")
-        XCTAssertEqual(definition.colors.h1Hex, "#FF79C6")
-        XCTAssertEqual(definition.colors.h2Hex, "#50FA7B")
-        XCTAssertEqual(definition.colors.h3Hex, "#8BE9FD")
-    }
-
-    func testDraculaSyntaxCSSCoversAllTokenTypes() {
-        let css = ReaderThemeKind.dracula.themeDefinition.syntaxCSS!
-        XCTAssertTrue(css.contains(".hljs-comment"))
-        XCTAssertTrue(css.contains(".hljs-keyword"))
-        XCTAssertTrue(css.contains(".hljs-string"))
-        XCTAssertTrue(css.contains(".hljs-number"))
-        XCTAssertTrue(css.contains(".hljs-title"))
-        XCTAssertTrue(css.contains(".hljs-built_in"))
-    }
-
-    func testDraculaUsesSyntaxCSSInsteadOfSyntaxTheme() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.dracula.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
-        XCTAssertTrue(css.contains("color: #FF79C6"), "Should contain Dracula keyword color")
-        XCTAssertFalse(css.contains("#F92672"), "Should not contain Monokai keyword color")
-    }
-
-    func testDraculaCSSContainsHeaderVariables() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.dracula.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
-        XCTAssertTrue(css.contains("--reader-h1: #FF79C6"))
-        XCTAssertTrue(css.contains("--reader-h2: #50FA7B"))
-        XCTAssertTrue(css.contains("--reader-h3: #8BE9FD"))
-    }
-
-    // MARK: - Monokai Theme
-
-    func testMonokaiThemeDefinition() {
-        let definition = ReaderThemeKind.monokai.themeDefinition
-        XCTAssertEqual(definition.displayName, "Monokai")
-        XCTAssertTrue(definition.kind.isDark)
-        XCTAssertNil(definition.customCSS)
-        XCTAssertNil(definition.customJavaScript)
-        XCTAssertTrue(definition.providesSyntaxHighlighting)
-        XCTAssertNotNil(definition.syntaxCSS)
-        XCTAssertNotNil(definition.syntaxPreviewPalette)
-    }
-
-    func testMonokaiColors() {
-        let definition = ReaderThemeKind.monokai.themeDefinition
-        XCTAssertEqual(definition.colors.backgroundHex, "#272822")
-        XCTAssertEqual(definition.colors.foregroundHex, "#F8F8F2")
-        XCTAssertEqual(definition.colors.linkHex, "#A6E22E")
-        XCTAssertEqual(definition.colors.h1Hex, "#F92672")
-        XCTAssertEqual(definition.colors.h2Hex, "#A6E22E")
-        XCTAssertEqual(definition.colors.h3Hex, "#66D9EF")
-    }
-
-    func testMonokaiSyntaxCSSCoversAllTokenTypes() {
-        let css = ReaderThemeKind.monokai.themeDefinition.syntaxCSS!
-        XCTAssertTrue(css.contains(".hljs-comment"))
-        XCTAssertTrue(css.contains(".hljs-keyword"))
-        XCTAssertTrue(css.contains(".hljs-string"))
-        XCTAssertTrue(css.contains(".hljs-number"))
-        XCTAssertTrue(css.contains(".hljs-title"))
-        XCTAssertTrue(css.contains(".hljs-built_in"))
-    }
-
-    func testMonokaiUsesSyntaxCSSInsteadOfSyntaxTheme() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.monokai.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
-        XCTAssertTrue(css.contains("color: #F92672"), "Should contain Monokai keyword color")
-        XCTAssertFalse(css.contains("#D73A49"), "Should not contain GitHub keyword color")
-    }
-
-    func testMonokaiCSSContainsHeaderVariables() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.monokai.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
-        XCTAssertTrue(css.contains("--reader-h1: #F92672"))
-        XCTAssertTrue(css.contains("--reader-h2: #A6E22E"))
-        XCTAssertTrue(css.contains("--reader-h3: #66D9EF"))
-    }
-
-    // MARK: - Header Color Fallback
-
-    func testSimpleThemesDoNotEmitHeaderVariables() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
-        XCTAssertFalse(css.contains("--reader-h1:"), "Simple themes should not emit h1 variable")
-        XCTAssertFalse(css.contains("--reader-h2:"), "Simple themes should not emit h2 variable")
-        XCTAssertFalse(css.contains("--reader-h3:"), "Simple themes should not emit h3 variable")
-    }
-
-    func testSimpleThemesHeaderColorsFallBackToForeground() {
-        let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
-        XCTAssertTrue(css.contains("color: var(--reader-h1, var(--reader-fg))"), "h1 should fall back to foreground")
-        XCTAssertTrue(css.contains("color: var(--reader-h2, var(--reader-fg))"), "h2 should fall back to foreground")
-        XCTAssertTrue(css.contains("color: var(--reader-h3, var(--reader-fg))"), "h3 should fall back to foreground")
-    }
+func testNewThemesUseSelectedSyntaxTheme() {
+    let factory = ReaderCSSFactory()
+    let theme = ReaderThemeKind.gruvboxDark.themeDefinition
+    let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
+    XCTAssertTrue(css.contains("#D73A49"), "Should contain GitHub keyword color from selected syntax theme")
+}
 ```
 
 - [ ] **Step 2: Commit**
@@ -781,45 +305,9 @@ git commit -m "Add tests for Gruvbox Dark/Light, Dracula, Monokai themes and hea
 
 ---
 
-### Task 10: Add new theme files to Xcode project and build
-
-**Files:**
-- Modify: `minimark.xcodeproj/project.pbxproj`
-
-- [ ] **Step 1: Add new Swift files to the Xcode project**
-
-The 4 new files need to be added to the Xcode project's build sources:
-- `minimark/Models/GruvboxDarkTheme.swift`
-- `minimark/Models/GruvboxLightTheme.swift`
-- `minimark/Models/DraculaTheme.swift`
-- `minimark/Models/MonokaiTheme.swift`
-
-Use `ruby` or manual editing of `project.pbxproj` to add PBXFileReference and PBXBuildFile entries, following the pattern of existing theme files like `GameBoyTheme.swift`. Alternatively, if the project uses a folder reference for the Models directory, the files may be picked up automatically.
-
-- [ ] **Step 2: Build the project**
-
-Run: `xcodebuild -project minimark.xcodeproj -scheme minimark -configuration Debug -destination 'platform=macOS' build`
-Expected: BUILD SUCCEEDED
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add minimark.xcodeproj/project.pbxproj
-git commit -m "Add new theme files to Xcode project"
-```
-
----
-
-### Task 11: Run full test suite and verify
+### Task 6: Run full test suite and verify
 
 - [ ] **Step 1: Run all tests**
 
 Run: `xcodebuild test -project minimark.xcodeproj -scheme minimark -destination 'platform=macOS' -only-testing:minimarkTests`
 Expected: All tests pass, including new theme tests and existing tests (no regressions).
-
-- [ ] **Step 2: Final commit (if any fixes needed)**
-
-```bash
-git add -A
-git commit -m "Fix test failures from new theme integration"
-```
