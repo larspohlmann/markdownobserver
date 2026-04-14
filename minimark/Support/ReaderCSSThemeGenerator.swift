@@ -359,6 +359,7 @@ enum ReaderCSSThemeGenerator {
         }
 
         pre {
+          position: relative;
           background: var(--reader-code-bg);
           border: 1px solid var(--reader-border);
           border-radius: 8px;
@@ -370,6 +371,67 @@ enum ReaderCSSThemeGenerator {
           background: var(--reader-code-bg);
           border-radius: 4px;
           padding: 0.1em 0.3em;
+        }
+
+        .code-block-overlay {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          background: var(--reader-code-bg);
+          border: 1px solid var(--reader-border);
+          border-radius: 6px;
+          padding: 2px 8px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 11px;
+          line-height: 1;
+          color: var(--reader-syntax-keyword);
+          opacity: 0.6;
+          cursor: pointer;
+          transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+          z-index: 1;
+          -webkit-user-select: none;
+          user-select: none;
+        }
+
+        .code-block-overlay:hover {
+          opacity: 1;
+          background: var(--reader-border);
+          border-color: var(--reader-fg-secondary);
+        }
+
+        .code-block-overlay-icon {
+          padding: 4px 5px;
+          line-height: 0;
+        }
+
+        .code-block-overlay-icon svg {
+          display: block;
+        }
+
+        .code-block-toast {
+          position: absolute;
+          top: -20px;
+          right: 6px;
+          background: color-mix(in srgb, var(--reader-code-bg) 90%, transparent);
+          border: 1px solid color-mix(in srgb, var(--reader-border) 60%, transparent);
+          border-radius: 6px;
+          padding: 3px 10px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 11px;
+          line-height: 1;
+          color: var(--reader-syntax-keyword);
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 2;
+          opacity: 0;
+          animation: minimark-toast-fade 1.5s ease forwards;
+        }
+
+        @keyframes minimark-toast-fade {
+          0% { opacity: 0; transform: translateY(4px); }
+          15% { opacity: 0.9; transform: translateY(0); }
+          75% { opacity: 0.9; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-2px); }
         }
 
         .markdown-body table {
