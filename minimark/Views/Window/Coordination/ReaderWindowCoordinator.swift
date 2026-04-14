@@ -223,16 +223,14 @@ final class ReaderWindowCoordinator {
     }
 
     func registerWindowIfNeeded() {
+        let session = folderWatchFlowController?.sharedFolderWatchSession
         let currentIdentity = RegisteredWindowIdentity(
             window: hostWindow,
-            folderWatchSession: folderWatchFlowController?.sharedFolderWatchSession
+            folderWatchSession: session
         )
         guard currentIdentity != registeredWindowIdentity else { return }
         registeredWindowIdentity = currentIdentity
-        registerWindow(
-            hostWindow,
-            activeFolderWatch: folderWatchFlowController?.sharedFolderWatchSession
-        )
+        registerWindow(hostWindow, activeFolderWatch: session)
     }
 
     func handleFolderWatchToolbarAction(_ action: FolderWatchToolbarAction) {
