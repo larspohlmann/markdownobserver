@@ -218,7 +218,8 @@ final class ReaderWindowCoordinator {
 
     func refreshWindowShellState() {
         registerWindowIfNeeded()
-        refreshWindowPresentation()
+        refreshSharedFolderWatchState()
+        applyWindowTitlePresentation()
     }
 
     func registerWindowIfNeeded() {

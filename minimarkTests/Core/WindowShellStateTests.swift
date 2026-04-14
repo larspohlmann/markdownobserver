@@ -130,6 +130,32 @@ struct WindowShellStateTests {
     }
 
     @Test @MainActor
+    func refreshWindowShellStateAppliesTitle() throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = ReaderWindowCoordinator(
+            settingsStore: harness.settingsStore,
+            sidebarDocumentController: harness.controller
+        )
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        coordinator.handleWindowAccessorUpdate(window)
+
+        // refreshWindowShellState should apply the title (behavioral parity with old nested version)
+        coordinator.refreshWindowShellState()
+
+        // The effective title should be the app name since no document is selected
+        #expect(coordinator.effectiveWindowTitle == ReaderWindowTitleFormatter.appName)
+        #expect(window.title == ReaderWindowTitleFormatter.appName)
+    }
+
+    @Test @MainActor
     func registrationIdentityClearedOnNilWindow() throws {
         ReaderWindowRegistry.shared.resetForTesting()
         defer { ReaderWindowRegistry.shared.resetForTesting() }
