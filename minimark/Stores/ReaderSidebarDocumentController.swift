@@ -21,6 +21,7 @@ final class ReaderSidebarDocumentController {
     @ObservationIgnored private let observationManager = SidebarObservationManager()
     let folderWatchCoordinator: FolderWatchSessionCoordinator
     @ObservationIgnored private let fileOpenPlanExecutor: FileOpenPlanExecutor
+    @ObservationIgnored private let documentCloseCoordinator: DocumentCloseCoordinator
 
     // MARK: - Selection state
 
@@ -124,6 +125,11 @@ final class ReaderSidebarDocumentController {
             observationManager: observationManager,
             rowStateComputer: rowStateComputer
         )
+        documentCloseCoordinator = DocumentCloseCoordinator(
+            documentList: documentList,
+            observationManager: observationManager,
+            rowStateComputer: rowStateComputer
+        )
         selectedDocumentID = initialDocument.id
         selectedWindowTitle = initialDocument.readerStore.windowTitle
         selectedFileURL = initialDocument.readerStore.fileURL
@@ -131,6 +137,7 @@ final class ReaderSidebarDocumentController {
         rowStateComputer.rebuildAllRowStates(from: documentList.documents)
         folderWatchCoordinator.delegate = self
         fileOpenPlanExecutor.delegate = self
+        documentCloseCoordinator.delegate = self
     }
 
     // MARK: - Selection
@@ -151,7 +158,10 @@ final class ReaderSidebarDocumentController {
     }
 
     func selectDocument(_ documentID: UUID?) {
-        observationManager.ensureSetup(for: documents, onStoreChanged: makeStoreChangedHandler())
+        observationManager.ensureSetup(for: documents) { [weak self] documentID in
+            guard let self else { return }
+            self.rowStateComputer.updateRowStateIfNeeded(for: documentID, in: self.documents)
+        }
         guard let documentID,
               documents.contains(where: { $0.id == documentID }) else {
             return
@@ -202,87 +212,23 @@ final class ReaderSidebarDocumentController {
     // MARK: - Document close
 
     func closeDocument(_ documentID: UUID) {
-        guard let removed = documentList.remove(documentID: documentID) else {
-            return
-        }
-
-        if documents.isEmpty {
-            let replacement = makeDocument()
-            documentList.replaceAll(with: [replacement])
-            if let storeConfigurator {
-                storeConfigurator(replacement.readerStore)
-            }
-            selectedDocumentID = replacement.id
-            synchronizeAndRebuild()
-            bindSelectedStore()
-            return
-        }
-
-        if selectedDocumentID == documentID {
-            let nextIndex = min(removed.index, documents.count - 1)
-            selectedDocumentID = documents[nextIndex].id
-        }
-
-        synchronizeAndRebuild()
-        bindSelectedStore()
+        documentCloseCoordinator.closeDocument(documentID)
     }
 
     func closeOtherDocuments(keeping documentID: UUID) {
-        closeOtherDocuments(keeping: [documentID])
+        documentCloseCoordinator.closeOtherDocuments(keeping: documentID)
     }
 
     func closeOtherDocuments(keeping documentIDs: Set<UUID>) {
-        let retainedDocuments = documents.filter { documentIDs.contains($0.id) }
-        guard !retainedDocuments.isEmpty else {
-            return
-        }
-
-        documentList.replaceAll(with: retainedDocuments)
-
-        if !retainedDocuments.contains(where: { $0.id == selectedDocumentID }) {
-            selectedDocumentID = retainedDocuments[0].id
-        }
-
-        synchronizeAndRebuild()
-        bindSelectedStore()
+        documentCloseCoordinator.closeOtherDocuments(keeping: documentIDs)
     }
 
     func closeDocuments(_ documentIDs: Set<UUID>) {
-        guard !documentIDs.isEmpty else {
-            return
-        }
-
-        let removedDocuments = documents.filter { documentIDs.contains($0.id) }
-        guard !removedDocuments.isEmpty else {
-            return
-        }
-
-        if removedDocuments.count >= documents.count {
-            closeAllDocuments()
-            return
-        }
-
-        let remainingDocuments = documents.filter { !documentIDs.contains($0.id) }
-        documentList.replaceAll(with: remainingDocuments)
-
-        if !remainingDocuments.contains(where: { $0.id == selectedDocumentID }) {
-            selectedDocumentID = remainingDocuments[0].id
-        }
-
-        synchronizeAndRebuild()
-        bindSelectedStore()
+        documentCloseCoordinator.closeDocuments(documentIDs)
     }
 
     func closeAllDocuments() {
-        let replacement = makeDocument()
-        if let storeConfigurator {
-            storeConfigurator(replacement.readerStore)
-        }
-
-        documentList.replaceAll(with: [replacement])
-        selectedDocumentID = replacement.id
-        synchronizeAndRebuild()
-        bindSelectedStore()
+        documentCloseCoordinator.closeAllDocuments()
     }
 
     // MARK: - Document actions
@@ -328,29 +274,15 @@ final class ReaderSidebarDocumentController {
         }
     }
 
-    private func synchronizeAndRebuild() {
-        observationManager.synchronize(for: documents, onStoreChanged: makeStoreChangedHandler())
-        rowStateComputer.rebuildAllRowStates(from: documents)
-    }
-
-    private func makeStoreChangedHandler() -> @MainActor (UUID) -> Void {
-        return { [weak self] documentID in
-            guard let self else { return }
-            self.rowStateComputer.updateRowStateIfNeeded(for: documentID, in: self.documents)
-        }
-    }
-
 }
 
-// MARK: - FolderWatchSessionCoordinatorDelegate
+// MARK: - Delegate conformances
 
 extension ReaderSidebarDocumentController: FolderWatchSessionCoordinatorDelegate {
     func handleFolderWatchOpenRequest(_ request: FileOpenRequest) {
         fileOpenCoordinator.open(request)
     }
 }
-
-// MARK: - FileOpenPlanExecutorDelegate
 
 extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {
     func resolvedFolderWatchSession(
@@ -363,3 +295,5 @@ extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {
         )
     }
 }
+
+extension ReaderSidebarDocumentController: DocumentCloseCoordinatorDelegate {}
