@@ -362,4 +362,128 @@ final class ThemeDefinitionTests: XCTestCase {
             XCTAssertTrue(css.contains(expectedColors.foregroundHex), "CSS should contain foreground hex for \(kind)")
         }
     }
+
+    // MARK: - New Content Themes
+
+    func testGruvboxDarkThemeDefinition() {
+        let definition = ReaderThemeKind.gruvboxDark.themeDefinition
+        XCTAssertEqual(definition.displayName, "Gruvbox Dark")
+        XCTAssertTrue(definition.kind.isDark)
+        XCTAssertNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertFalse(definition.providesSyntaxHighlighting)
+        XCTAssertNil(definition.syntaxCSS)
+        XCTAssertNil(definition.syntaxPreviewPalette)
+    }
+
+    func testGruvboxDarkColors() {
+        let definition = ReaderThemeKind.gruvboxDark.themeDefinition
+        XCTAssertEqual(definition.colors.backgroundHex, "#282828")
+        XCTAssertEqual(definition.colors.foregroundHex, "#EBDBB2")
+        XCTAssertEqual(definition.colors.linkHex, "#FE8019")
+        XCTAssertEqual(definition.colors.h1Hex, "#FB4934")
+        XCTAssertEqual(definition.colors.h2Hex, "#B8BB26")
+        XCTAssertEqual(definition.colors.h3Hex, "#83A598")
+    }
+
+    func testGruvboxLightThemeDefinition() {
+        let definition = ReaderThemeKind.gruvboxLight.themeDefinition
+        XCTAssertEqual(definition.displayName, "Gruvbox Light")
+        XCTAssertFalse(definition.kind.isDark)
+        XCTAssertNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertFalse(definition.providesSyntaxHighlighting)
+        XCTAssertNil(definition.syntaxCSS)
+        XCTAssertNil(definition.syntaxPreviewPalette)
+    }
+
+    func testGruvboxLightColors() {
+        let definition = ReaderThemeKind.gruvboxLight.themeDefinition
+        XCTAssertEqual(definition.colors.backgroundHex, "#FBF1C7")
+        XCTAssertEqual(definition.colors.foregroundHex, "#3C3836")
+        XCTAssertEqual(definition.colors.linkHex, "#076678")
+        XCTAssertEqual(definition.colors.h1Hex, "#9D0006")
+        XCTAssertEqual(definition.colors.h2Hex, "#79740E")
+        XCTAssertEqual(definition.colors.h3Hex, "#076678")
+    }
+
+    func testDraculaThemeDefinition() {
+        let definition = ReaderThemeKind.dracula.themeDefinition
+        XCTAssertEqual(definition.displayName, "Dracula")
+        XCTAssertTrue(definition.kind.isDark)
+        XCTAssertNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertFalse(definition.providesSyntaxHighlighting)
+        XCTAssertNil(definition.syntaxCSS)
+        XCTAssertNil(definition.syntaxPreviewPalette)
+    }
+
+    func testDraculaColors() {
+        let definition = ReaderThemeKind.dracula.themeDefinition
+        XCTAssertEqual(definition.colors.backgroundHex, "#282A36")
+        XCTAssertEqual(definition.colors.foregroundHex, "#F8F8F2")
+        XCTAssertEqual(definition.colors.linkHex, "#8BE9FD")
+        XCTAssertEqual(definition.colors.h1Hex, "#FF79C6")
+        XCTAssertEqual(definition.colors.h2Hex, "#50FA7B")
+        XCTAssertEqual(definition.colors.h3Hex, "#8BE9FD")
+    }
+
+    func testMonokaiThemeDefinition() {
+        let definition = ReaderThemeKind.monokai.themeDefinition
+        XCTAssertEqual(definition.displayName, "Monokai")
+        XCTAssertTrue(definition.kind.isDark)
+        XCTAssertNil(definition.customCSS)
+        XCTAssertNil(definition.customJavaScript)
+        XCTAssertFalse(definition.providesSyntaxHighlighting)
+        XCTAssertNil(definition.syntaxCSS)
+        XCTAssertNil(definition.syntaxPreviewPalette)
+    }
+
+    func testMonokaiColors() {
+        let definition = ReaderThemeKind.monokai.themeDefinition
+        XCTAssertEqual(definition.colors.backgroundHex, "#272822")
+        XCTAssertEqual(definition.colors.foregroundHex, "#F8F8F2")
+        XCTAssertEqual(definition.colors.linkHex, "#A6E22E")
+        XCTAssertEqual(definition.colors.h1Hex, "#F92672")
+        XCTAssertEqual(definition.colors.h2Hex, "#A6E22E")
+        XCTAssertEqual(definition.colors.h3Hex, "#66D9EF")
+    }
+
+    func testNewThemesCSSContainsHeaderVariables() {
+        let factory = ReaderCSSFactory()
+        let newThemes: [ReaderThemeKind] = [.gruvboxDark, .gruvboxLight, .dracula, .monokai]
+        for kind in newThemes {
+            let theme = kind.themeDefinition
+            let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+            let colors = theme.colors
+            XCTAssertTrue(css.contains("--reader-h1: \(colors.h1Hex!)"), "Missing h1 variable for \(kind)")
+            XCTAssertTrue(css.contains("--reader-h2: \(colors.h2Hex!)"), "Missing h2 variable for \(kind)")
+            XCTAssertTrue(css.contains("--reader-h3: \(colors.h3Hex!)"), "Missing h3 variable for \(kind)")
+        }
+    }
+
+    func testNewThemesUseSelectedSyntaxTheme() {
+        let factory = ReaderCSSFactory()
+        let theme = ReaderThemeKind.gruvboxDark.themeDefinition
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
+        XCTAssertTrue(css.contains("#D73A49"), "Should contain GitHub keyword color from selected syntax theme")
+    }
+
+    func testSimpleThemesDoNotEmitHeaderVariables() {
+        let factory = ReaderCSSFactory()
+        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        XCTAssertFalse(css.contains("--reader-h1:"), "Simple themes should not emit h1 variable")
+        XCTAssertFalse(css.contains("--reader-h2:"), "Simple themes should not emit h2 variable")
+        XCTAssertFalse(css.contains("--reader-h3:"), "Simple themes should not emit h3 variable")
+    }
+
+    func testHeaderColorFallbackInCSS() {
+        let factory = ReaderCSSFactory()
+        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        XCTAssertTrue(css.contains("color: var(--reader-h1, var(--reader-fg))"), "h1 should fall back to foreground")
+        XCTAssertTrue(css.contains("color: var(--reader-h2, var(--reader-fg))"), "h2 should fall back to foreground")
+        XCTAssertTrue(css.contains("color: var(--reader-h3, var(--reader-fg))"), "h3 should fall back to foreground")
+    }
 }
