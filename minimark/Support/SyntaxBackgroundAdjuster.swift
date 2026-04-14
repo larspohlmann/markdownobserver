@@ -34,7 +34,7 @@ enum SyntaxBackgroundAdjuster {
         return palette.blockBackgroundHex
     }
 
-    /// Returns an adjusted hex colour string when the two backgrounds are
+    /// Returns an adjusted hex color string when the two backgrounds are
     /// too close, or `nil` when no adjustment is needed.
     static func adjustedBlockBackground(
         readerBackgroundHex: String,

@@ -57,6 +57,7 @@ struct ThemeSelectorView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            .accessibilityLabel("Background")
             .onChange(of: selectedBackgroundTab) { _, _ in
                 if !filteredReaderThemes.contains(stagedReaderTheme) {
                     stagedReaderTheme = filteredReaderThemes.first ?? stagedReaderTheme
