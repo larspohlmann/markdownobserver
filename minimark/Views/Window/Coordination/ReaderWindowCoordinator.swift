@@ -29,6 +29,37 @@ final class ReaderWindowCoordinator {
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private let folderWatchOpenCoordinator = ReaderFolderWatchOpenCoordinator()
 
+    // Window presentation state (will be migrated from view @State)
+    var hostWindow: NSWindow?
+    var hasCompletedWindowPhase = false
+    var hasOpenedInitialFile = false
+    var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
+    let dockTileWindowToken = UUID()
+    var hasAppliedUITestLaunchConfiguration = false
+    var uiTestWatchFlowTask: Task<Void, Never>?
+    var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+    var lastAppliedSidebarDelta: CGFloat = 0
+    var isTitlebarEditingFavorites = false
+    var isEditingSubfolders = false
+
+    // Controller references (set via configure())
+    private(set) var appearanceController: WindowAppearanceController?
+    private(set) var groupStateController: SidebarGroupStateController?
+    private(set) var favoriteWorkspaceController: FavoriteWorkspaceController?
+    private(set) var folderWatchFlowController: FolderWatchFlowController?
+
+    func configure(
+        appearanceController: WindowAppearanceController,
+        groupStateController: SidebarGroupStateController,
+        favoriteWorkspaceController: FavoriteWorkspaceController,
+        folderWatchFlowController: FolderWatchFlowController
+    ) {
+        self.appearanceController = appearanceController
+        self.groupStateController = groupStateController
+        self.favoriteWorkspaceController = favoriteWorkspaceController
+        self.folderWatchFlowController = folderWatchFlowController
+    }
+
     init(
         settingsStore: ReaderSettingsStore,
         sidebarDocumentController: ReaderSidebarDocumentController
