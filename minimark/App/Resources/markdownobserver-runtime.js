@@ -1661,6 +1661,15 @@
     }
   }
 
+  function markExplicitLanguages(root) {
+    var codes = root.querySelectorAll("pre > code");
+    for (var i = 0; i < codes.length; i += 1) {
+      if (/(?:^|\s)language-\S+/.test(codes[i].className || "")) {
+        codes[i].setAttribute("data-lang-explicit", "1");
+      }
+    }
+  }
+
   function runHighlighting() {
     try {
       if (!window.hljs || typeof window.hljs.highlightAll !== "function") return;
@@ -1842,7 +1851,17 @@
       var classes = code.className || "";
       var langMatch = classes.match(/(?:^|\s)language-(\S+)/);
       if (langMatch) {
-        language = langMatch[1];
+        if (code.hasAttribute("data-lang-explicit")) {
+          language = langMatch[1];
+        } else {
+          // Auto-detected by hljs — only show if relevance is high enough
+          // to filter out low-confidence guesses (e.g. "vbnet" for plain text).
+          var hljsResult = code.result;
+          var relevance = hljsResult ? hljsResult.relevance : 0;
+          if (relevance >= 25) {
+            language = langMatch[1];
+          }
+        }
       }
 
       var btn = document.createElement("button");
@@ -1948,6 +1967,7 @@
     var rawHTML = md.render(payload.markdown || "");
     var safeHTML = sanitizeRenderedHTML(rawHTML);
     root.innerHTML = safeHTML;
+    markExplicitLanguages(root);
     runHighlighting();
     annotateCodeBlockLines(root);
     addCodeBlockOverlays(root);
