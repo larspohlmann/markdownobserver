@@ -28,40 +28,27 @@ extension ReaderWindowRootView {
     }
 
     func handleFolderWatchAutoOpenWarningChange(_ warning: ReaderFolderWatchAutoOpenWarning?) {
-        folderWatchFlowController.warningCoordinator.handleWarningChange(warning) {
+        folderWatchFlowController.handleAutoOpenWarningChange(warning) { [self] in
             isFolderWatchWarningPresentationAllowed()
         }
     }
 
     func refreshFolderWatchAutoOpenWarningPresentation() {
-        let warning = sidebarDocumentController.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning
-        handleFolderWatchAutoOpenWarningChange(warning)
+        folderWatchFlowController.refreshAutoOpenWarningPresentation { [self] in
+            isFolderWatchWarningPresentationAllowed()
+        }
     }
 
     func dismissFolderWatchAutoOpenWarning() {
-        folderWatchFlowController.warningCoordinator.dismiss {
-            sidebarDocumentController.folderWatchCoordinator.dismissFolderWatchAutoOpenWarnings()
-        }
+        folderWatchFlowController.dismissAutoOpenWarning()
     }
 
     func openSelectedFolderWatchAutoOpenFiles() {
-        let selectedFileURLs = folderWatchFlowController.warningCoordinator.selectedFileURLs()
-        guard !selectedFileURLs.isEmpty else {
-            dismissFolderWatchAutoOpenWarning()
-            return
-        }
-
-        dismissFolderWatchAutoOpenWarning()
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: selectedFileURLs,
-            origin: .manual,
-            slotStrategy: .alwaysAppend
-        ))
+        folderWatchFlowController.openSelectedAutoOpenFiles(using: fileOpenCoordinator)
         refreshWindowPresentation()
     }
 
     func isFolderWatchWarningPresentationAllowed() -> Bool {
-        let targetWindow = windowCoordinator.hostWindow ?? NSApp.keyWindow
-        return !folderWatchFlowController.isFolderWatchOptionsPresented && targetWindow?.attachedSheet == nil
+        folderWatchFlowController.isWarningPresentationAllowed(hostWindow: windowCoordinator.hostWindow)
     }
 }
