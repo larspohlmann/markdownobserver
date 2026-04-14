@@ -94,11 +94,12 @@ struct FavoriteWorkspaceControllerTests {
     @Test @MainActor func matchingFavoriteFindsMatchByFolderPathAndOptions() {
         let controller = FavoriteWorkspaceController()
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder")
+        let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
         let options = ReaderFolderWatchOptions(
             openMode: .watchChangesOnly, scope: .selectedFolderOnly, excludedSubdirectoryPaths: []
         )
         let favorite = ReaderFavoriteWatchedFolder(
-            name: "Test", folderPath: folderURL.path, options: options, bookmarkData: nil, createdAt: .now
+            name: "Test", folderPath: normalizedPath, options: options, bookmarkData: nil, createdAt: .now
         )
         let result = controller.matchingFavorite(folderURL: folderURL, options: options, in: [favorite])
         #expect(result?.id == favorite.id)

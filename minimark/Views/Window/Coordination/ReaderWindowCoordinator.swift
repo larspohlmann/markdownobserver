@@ -980,32 +980,26 @@ final class ReaderWindowCoordinator {
         }
 
         let action = resolvedUITestLaunchAction()
-        guard case .none = action else {
-            switch action {
-            case .none:
-                hasAppliedUITestLaunchConfiguration = true
-            case .simulateGroupedSidebar:
-                startUITestGroupedSidebarFlow()
-                hasAppliedUITestLaunchConfiguration = true
-            case .simulateAutoOpenWatchFlow:
-                startUITestAutoOpenWatchFlow()
-                hasAppliedUITestLaunchConfiguration = true
-            case .presentWatchFolderSheet(let watchFolderURL):
-                applyScreenshotWindowSize()
-                var options = ReaderFolderWatchOptions.default
-                if ProcessInfo.processInfo.environment[
-                    ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
-                ] == "includeSubfolders" {
-                    options.scope = .includeSubfolders
-                }
-                presentFolderWatchOptions(for: watchFolderURL, options: options)
-                hasAppliedUITestLaunchConfiguration = true
-            case .startWatchingFolder(let watchFolderURL):
-                startWatchingFolder(folderURL: watchFolderURL, options: .default)
-                hasAppliedUITestLaunchConfiguration = true
+        switch action {
+        case .none:
+            break
+        case .simulateGroupedSidebar:
+            startUITestGroupedSidebarFlow()
+        case .simulateAutoOpenWatchFlow:
+            startUITestAutoOpenWatchFlow()
+        case .presentWatchFolderSheet(let watchFolderURL):
+            applyScreenshotWindowSize()
+            var options = ReaderFolderWatchOptions.default
+            if ProcessInfo.processInfo.environment[
+                ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
+            ] == "includeSubfolders" {
+                options.scope = .includeSubfolders
             }
-            return
+            presentFolderWatchOptions(for: watchFolderURL, options: options)
+        case .startWatchingFolder(let watchFolderURL):
+            startWatchingFolder(folderURL: watchFolderURL, options: .default)
         }
+        hasAppliedUITestLaunchConfiguration = true
     }
 
     private func resolvedUITestLaunchAction() -> ReaderWindowUITestLaunchAction {
