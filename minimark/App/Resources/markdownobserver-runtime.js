@@ -2047,7 +2047,10 @@
             pre.parentNode.replaceChild(container, pre);
             done();
           }).catch(function () {
-            // Leave the highlight.js-rendered <pre> in place
+            // Leave the highlight.js-rendered <pre> in place.
+            // Remove any error element Mermaid injected into the DOM.
+            var errEl = document.getElementById("d" + id);
+            if (errEl) { errEl.remove(); }
             done();
           });
         })(codeEls[i], i);
