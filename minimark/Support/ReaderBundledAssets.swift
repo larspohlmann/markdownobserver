@@ -7,6 +7,8 @@ struct ReaderRuntimeAssets: Equatable, Sendable {
     let footnoteScriptPath: String?
     let attrsScriptPath: String?
     let deflistScriptPath: String?
+    let calloutsScriptPath: String?
+    let calloutsCSSPath: String?
 }
 
 protocol ReaderRuntimeAssetResolving {
@@ -28,6 +30,8 @@ enum ReaderBundledAssets {
     static let footnoteScriptPath = "Contents/Resources/markdown-it-footnote.min.js"
     static let attrsScriptPath = "Contents/Resources/markdown-it-attrs.min.js"
     static let deflistScriptPath = "Contents/Resources/markdown-it-deflist.min.js"
+    static let calloutsScriptPath = "Contents/Resources/markdown-it-callouts.js"
+    static let calloutsCSSPath = "Contents/Resources/callout-blocks.css"
     static let mermaidScriptPath = "Contents/Resources/mermaid.min.js"
     static let mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css"
 
@@ -43,7 +47,9 @@ enum ReaderBundledAssets {
             taskListsScriptPath: availableTaskListsScriptPath(),
             footnoteScriptPath: availableFootnoteScriptPath(),
             attrsScriptPath: availableAttrsScriptPath(),
-            deflistScriptPath: availableDeflistScriptPath()
+            deflistScriptPath: availableDeflistScriptPath(),
+            calloutsScriptPath: availableCalloutsScriptPath(),
+            calloutsCSSPath: availableCalloutsCSSPath()
         )
     }
 
@@ -69,6 +75,15 @@ enum ReaderBundledAssets {
 
     static func availableDeflistScriptPath() -> String? {
         availableScriptPath(deflistScriptPath)
+    }
+
+    static func availableCalloutsScriptPath() -> String? {
+        availableScriptPath(calloutsScriptPath)
+    }
+
+    static func availableCalloutsCSSPath() -> String? {
+        let fileURL = Bundle.main.bundleURL.appendingPathComponent(calloutsCSSPath)
+        return FileManager.default.fileExists(atPath: fileURL.path) ? calloutsCSSPath : nil
     }
 
     private static func availableScriptPath(_ path: String) -> String? {

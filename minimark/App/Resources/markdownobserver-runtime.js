@@ -143,6 +143,7 @@
     registerPlugin(md, window.markdownitFootnote);
     registerPlugin(md, window.markdownitDeflist);
     registerPlugin(md, window.markdownItAttrs);
+    registerPlugin(md, window.markdownitCallouts);
   }
 
   function installHeadingIDs(md) {

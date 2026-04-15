@@ -23,6 +23,7 @@ struct ReaderCSSFactory {
         let cssBase64 = Data(css.utf8).base64EncodedString()
         let themeJSBase64 = themeJavaScript.map { Data($0.utf8).base64EncodedString() }
         let runtimeScripts = makeRuntimeScripts(runtimeAssets: runtimeAssets)
+        let runtimeCSSLinks = makeRuntimeCSSLinks(runtimeAssets: runtimeAssets)
         let mathRuntimeScripts = makeMathRuntimeScripts()
         let bootstrapRuntime = makeBootstrapRuntime(
             payloadBase64: payloadBase64,
@@ -43,6 +44,7 @@ struct ReaderCSSFactory {
           \(css)
           </style>
           \(runtimeScripts)
+          \(runtimeCSSLinks)
           \(mathRuntimeScripts)
         </head>
         <body>
@@ -63,7 +65,8 @@ struct ReaderCSSFactory {
         runtimeAssets.taskListsScriptPath,
         runtimeAssets.footnoteScriptPath,
         runtimeAssets.attrsScriptPath,
-        runtimeAssets.deflistScriptPath
+        runtimeAssets.deflistScriptPath,
+        runtimeAssets.calloutsScriptPath
       ].compactMap { $0 })
 
       if let highlightScriptPath = runtimeAssets.highlightScriptPath {
@@ -78,6 +81,15 @@ struct ReaderCSSFactory {
     private func makeScriptTag(for path: String) -> String {
       let escapedPath = path.replacingOccurrences(of: "\"", with: "&quot;")
       return "<script src=\"\(escapedPath)\"></script>"
+    }
+
+    private func makeCSSLinkTag(for path: String) -> String {
+      let escapedPath = path.replacingOccurrences(of: "\"", with: "&quot;")
+      return "<link rel=\"stylesheet\" href=\"\(escapedPath)\" />"
+    }
+
+    private func makeRuntimeCSSLinks(runtimeAssets: ReaderRuntimeAssets) -> String {
+      [runtimeAssets.calloutsCSSPath].compactMap { $0 }.map(makeCSSLinkTag).joined(separator: "\n")
     }
 
     private func makeMathRuntimeScripts() -> String {
