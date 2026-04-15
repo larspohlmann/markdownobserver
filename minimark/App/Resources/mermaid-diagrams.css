@@ -1,0 +1,14 @@
+.mermaid-diagram {
+  background: var(--reader-syntax-bg);
+  border: 1px solid var(--reader-syntax-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 1em 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}

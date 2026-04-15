@@ -28,7 +28,7 @@ enum ReaderBundledAssets {
     static let footnoteScriptPath = "Contents/Resources/markdown-it-footnote.min.js"
     static let attrsScriptPath = "Contents/Resources/markdown-it-attrs.min.js"
     static let deflistScriptPath = "Contents/Resources/markdown-it-deflist.min.js"
-    static let mermaidScriptPath = "Contents/Resources/Vendor/mermaid/mermaid.min.js"
+    static let mermaidScriptPath = "Contents/Resources/mermaid.min.js"
     static let mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css"
 
     static func requiredRuntimeAssets() throws -> ReaderRuntimeAssets {
