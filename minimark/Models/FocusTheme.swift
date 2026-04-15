@@ -13,6 +13,6 @@ enum FocusTheme {
     )
 
     static var customCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-focus")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-focus")
     }
 }

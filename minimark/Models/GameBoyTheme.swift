@@ -13,11 +13,11 @@ enum GameBoyTheme {
     )
 
     static var customCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-gameboy")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-gameboy")
     }
 
     static var syntaxCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-gameboy-syntax")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-gameboy-syntax")
     }
 
     static let previewPalette = SyntaxThemePreviewPalette(

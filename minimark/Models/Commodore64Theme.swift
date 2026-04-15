@@ -13,11 +13,11 @@ enum Commodore64Theme {
     )
 
     static var customCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-commodore64")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-commodore64")
     }
 
     static var syntaxCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-commodore64-syntax")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-commodore64-syntax")
     }
 
     static let previewPalette = SyntaxThemePreviewPalette(

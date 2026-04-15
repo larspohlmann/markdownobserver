@@ -9,7 +9,7 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
     private static let tocMessageName = "minimarkTOC"
-    private static let scrollSyncObserverScript = ReaderJavaScriptLoader.scrollSyncObserverJavaScript
+    private static let scrollSyncObserverScript = ReaderBundledAssetLoader.scrollSyncObserverJavaScript
 
     let htmlDocument: String
     let documentIdentity: String?

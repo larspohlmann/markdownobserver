@@ -1,6 +1,12 @@
 import Foundation
+import os
 
-enum ReaderJavaScriptLoader {
+enum ReaderBundledAssetLoader {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "BundledAssetLoader"
+    )
+
     private static var bundledJSCache: [String: String] = [:]
     private static var bundledCSSCache: [String: String] = [:]
 
@@ -11,6 +17,7 @@ enum ReaderJavaScriptLoader {
 
         guard let url = Bundle.main.url(forResource: name, withExtension: "js"),
               let contents = try? String(contentsOf: url, encoding: .utf8) else {
+            logger.error("Failed to load bundled JS resource: \(name, privacy: .public).js")
             #if DEBUG
             assertionFailure("Failed to load bundled JS resource named '\(name).js' from main bundle.")
             #endif
@@ -30,6 +37,7 @@ enum ReaderJavaScriptLoader {
 
         guard let url = Bundle.main.url(forResource: name, withExtension: "css"),
               let contents = try? String(contentsOf: url, encoding: .utf8) else {
+            logger.error("Failed to load bundled CSS resource: \(name, privacy: .public).css")
             #if DEBUG
             assertionFailure("Failed to load bundled CSS resource named '\(name).css' from main bundle.")
             #endif

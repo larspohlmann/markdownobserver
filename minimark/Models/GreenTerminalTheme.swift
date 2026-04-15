@@ -24,11 +24,11 @@ enum GreenTerminalTheme {
     )
 
     static var customCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-green-terminal")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-green-terminal")
     }
 
     static var syntaxCSS: String {
-        ReaderJavaScriptLoader.loadBundledCSS(named: "theme-green-terminal-syntax")
+        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-green-terminal-syntax")
     }
 
     static let previewPalette: SyntaxThemePreviewPalette = SyntaxThemePreviewPalette(
@@ -46,6 +46,6 @@ enum GreenTerminalTheme {
     // MARK: - Digital Rain Animation
 
     static var digitalRainJavaScript: String {
-        ReaderJavaScriptLoader.loadBundledJS(named: "theme-green-terminal-rain")
+        ReaderBundledAssetLoader.loadBundledJS(named: "theme-green-terminal-rain")
     }
 }
