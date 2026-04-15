@@ -7,7 +7,7 @@ final class ReaderFolderWatchAutoOpenWarningCoordinator {
     var activeFlow: FolderWatchAutoOpenWarningFlow?
 
     private var queuedWarning: ReaderFolderWatchAutoOpenWarning?
-    private nonisolated(unsafe) var presentationTask: Task<Void, Never>?
+    @ObservationIgnored private nonisolated(unsafe) var presentationTask: Task<Void, Never>?
 
     deinit {
         presentationTask?.cancel()

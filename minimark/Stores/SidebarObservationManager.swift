@@ -108,16 +108,16 @@ final class SidebarObservationManager {
     }
 
     private final class ObservationContinuationBox: @unchecked Sendable {
-        private var continuation: UnsafeContinuation<Bool, Never>?
-        private let lock = NSLock()
+        private nonisolated(unsafe) var continuation: UnsafeContinuation<Bool, Never>?
+        private nonisolated let lock = NSLock()
 
-        func store(_ continuation: UnsafeContinuation<Bool, Never>) {
+        nonisolated func store(_ continuation: UnsafeContinuation<Bool, Never>) {
             lock.lock()
             self.continuation = continuation
             lock.unlock()
         }
 
-        func resume(returning value: Bool) {
+        nonisolated func resume(returning value: Bool) {
             lock.lock()
             let c = continuation
             continuation = nil

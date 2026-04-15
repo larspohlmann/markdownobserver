@@ -13,7 +13,7 @@ protocol FolderChangeWatching: AnyObject, Sendable {
 
     func stopWatching()
 
-    func markdownFiles(
+    nonisolated func markdownFiles(
         in folderURL: URL,
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
