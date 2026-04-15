@@ -31,20 +31,6 @@
   -webkit-mask-position: center;
 }
 
-/* ── Body text ──────────────────────────────────────────────────────── */
-
-.markdown-body blockquote.callout .callout-body {
-  color: var(--reader-blockquote-fg);
-}
-
-.markdown-body blockquote.callout .callout-body > :first-child {
-  margin-top: 0;
-}
-
-.markdown-body blockquote.callout .callout-body > :last-child {
-  margin-bottom: 0;
-}
-
 /* ── Note (blue) ────────────────────────────────────────────────────── */
 
 .markdown-body blockquote.callout.callout-note {

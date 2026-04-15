@@ -91,6 +91,19 @@
   }
 
   /**
+   * Join a value onto a token's attribute, appending with a space if it
+   * already exists (like classList.add). Creates the attribute when absent.
+   */
+  function attrJoin(token, name, value) {
+    var idx = token.attrIndex(name);
+    if (idx < 0) {
+      token.attrPush([name, value]);
+    } else {
+      token.attrs[idx][1] = token.attrs[idx][1] + " " + value;
+    }
+  }
+
+  /**
    * Set an attribute on a token, creating or updating as needed.
    */
   function setAttr(token, name, value) {
@@ -206,8 +219,9 @@
 
       typeInfo = CALLOUT_TYPES[calloutInfo.type];
 
-      // Add class and data-callout attributes to the blockquote
-      setAttr(tokens[bqIdx], "class", "callout callout-" + typeInfo.cssClass);
+      // Add class and data-callout attributes to the blockquote.
+      // Use attrJoin for class to preserve any existing classes (e.g. from markdown-it-attrs).
+      attrJoin(tokens[bqIdx], "class", "callout callout-" + typeInfo.cssClass);
       setAttr(tokens[bqIdx], "data-callout", typeInfo.cssClass);
 
       // Transform the inline content to show the title
