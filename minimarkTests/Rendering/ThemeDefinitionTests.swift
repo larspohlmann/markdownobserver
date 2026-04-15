@@ -151,7 +151,9 @@ final class ThemeDefinitionTests: XCTestCase {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             ),
             themeJavaScript: "console.log('theme loaded');"
         )
@@ -170,7 +172,9 @@ final class ThemeDefinitionTests: XCTestCase {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
         XCTAssertFalse(html.contains("minimark-runtime-theme-js-base64"), "Should not include theme JS meta tag")

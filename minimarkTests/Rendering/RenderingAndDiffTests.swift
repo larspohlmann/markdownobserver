@@ -73,7 +73,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
@@ -158,7 +160,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
@@ -179,7 +183,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
@@ -201,7 +207,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
@@ -220,7 +228,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
@@ -240,7 +250,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
@@ -425,7 +437,9 @@ struct RenderingAndDiffTests {
                 taskListsScriptPath: nil,
                 footnoteScriptPath: nil,
                 attrsScriptPath: nil,
-                deflistScriptPath: nil
+                deflistScriptPath: nil,
+                calloutsScriptPath: nil,
+                calloutsCSSPath: nil
             )
         )
 
