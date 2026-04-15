@@ -224,6 +224,7 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
     case markdownItTaskLists
     case differ
     case highlightJS
+    case mermaidJS
 
     var id: String {
         rawValue
@@ -247,6 +248,8 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return "Differ (Swift package)"
         case .highlightJS:
             return "highlight.js"
+        case .mermaidJS:
+            return "Mermaid"
         }
     }
 
@@ -268,6 +271,8 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return "MIT"
         case .highlightJS:
             return "BSD 3-Clause"
+        case .mermaidJS:
+            return "MIT"
         }
     }
 
@@ -289,6 +294,8 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return URL(string: "https://github.com/tonyarnold/Differ")!
         case .highlightJS:
             return URL(string: "https://github.com/highlightjs/highlight.js")!
+        case .mermaidJS:
+            return URL(string: "https://github.com/mermaid-js/mermaid")!
         }
     }
 }

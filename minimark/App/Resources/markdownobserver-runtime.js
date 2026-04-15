@@ -1951,6 +1951,122 @@
     }, 1600);
   }
 
+  // ---------------------------------------------------------------------------
+  // Mermaid diagram rendering
+  // ---------------------------------------------------------------------------
+
+  var mermaidScriptPath = "Contents/Resources/mermaid.min.js";
+  var mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css";
+  var mermaidLoadPromise = null;
+  var mermaidLastThemeKey = null;
+
+  function getMermaidThemeVariables() {
+    var style = getComputedStyle(document.documentElement);
+    var v = function (name) { return style.getPropertyValue(name).trim(); };
+    return {
+      background: v("--reader-syntax-bg"),
+      mainBkg: v("--reader-syntax-bg"),
+      primaryTextColor: v("--reader-syntax-text"),
+      noteTextColor: v("--reader-syntax-text"),
+      primaryBorderColor: v("--reader-syntax-border"),
+      noteBorderColor: v("--reader-syntax-border"),
+      primaryColor: v("--reader-syntax-keyword"),
+      secondaryColor: v("--reader-syntax-string"),
+      tertiaryColor: v("--reader-syntax-title"),
+      lineColor: v("--reader-syntax-builtin"),
+      secondaryTextColor: v("--reader-syntax-comment"),
+      tertiaryTextColor: v("--reader-syntax-number"),
+      tertiaryBorderColor: v("--reader-syntax-number")
+    };
+  }
+
+  function loadMermaidCSS() {
+    if (document.getElementById("minimark-mermaid-css")) { return; }
+    var link = document.createElement("link");
+    link.id = "minimark-mermaid-css";
+    link.rel = "stylesheet";
+    link.href = mermaidCSSPath;
+    document.head.appendChild(link);
+  }
+
+  function loadMermaidScript() {
+    if (mermaidLoadPromise) { return mermaidLoadPromise; }
+    if (window.mermaid) { return Promise.resolve(); }
+    mermaidLoadPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = mermaidScriptPath;
+      script.onload = function () { resolve(); };
+      script.onerror = function () {
+        mermaidLoadPromise = null;
+        reject(new Error("Failed to load mermaid.min.js"));
+      };
+      document.head.appendChild(script);
+    });
+    return mermaidLoadPromise;
+  }
+
+  function initializeMermaidIfNeeded() {
+    var vars = getMermaidThemeVariables();
+    var key = JSON.stringify(vars);
+    if (key === mermaidLastThemeKey) { return; }
+    mermaidLastThemeKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: "base",
+      themeVariables: vars
+    });
+  }
+
+  function renderMermaidDiagrams(root, completion) {
+    var codeEls = root.querySelectorAll('pre > code.language-mermaid');
+    if (codeEls.length === 0) { completion(); return; }
+
+    loadMermaidCSS();
+
+    loadMermaidScript().then(function () {
+      initializeMermaidIfNeeded();
+
+      var pending = codeEls.length;
+      function done() {
+        pending -= 1;
+        if (pending <= 0) { completion(); }
+      }
+
+      for (var i = 0; i < codeEls.length; i += 1) {
+        (function (codeEl, idx) {
+          var pre = codeEl.parentElement;
+          if (!pre) { done(); return; }
+
+          var source = codeEl.textContent || "";
+          var id = "mermaid-diagram-" + idx + "-" + Date.now();
+
+          window.mermaid.render(id, source).then(function (result) {
+            try {
+              var container = document.createElement("div");
+              container.className = "mermaid-diagram";
+              container.innerHTML = result.svg;
+              if (pre.isConnected && pre.parentNode) {
+                pre.parentNode.replaceChild(container, pre);
+              }
+            } finally {
+              done();
+            }
+          }).catch(function () {
+            // Leave the highlight.js-rendered <pre> in place.
+            // Remove any error element Mermaid injected into the DOM.
+            var errEl = document.getElementById("d" + id);
+            if (errEl) { errEl.remove(); }
+            done();
+          });
+        })(codeEls[i], i);
+      }
+    }).catch(function () {
+      // Mermaid script failed to load — leave all blocks as-is
+      completion();
+    });
+  }
+
   function renderMarkdown(scrollAnchorProgress) {
     var root = document.getElementById("reader-root");
     var gutter = document.getElementById("reader-change-gutter");
@@ -1971,21 +2087,23 @@
     runHighlighting();
     annotateCodeBlockLines(root);
     addCodeBlockOverlays(root);
-    typesetMath(root, function () {
-      renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
-      renderChangedRegionGutter(root, gutter, payload.changedRegions || []);
-      applyScrollProgress(scrollAnchorProgress);
+    renderMermaidDiagrams(root, function () {
+      typesetMath(root, function () {
+        renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
+        renderChangedRegionGutter(root, gutter, payload.changedRegions || []);
+        applyScrollProgress(scrollAnchorProgress);
 
-      // Auto-expand the first edited gutter pill (screenshot automation)
-      var autoExpandMeta = document.querySelector('meta[name="minimark-auto-expand-first-edit"]');
-      if (autoExpandMeta && autoExpandMeta.getAttribute("content") === "true") {
-        var editedButton = gutter.querySelector(".reader-gutter-row-edited");
-        if (editedButton) {
-          editedButton.click();
-          autoExpandMeta.setAttribute("content", "done");
+        // Auto-expand the first edited gutter pill (screenshot automation)
+        var autoExpandMeta = document.querySelector('meta[name="minimark-auto-expand-first-edit"]');
+        if (autoExpandMeta && autoExpandMeta.getAttribute("content") === "true") {
+          var editedButton = gutter.querySelector(".reader-gutter-row-edited");
+          if (editedButton) {
+            editedButton.click();
+            autoExpandMeta.setAttribute("content", "done");
+          }
         }
-      }
-      extractHeadings();
+        extractHeadings();
+      });
     });
   }
 
