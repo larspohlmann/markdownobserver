@@ -1,0 +1,30 @@
+/* ── Green Terminal Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #00FF41;
+    --reader-syntax-keyword: #00FF41;
+    --reader-blockquote-accent: #008F11;
+    --reader-blockquote-bg: rgba(0, 255, 65, 0.06);
+    --reader-blockquote-fg: #008F11;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #00FF41;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment { color: #2E7D32; font-style: italic; }
+pre code .hljs-keyword { color: #00FF41; }
+pre code .hljs-string  { color: #41FF7F; }
+pre code .hljs-number  { color: #76FF03; }
+pre code .hljs-title   { color: #69F0AE; }
+pre code .hljs-built_in { color: #00E676; }
