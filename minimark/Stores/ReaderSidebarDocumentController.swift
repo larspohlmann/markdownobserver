@@ -7,7 +7,7 @@ final class ReaderSidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
         let readerStore: ReaderStore
-        internal(set) var normalizedFileURL: URL?
+        var normalizedFileURL: URL?
 
         static func == (lhs: Document, rhs: Document) -> Bool {
             lhs.id == rhs.id

@@ -13,12 +13,12 @@ final class WindowAppearanceController {
     var effectiveFontSize: Double { effectiveAppearance.baseFontSize }
     var effectiveSyntaxTheme: SyntaxThemeKind { effectiveAppearance.syntaxTheme }
 
-    private static let _lockedWindowCount = Mutex(0)
+    nonisolated private static let _lockedWindowCount = Mutex(0)
     static var lockedWindowCount: Int { _lockedWindowCount.withLock { $0 } }
 
     /// Tracks whether this instance contributed to `_lockedWindowCount`.
     /// Must be `nonisolated(unsafe)` so `deinit` (which is nonisolated) can read it.
-    private nonisolated(unsafe) var _isLockedForDeinit = false
+    @ObservationIgnored private nonisolated(unsafe) var _isLockedForDeinit = false
 
     private let settingsStore: ReaderSettingsReading
     private var cancellable: AnyCancellable?

@@ -269,7 +269,8 @@ final class ReaderFolderWatchController {
 
         if includeSubfolders {
             Task.detached(priority: .utility) {
-                let urls = (try? folderWatcher.markdownFiles(
+                let urls = (try? Self.scanMarkdownFiles(
+                    using: folderWatcher,
                     in: folderURL,
                     includeSubfolders: true,
                     excludedSubdirectoryURLs: excludedURLs
@@ -357,7 +358,8 @@ final class ReaderFolderWatchController {
         initialMarkdownScanTask = Task.detached(priority: .utility) { [weak self] in
             let markdownScanResult: Result<[URL], Error>
             do {
-                let markdownURLs = try folderWatcher.markdownFiles(
+                let markdownURLs = try Self.scanMarkdownFiles(
+                    using: folderWatcher,
                     in: folderURL,
                     includeSubfolders: includeSubfolders,
                     excludedSubdirectoryURLs: excludedSubdirectoryURLs
@@ -458,5 +460,18 @@ final class ReaderFolderWatchController {
         }
         .sorted { $0.modDate > $1.modDate }
         .map(\.url)
+    }
+
+    nonisolated private static func scanMarkdownFiles(
+        using watcher: FolderChangeWatching,
+        in folderURL: URL,
+        includeSubfolders: Bool,
+        excludedSubdirectoryURLs: [URL]
+    ) throws -> [URL] {
+        try watcher.markdownFiles(
+            in: folderURL,
+            includeSubfolders: includeSubfolders,
+            excludedSubdirectoryURLs: excludedSubdirectoryURLs
+        )
     }
 }
