@@ -2012,6 +2012,7 @@
     mermaidLastThemeKey = key;
     window.mermaid.initialize({
       startOnLoad: false,
+      securityLevel: "strict",
       theme: "base",
       themeVariables: vars
     });
@@ -2041,11 +2042,16 @@
           var id = "mermaid-diagram-" + idx + "-" + Date.now();
 
           window.mermaid.render(id, source).then(function (result) {
-            var container = document.createElement("div");
-            container.className = "mermaid-diagram";
-            container.innerHTML = result.svg;
-            pre.parentNode.replaceChild(container, pre);
-            done();
+            try {
+              var container = document.createElement("div");
+              container.className = "mermaid-diagram";
+              container.innerHTML = result.svg;
+              if (pre.isConnected && pre.parentNode) {
+                pre.parentNode.replaceChild(container, pre);
+              }
+            } finally {
+              done();
+            }
           }).catch(function () {
             // Leave the highlight.js-rendered <pre> in place.
             // Remove any error element Mermaid injected into the DOM.
