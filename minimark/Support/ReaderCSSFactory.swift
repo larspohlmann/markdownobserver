@@ -51,7 +51,7 @@ struct ReaderCSSFactory {
               <div id="reader-change-gutter" class="reader-change-gutter" role="navigation" aria-label="Changed regions"></div>
             </div>
           \(bootstrapRuntime)
-          \(themeJSBase64 != nil ? ReaderJavaScriptLoader.themeJSBootstrapScript : "")
+          \(themeJSBase64 != nil ? ReaderBundledAssetLoader.themeJSBootstrapScript : "")
         </body>
         </html>
         """
@@ -105,9 +105,9 @@ struct ReaderCSSFactory {
         let escapedPayload = payloadBase64.replacingOccurrences(of: "\"", with: "\\\"")
         let escapedCSS = cssBase64.replacingOccurrences(of: "\"", with: "\\\"")
 
-        let inlineDiffJS = ReaderJavaScriptLoader.loadBundledJS(named: "markdownobserver-inline-diff")
+        let inlineDiffJS = ReaderBundledAssetLoader.loadBundledJS(named: "markdownobserver-inline-diff")
         let defaultInset = "\(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))"
-        let runtimeJS = ReaderJavaScriptLoader.loadBundledJS(named: "markdownobserver-runtime")
+        let runtimeJS = ReaderBundledAssetLoader.loadBundledJS(named: "markdownobserver-runtime")
             .replacingOccurrences(of: "__MINIMARK_PAYLOAD_BASE64__", with: escapedPayload)
             .replacingOccurrences(of: "__MINIMARK_CSS_BASE64__", with: escapedCSS)
             .replacingOccurrences(of: "__MINIMARK_OVERLAY_TOP_INSET__", with: defaultInset)

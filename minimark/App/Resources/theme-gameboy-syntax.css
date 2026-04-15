@@ -1,0 +1,31 @@
+/* ── Game Boy Syntax Highlighting (4-shade palette) ── */
+
+:root {
+    --reader-mark-signal: #0F380F;
+    --reader-syntax-keyword: #0F380F;
+    --reader-blockquote-accent: #306230;
+    --reader-blockquote-bg: rgba(15, 56, 15, 0.08);
+    --reader-blockquote-fg: #306230;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 2px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #0F380F;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+/* Only 4 shades available — use weight and style to differentiate */
+pre code .hljs-comment { color: #306230; font-style: italic; }
+pre code .hljs-keyword { color: #0F380F; font-weight: bold; }
+pre code .hljs-string  { color: #306230; }
+pre code .hljs-number  { color: #0F380F; }
+pre code .hljs-title   { color: #0F380F; font-weight: bold; }
+pre code .hljs-built_in { color: #306230; font-weight: bold; }

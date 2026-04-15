@@ -30,7 +30,7 @@ struct RenderingAndDiffTests {
             Issue.record("JavaScript exception: \(message)")
         }
 
-        context.evaluateScript(ReaderJavaScriptLoader.inlineDiffRuntimeJavaScript)
+        context.evaluateScript(ReaderBundledAssetLoader.inlineDiffRuntimeJavaScript)
         context.setObject(previous, forKeyedSubscript: "__previous" as NSString)
         context.setObject(current, forKeyedSubscript: "__current" as NSString)
 
@@ -103,7 +103,7 @@ struct RenderingAndDiffTests {
             };
             """
         )
-        context.evaluateScript(ReaderJavaScriptLoader.inlineDiffRuntimeJavaScript)
+        context.evaluateScript(ReaderBundledAssetLoader.inlineDiffRuntimeJavaScript)
         context.evaluateScript(functionSource)
         context.setObject(previous, forKeyedSubscript: "__previous" as NSString)
         context.setObject(current, forKeyedSubscript: "__current" as NSString)
