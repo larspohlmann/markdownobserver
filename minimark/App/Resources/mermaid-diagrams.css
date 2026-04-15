@@ -12,3 +12,11 @@
   max-width: 100%;
   height: auto;
 }
+
+.mermaid-diagram text {
+  fill: var(--reader-syntax-text) !important;
+}
+
+.mermaid-diagram foreignObject * {
+  color: var(--reader-syntax-text) !important;
+}
