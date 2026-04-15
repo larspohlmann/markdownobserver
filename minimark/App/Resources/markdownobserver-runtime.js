@@ -1957,7 +1957,8 @@
 
   var mermaidScriptPath = "Contents/Resources/mermaid.min.js";
   var mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css";
-  var mermaidIdCounter = 0;
+  var mermaidLoadPromise = null;
+  var mermaidLastThemeKey = null;
 
   function getMermaidThemeVariables() {
     var style = getComputedStyle(document.documentElement);
@@ -1989,13 +1990,30 @@
   }
 
   function loadMermaidScript() {
-    return new Promise(function (resolve, reject) {
-      if (window.mermaid) { resolve(); return; }
+    if (mermaidLoadPromise) { return mermaidLoadPromise; }
+    if (window.mermaid) { return Promise.resolve(); }
+    mermaidLoadPromise = new Promise(function (resolve, reject) {
       var script = document.createElement("script");
       script.src = mermaidScriptPath;
       script.onload = function () { resolve(); };
-      script.onerror = function () { reject(new Error("Failed to load mermaid.min.js")); };
+      script.onerror = function () {
+        mermaidLoadPromise = null;
+        reject(new Error("Failed to load mermaid.min.js"));
+      };
       document.head.appendChild(script);
+    });
+    return mermaidLoadPromise;
+  }
+
+  function initializeMermaidIfNeeded() {
+    var vars = getMermaidThemeVariables();
+    var key = JSON.stringify(vars);
+    if (key === mermaidLastThemeKey) { return; }
+    mermaidLastThemeKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: "base",
+      themeVariables: vars
     });
   }
 
@@ -2006,11 +2024,7 @@
     loadMermaidCSS();
 
     loadMermaidScript().then(function () {
-      window.mermaid.initialize({
-        startOnLoad: false,
-        theme: "base",
-        themeVariables: getMermaidThemeVariables()
-      });
+      initializeMermaidIfNeeded();
 
       var pending = codeEls.length;
       function done() {
@@ -2019,12 +2033,12 @@
       }
 
       for (var i = 0; i < codeEls.length; i += 1) {
-        (function (codeEl) {
+        (function (codeEl, idx) {
           var pre = codeEl.parentElement;
           if (!pre) { done(); return; }
 
           var source = codeEl.textContent || "";
-          var id = "mermaid-diagram-" + (mermaidIdCounter++);
+          var id = "mermaid-diagram-" + idx + "-" + Date.now();
 
           window.mermaid.render(id, source).then(function (result) {
             var container = document.createElement("div");
@@ -2036,7 +2050,7 @@
             // Leave the highlight.js-rendered <pre> in place
             done();
           });
-        })(codeEls[i]);
+        })(codeEls[i], i);
       }
     }).catch(function () {
       // Mermaid script failed to load — leave all blocks as-is

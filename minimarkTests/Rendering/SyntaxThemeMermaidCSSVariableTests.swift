@@ -4,6 +4,7 @@ import Testing
 @Suite
 struct SyntaxThemeMermaidCSSVariableTests {
     private let requiredVariables = [
+        "--reader-syntax-keyword",
         "--reader-syntax-text",
         "--reader-syntax-bg",
         "--reader-syntax-border",
