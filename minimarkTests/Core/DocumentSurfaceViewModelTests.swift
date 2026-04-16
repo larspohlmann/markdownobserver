@@ -99,6 +99,14 @@ struct DocumentSurfaceViewModelModeTests {
         #expect(vm.previewReloadToken == 0)
     }
 
+    @Test @MainActor func handleSurfaceAppear_doesNotRestoreSourceWhenContentEmpty() {
+        let vm = makeViewModel(renderedHTMLDocument: "<html></html>", sourceMarkdown: "")
+        vm.sourceMode = .plainTextFallback
+        vm.handleSurfaceAppear()
+        #expect(vm.sourceMode == .plainTextFallback)
+        #expect(vm.sourceReloadToken == 0)
+    }
+
     @Test @MainActor func handleSurfaceAppear_restoresSourceToWebWhenContentAvailable() {
         let vm = makeViewModel(renderedHTMLDocument: "<html></html>", sourceMarkdown: "hello")
         vm.sourceMode = .plainTextFallback
@@ -124,6 +132,16 @@ struct DocumentSurfaceViewModelModeTests {
             update: DropTargetingUpdate(isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true)
         )
         vm.handlePreviewModeChange(.web)
+        #expect(vm.dropTargeting.isDragTargeted)
+    }
+
+    @Test @MainActor func handleSourceModeChangeOnWeb_doesNothing() {
+        let vm = makeViewModel()
+        vm.dropTargeting.update(
+            for: .source,
+            update: DropTargetingUpdate(isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true)
+        )
+        vm.handleSourceModeChange(.web)
         #expect(vm.dropTargeting.isDragTargeted)
     }
 
