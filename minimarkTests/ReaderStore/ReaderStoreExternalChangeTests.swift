@@ -78,7 +78,7 @@ struct ReaderStoreExternalChangeTests {
         let folderURL = fixture.temporaryDirectoryURL
         let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
@@ -98,7 +98,7 @@ struct ReaderStoreExternalChangeTests {
         let folderURL = fixture.temporaryDirectoryURL
         let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(
             at: fixture.primaryFileURL,
@@ -122,7 +122,7 @@ struct ReaderStoreExternalChangeTests {
         let folderURL = fixture.temporaryDirectoryURL
         let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
@@ -632,7 +632,7 @@ struct ReaderStoreExternalChangeTests {
             options: .default,
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(
             at: fixture.primaryFileURL,
@@ -653,7 +653,7 @@ struct ReaderStoreExternalChangeTests {
             options: .default,
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
         fixture.store.openFile(
             at: fixture.primaryFileURL,
             origin: .manual,
@@ -682,7 +682,7 @@ struct ReaderStoreExternalChangeTests {
             options: .default,
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
         fixture.store.openFile(
             at: fixture.primaryFileURL,
             origin: .manual,
@@ -706,7 +706,7 @@ struct ReaderStoreExternalChangeTests {
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         let fourthFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("fourth.md")
         fixture.write(content: "# Fourth", to: fourthFileURL)
@@ -741,7 +741,7 @@ struct ReaderStoreExternalChangeTests {
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         let createdFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("created.md")
         fixture.write(content: "", to: createdFileURL)
@@ -771,7 +771,7 @@ struct ReaderStoreExternalChangeTests {
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         let changedFileURL = fixture.secondaryFileURL
         var capturedEvent: ReaderFolderWatchChangeEvent?
@@ -802,7 +802,7 @@ struct ReaderStoreExternalChangeTests {
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
         let fileURLs = (0..<(autoOpenLimit + 2)).map { index in

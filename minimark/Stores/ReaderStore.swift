@@ -147,10 +147,6 @@ final class ReaderStore {
         folderWatchDispatcher.setStateCallbacks(onStarted: onStarted, onStopped: onStopped)
     }
 
-    func setActiveFolderWatchSession(_ session: ReaderFolderWatchSession?) {
-        folderWatchDispatcher.setSession(session)
-    }
-
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
         externalChange.noteObservedExternalChange(kind: kind)
     }

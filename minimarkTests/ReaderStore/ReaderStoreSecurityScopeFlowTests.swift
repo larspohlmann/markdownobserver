@@ -47,7 +47,7 @@ struct ReaderStoreSecurityScopeFlowTests {
         let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
 
         fixture.settings.addRecentWatchedFolder(folderURL, options: options)
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         resolver.context.folderToken = fixture.securityScope.beginAccess(to: folderURL)
         resolver.context.fileToken = nil

@@ -46,7 +46,7 @@ extension ReaderStore {
                 throw error
             }
             if let updatedSession = result.updatedSession {
-                setActiveFolderWatchSession(updatedSession)
+                folderWatchDispatcher.setSession(updatedSession)
             }
 
             logSaveInfo(

@@ -128,7 +128,7 @@ struct ReaderStoreSourceEditingTests {
             options: options,
             startedAt: .now
         )
-        fixture.store.setActiveFolderWatchSession(session)
+        fixture.store.folderWatchDispatcher.setSession(session)
 
         let permissionDeniedError = NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError)
         let result = fixture.store.securityScopeResolver.tryReauthorizeWatchedFolder(
@@ -137,7 +137,7 @@ struct ReaderStoreSourceEditingTests {
             folderWatchSession: fixture.store.folderWatchDispatcher.activeFolderWatchSession
         )
         if let updatedSession = result.updatedSession {
-            fixture.store.setActiveFolderWatchSession(updatedSession)
+            fixture.store.folderWatchDispatcher.setSession(updatedSession)
         }
 
         #expect(result.succeeded)
