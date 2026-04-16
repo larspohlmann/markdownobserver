@@ -1,10 +1,10 @@
-import Combine
 import Foundation
 
 @MainActor
-final class SplitScrollCoordinator: ObservableObject {
-    @Published private var previewRequest: ScrollSyncRequest?
-    @Published private var sourceRequest: ScrollSyncRequest?
+@Observable
+final class SplitScrollCoordinator {
+    private var previewRequest: ScrollSyncRequest?
+    private var sourceRequest: ScrollSyncRequest?
 
     private var nextRequestID = 0
     private var lastRequestedProgressByRole: [DocumentSurfaceRole: Double] = [:]

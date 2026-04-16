@@ -464,4 +464,40 @@ struct DocumentSurfaceViewModelSharedActionsTests {
         vm.sourceMode = .plainTextFallback
         #expect(vm.canSynchronizeSplitScroll(documentViewMode: .split) == false)
     }
+
+    @Test @MainActor func scrollSyncObservation_invalidatesObservers() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+
+        var invalidationFired = false
+        withObservationTracking {
+            _ = vm.documentSurfaceConfiguration(
+                for: .preview,
+                fileURL: nil,
+                renderedHTMLDocument: "",
+                sourceMarkdown: "",
+                documentViewMode: .split,
+                changedRegions: [],
+                isSourceEditing: false,
+                overlayTopInset: 0,
+                minimumSurfaceWidth: nil,
+                tocScrollRequest: nil,
+                canAcceptDroppedFileURLs: { _ in true },
+                onSharedAction: { _, _ in false },
+                onAction: { _ in }
+            )
+        } onChange: {
+            invalidationFired = true
+        }
+
+        vm.handleScrollSyncObservation(
+            ScrollSyncObservation(progress: 0.5, isProgrammatic: false),
+            from: .source,
+            documentViewMode: .split
+        )
+
+        #expect(invalidationFired, "Split-scroll coordinator mutation must invalidate the view model's observers so ContentView re-evaluates and the fresh scrollSyncRequest reaches MarkdownWebView.")
+    }
 }
