@@ -65,7 +65,7 @@ final class SidebarRowStateComputer {
         ReaderDocumentIndicatorState(
             hasUnacknowledgedExternalChange: store.hasUnacknowledgedExternalChange,
             isCurrentFileMissing: store.isCurrentFileMissing,
-            unacknowledgedExternalChangeKind: store.content.unacknowledgedExternalChangeKind
+            unacknowledgedExternalChangeKind: store.externalChange.unacknowledgedExternalChangeKind
         )
     }
 }

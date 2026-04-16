@@ -20,8 +20,7 @@ extension ReaderStore {
         )
         try renderCurrentMarkdownImmediately()
         if acknowledgeExternalChange {
-            content.hasUnacknowledgedExternalChange = false
-            content.unacknowledgedExternalChangeKind = .modified
+            externalChange.clear()
         }
         identity.isCurrentFileMissing = false
         identity.lastError = nil

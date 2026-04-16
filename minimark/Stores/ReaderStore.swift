@@ -38,9 +38,9 @@ final class ReaderStore {
     var renderedHTMLDocument: String { renderingController.renderedHTMLDocument }
     var changedRegions: [ChangedRegion] { content.changedRegions }
     var lastRefreshAt: Date? { renderingController.lastRefreshAt }
-    var lastExternalChangeAt: Date? { content.lastExternalChangeAt }
+    var lastExternalChangeAt: Date? { externalChange.lastExternalChangeAt }
     var fileLastModifiedAt: Date? { content.fileLastModifiedAt }
-    var hasUnacknowledgedExternalChange: Bool { content.hasUnacknowledgedExternalChange }
+    var hasUnacknowledgedExternalChange: Bool { externalChange.hasUnacknowledgedExternalChange }
 
     // MARK: - Editing forwarding
 
@@ -59,14 +59,14 @@ final class ReaderStore {
     }
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
-        if let date = content.lastExternalChangeAt { return .updated(date) }
+        if let date = externalChange.lastExternalChangeAt { return .updated(date) }
         if let date = content.fileLastModifiedAt { return .lastModified(date) }
-        if let date = content.lastRefreshAt { return .updated(date) }
+        if let date = renderingController.lastRefreshAt { return .updated(date) }
         return nil
     }
 
     var decoratedWindowTitle: String {
-        (content.hasUnacknowledgedExternalChange || editing.hasUnsavedDraftChanges)
+        (externalChange.hasUnacknowledgedExternalChange || editing.hasUnsavedDraftChanges)
             ? "* \(identity.windowTitle)" : identity.windowTitle
     }
 
@@ -87,6 +87,7 @@ final class ReaderStore {
     func toggleTOC() { toc.toggle() }
     func scrollToTOCHeading(_ heading: TOCHeading) { toc.scrollTo(heading) }
 
+    let externalChange = ReaderExternalChangeController()
     let rendering: ReaderRenderingDependencies
     let renderingController: ReaderRenderingController
     let file: ReaderFileDependencies
@@ -95,7 +96,6 @@ final class ReaderStore {
     let securityScopeResolver: SecurityScopeResolver
     let sourceEditingCoordinator = ReaderSourceEditingCoordinator()
 
-    @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
     var needsAppearanceRender: Bool {
         get { renderingController.needsAppearanceRender }
@@ -234,19 +234,11 @@ final class ReaderStore {
     }
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
-        let previousKind = content.unacknowledgedExternalChangeKind
-        let wasAcknowledged = !content.hasUnacknowledgedExternalChange
-        content.lastExternalChangeAt = Date()
-        content.hasUnacknowledgedExternalChange = true
-        content.unacknowledgedExternalChangeKind = kind
-        if !wasAcknowledged && previousKind != kind {
-            onExternalChangeKindChanged?()
-        }
+        externalChange.noteObservedExternalChange(kind: kind)
     }
 
     func clearExternalChangeIndicator() {
-        content.hasUnacknowledgedExternalChange = false
-        content.unacknowledgedExternalChangeKind = .modified
+        externalChange.clear()
     }
 
     func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
@@ -409,7 +401,7 @@ final class ReaderStore {
     func testSetFileURL(_ url: URL?) { identity.fileURL = url }
     func testSetFileDisplayName(_ name: String) { identity.fileDisplayName = name }
     func testSetFileLastModifiedAt(_ date: Date?) { content.fileLastModifiedAt = date }
-    func testSetHasUnacknowledgedExternalChange(_ value: Bool) { content.hasUnacknowledgedExternalChange = value }
+    func testSetHasUnacknowledgedExternalChange(_ value: Bool) { externalChange.hasUnacknowledgedExternalChange = value }
     func testSetIsCurrentFileMissing(_ value: Bool) { identity.isCurrentFileMissing = value }
     #endif
 }

@@ -22,8 +22,7 @@ extension ReaderStore {
             )
             content.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
             editing.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
-            content.hasUnacknowledgedExternalChange = false
-            content.unacknowledgedExternalChangeKind = .modified
+            externalChange.clear()
             identity.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
             identity.lastError = nil
