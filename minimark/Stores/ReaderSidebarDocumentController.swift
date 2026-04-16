@@ -234,14 +234,14 @@ final class ReaderSidebarDocumentController {
     // MARK: - Document actions
 
     func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
-        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.document.fileURL != nil {
-            document.readerStore.openCurrentFileInApplication(application)
+        for tab in documentList.orderedDocuments(matching: documentIDs) where tab.readerStore.document.fileURL != nil {
+            tab.readerStore.document.openInApplication(application)
         }
     }
 
     func revealDocumentsInFinder(_ documentIDs: Set<UUID>) {
-        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.document.fileURL != nil {
-            document.readerStore.revealCurrentFileInFinder()
+        for tab in documentList.orderedDocuments(matching: documentIDs) where tab.readerStore.document.fileURL != nil {
+            tab.readerStore.document.revealInFinder()
         }
     }
 

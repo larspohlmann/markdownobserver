@@ -17,7 +17,7 @@ extension ReaderStore {
             let normalizedURL = Self.normalizedFileURL(accessibleURL)
             securityScopeResolver.activateFileSecurityScope(for: accessibleURL, reason: "open")
             if let folderWatchSession {
-                setActiveFolderWatchSession(securityScopeResolver.normalizedFolderWatchSession(folderWatchSession))
+                folderWatchDispatcher.setSession(securityScopeResolver.normalizedFolderWatchSession(folderWatchSession))
             }
             let readURL = securityScopeResolver.effectiveAccessibleFileURL(
                 for: normalizedURL, reason: "open", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession

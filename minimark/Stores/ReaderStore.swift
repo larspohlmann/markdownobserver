@@ -126,22 +126,10 @@ final class ReaderStore {
         )
     }
 
-    var currentSettings: ReaderSettings {
-        settingsStore.currentSettings
-    }
-
     func setOpenAdditionalDocumentForFolderWatchEventHandler(
         _ handler: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
     ) {
         folderWatchDispatcher.setAdditionalOpenHandler(handler)
-    }
-
-    func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
-        sourceEditingController.setViewMode(mode, hasOpenDocument: document.hasOpenDocument)
-    }
-
-    func toggleDocumentViewMode() {
-        sourceEditingController.toggleViewMode()
     }
 
     func setFolderWatchStateCallbacks(
@@ -149,18 +137,6 @@ final class ReaderStore {
         onStopped: (() -> Void)?
     ) {
         folderWatchDispatcher.setStateCallbacks(onStarted: onStarted, onStopped: onStopped)
-    }
-
-    func setActiveFolderWatchSession(_ session: ReaderFolderWatchSession?) {
-        folderWatchDispatcher.setSession(session)
-    }
-
-    func setLastWatchedFolderEventAt(_ date: Date?) {
-        folderWatchDispatcher.lastWatchedFolderEventAt = date
-    }
-
-    func setFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
-        folderWatchDispatcher.autoOpenWarning = warning
     }
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
@@ -216,14 +192,6 @@ final class ReaderStore {
 
     func refreshOpenInApplications() {
         document.refreshOpenInApplications()
-    }
-
-    func openCurrentFileInApplication(_ application: ReaderExternalApplication?) {
-        document.openInApplication(application)
-    }
-
-    func revealCurrentFileInFinder() {
-        document.revealInFinder()
     }
 
     func presentError(_ error: Error) {
