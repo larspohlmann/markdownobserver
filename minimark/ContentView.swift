@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import Foundation
 import OSLog
 import SwiftUI
@@ -7,16 +6,6 @@ import SwiftUI
 struct ContentView: View {
     private enum Metrics {
         static let splitPaneMinimumWidth: CGFloat = 320
-    }
-
-    enum PreviewMode {
-        case web
-        case nativeFallback
-    }
-
-    enum SourceMode {
-        case web
-        case plainTextFallback
     }
 
     static let logger = Logger(
@@ -31,24 +20,12 @@ struct ContentView: View {
     let toc: ReaderTOCController
     let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
+    let surfaceViewModel: DocumentSurfaceViewModel
     let onAction: (ContentViewAction) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
-
-    // MARK: - Internal: accessible to factory extension in ContentViewConfigurationFactory.swift
-    // These properties must be at least `internal` because Swift extensions in separate files
-    // cannot see `private` members.
-
-    @StateObject var splitScrollCoordinator = SplitScrollCoordinator()
-    @State var dropTargeting = DropTargetingCoordinator()
-    @State var previewMode: PreviewMode = .web
-    @State var previewReloadToken = 0
-    @State var sourceMode: SourceMode = .web
-    @State var sourceReloadToken = 0
-    @State var changeNavigation = ChangedRegionNavigationCoordinator()
-    @State var sourceHTMLCache = SourceHTMLDocumentCache()
 
     var body: some View {
         baseBody.modifier(ContentViewFocusedValues(
@@ -59,14 +36,21 @@ struct ContentView: View {
             onAction: onAction,
             canNavigateChangedRegions: canNavigateChangedRegions,
             onNavigateChangedRegion: { direction in
-                changeNavigation.requestNavigation(direction)
-                splitScrollCoordinator.suppressPreviewBounceBack()
+                surfaceViewModel.changeNavigation.requestNavigation(direction)
+                surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
             },
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
             pendingFolderWatchScope: $pendingFolderWatchScope,
             pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
         ))
+    }
+
+    private var canNavigateChangedRegions: Bool {
+        surfaceViewModel.canNavigateChangedRegions(
+            documentViewMode: sourceEditing.documentViewMode,
+            changedRegions: document.changedRegions
+        )
     }
 
     private var statusBarTimestamp: ReaderStatusBarTimestamp? {
@@ -96,11 +80,11 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
-                if dropTargeting.isBlockedFolderDropTargeted {
+                if surfaceViewModel.dropTargeting.isBlockedFolderDropTargeted {
                     FolderDropBlockedOverlayView()
                         .padding(10)
                         .allowsHitTesting(false)
-                } else if dropTargeting.isDragTargeted {
+                } else if surfaceViewModel.dropTargeting.isDragTargeted {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(Color.accentColor.opacity(0.65), lineWidth: 2)
                         .padding(10)
@@ -108,34 +92,38 @@ struct ContentView: View {
                 }
             }
             .onChange(of: document.fileURL?.standardizedFileURL.path) { _, _ in
-                handleFileIdentityChange()
+                surfaceViewModel.handleFileIdentityChange()
             }
             .onChange(of: document.changedRegions) { _, _ in
-                changeNavigation.resetForNewRegions()
+                surfaceViewModel.changeNavigation.resetForNewRegions()
             }
-            .onChange(of: previewMode) { _, newValue in
-                handlePreviewModeChange(newValue)
+            .onChange(of: surfaceViewModel.previewMode) { _, newValue in
+                surfaceViewModel.handlePreviewModeChange(newValue)
             }
-            .onChange(of: sourceMode) { _, newValue in
-                handleSourceModeChange(newValue)
+            .onChange(of: surfaceViewModel.sourceMode) { _, newValue in
+                surfaceViewModel.handleSourceModeChange(newValue)
             }
             .onChange(of: sourceEditing.documentViewMode) { _, newValue in
-                handleDocumentViewModeChange(newValue)
+                surfaceViewModel.handleDocumentViewModeChange(newValue)
             }
             .onChange(of: sourceEditing.sourceEditorSeedMarkdown) { _, _ in
-                refreshSourceHTML()
+                refreshSourceHTMLFromControllers()
             }
             .onChange(of: settingsStore.currentSettings) { _, _ in
-                refreshSourceHTML()
+                refreshSourceHTMLFromControllers()
             }
             .onChange(of: sourceEditing.isSourceEditing) { _, _ in
-                refreshSourceHTML()
+                refreshSourceHTMLFromControllers()
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
-                dropTargeting.clearAll()
+                surfaceViewModel.dropTargeting.clearAll()
             }
             .onAppear {
-                handleSurfaceAppear()
+                refreshSourceHTMLFromControllers()
+                surfaceViewModel.handleSurfaceAppear(
+                    renderedHTMLDocument: rendering.renderedHTMLDocument,
+                    sourceMarkdown: document.sourceMarkdown
+                )
             }
 
             ReaderTopBar(
@@ -206,60 +194,6 @@ struct ContentView: View {
         .contentShape(Rectangle())
     }
 
-    private func handleFileIdentityChange() {
-        changeNavigation.reset()
-        if previewMode == .nativeFallback {
-            previewReloadToken += 1
-            previewMode = .web
-        }
-        if sourceMode == .plainTextFallback {
-            sourceReloadToken += 1
-            sourceMode = .web
-        }
-        dropTargeting.clearAll()
-        splitScrollCoordinator.reset()
-    }
-
-    private func handlePreviewModeChange(_ mode: PreviewMode) {
-        guard mode == .nativeFallback else {
-            return
-        }
-
-        dropTargeting.clear(for: .preview)
-        splitScrollCoordinator.reset()
-    }
-
-    private func handleSourceModeChange(_ mode: SourceMode) {
-        guard mode == .plainTextFallback else {
-            return
-        }
-
-        dropTargeting.clear(for: .source)
-        splitScrollCoordinator.reset()
-    }
-
-    private func handleDocumentViewModeChange(_ mode: ReaderDocumentViewMode) {
-        guard mode != .split else {
-            return
-        }
-
-        splitScrollCoordinator.reset()
-    }
-
-    private func handleSurfaceAppear() {
-        refreshSourceHTML()
-
-        if previewMode == .nativeFallback, !rendering.renderedHTMLDocument.isEmpty {
-            previewReloadToken += 1
-            previewMode = .web
-        }
-        if sourceMode == .plainTextFallback,
-           !document.sourceMarkdown.isEmpty {
-            sourceReloadToken += 1
-            sourceMode = .web
-        }
-    }
-
     private func promptForImageDirectoryAccess() {
         guard let directoryURL = document.fileURL?.deletingLastPathComponent() else {
             return
@@ -287,11 +221,6 @@ struct ContentView: View {
         return "file=\(fileName)|regions=\(document.changedRegions.count)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=preview"
     }
 
-    var sourceAccessibilityValue: String {
-        let fileName = document.fileURL?.lastPathComponent ?? "none"
-        return "file=\(fileName)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=source"
-    }
-
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
             documentViewMode: sourceEditing.documentViewMode,
@@ -302,8 +231,36 @@ struct ContentView: View {
             emptyStateVariant: emptyStateVariant,
             currentReaderTheme: currentReaderTheme,
             onDroppedFileURLs: handleDroppedFileURLs,
-            previewSurface: documentSurfacePane(for: .preview),
-            sourceSurface: documentSurfacePane(for: .source)
+            previewSurface: surfaceHost(for: .preview),
+            sourceSurface: surfaceHost(for: .source)
+        )
+    }
+
+    private func surfaceHost(for surface: DocumentSurfaceRole) -> DocumentSurfaceHost {
+        DocumentSurfaceHost(
+            configuration: surfaceViewModel.documentSurfaceConfiguration(
+                for: surface,
+                fileURL: document.fileURL,
+                renderedHTMLDocument: rendering.renderedHTMLDocument,
+                documentViewMode: sourceEditing.documentViewMode,
+                changedRegions: document.changedRegions,
+                isSourceEditing: sourceEditing.isSourceEditing,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
+                minimumSurfaceWidth: minimumSurfaceWidth,
+                tocScrollRequest: toc.scrollRequest,
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onSharedAction: { action, role in
+                    surfaceViewModel.handleSharedAction(
+                        action,
+                        for: role,
+                        documentViewMode: sourceEditing.documentViewMode,
+                        onDroppedFileURLs: handleDroppedFileURLs,
+                        onAction: onAction
+                    )
+                },
+                onAction: onAction
+            ),
+            fallbackMarkdown: document.sourceMarkdown
         )
     }
 
@@ -353,11 +310,11 @@ struct ContentView: View {
     private var changeNavigationOverlay: some View {
         if canNavigateChangedRegions {
             ChangeNavigationPill(
-                currentIndex: changeNavigation.currentIndex,
+                currentIndex: surfaceViewModel.changeNavigation.currentIndex,
                 totalCount: document.changedRegions.count,
                 onNavigate: { direction in
-                    changeNavigation.requestNavigation(direction)
-                    splitScrollCoordinator.suppressPreviewBounceBack()
+                    surfaceViewModel.changeNavigation.requestNavigation(direction)
+                    surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
                 }
             )
             .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
@@ -460,22 +417,9 @@ struct ContentView: View {
         }
     }
 
-
-    var canNavigateChangedRegions: Bool {
-        sourceEditing.documentViewMode != .source &&
-            previewMode == .web &&
-            !document.changedRegions.isEmpty
-    }
-
     private var showSourceEditingControls: Bool {
         document.hasOpenDocument &&
             (sourceEditing.documentViewMode != .preview || sourceEditing.isSourceEditing)
-    }
-
-    var canSynchronizeSplitScroll: Bool {
-        sourceEditing.documentViewMode == .split &&
-            previewMode == .web &&
-            sourceMode == .web
     }
 
     private var currentReaderTheme: ReaderTheme {
@@ -517,6 +461,74 @@ struct ContentView: View {
 
     private var isUITestModeEnabled: Bool {
         ReaderUITestLaunchConfiguration.current.isUITestModeEnabled
+    }
+
+    private func refreshSourceHTMLFromControllers() {
+        surfaceViewModel.refreshSourceHTML(
+            markdown: sourceEditing.sourceEditorSeedMarkdown,
+            settings: settingsStore.currentSettings,
+            isEditable: sourceEditing.isSourceEditing
+        )
+    }
+
+    private func handleDroppedFileURLs(_ fileURLs: [URL]) {
+        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
+            guard folderWatchState.activeFolderWatch == nil else {
+                return
+            }
+
+            onAction(.requestFolderWatch(droppedFolderURL))
+            return
+        }
+
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard !markdownURLs.isEmpty else {
+            return
+        }
+
+        let slotStrategy: FileOpenRequest.SlotStrategy =
+            document.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
+        onAction(.requestFileOpen(FileOpenRequest(
+            fileURLs: markdownURLs,
+            origin: .manual,
+            slotStrategy: slotStrategy
+        )))
+    }
+
+    private func handlePickedFileURLs(_ fileURLs: [URL]) {
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard !markdownURLs.isEmpty else {
+            return
+        }
+
+        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
+        let currentURL = document.fileURL.map(ReaderFileRouting.normalizedFileURL)
+        if sourceEditing.hasUnsavedDraftChanges,
+           currentURL != normalizedIncomingURL {
+            onAction(.presentError(ReaderError.unsavedDraftRequiresResolution))
+            return
+        }
+
+        onAction(.requestFileOpen(FileOpenRequest(
+            fileURLs: [markdownURLs[0]],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        )))
+
+        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
+        guard !additionalMarkdownURLs.isEmpty else {
+            return
+        }
+
+        onAction(.requestFileOpen(FileOpenRequest(
+            fileURLs: additionalMarkdownURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        )))
+    }
+
+    private func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs) || folderWatchState.activeFolderWatch == nil
     }
 }
 
@@ -648,82 +660,6 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
     }
 }
 
-@MainActor
-final class SplitScrollCoordinator: ObservableObject {
-    @Published private var previewRequest: ScrollSyncRequest?
-    @Published private var sourceRequest: ScrollSyncRequest?
-
-    private var nextRequestID = 0
-    private var lastRequestedProgressByRole: [DocumentSurfaceRole: Double] = [:]
-    private var lastObservedProgressByRole: [DocumentSurfaceRole: Double] = [:]
-    private var previewBounceBackSuppressedUntil: Date?
-
-    func request(for role: DocumentSurfaceRole) -> ScrollSyncRequest? {
-        switch role {
-        case .preview:
-            return previewRequest
-        case .source:
-            return sourceRequest
-        }
-    }
-
-    /// Temporarily prevents scroll-sync observations from bouncing back to the
-    /// preview pane. Called when a changed-region navigation scrolls the preview
-    /// to an exact element position — the source pane may still sync forward,
-    /// but its response must not override the navigation scroll.
-    func suppressPreviewBounceBack(for duration: TimeInterval = 0.6) {
-        previewBounceBackSuppressedUntil = Date().addingTimeInterval(duration)
-    }
-
-    func handleObservation(
-        _ observation: ScrollSyncObservation,
-        from role: DocumentSurfaceRole,
-        shouldSync: Bool
-    ) {
-        lastObservedProgressByRole[role] = observation.progress
-
-        guard shouldSync, !observation.isProgrammatic else {
-            return
-        }
-
-        let targetRole = role.counterpart
-
-        if targetRole == .preview,
-           let suppressedUntil = previewBounceBackSuppressedUntil,
-           Date() < suppressedUntil {
-            return
-        }
-
-        if let lastProgress = lastRequestedProgressByRole[targetRole],
-           abs(lastProgress - observation.progress) < 0.003 {
-            return
-        }
-
-        nextRequestID += 1
-        let request = ScrollSyncRequest(id: nextRequestID, progress: observation.progress)
-        lastRequestedProgressByRole[targetRole] = observation.progress
-
-        switch targetRole {
-        case .preview:
-            previewRequest = request
-        case .source:
-            sourceRequest = request
-        }
-    }
-
-    func latestObservedProgress(for role: DocumentSurfaceRole) -> Double? {
-        lastObservedProgressByRole[role]
-    }
-
-    func reset() {
-        previewRequest = nil
-        sourceRequest = nil
-        lastRequestedProgressByRole.removeAll()
-        lastObservedProgressByRole.removeAll()
-        previewBounceBackSuppressedUntil = nil
-    }
-}
-
 #Preview {
     let settingsStore = ReaderSettingsStore()
     let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
@@ -774,6 +710,7 @@ final class SplitScrollCoordinator: ObservableObject {
             isAppearanceLocked: false,
             effectiveReaderTheme: .blackOnWhite
         ),
+        surfaceViewModel: DocumentSurfaceViewModel(),
         onAction: { _ in },
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),

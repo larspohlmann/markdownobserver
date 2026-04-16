@@ -1,8 +1,3 @@
-//
-//  SourceHTMLDocumentCache.swift
-//  minimark
-//
-
 import Foundation
 
 struct SourceHTMLDocumentCache {

@@ -23,6 +23,8 @@ struct ContentViewAdapter: View {
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
+    @State private var surfaceViewModel = DocumentSurfaceViewModel()
+
     var body: some View {
         let favorites = settingsStore.currentSettings.favoriteWatchedFolders
         let isCurrentWatchAFavorite: Bool = {
@@ -51,6 +53,7 @@ struct ContentViewAdapter: View {
                 isAppearanceLocked: appearanceController.isLocked,
                 effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
             ),
+            surfaceViewModel: surfaceViewModel,
             onAction: onAction,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
