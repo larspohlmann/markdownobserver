@@ -715,7 +715,7 @@ struct ReaderStoreExternalChangeTests {
 
         var openedAdditionalDocuments: [URL] = []
         var openedEvents: [ReaderFolderWatchChangeEvent] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
+        fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
             openedEvents.append(event)
         }
@@ -747,7 +747,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.write(content: "", to: createdFileURL)
 
         var openedEvents: [ReaderFolderWatchChangeEvent] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
+        fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             openedEvents.append(event)
         }
 
@@ -775,7 +775,7 @@ struct ReaderStoreExternalChangeTests {
 
         let changedFileURL = fixture.secondaryFileURL
         var capturedEvent: ReaderFolderWatchChangeEvent?
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
+        fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             capturedEvent = event
         }
 
@@ -812,7 +812,7 @@ struct ReaderStoreExternalChangeTests {
         }
 
         var openedAdditionalDocuments: [URL] = []
-        fixture.store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, _, _ in
+        fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
         }
 
