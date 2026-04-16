@@ -36,7 +36,7 @@ final class ReaderStore {
     let renderingController: ReaderRenderingController
     let file: ReaderFileDependencies
     let folderWatch: ReaderFolderWatchDependencies
-    let settingsStore: ReaderSettingsStoring
+    let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     let securityScopeResolver: SecurityScopeResolver
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
@@ -59,7 +59,7 @@ final class ReaderStore {
         rendering: ReaderRenderingDependencies,
         file: ReaderFileDependencies,
         folderWatch: ReaderFolderWatchDependencies,
-        settingsStore: ReaderSettingsStoring,
+        settingsStore: ReaderSettingsReading & ReaderRecentWriting,
         securityScopeResolver: SecurityScopeResolver,
         diffBaselineTracker: DiffBaselineTracking? = nil
     ) {

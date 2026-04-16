@@ -431,6 +431,50 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
         return nil
     }
+
+    func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
+        var next = subject.value
+        let existing = next.favoriteWatchedFolders
+        let ordered = orderedIDs.compactMap { id in
+            existing.first(where: { $0.id == id })
+        }
+        let orderedIDSet = Set(ordered.map(\.id))
+        let remaining = existing.filter { !orderedIDSet.contains($0.id) }
+        let reordered = ordered + remaining
+        next.favoriteWatchedFolders = reordered
+        recordedFavoriteWatchedFolders = reordered
+        subject.send(next)
+    }
+
+    func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String]) {
+        var next = subject.value
+        guard let index = next.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        let existing = next.favoriteWatchedFolders[index]
+        let folderURL = URL(fileURLWithPath: existing.folderPath, isDirectory: true)
+        let normalizedOptions = ReaderFolderWatchOptions(
+            openMode: existing.options.openMode,
+            scope: existing.options.scope,
+            excludedSubdirectoryPaths: excludedSubdirectoryPaths
+        ).encodedForFolder(folderURL)
+        guard existing.options != normalizedOptions else {
+            return
+        }
+        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+            id: existing.id,
+            name: existing.name,
+            folderPath: existing.folderPath,
+            options: normalizedOptions,
+            bookmarkData: existing.bookmarkData,
+            openDocumentRelativePaths: existing.openDocumentRelativePaths,
+            allKnownRelativePaths: existing.allKnownRelativePaths,
+            workspaceState: existing.workspaceState,
+            createdAt: existing.createdAt
+        )
+        recordedFavoriteWatchedFolders = next.favoriteWatchedFolders
+        subject.send(next)
+    }
 }
 
 final class TestSettingsKeyValueStorage: ReaderSettingsKeyValueStoring {

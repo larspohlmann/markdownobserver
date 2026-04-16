@@ -15,12 +15,12 @@ final class ReaderRenderingController {
     @ObservationIgnored var pendingDraftPreviewRenderTask: Task<Void, Never>?
 
     private let renderingDependencies: ReaderRenderingDependencies
-    private let settingsStore: ReaderSettingsStoring
+    private let settingsStore: ReaderSettingsReading
     private let securityScopeResolver: SecurityScopeResolver
 
     init(
         renderingDependencies: ReaderRenderingDependencies,
-        settingsStore: ReaderSettingsStoring,
+        settingsStore: ReaderSettingsReading,
         securityScopeResolver: SecurityScopeResolver
     ) {
         self.renderingDependencies = renderingDependencies

@@ -142,7 +142,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func isHintDismissed(_ hint: FirstUseHint) -> Bool
 }
 
-@MainActor protocol ReaderSettingsWriting: AnyObject {
+@MainActor protocol ReaderThemeWriting: AnyObject {
     func updateAppAppearance(_ appearance: AppAppearance)
     func updateTheme(_ kind: ReaderThemeKind)
     func updateSyntaxTheme(_ kind: SyntaxThemeKind)
@@ -150,11 +150,17 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func increaseFontSize(step: Double)
     func decreaseFontSize(step: Double)
     func resetFontSize()
+}
+
+@MainActor protocol ReaderPreferencesWriting: AnyObject {
     func updateNotificationsEnabled(_ isEnabled: Bool)
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
     func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode)
     func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback)
+}
+
+@MainActor protocol ReaderFavoriteWriting: AnyObject {
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
@@ -177,16 +183,34 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState)
     func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
+    func reorderFavoriteWatchedFolders(orderedIDs: [UUID])
+    func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String])
+}
+
+@MainActor protocol ReaderRecentWriting: AnyObject {
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
     func addRecentManuallyOpenedFile(_ fileURL: URL)
     func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
+}
+
+@MainActor protocol ReaderTrustedFolderWriting: AnyObject {
     func addTrustedImageFolder(_ folderURL: URL)
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL?
+}
+
+@MainActor protocol ReaderHintWriting: AnyObject {
     func dismissHint(_ hint: FirstUseHint)
 }
+
+typealias ReaderSettingsWriting = ReaderThemeWriting
+    & ReaderPreferencesWriting
+    & ReaderFavoriteWriting
+    & ReaderRecentWriting
+    & ReaderTrustedFolderWriting
+    & ReaderHintWriting
 
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 

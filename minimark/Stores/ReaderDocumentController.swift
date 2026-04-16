@@ -36,14 +36,14 @@ final class ReaderDocumentController {
 
     // MARK: - Dependencies
     let fileDependencies: ReaderFileDependencies
-    let settingsStore: ReaderSettingsStoring
+    let settingsStore: ReaderSettingsReading
     let settler: ReaderAutoOpenSettling
 
     @ObservationIgnored private var loadingOverlayHoldGeneration: UInt = 0
 
     init(
         fileDependencies: ReaderFileDependencies,
-        settingsStore: ReaderSettingsStoring,
+        settingsStore: ReaderSettingsReading,
         settler: ReaderAutoOpenSettling
     ) {
         self.fileDependencies = fileDependencies
