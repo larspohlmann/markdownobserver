@@ -30,7 +30,11 @@ final class UITestLaunchCoordinator {
         let action = resolvedLaunchAction()
         switch action {
         case .none:
-            break
+            // Configuration not yet applicable — either the launch config
+            // requests no action, or the host window isn't attached yet.
+            // Leave the flag unset so a later trigger (window attach, or
+            // configure() once actions are wired) can retry.
+            return
         case .simulateGroupedSidebar:
             startGroupedSidebarFlow()
         case .simulateAutoOpenWatchFlow:

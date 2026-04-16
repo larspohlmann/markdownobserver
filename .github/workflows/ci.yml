@@ -63,7 +63,7 @@ jobs:
             build_for_testing second | tee -a build-for-testing.log
           }
 
-      - name: Run macOS tests
+      - name: Run macOS unit tests
         run: |
           set -o pipefail
           xcodebuild test-without-building \
@@ -77,6 +77,19 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             | tee test.log
 
+      - name: Run macOS UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project minimark.xcodeproj \
+            -scheme minimarkUITests \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            -resultBundlePath UITestResults.xcresult \
+            | tee ui-test.log
+
       - name: Upload test logs and result bundle
         if: always()
         uses: actions/upload-artifact@v7
@@ -86,7 +99,9 @@ jobs:
             resolve-packages.log
             build-for-testing.log
             test.log
+            ui-test.log
             BuildForTestingResults-first.xcresult
             BuildForTestingResults-second.xcresult
             TestResults.xcresult
+            UITestResults.xcresult
           if-no-files-found: warn
