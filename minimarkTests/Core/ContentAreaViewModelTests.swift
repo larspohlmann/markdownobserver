@@ -105,3 +105,57 @@ struct ContentAreaViewModelTests {
         #expect(viewModel.overlayLayout.isSourceEditing == true)
     }
 }
+
+@Suite
+struct ContentAreaViewModelDropRoutingTests {
+
+    @Test @MainActor func canAcceptDropsWhenNoFolderIsWatched() {
+        let (viewModel, _, _, _) = makeTestViewModel()
+        let urls = [URL(fileURLWithPath: "/tmp/example.md")]
+        #expect(viewModel.canAcceptDroppedFileURLs(urls) == true)
+    }
+
+    @Test @MainActor func handleDroppedMarkdownFiresRequestFileOpen() {
+        var captured: [ContentViewAction] = []
+        let settingsStore = ReaderSettingsStore()
+        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let securityScopeResolver = SecurityScopeResolver(
+            securityScope: SecurityScopedResourceAccess(),
+            settingsStore: settingsStore,
+            requestWatchedFolderReauthorization: { _ in nil }
+        )
+        let fileDeps = ReaderFileDependencies(
+            watcher: FileChangeWatcher(),
+            io: ReaderDocumentIOService(),
+            actions: ReaderFileActionService()
+        )
+        let renderingDeps = ReaderRenderingDependencies(
+            renderer: MarkdownRenderingService(),
+            differ: ChangedRegionDiffer()
+        )
+        let viewModel = ContentAreaViewModel(
+            document: ReaderDocumentController(
+                fileDependencies: fileDeps,
+                settingsStore: settingsStore,
+                settler: settler
+            ),
+            rendering: ReaderRenderingController(
+                renderingDependencies: renderingDeps,
+                settingsStore: settingsStore,
+                securityScopeResolver: securityScopeResolver
+            ),
+            sourceEditing: ReaderSourceEditingController(),
+            externalChange: ReaderExternalChangeController(),
+            toc: ReaderTOCController(),
+            settingsStore: settingsStore,
+            folderWatchState: .testEmpty,
+            surfaceViewModel: DocumentSurfaceViewModel(),
+            onAction: { captured.append($0) }
+        )
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("sample.md")
+        viewModel.handleDroppedFileURLs([url])
+        #expect(captured.contains(where: {
+            if case .requestFileOpen = $0 { return true } else { return false }
+        }))
+    }
+}

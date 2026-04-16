@@ -128,5 +128,131 @@ final class ContentAreaViewModel {
         ReaderUITestLaunchConfiguration.current.isUITestModeEnabled
     }
 
-    // Actions will be added in Task 3.
+    // MARK: - Actions
+
+    func handleAppear() {
+        refreshSourceHTMLFromControllers()
+        surfaceViewModel.handleSurfaceAppear(
+            renderedHTMLDocument: rendering.renderedHTMLDocument,
+            sourceMarkdown: document.sourceMarkdown
+        )
+    }
+
+    func refreshSourceHTMLFromControllers() {
+        surfaceViewModel.refreshSourceHTML(
+            markdown: sourceEditing.sourceEditorSeedMarkdown,
+            settings: settingsStore.currentSettings,
+            isEditable: sourceEditing.isSourceEditing
+        )
+    }
+
+    func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
+        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs)
+            || folderWatchState.activeFolderWatch == nil
+    }
+
+    func handleDroppedFileURLs(_ fileURLs: [URL]) {
+        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
+            guard folderWatchState.activeFolderWatch == nil else { return }
+            onAction(.requestFolderWatch(droppedFolderURL))
+            return
+        }
+
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard !markdownURLs.isEmpty else { return }
+
+        let slotStrategy: FileOpenRequest.SlotStrategy =
+            document.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
+        onAction(.requestFileOpen(FileOpenRequest(
+            fileURLs: markdownURLs,
+            origin: .manual,
+            slotStrategy: slotStrategy
+        )))
+    }
+
+    func handlePickedFileURLs(_ fileURLs: [URL]) {
+        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        guard !markdownURLs.isEmpty else { return }
+
+        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
+        let currentURL = document.fileURL.map(ReaderFileRouting.normalizedFileURL)
+        if sourceEditing.hasUnsavedDraftChanges, currentURL != normalizedIncomingURL {
+            onAction(.presentError(ReaderError.unsavedDraftRequiresResolution))
+            return
+        }
+
+        onAction(.requestFileOpen(FileOpenRequest(
+            fileURLs: [markdownURLs[0]],
+            origin: .manual,
+            slotStrategy: .replaceSelectedSlot
+        )))
+
+        let additionalMarkdownURLs = Array(markdownURLs.dropFirst())
+        guard !additionalMarkdownURLs.isEmpty else { return }
+
+        onAction(.requestFileOpen(FileOpenRequest(
+            fileURLs: additionalMarkdownURLs,
+            origin: .manual,
+            slotStrategy: .alwaysAppend
+        )))
+    }
+
+    func promptForImageDirectoryAccess() {
+        guard let directoryURL = document.fileURL?.deletingLastPathComponent() else { return }
+
+        let panel = NSOpenPanel()
+        panel.title = "Grant Image Access"
+        panel.message = "Select the folder containing your images to display them in the preview."
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.prompt = "Grant Access"
+        panel.directoryURL = directoryURL
+
+        guard panel.runModal() == .OK, let selectedURL = panel.url else { return }
+        onAction(.grantImageDirectoryAccess(selectedURL))
+    }
+
+    func requestChangeNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
+        surfaceViewModel.changeNavigation.requestNavigation(direction)
+        surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
+    }
+
+    func dispatchTopBarAction(_ action: ReaderTopBarAction) {
+        switch action {
+        case .openFiles(let urls):
+            handlePickedFileURLs(urls)
+        case .openInApp(let app):
+            onAction(.openInApplication(app))
+        case .revealInFinder:
+            onAction(.revealInFinder)
+        case .saveSourceDraft:
+            onAction(.saveSourceDraft)
+        case .discardSourceDraft:
+            onAction(.discardSourceDraft)
+        case .requestFolderWatch(let url):
+            onAction(.requestFolderWatch(url))
+        case .stopFolderWatch:
+            onAction(.stopFolderWatch)
+        case .startFavoriteWatch(let fav):
+            onAction(.startFavoriteWatch(fav))
+        case .clearFavoriteWatchedFolders:
+            onAction(.clearFavoriteWatchedFolders)
+        case .renameFavoriteWatchedFolder(let id, let name):
+            onAction(.renameFavoriteWatchedFolder(id: id, name: name))
+        case .removeFavoriteWatchedFolder(let id):
+            onAction(.removeFavoriteWatchedFolder(id))
+        case .reorderFavoriteWatchedFolders(let ids):
+            onAction(.reorderFavoriteWatchedFolders(ids))
+        case .startRecentManuallyOpenedFile(let entry):
+            onAction(.startRecentManuallyOpenedFile(entry))
+        case .startRecentFolderWatch(let entry):
+            onAction(.startRecentFolderWatch(entry))
+        case .clearRecentWatchedFolders:
+            onAction(.clearRecentWatchedFolders)
+        case .clearRecentManuallyOpenedFiles:
+            onAction(.clearRecentManuallyOpenedFiles)
+        }
+    }
 }
