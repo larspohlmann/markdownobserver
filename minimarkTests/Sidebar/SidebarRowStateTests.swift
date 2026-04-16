@@ -99,7 +99,7 @@ struct SidebarRowStateDerivationTests {
         await Task.yield()
 
         // Simulate an external change notification on the store
-        store.noteObservedExternalChange()
+        store.externalChange.noteObservedExternalChange()
 
         // Allow the observation tracking task to process and update rowStates
         try await Task.sleep(for: .milliseconds(50))
@@ -126,14 +126,14 @@ struct SidebarRowStateDerivationTests {
         await Task.yield()
 
         // Simulate file-created indicator (green badge)
-        store.noteObservedExternalChange(kind: .added)
+        store.externalChange.noteObservedExternalChange(kind: .added)
         try await Task.sleep(for: .milliseconds(50))
 
         let addedState = harness.controller.rowStates[docID]
         #expect(addedState?.indicatorState == .addedExternalChange)
 
         // Simulate file-modified indicator (yellow badge) — should replace green
-        store.noteObservedExternalChange(kind: .modified)
+        store.externalChange.noteObservedExternalChange(kind: .modified)
         try await Task.sleep(for: .milliseconds(50))
 
         let modifiedState = harness.controller.rowStates[docID]

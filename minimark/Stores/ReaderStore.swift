@@ -47,7 +47,7 @@ final class ReaderStore {
     //
     // - diffBaselineTracker: read-only (`let`) — used by ExternalChangeFlow
     // - onFolderWatchStarted/Stopped: read-only from extensions (called, never reassigned);
-    //   set exclusively through setFolderWatchStateCallbacks(_:onStopped:)
+    //   set exclusively through folderWatchDispatcher.setStateCallbacks(onStarted:onStopped:)
     let diffBaselineTracker: DiffBaselineTracking
 
     var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
@@ -126,32 +126,11 @@ final class ReaderStore {
         )
     }
 
-    func setOpenAdditionalDocumentForFolderWatchEventHandler(
-        _ handler: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
-    ) {
-        folderWatchDispatcher.setAdditionalOpenHandler(handler)
-    }
-
-    func setFolderWatchStateCallbacks(
-        onStarted: ((ReaderFolderWatchSession) -> Void)?,
-        onStopped: (() -> Void)?
-    ) {
-        folderWatchDispatcher.setStateCallbacks(onStarted: onStarted, onStopped: onStopped)
-    }
-
-    func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
-        externalChange.noteObservedExternalChange(kind: kind)
-    }
-
     /// Marks this document as live-auto-opened: sets the external change
     /// indicator and clears the settler so subsequent edits are not absorbed.
     func markAsLiveAutoOpened() {
-        noteObservedExternalChange(kind: .added)
+        externalChange.noteObservedExternalChange(kind: .added)
         folderWatch.settler.clearSettling()
-    }
-
-    func clearExternalChangeIndicator() {
-        externalChange.clear()
     }
 
     func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
@@ -159,18 +138,6 @@ final class ReaderStore {
         if let folderWatchSession {
             folderWatchDispatcher.setSession(folderWatchSession)
         }
-    }
-
-    func transitionToLoading() {
-        document.transitionToLoading()
-    }
-
-    func clearLoadingState() {
-        document.clearLoadingState()
-    }
-
-    func holdLoadingOverlayBriefly() {
-        document.holdLoadingOverlayBriefly()
     }
 
     func clearOpenDocument() {
@@ -184,14 +151,6 @@ final class ReaderStore {
         sourceEditingController.reset()
         externalChange.clear()
         toc.clear()
-    }
-
-    func dismissFolderWatchAutoOpenWarning() {
-        folderWatchDispatcher.dismissAutoOpenWarning()
-    }
-
-    func refreshOpenInApplications() {
-        document.refreshOpenInApplications()
     }
 
     func presentError(_ error: Error) {
@@ -218,10 +177,6 @@ final class ReaderStore {
 
     func handle(_ error: Error) {
         document.handle(error)
-    }
-
-    func clearLastError() {
-        document.clearLastError()
     }
 
     static func normalizedFileURL(_ url: URL) -> URL {

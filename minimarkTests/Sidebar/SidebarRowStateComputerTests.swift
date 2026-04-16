@@ -99,7 +99,7 @@ struct SidebarRowStateComputerTests {
         #expect(computer.rowStates[doc.id]?.indicatorPulseToken == 0)
 
         // Simulate external change -> indicator becomes active
-        doc.readerStore.noteObservedExternalChange()
+        doc.readerStore.externalChange.noteObservedExternalChange()
 
         // Second rebuild — indicator transitioned to active, pulse increments
         computer.rebuildAllRowStates(from: [doc])
@@ -188,7 +188,7 @@ struct SidebarRowStateComputerTests {
         computer.onRowStatesChanged = { _ in callbackFired = true }
         computer.onDockTileRowStatesChanged = { _ in dockTileCallbackFired = true }
 
-        doc.readerStore.noteObservedExternalChange()
+        doc.readerStore.externalChange.noteObservedExternalChange()
         computer.updateRowStateIfNeeded(for: doc.id, in: [doc])
 
         #expect(callbackFired)

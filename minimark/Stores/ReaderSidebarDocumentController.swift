@@ -252,11 +252,11 @@ final class ReaderSidebarDocumentController {
     }
 
     private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
-        store.transitionToLoading()
+        store.document.transitionToLoading()
         Task { @MainActor in
             await Task.yield()
             load()
-            store.holdLoadingOverlayBriefly()
+            store.document.holdLoadingOverlayBriefly()
         }
     }
 

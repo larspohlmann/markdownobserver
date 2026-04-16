@@ -61,7 +61,7 @@ extension ReaderStore {
         }
 
         if document.documentLoadState == .deferred {
-            transitionToLoading()
+            document.transitionToLoading()
         }
 
         openFile(
@@ -72,10 +72,10 @@ extension ReaderStore {
         )
 
         // Safety: if openFile failed internally, clear the loading state
-        clearLoadingState()
+        document.clearLoadingState()
 
         if initialDiffBaselineMarkdown != nil {
-            noteObservedExternalChange(kind: .modified)
+            externalChange.noteObservedExternalChange(kind: .modified)
         }
     }
 }

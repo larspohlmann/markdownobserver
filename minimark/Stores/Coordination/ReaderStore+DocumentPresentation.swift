@@ -141,7 +141,7 @@ extension ReaderStore {
                 at: now
             )
         }
-        refreshOpenInApplications()
+        document.refreshOpenInApplications()
         recordRecentManualOpenIfNeeded(accessibleURL, origin: origin)
         notifyAutoLoadedFileIfNeeded(
             normalizedURL,
