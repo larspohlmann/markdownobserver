@@ -132,14 +132,6 @@ final class ReaderStore {
         folderWatchDispatcher.setAdditionalOpenHandler(handler)
     }
 
-    func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
-        sourceEditingController.setViewMode(mode, hasOpenDocument: document.hasOpenDocument)
-    }
-
-    func toggleDocumentViewMode() {
-        sourceEditingController.toggleViewMode()
-    }
-
     func setFolderWatchStateCallbacks(
         onStarted: ((ReaderFolderWatchSession) -> Void)?,
         onStopped: (() -> Void)?

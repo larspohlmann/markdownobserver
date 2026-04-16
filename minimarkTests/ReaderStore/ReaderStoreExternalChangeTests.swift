@@ -181,7 +181,7 @@ struct ReaderStoreExternalChangeTests {
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
 
-        fixture.store.setDocumentViewMode(.split)
+        fixture.store.sourceEditingController.setViewMode(.split, hasOpenDocument: fixture.store.document.hasOpenDocument)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
@@ -191,7 +191,7 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.setDocumentViewMode(.source)
+        fixture.store.sourceEditingController.setViewMode(.source, hasOpenDocument: fixture.store.document.hasOpenDocument)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .source)
 
@@ -205,7 +205,7 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.setDocumentViewMode(.split)
+        fixture.store.sourceEditingController.setViewMode(.split, hasOpenDocument: fixture.store.document.hasOpenDocument)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .split)
 
@@ -222,13 +222,13 @@ struct ReaderStoreExternalChangeTests {
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
 
-        fixture.store.toggleDocumentViewMode()
+        fixture.store.sourceEditingController.toggleViewMode()
         #expect(fixture.store.sourceEditingController.documentViewMode == .split)
 
-        fixture.store.toggleDocumentViewMode()
+        fixture.store.sourceEditingController.toggleViewMode()
         #expect(fixture.store.sourceEditingController.documentViewMode == .source)
 
-        fixture.store.toggleDocumentViewMode()
+        fixture.store.sourceEditingController.toggleViewMode()
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
 
