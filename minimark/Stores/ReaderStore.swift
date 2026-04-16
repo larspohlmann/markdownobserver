@@ -153,18 +153,6 @@ final class ReaderStore {
         }
     }
 
-    func transitionToLoading() {
-        document.transitionToLoading()
-    }
-
-    func clearLoadingState() {
-        document.clearLoadingState()
-    }
-
-    func holdLoadingOverlayBriefly() {
-        document.holdLoadingOverlayBriefly()
-    }
-
     func clearOpenDocument() {
         // Note: diffBaselineTracker is intentionally NOT reset here.
         // Per-file-URL history is preserved across open/close cycles
@@ -180,10 +168,6 @@ final class ReaderStore {
 
     func dismissFolderWatchAutoOpenWarning() {
         folderWatchDispatcher.dismissAutoOpenWarning()
-    }
-
-    func refreshOpenInApplications() {
-        document.refreshOpenInApplications()
     }
 
     func presentError(_ error: Error) {
@@ -210,10 +194,6 @@ final class ReaderStore {
 
     func handle(_ error: Error) {
         document.handle(error)
-    }
-
-    func clearLastError() {
-        document.clearLastError()
     }
 
     static func normalizedFileURL(_ url: URL) -> URL {

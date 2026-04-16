@@ -10,7 +10,7 @@ extension ReaderStore {
         )
         if !wasEditing && sourceEditingController.isSourceEditing {
             document.sourceMarkdown = document.savedMarkdown
-            clearLastError()
+            document.clearLastError()
         }
     }
 
@@ -74,7 +74,7 @@ extension ReaderStore {
 
         do {
             try renderCurrentMarkdownImmediately()
-            clearLastError()
+            document.clearLastError()
         } catch {
             handle(error)
         }

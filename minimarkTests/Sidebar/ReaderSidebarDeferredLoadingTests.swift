@@ -388,7 +388,7 @@ struct ReaderSidebarDeferredLoadingTests {
         )
 
         store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
-        store.transitionToLoading()
+        store.document.transitionToLoading()
         #expect(store.document.documentLoadState == .loading)
 
         store.materializeDeferredDocument()
@@ -449,7 +449,7 @@ struct ReaderSidebarDeferredLoadingTests {
         store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
         #expect(store.document.documentLoadState == .deferred)
 
-        store.transitionToLoading()
+        store.document.transitionToLoading()
 
         #expect(store.document.documentLoadState == .loading)
     }
