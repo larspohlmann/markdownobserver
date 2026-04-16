@@ -11,9 +11,7 @@ final class ReaderStore {
         category: "ReaderStore"
     )
 
-    var identity = DocumentIdentity.empty
-    var content = DocumentContent.empty
-    var editing = DocumentEditing.empty
+    let document: ReaderDocumentController
     var activeFolderWatchSession: ReaderFolderWatchSession? { folderWatchDispatcher.activeFolderWatchSession }
     var lastWatchedFolderEventAt: Date? {
         get { folderWatchDispatcher.lastWatchedFolderEventAt }
@@ -28,27 +26,24 @@ final class ReaderStore {
         set { folderWatchDispatcher.pendingFileSelectionRequest = newValue }
     }
 
-    // MARK: - Identity forwarding
+    // MARK: - Document forwarding
 
-    var fileURL: URL? { identity.fileURL }
-    var fileDisplayName: String { identity.fileDisplayName }
-    var documentLoadState: ReaderDocumentLoadState { identity.documentLoadState }
-    var isCurrentFileMissing: Bool { identity.isCurrentFileMissing }
-    var lastError: ReaderPresentableError? { identity.lastError }
-    var openInApplications: [ReaderExternalApplication] { identity.openInApplications }
+    var fileURL: URL? { document.fileURL }
+    var fileDisplayName: String { document.fileDisplayName }
+    var documentLoadState: ReaderDocumentLoadState { document.documentLoadState }
+    var isCurrentFileMissing: Bool { document.isCurrentFileMissing }
+    var lastError: ReaderPresentableError? { document.lastError }
+    var openInApplications: [ReaderExternalApplication] { document.openInApplications }
     var needsImageDirectoryAccess: Bool { renderingController.needsImageDirectoryAccess }
-    var hasOpenDocument: Bool { identity.hasOpenDocument }
-    var isDeferredDocument: Bool { identity.isDeferredDocument }
-    var windowTitle: String { identity.windowTitle }
-
-    // MARK: - Content forwarding
-
-    var sourceMarkdown: String { content.sourceMarkdown }
+    var hasOpenDocument: Bool { document.hasOpenDocument }
+    var isDeferredDocument: Bool { document.isDeferredDocument }
+    var windowTitle: String { document.windowTitle }
+    var sourceMarkdown: String { document.sourceMarkdown }
     var renderedHTMLDocument: String { renderingController.renderedHTMLDocument }
-    var changedRegions: [ChangedRegion] { content.changedRegions }
+    var changedRegions: [ChangedRegion] { document.changedRegions }
     var lastRefreshAt: Date? { renderingController.lastRefreshAt }
     var lastExternalChangeAt: Date? { externalChange.lastExternalChangeAt }
-    var fileLastModifiedAt: Date? { content.fileLastModifiedAt }
+    var fileLastModifiedAt: Date? { document.fileLastModifiedAt }
     var hasUnacknowledgedExternalChange: Bool { externalChange.hasUnacknowledgedExternalChange }
 
     // MARK: - Editing forwarding
@@ -64,19 +59,19 @@ final class ReaderStore {
     // MARK: - Cross-group computed properties
 
     var canStartSourceEditing: Bool {
-        identity.hasOpenDocument && !identity.isCurrentFileMissing && !sourceEditingController.isSourceEditing
+        document.hasOpenDocument && !document.isCurrentFileMissing && !sourceEditingController.isSourceEditing
     }
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
         if let date = externalChange.lastExternalChangeAt { return .updated(date) }
-        if let date = content.fileLastModifiedAt { return .lastModified(date) }
+        if let date = document.fileLastModifiedAt { return .lastModified(date) }
         if let date = renderingController.lastRefreshAt { return .updated(date) }
         return nil
     }
 
     var decoratedWindowTitle: String {
         (externalChange.hasUnacknowledgedExternalChange || sourceEditingController.hasUnsavedDraftChanges)
-            ? "* \(identity.windowTitle)" : identity.windowTitle
+            ? "* \(document.windowTitle)" : document.windowTitle
     }
 
     // MARK: - Table of Contents
@@ -136,6 +131,11 @@ final class ReaderStore {
         securityScopeResolver: SecurityScopeResolver,
         diffBaselineTracker: DiffBaselineTracking? = nil
     ) {
+        self.document = ReaderDocumentController(
+            fileDependencies: file,
+            settingsStore: settingsStore,
+            settler: folderWatch.settler
+        )
         self.folderWatchDispatcher = ReaderFolderWatchDispatcher(folderWatchDependencies: folderWatch)
         self.rendering = rendering
         self.renderingController = ReaderRenderingController(
@@ -189,7 +189,7 @@ final class ReaderStore {
                 }
             },
             onLoadStateChanged: { [weak self] state in
-                self?.identity.documentLoadState = state
+                self?.document.documentLoadState = state
             }
         )
     }
@@ -244,49 +244,22 @@ final class ReaderStore {
     }
 
     func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
-        let normalizedURL = Self.normalizedFileURL(url)
-        identity.fileURL = normalizedURL
-        identity.fileDisplayName = normalizedURL.lastPathComponent
-        identity.documentLoadState = .deferred
-        identity.currentOpenOrigin = origin
-        identity.lastError = nil
-        identity.isCurrentFileMissing = false
-        let modificationDate = file.io.modificationDate(for: normalizedURL)
-        content.fileLastModifiedAt = modificationDate == .distantPast ? nil : modificationDate
+        document.deferFile(at: url, origin: origin)
         if let folderWatchSession {
             folderWatchDispatcher.setSession(folderWatchSession)
         }
     }
 
     func transitionToLoading() {
-        guard documentLoadState == .deferred || documentLoadState == .ready else { return }
-        identity.documentLoadState = .loading
+        document.transitionToLoading()
     }
 
     func clearLoadingState() {
-        guard documentLoadState == .loading else { return }
-        identity.documentLoadState = .ready
+        document.clearLoadingState()
     }
 
-    @ObservationIgnored private var loadingOverlayHoldGeneration: UInt = 0
-
     func holdLoadingOverlayBriefly() {
-        // After file I/O completes the settler sets .ready immediately,
-        // but the WKWebView still needs time to render.  Re-enter .loading
-        // briefly so the overlay stays visible while the web view catches up.
-        guard documentLoadState == .ready else { return }
-        transitionToLoading()
-
-        // Generation counter: rapid successive calls retire earlier timers
-        // so only the most recent hold restores the state.
-        loadingOverlayHoldGeneration &+= 1
-        let generation = loadingOverlayHoldGeneration
-
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(300))
-            guard let self, self.loadingOverlayHoldGeneration == generation else { return }
-            self.clearLoadingState()
-        }
+        document.holdLoadingOverlayBriefly()
     }
 
     func clearOpenDocument() {
@@ -294,15 +267,11 @@ final class ReaderStore {
         // Note: diffBaselineTracker is intentionally NOT reset here.
         // Per-file-URL history is preserved across open/close cycles
         // so the lookback window remains time-based, not session-based.
-        file.watcher.stopWatching()
         securityScopeResolver.endFileAndDirectoryAccess()
 
-        identity = .empty
-        content = .empty
-        editing = .empty
+        document.clearOpenDocument()
         sourceEditingController.reset()
-
-        folderWatch.settler.clearSettling()
+        toc.clear()
     }
 
     func dismissFolderWatchAutoOpenWarning() {
@@ -311,7 +280,7 @@ final class ReaderStore {
 
     func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
         sourceEditingController.draftMarkdown = transition.draftMarkdown
-        content.sourceMarkdown = transition.sourceMarkdown
+        document.sourceMarkdown = transition.sourceMarkdown
         sourceEditingController.sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
         sourceEditingController.unsavedChangedRegions = transition.unsavedChangedRegions
         sourceEditingController.isSourceEditing = transition.isSourceEditing
@@ -319,45 +288,15 @@ final class ReaderStore {
     }
 
     func refreshOpenInApplications() {
-        guard let fileURL else {
-            identity.openInApplications = []
-            return
-        }
-
-        do {
-            identity.openInApplications = try file.actions.registeredApplications(for: fileURL)
-        } catch {
-            identity.openInApplications = []
-            handle(error)
-        }
+        document.refreshOpenInApplications()
     }
 
     func openCurrentFileInApplication(_ application: ReaderExternalApplication?) {
-        guard let fileURL else {
-            handle(ReaderError.noOpenFileInReader)
-            return
-        }
-
-        do {
-            try file.actions.open(fileURL: fileURL, in: application)
-            identity.lastError = nil
-        } catch {
-            handle(error)
-        }
+        document.openInApplication(application)
     }
 
     func revealCurrentFileInFinder() {
-        guard let fileURL else {
-            handle(ReaderError.noOpenFileInReader)
-            return
-        }
-
-        do {
-            try file.actions.revealInFinder(fileURL: fileURL)
-            identity.lastError = nil
-        } catch {
-            handle(error)
-        }
+        document.revealInFinder()
     }
 
     func presentError(_ error: Error) {
@@ -383,11 +322,11 @@ final class ReaderStore {
 
 
     func handle(_ error: Error) {
-        identity.lastError = ReaderPresentableError(from: error)
+        document.handle(error)
     }
 
     func clearLastError() {
-        identity.lastError = nil
+        document.clearLastError()
     }
 
     static func normalizedFileURL(_ url: URL) -> URL {
@@ -401,10 +340,10 @@ final class ReaderStore {
     // MARK: - Test Helpers
 
     #if DEBUG
-    func testSetFileURL(_ url: URL?) { identity.fileURL = url }
-    func testSetFileDisplayName(_ name: String) { identity.fileDisplayName = name }
-    func testSetFileLastModifiedAt(_ date: Date?) { content.fileLastModifiedAt = date }
+    func testSetFileURL(_ url: URL?) { document.fileURL = url }
+    func testSetFileDisplayName(_ name: String) { document.fileDisplayName = name }
+    func testSetFileLastModifiedAt(_ date: Date?) { document.fileLastModifiedAt = date }
     func testSetHasUnacknowledgedExternalChange(_ value: Bool) { externalChange.hasUnacknowledgedExternalChange = value }
-    func testSetIsCurrentFileMissing(_ value: Bool) { identity.isCurrentFileMissing = value }
+    func testSetIsCurrentFileMissing(_ value: Bool) { document.isCurrentFileMissing = value }
     #endif
 }

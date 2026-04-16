@@ -10,7 +10,7 @@ extension ReaderStore {
             return
         }
 
-        let transition = sourceEditingCoordinator.beginSession(markdown: content.savedMarkdown)
+        let transition = sourceEditingCoordinator.beginSession(markdown: document.savedMarkdown)
         applySourceEditingTransition(transition)
         clearLastError()
     }
@@ -21,13 +21,13 @@ extension ReaderStore {
         }
 
         let unsavedChangedRegions = changedRegions(
-            diffBaselineMarkdown: content.savedMarkdown,
+            diffBaselineMarkdown: document.savedMarkdown,
             newMarkdown: markdown
         )
         let transition = sourceEditingCoordinator.updateDraft(
             markdown: markdown,
             sourceEditorSeedMarkdown: sourceEditorSeedMarkdown,
-            diffBaselineMarkdown: content.savedMarkdown,
+            diffBaselineMarkdown: document.savedMarkdown,
             unsavedChangedRegions: unsavedChangedRegions
         )
         applySourceEditingTransition(transition)
@@ -49,7 +49,7 @@ extension ReaderStore {
                 "save requested: \(saveLogContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
             )
             cancelPendingDraftPreviewRender()
-            let diffBaselineMarkdown = content.savedMarkdown
+            let diffBaselineMarkdown = document.savedMarkdown
             try persistSourceDraft(
                 draftMarkdown,
                 to: fileURL,
@@ -75,7 +75,7 @@ extension ReaderStore {
             return
         }
 
-        let transition = sourceEditingCoordinator.finishSession(markdown: content.savedMarkdown)
+        let transition = sourceEditingCoordinator.finishSession(markdown: document.savedMarkdown)
         applySourceEditingTransition(transition)
 
         do {

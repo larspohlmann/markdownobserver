@@ -13,19 +13,19 @@ extension ReaderStore {
                 for: fileURL, reason: "write", folderWatchSession: activeFolderWatchSession
             )
             try file.io.write(draftMarkdown, to: accessibleURL)
-            content.savedMarkdown = draftMarkdown
+            document.savedMarkdown = draftMarkdown
             let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
             applySourceEditingTransition(transition)
-            content.changedRegions = changedRegions(
+            document.changedRegions = changedRegions(
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
             )
-            content.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
-            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
+            document.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = document.changedRegions.isEmpty ? nil : diffBaselineMarkdown
             externalChange.clear()
-            identity.isCurrentFileMissing = false
+            document.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
-            identity.lastError = nil
+            document.lastError = nil
             let modifiedAtDescription = fileLastModifiedAt?.description ?? "nil"
             logSaveInfo(
                 "save succeeded: \(saveLogContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
@@ -112,8 +112,8 @@ extension ReaderStore {
             return false
         }
 
-        content.fileLastModifiedAt = loaded.modificationDate
-        content.changedRegions = changedRegions(
+        document.fileLastModifiedAt = loaded.modificationDate
+        document.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
@@ -138,7 +138,7 @@ extension ReaderStore {
         let fileScopeURL = redactedPathText(for: ctx.fileToken?.url)
         let folderScopeURL = redactedPathText(for: ctx.folderToken?.url)
         let accessibleFilePath = redactedPathText(for: ctx.accessibleFileURL)
-        return "file=\(filePath) origin=\(identity.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        return "file=\(filePath) origin=\(document.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
     func redactedPathText(for url: URL?) -> String {

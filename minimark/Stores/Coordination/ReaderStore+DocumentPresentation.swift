@@ -22,8 +22,8 @@ extension ReaderStore {
         if acknowledgeExternalChange {
             externalChange.clear()
         }
-        identity.isCurrentFileMissing = false
-        identity.lastError = nil
+        document.isCurrentFileMissing = false
+        document.lastError = nil
     }
 
     func applyLoadedDocumentState(
@@ -32,20 +32,20 @@ extension ReaderStore {
         diffBaselineMarkdown: String?,
         resetDocumentViewMode: Bool
     ) {
-        identity.fileURL = fileURL
-        identity.fileDisplayName = fileURL.lastPathComponent
-        content.savedMarkdown = loaded.markdown
+        document.fileURL = fileURL
+        document.fileDisplayName = fileURL.lastPathComponent
+        document.savedMarkdown = loaded.markdown
         sourceEditingController.draftMarkdown = nil
         sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
-        content.sourceMarkdown = loaded.markdown
+        document.sourceMarkdown = loaded.markdown
         sourceEditingController.sourceEditorSeedMarkdown = loaded.markdown
-        content.fileLastModifiedAt = loaded.modificationDate
+        document.fileLastModifiedAt = loaded.modificationDate
 
         if resetDocumentViewMode {
             sourceEditingController.documentViewMode = .preview
         }
 
-        content.changedRegions = changedRegions(
+        document.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
@@ -56,12 +56,12 @@ extension ReaderStore {
     }
 
     func presentMissingDocument(at fileURL: URL, error: Error) {
-        identity.fileURL = fileURL
-        identity.fileDisplayName = fileURL.lastPathComponent
-        content.fileLastModifiedAt = nil
-        identity.openInApplications = []
-        identity.isCurrentFileMissing = true
-        identity.lastError = ReaderPresentableError(from: error)
+        document.fileURL = fileURL
+        document.fileDisplayName = fileURL.lastPathComponent
+        document.fileLastModifiedAt = nil
+        document.openInApplications = []
+        document.isCurrentFileMissing = true
+        document.lastError = ReaderPresentableError(from: error)
         folderWatch.settler.clearSettling()
     }
 
