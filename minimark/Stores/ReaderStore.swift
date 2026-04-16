@@ -237,6 +237,7 @@ final class ReaderStore {
 
         document.clearOpenDocument()
         sourceEditingController.reset()
+        externalChange.clear()
         toc.clear()
     }
 

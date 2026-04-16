@@ -14,6 +14,7 @@ final class ReaderExternalChangeController {
     var unacknowledgedExternalChangeKind: ReaderExternalChangeKind = .modified
 
     @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
+    @ObservationIgnored var onStateChanged: (() -> Void)?
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
         let previousKind = unacknowledgedExternalChangeKind
@@ -24,11 +25,16 @@ final class ReaderExternalChangeController {
         if !wasAcknowledged && previousKind != kind {
             onExternalChangeKindChanged?()
         }
+        onStateChanged?()
     }
 
     func clear() {
+        let wasUnacknowledged = hasUnacknowledgedExternalChange
         hasUnacknowledgedExternalChange = false
         unacknowledgedExternalChangeKind = .modified
+        if wasUnacknowledged {
+            onStateChanged?()
+        }
     }
 
     func reset() {
@@ -36,5 +42,6 @@ final class ReaderExternalChangeController {
         hasUnacknowledgedExternalChange = false
         unacknowledgedExternalChangeKind = .modified
         onExternalChangeKindChanged = nil
+        onStateChanged = nil
     }
 }

@@ -25,6 +25,8 @@ struct FolderWatchSessionCoordinatorTests {
         func handleFolderWatchOpenRequest(_ request: FileOpenRequest) {
             lastOpenRequest = request
         }
+
+        func refreshRowStates() {}
     }
 
     // MARK: - Tests
