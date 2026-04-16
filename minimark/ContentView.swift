@@ -24,7 +24,11 @@ struct ContentView: View {
         category: "ContentView"
     )
 
-    var readerStore: ReaderStore
+    let document: ReaderDocumentController
+    let rendering: ReaderRenderingController
+    let sourceEditing: ReaderSourceEditingController
+    let externalChange: ReaderExternalChangeController
+    let toc: ReaderTOCController
     let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
@@ -48,7 +52,9 @@ struct ContentView: View {
 
     var body: some View {
         baseBody.modifier(ContentViewFocusedValues(
-            readerStore: readerStore,
+            document: document,
+            sourceEditing: sourceEditing,
+            toc: toc,
             folderWatchState: folderWatchState,
             onAction: onAction,
             canNavigateChangedRegions: canNavigateChangedRegions,
@@ -66,13 +72,13 @@ struct ContentView: View {
     private var baseBody: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
-                if readerStore.isCurrentFileMissing {
+                if document.isCurrentFileMissing {
                     DeletedFileWarningBar(
-                        fileName: readerStore.fileDisplayName,
-                        message: readerStore.lastError?.message
+                        fileName: document.fileDisplayName,
+                        message: document.lastError?.message
                     )
                     .padding(.top, ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: overlayTopInset))
-                } else if readerStore.needsImageDirectoryAccess {
+                } else if rendering.needsImageDirectoryAccess {
                     ImageAccessWarningBar {
                         promptForImageDirectoryAccess()
                     }
@@ -94,10 +100,10 @@ struct ContentView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .onChange(of: readerStore.fileURL?.standardizedFileURL.path) { _, _ in
+            .onChange(of: document.fileURL?.standardizedFileURL.path) { _, _ in
                 handleFileIdentityChange()
             }
-            .onChange(of: readerStore.changedRegions) { _, _ in
+            .onChange(of: document.changedRegions) { _, _ in
                 changeNavigation.resetForNewRegions()
             }
             .onChange(of: previewMode) { _, newValue in
@@ -106,16 +112,16 @@ struct ContentView: View {
             .onChange(of: sourceMode) { _, newValue in
                 handleSourceModeChange(newValue)
             }
-            .onChange(of: readerStore.documentViewMode) { _, newValue in
+            .onChange(of: sourceEditing.documentViewMode) { _, newValue in
                 handleDocumentViewModeChange(newValue)
             }
-            .onChange(of: readerStore.sourceEditorSeedMarkdown) { _, _ in
+            .onChange(of: sourceEditing.sourceEditorSeedMarkdown) { _, _ in
                 refreshSourceHTML()
             }
-            .onChange(of: readerStore.currentSettings) { _, _ in
+            .onChange(of: settingsStore.currentSettings) { _, _ in
                 refreshSourceHTML()
             }
-            .onChange(of: readerStore.isSourceEditing) { _, _ in
+            .onChange(of: sourceEditing.isSourceEditing) { _, _ in
                 refreshSourceHTML()
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
@@ -126,9 +132,10 @@ struct ContentView: View {
             }
 
             ReaderTopBar(
-                readerStore: readerStore,
+                document: document,
+                sourceEditing: sourceEditing,
                 canStopFolderWatch: folderWatchState.canStopFolderWatch,
-                apps: readerStore.openInApplications,
+                apps: document.openInApplications,
                 favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
                 recentWatchedFolders: folderWatchState.recentWatchedFolders,
                 recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
@@ -138,13 +145,13 @@ struct ContentView: View {
                     case .openFiles(let urls):
                         handlePickedFileURLs(urls)
                     case .openInApp(let app):
-                        readerStore.openCurrentFileInApplication(app)
+                        onAction(.openInApplication(app))
                     case .revealInFinder:
-                        readerStore.revealCurrentFileInFinder()
+                        onAction(.revealInFinder)
                     case .saveSourceDraft:
-                        readerStore.saveSourceDraft()
+                        onAction(.saveSourceDraft)
                     case .discardSourceDraft:
-                        readerStore.discardSourceDraft()
+                        onAction(.discardSourceDraft)
                     case .requestFolderWatch(let url):
                         onAction(.requestFolderWatch(url))
                     case .stopFolderWatch:
@@ -234,19 +241,19 @@ struct ContentView: View {
     private func handleSurfaceAppear() {
         refreshSourceHTML()
 
-        if previewMode == .nativeFallback, !readerStore.renderedHTMLDocument.isEmpty {
+        if previewMode == .nativeFallback, !rendering.renderedHTMLDocument.isEmpty {
             previewReloadToken += 1
             previewMode = .web
         }
         if sourceMode == .plainTextFallback,
-           !readerStore.sourceMarkdown.isEmpty {
+           !document.sourceMarkdown.isEmpty {
             sourceReloadToken += 1
             sourceMode = .web
         }
     }
 
     private func promptForImageDirectoryAccess() {
-        guard let directoryURL = readerStore.fileURL?.deletingLastPathComponent() else {
+        guard let directoryURL = document.fileURL?.deletingLastPathComponent() else {
             return
         }
 
@@ -264,23 +271,23 @@ struct ContentView: View {
             return
         }
 
-        readerStore.grantImageDirectoryAccess(folderURL: selectedURL)
+        onAction(.grantImageDirectoryAccess(selectedURL))
     }
 
     var previewAccessibilityValue: String {
-        let fileName = readerStore.fileURL?.lastPathComponent ?? "none"
-        return "file=\(fileName)|regions=\(readerStore.changedRegions.count)|mode=\(readerStore.documentViewMode.rawValue)|surface=preview"
+        let fileName = document.fileURL?.lastPathComponent ?? "none"
+        return "file=\(fileName)|regions=\(document.changedRegions.count)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=preview"
     }
 
     var sourceAccessibilityValue: String {
-        let fileName = readerStore.fileURL?.lastPathComponent ?? "none"
-        return "file=\(fileName)|mode=\(readerStore.documentViewMode.rawValue)|surface=source"
+        let fileName = document.fileURL?.lastPathComponent ?? "none"
+        return "file=\(fileName)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=source"
     }
 
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
-            documentViewMode: readerStore.documentViewMode,
-            hasOpenDocument: readerStore.hasOpenDocument,
+            documentViewMode: sourceEditing.documentViewMode,
+            hasOpenDocument: document.hasOpenDocument,
             showsLoadingOverlay: shouldShowDocumentLoadingOverlay,
             loadingOverlayHeadline: loadingOverlayHeadline,
             loadingOverlaySubtitle: loadingOverlaySubtitle,
@@ -298,14 +305,14 @@ struct ContentView: View {
 
     private var overlayTopInset: CGFloat {
         var height = ReaderTopBarMetrics.mainBarHeight
-        if readerStore.isSourceEditing {
+        if sourceEditing.isSourceEditing {
             height += ReaderTopBarMetrics.sourceEditingBarHeight
         }
         return height
     }
 
     private var isStatusBannerVisible: Bool {
-        readerStore.isCurrentFileMissing || readerStore.needsImageDirectoryAccess
+        document.isCurrentFileMissing || rendering.needsImageDirectoryAccess
     }
 
     var overlayInsets: ReaderOverlayInsetValues {
@@ -324,7 +331,7 @@ struct ContentView: View {
                     .environment(\.colorScheme, overlayColorScheme)
             }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
-                if readerStore.isTOCVisible, let anchor {
+                if toc.isVisible, let anchor {
                     tocOverlay(buttonAnchor: anchor)
                 }
             }
@@ -339,7 +346,7 @@ struct ContentView: View {
         if canNavigateChangedRegions {
             ChangeNavigationPill(
                 currentIndex: changeNavigation.currentIndex,
-                totalCount: readerStore.changedRegions.count,
+                totalCount: document.changedRegions.count,
                 onNavigate: { direction in
                     changeNavigation.requestNavigation(direction)
                     splitScrollCoordinator.suppressPreviewBounceBack()
@@ -394,20 +401,20 @@ struct ContentView: View {
 
     private var contentUtilityRail: some View {
         ContentUtilityRail(
-            hasFile: readerStore.fileURL != nil,
-            documentViewMode: readerStore.documentViewMode,
-            showEditButton: showSourceEditingControls && !readerStore.isSourceEditing,
-            canStartSourceEditing: readerStore.canStartSourceEditing,
+            hasFile: document.fileURL != nil,
+            documentViewMode: sourceEditing.documentViewMode,
+            showEditButton: showSourceEditingControls && !sourceEditing.isSourceEditing,
+            canStartSourceEditing: (document.hasOpenDocument && !document.isCurrentFileMissing && !sourceEditing.isSourceEditing),
             onSetDocumentViewMode: { mode in
-                readerStore.setDocumentViewMode(mode)
+                sourceEditing.setViewMode(mode, hasOpenDocument: document.hasOpenDocument)
             },
             onStartSourceEditing: {
-                readerStore.startEditingSource()
+                onAction(.startSourceEditing)
             },
-            hasTOCHeadings: !readerStore.tocHeadings.isEmpty,
+            hasTOCHeadings: !toc.headings.isEmpty,
             isTOCVisible: Binding(
-                get: { readerStore.isTOCVisible },
-                set: { readerStore.isTOCVisible = $0 }
+                get: { toc.isVisible },
+                set: { toc.isVisible = $0 }
             )
         )
     }
@@ -424,12 +431,12 @@ struct ContentView: View {
             ZStack(alignment: .topLeading) {
                 Color.clear
                     .contentShape(Rectangle())
-                    .onTapGesture { readerStore.isTOCVisible = false }
+                    .onTapGesture { toc.isVisible = false }
 
                 TOCPopoverView(
-                    headings: readerStore.tocHeadings,
+                    headings: toc.headings,
                     onSelect: { heading in
-                        readerStore.scrollToTOCHeading(heading)
+                        toc.scrollTo(heading)
                     }
                 )
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -447,18 +454,18 @@ struct ContentView: View {
 
 
     var canNavigateChangedRegions: Bool {
-        readerStore.documentViewMode != .source &&
+        sourceEditing.documentViewMode != .source &&
             previewMode == .web &&
-            !readerStore.changedRegions.isEmpty
+            !document.changedRegions.isEmpty
     }
 
     private var showSourceEditingControls: Bool {
-        readerStore.hasOpenDocument &&
-            (readerStore.documentViewMode != .preview || readerStore.isSourceEditing)
+        document.hasOpenDocument &&
+            (sourceEditing.documentViewMode != .preview || sourceEditing.isSourceEditing)
     }
 
     var canSynchronizeSplitScroll: Bool {
-        readerStore.documentViewMode == .split &&
+        sourceEditing.documentViewMode == .split &&
             previewMode == .web &&
             sourceMode == .web
     }
@@ -475,11 +482,11 @@ struct ContentView: View {
     }
 
     private var shouldShowDocumentLoadingOverlay: Bool {
-        readerStore.documentLoadState == .loading || readerStore.documentLoadState == .settlingAutoOpen
+        document.documentLoadState == .loading || document.documentLoadState == .settlingAutoOpen
     }
 
     private var loadingOverlayHeadline: String {
-        switch readerStore.documentLoadState {
+        switch document.documentLoadState {
         case .settlingAutoOpen:
             return "Waiting for file contents\u{2026}"
         case .ready, .loading, .deferred:
@@ -488,7 +495,7 @@ struct ContentView: View {
     }
 
     private var loadingOverlaySubtitle: String? {
-        switch readerStore.documentLoadState {
+        switch document.documentLoadState {
         case .settlingAutoOpen:
             return "The new watched document will appear as soon as writing finishes."
         case .ready, .loading, .deferred:
@@ -497,7 +504,7 @@ struct ContentView: View {
     }
 
     var minimumSurfaceWidth: CGFloat? {
-        readerStore.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
+        sourceEditing.documentViewMode == .split ? Metrics.splitPaneMinimumWidth : nil
     }
 
     private var isUITestModeEnabled: Bool {
@@ -717,28 +724,34 @@ final class SplitScrollCoordinator: ObservableObject {
         settingsStore: settingsStore,
         requestWatchedFolderReauthorization: { _ in nil }
     )
-    let store = ReaderStore(
-        rendering: ReaderRenderingDependencies(
-            renderer: MarkdownRenderingService(),
-            differ: ChangedRegionDiffer()
-        ),
-        file: ReaderFileDependencies(
-            watcher: FileChangeWatcher(),
-            io: ReaderDocumentIOService(),
-            actions: ReaderFileActionService()
-        ),
-        folderWatch: ReaderFolderWatchDependencies(
-            autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
-                minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
-            ),
-            settler: settler,
-            systemNotifier: ReaderSystemNotifier.shared
-        ),
+    let fileDeps = ReaderFileDependencies(
+        watcher: FileChangeWatcher(),
+        io: ReaderDocumentIOService(),
+        actions: ReaderFileActionService()
+    )
+    let renderingDeps = ReaderRenderingDependencies(
+        renderer: MarkdownRenderingService(),
+        differ: ChangedRegionDiffer()
+    )
+    let document = ReaderDocumentController(
+        fileDependencies: fileDeps,
+        settingsStore: settingsStore,
+        settler: settler
+    )
+    let rendering = ReaderRenderingController(
+        renderingDependencies: renderingDeps,
         settingsStore: settingsStore,
         securityScopeResolver: securityScopeResolver
     )
+    let sourceEditing = ReaderSourceEditingController()
+    let externalChange = ReaderExternalChangeController()
+    let toc = ReaderTOCController()
     return ContentView(
-        readerStore: store,
+        document: document,
+        rendering: rendering,
+        sourceEditing: sourceEditing,
+        externalChange: externalChange,
+        toc: toc,
         settingsStore: settingsStore,
         folderWatchState: ContentViewFolderWatchState(
             activeFolderWatch: nil,

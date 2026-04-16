@@ -32,7 +32,11 @@ struct ContentViewAdapter: View {
         }()
 
         ContentView(
-            readerStore: readerStore,
+            document: readerStore.document,
+            rendering: readerStore.renderingController,
+            sourceEditing: readerStore.sourceEditingController,
+            externalChange: readerStore.externalChange,
+            toc: readerStore.toc,
             settingsStore: settingsStore,
             folderWatchState: ContentViewFolderWatchState(
                 activeFolderWatch: sharedFolderWatchSession,

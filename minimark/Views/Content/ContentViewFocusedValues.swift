@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ContentViewFocusedValues: ViewModifier {
-    let readerStore: ReaderStore
+    let document: ReaderDocumentController
+    let sourceEditing: ReaderSourceEditingController
+    let toc: ReaderTOCController
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
     let canNavigateChangedRegions: Bool
@@ -13,7 +15,7 @@ struct ContentViewFocusedValues: ViewModifier {
 
     private func openOrAppendDocument(_ fileURL: URL) {
         let strategy: FileOpenRequest.SlotStrategy =
-            readerStore.fileURL == nil ? .replaceSelectedSlot : .alwaysAppend
+            document.fileURL == nil ? .replaceSelectedSlot : .alwaysAppend
         onAction(.requestFileOpen(FileOpenRequest(
             fileURLs: [fileURL],
             origin: .manual,
@@ -27,9 +29,9 @@ struct ContentViewFocusedValues: ViewModifier {
                 \.readerOpenDocumentInCurrentWindow,
                 ReaderOpenDocumentInCurrentWindowAction { fileURL in
                     let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-                    let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
-                    if readerStore.hasUnsavedDraftChanges, currentURL != normalizedURL {
-                        readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
+                    let currentURL = document.fileURL.map(ReaderFileRouting.normalizedFileURL)
+                    if sourceEditing.hasUnsavedDraftChanges, currentURL != normalizedURL {
+                        onAction(.presentError(ReaderError.unsavedDraftRequiresResolution))
                         return
                     }
                     onAction(.requestFileOpen(FileOpenRequest(
@@ -75,30 +77,30 @@ struct ContentViewFocusedValues: ViewModifier {
             .focusedValue(
                 \.readerDocumentViewModeContext,
                 ReaderDocumentViewModeContext(
-                    currentMode: readerStore.documentViewMode,
-                    canSetMode: readerStore.hasOpenDocument,
+                    currentMode: sourceEditing.documentViewMode,
+                    canSetMode: document.hasOpenDocument,
                     setMode: { mode in
-                        readerStore.setDocumentViewMode(mode)
+                        sourceEditing.setViewMode(mode, hasOpenDocument: document.hasOpenDocument)
                     },
                     toggleMode: {
-                        readerStore.toggleDocumentViewMode()
+                        sourceEditing.toggleViewMode()
                     }
                 )
             )
             .focusedValue(
                 \.readerSourceEditingContext,
                 ReaderSourceEditingContext(
-                    canStartEditing: readerStore.canStartSourceEditing,
-                    canSave: readerStore.canSaveSourceDraft,
-                    canDiscard: readerStore.canDiscardSourceDraft,
+                    canStartEditing: (document.hasOpenDocument && !document.isCurrentFileMissing && !sourceEditing.isSourceEditing),
+                    canSave: sourceEditing.canSaveSourceDraft,
+                    canDiscard: sourceEditing.canDiscardSourceDraft,
                     startEditing: {
-                        readerStore.startEditingSource()
+                        onAction(.startSourceEditing)
                     },
                     save: {
-                        readerStore.saveSourceDraft()
+                        onAction(.saveSourceDraft)
                     },
                     discard: {
-                        readerStore.discardSourceDraft()
+                        onAction(.discardSourceDraft)
                     }
                 )
             )
@@ -112,8 +114,8 @@ struct ContentViewFocusedValues: ViewModifier {
             .focusedValue(
                 \.readerToggleTOC,
                 ReaderToggleTOCAction(
-                    canToggle: !readerStore.tocHeadings.isEmpty,
-                    toggle: { readerStore.toggleTOC() }
+                    canToggle: !toc.headings.isEmpty,
+                    toggle: { toc.toggle() }
                 )
             )
             .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
