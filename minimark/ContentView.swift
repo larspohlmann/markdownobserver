@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import Foundation
 import OSLog
 import SwiftUI
@@ -28,19 +27,6 @@ struct ContentView: View {
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
-    // MARK: - Internal: accessible to factory extension in ContentViewConfigurationFactory.swift
-    // These properties must be at least `internal` because Swift extensions in separate files
-    // cannot see `private` members.
-
-    @StateObject var splitScrollCoordinator = SplitScrollCoordinator()
-    @State var dropTargeting = DropTargetingCoordinator()
-    @State var previewMode: PreviewMode = .web
-    @State var previewReloadToken = 0
-    @State var sourceMode: SourceMode = .web
-    @State var sourceReloadToken = 0
-    @State var changeNavigation = ChangedRegionNavigationCoordinator()
-    @State var sourceHTMLCache = SourceHTMLDocumentCache()
-
     var body: some View {
         baseBody.modifier(ContentViewFocusedValues(
             document: document,
@@ -48,10 +34,13 @@ struct ContentView: View {
             toc: toc,
             folderWatchState: folderWatchState,
             onAction: onAction,
-            canNavigateChangedRegions: canNavigateChangedRegions,
+            canNavigateChangedRegions: surfaceViewModel.canNavigateChangedRegions(
+                documentViewMode: sourceEditing.documentViewMode,
+                changedRegions: document.changedRegions
+            ),
             onNavigateChangedRegion: { direction in
-                changeNavigation.requestNavigation(direction)
-                splitScrollCoordinator.suppressPreviewBounceBack()
+                surfaceViewModel.changeNavigation.requestNavigation(direction)
+                surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
             },
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
@@ -87,11 +76,11 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
-                if dropTargeting.isBlockedFolderDropTargeted {
+                if surfaceViewModel.dropTargeting.isBlockedFolderDropTargeted {
                     FolderDropBlockedOverlayView()
                         .padding(10)
                         .allowsHitTesting(false)
-                } else if dropTargeting.isDragTargeted {
+                } else if surfaceViewModel.dropTargeting.isDragTargeted {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(Color.accentColor.opacity(0.65), lineWidth: 2)
                         .padding(10)
@@ -99,34 +88,35 @@ struct ContentView: View {
                 }
             }
             .onChange(of: document.fileURL?.standardizedFileURL.path) { _, _ in
-                handleFileIdentityChange()
+                surfaceViewModel.handleFileIdentityChange()
             }
             .onChange(of: document.changedRegions) { _, _ in
-                changeNavigation.resetForNewRegions()
+                surfaceViewModel.changeNavigation.resetForNewRegions()
             }
-            .onChange(of: previewMode) { _, newValue in
-                handlePreviewModeChange(newValue)
+            .onChange(of: surfaceViewModel.previewMode) { _, newValue in
+                surfaceViewModel.handlePreviewModeChange(newValue)
             }
-            .onChange(of: sourceMode) { _, newValue in
-                handleSourceModeChange(newValue)
+            .onChange(of: surfaceViewModel.sourceMode) { _, newValue in
+                surfaceViewModel.handleSourceModeChange(newValue)
             }
             .onChange(of: sourceEditing.documentViewMode) { _, newValue in
-                handleDocumentViewModeChange(newValue)
+                surfaceViewModel.handleDocumentViewModeChange(newValue)
             }
             .onChange(of: sourceEditing.sourceEditorSeedMarkdown) { _, _ in
-                refreshSourceHTML()
+                refreshSourceHTMLFromControllers()
             }
             .onChange(of: settingsStore.currentSettings) { _, _ in
-                refreshSourceHTML()
+                refreshSourceHTMLFromControllers()
             }
             .onChange(of: sourceEditing.isSourceEditing) { _, _ in
-                refreshSourceHTML()
+                refreshSourceHTMLFromControllers()
             }
             .onChange(of: folderWatchState.activeFolderWatch?.folderURL.standardizedFileURL.path) { _, _ in
-                dropTargeting.clearAll()
+                surfaceViewModel.dropTargeting.clearAll()
             }
             .onAppear {
-                handleSurfaceAppear()
+                refreshSourceHTMLFromControllers()
+                recoverFallbackSurfaceModes()
             }
 
             ReaderTopBar(
@@ -197,60 +187,6 @@ struct ContentView: View {
         .contentShape(Rectangle())
     }
 
-    private func handleFileIdentityChange() {
-        changeNavigation.reset()
-        if previewMode == .nativeFallback {
-            previewReloadToken += 1
-            previewMode = .web
-        }
-        if sourceMode == .plainTextFallback {
-            sourceReloadToken += 1
-            sourceMode = .web
-        }
-        dropTargeting.clearAll()
-        splitScrollCoordinator.reset()
-    }
-
-    private func handlePreviewModeChange(_ mode: PreviewMode) {
-        guard mode == .nativeFallback else {
-            return
-        }
-
-        dropTargeting.clear(for: .preview)
-        splitScrollCoordinator.reset()
-    }
-
-    private func handleSourceModeChange(_ mode: SourceMode) {
-        guard mode == .plainTextFallback else {
-            return
-        }
-
-        dropTargeting.clear(for: .source)
-        splitScrollCoordinator.reset()
-    }
-
-    private func handleDocumentViewModeChange(_ mode: ReaderDocumentViewMode) {
-        guard mode != .split else {
-            return
-        }
-
-        splitScrollCoordinator.reset()
-    }
-
-    private func handleSurfaceAppear() {
-        refreshSourceHTML()
-
-        if previewMode == .nativeFallback, !rendering.renderedHTMLDocument.isEmpty {
-            previewReloadToken += 1
-            previewMode = .web
-        }
-        if sourceMode == .plainTextFallback,
-           !document.sourceMarkdown.isEmpty {
-            sourceReloadToken += 1
-            sourceMode = .web
-        }
-    }
-
     private func promptForImageDirectoryAccess() {
         guard let directoryURL = document.fileURL?.deletingLastPathComponent() else {
             return
@@ -293,8 +229,37 @@ struct ContentView: View {
             emptyStateVariant: emptyStateVariant,
             currentReaderTheme: currentReaderTheme,
             onDroppedFileURLs: handleDroppedFileURLs,
-            previewSurface: documentSurfacePane(for: .preview),
-            sourceSurface: documentSurfacePane(for: .source)
+            previewSurface: surfaceHost(for: .preview),
+            sourceSurface: surfaceHost(for: .source)
+        )
+    }
+
+    private func surfaceHost(for surface: DocumentSurfaceRole) -> DocumentSurfaceHost {
+        DocumentSurfaceHost(
+            configuration: surfaceViewModel.documentSurfaceConfiguration(
+                for: surface,
+                fileURL: document.fileURL,
+                renderedHTMLDocument: rendering.renderedHTMLDocument,
+                sourceMarkdown: document.sourceMarkdown,
+                documentViewMode: sourceEditing.documentViewMode,
+                changedRegions: document.changedRegions,
+                isSourceEditing: sourceEditing.isSourceEditing,
+                overlayTopInset: overlayInsets.scrollTargetTopInset,
+                minimumSurfaceWidth: minimumSurfaceWidth,
+                tocScrollRequest: toc.scrollRequest,
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onSharedAction: { action, role in
+                    surfaceViewModel.handleSharedAction(
+                        action,
+                        for: role,
+                        documentViewMode: sourceEditing.documentViewMode,
+                        onDroppedFileURLs: handleDroppedFileURLs,
+                        onAction: onAction
+                    )
+                },
+                onAction: onAction
+            ),
+            fallbackMarkdown: document.sourceMarkdown
         )
     }
 
@@ -335,20 +300,20 @@ struct ContentView: View {
                 }
             }
             .overlay(alignment: .topLeading) { changeNavigationOverlay }
-            .animation(.easeOut(duration: 0.25), value: canNavigateChangedRegions)
+            .animation(.easeOut(duration: 0.25), value: surfaceViewModel.canNavigateChangedRegions(documentViewMode: sourceEditing.documentViewMode, changedRegions: document.changedRegions))
             .overlay(alignment: .top) { watchPillOverlay }
             .animation(.easeOut(duration: 0.25), value: folderWatchState.activeFolderWatch != nil)
     }
 
     @ViewBuilder
     private var changeNavigationOverlay: some View {
-        if canNavigateChangedRegions {
+        if surfaceViewModel.canNavigateChangedRegions(documentViewMode: sourceEditing.documentViewMode, changedRegions: document.changedRegions) {
             ChangeNavigationPill(
-                currentIndex: changeNavigation.currentIndex,
+                currentIndex: surfaceViewModel.changeNavigation.currentIndex,
                 totalCount: document.changedRegions.count,
                 onNavigate: { direction in
-                    changeNavigation.requestNavigation(direction)
-                    splitScrollCoordinator.suppressPreviewBounceBack()
+                    surfaceViewModel.changeNavigation.requestNavigation(direction)
+                    surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
                 }
             )
             .firstUseHint(.changeNavigation, message: "Use the arrows to step through changes", settingsStore: settingsStore)
@@ -388,7 +353,7 @@ struct ContentView: View {
                 }
             )
             .padding(.top, overlayInsets.leadingOverlayTopPadding)
-            .padding(.leading, canNavigateChangedRegions ? 150 : 60)
+            .padding(.leading, surfaceViewModel.canNavigateChangedRegions(documentViewMode: sourceEditing.documentViewMode, changedRegions: document.changedRegions) ? 150 : 60)
             .padding(.trailing, 70)
             .environment(\.colorScheme, overlayColorScheme)
             .transition(.asymmetric(
@@ -451,22 +416,9 @@ struct ContentView: View {
         }
     }
 
-
-    var canNavigateChangedRegions: Bool {
-        sourceEditing.documentViewMode != .source &&
-            previewMode == .web &&
-            !document.changedRegions.isEmpty
-    }
-
     private var showSourceEditingControls: Bool {
         document.hasOpenDocument &&
             (sourceEditing.documentViewMode != .preview || sourceEditing.isSourceEditing)
-    }
-
-    var canSynchronizeSplitScroll: Bool {
-        sourceEditing.documentViewMode == .split &&
-            previewMode == .web &&
-            sourceMode == .web
     }
 
     private var currentReaderTheme: ReaderTheme {
@@ -508,6 +460,26 @@ struct ContentView: View {
 
     private var isUITestModeEnabled: Bool {
         ReaderUITestLaunchConfiguration.current.isUITestModeEnabled
+    }
+
+    private func refreshSourceHTMLFromControllers() {
+        surfaceViewModel.refreshSourceHTML(
+            markdown: sourceEditing.sourceEditorSeedMarkdown,
+            settings: settingsStore.currentSettings,
+            isEditable: sourceEditing.isSourceEditing
+        )
+    }
+
+    private func recoverFallbackSurfaceModes() {
+        if surfaceViewModel.previewMode == .nativeFallback, !rendering.renderedHTMLDocument.isEmpty {
+            surfaceViewModel.previewReloadToken += 1
+            surfaceViewModel.previewMode = .web
+        }
+        if surfaceViewModel.sourceMode == .plainTextFallback,
+           !document.sourceMarkdown.isEmpty {
+            surfaceViewModel.sourceReloadToken += 1
+            surfaceViewModel.sourceMode = .web
+        }
     }
 }
 
