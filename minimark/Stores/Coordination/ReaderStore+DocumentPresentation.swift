@@ -53,8 +53,7 @@ extension ReaderStore {
         editing.unsavedChangedRegions = []
         editing.isSourceEditing = false
         editing.hasUnsavedDraftChanges = false
-        tocHeadings = []
-        isTOCVisible = false
+        toc.clear()
     }
 
     func presentMissingDocument(at fileURL: URL, error: Error) {

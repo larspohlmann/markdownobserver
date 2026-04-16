@@ -72,10 +72,21 @@ final class ReaderStore {
     }
 
     // MARK: - Table of Contents
-    var tocHeadings: [TOCHeading] = []
-    var isTOCVisible: Bool = false
-    var tocScrollRequest: TOCScrollRequest?
-    var tocScrollRequestCounter = 0
+    let toc = ReaderTOCController()
+    var tocHeadings: [TOCHeading] { toc.headings }
+    var isTOCVisible: Bool {
+        get { toc.isVisible }
+        set { toc.isVisible = newValue }
+    }
+    var tocScrollRequest: TOCScrollRequest? {
+        get { toc.scrollRequest }
+        set { toc.scrollRequest = newValue }
+    }
+    var tocScrollRequestCounter: Int { toc.scrollRequestCounter }
+
+    func updateTOCHeadings(_ headings: [TOCHeading]) { toc.updateHeadings(headings) }
+    func toggleTOC() { toc.toggle() }
+    func scrollToTOCHeading(_ heading: TOCHeading) { toc.scrollTo(heading) }
 
     let rendering: ReaderRenderingDependencies
     let file: ReaderFileDependencies
