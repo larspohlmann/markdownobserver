@@ -16,7 +16,7 @@ final class ReaderFolderWatchController {
     private static let scanProgressLingerDuration: Duration = .milliseconds(500)
 
     private let folderWatcher: FolderChangeWatching
-    private let settingsStore: ReaderSettingsStoring
+    private let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     private let securityScope: SecurityScopedResourceAccessing
     private let systemNotifier: ReaderSystemNotifying
     private let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
@@ -61,7 +61,7 @@ final class ReaderFolderWatchController {
 
     init(
         folderWatcher: FolderChangeWatching,
-        settingsStore: ReaderSettingsStoring,
+        settingsStore: ReaderSettingsReading & ReaderRecentWriting,
         securityScope: SecurityScopedResourceAccessing,
         systemNotifier: ReaderSystemNotifying,
         folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning

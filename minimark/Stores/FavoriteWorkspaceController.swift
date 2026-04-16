@@ -54,7 +54,7 @@ final class FavoriteWorkspaceController {
         return favorites.first { $0.matches(folderPath: normalizedPath, options: options) }
     }
 
-    func persistFinalState(to settingsStore: some ReaderSettingsStoring) {
+    func persistFinalState(to settingsStore: some ReaderFavoriteWriting) {
         guard let id = activeFavoriteID, let state = activeFavoriteWorkspaceState else { return }
         settingsStore.updateFavoriteWorkspaceState(id: id, workspaceState: state)
     }
