@@ -21,6 +21,7 @@ struct ContentView: View {
     let toc: ReaderTOCController
     let settingsStore: ReaderSettingsStore
     let folderWatchState: ContentViewFolderWatchState
+    let surfaceViewModel: DocumentSurfaceViewModel
     let onAction: (ContentViewAction) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
@@ -688,6 +689,7 @@ private struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: Vi
             isAppearanceLocked: false,
             effectiveReaderTheme: .blackOnWhite
         ),
+        surfaceViewModel: DocumentSurfaceViewModel(),
         onAction: { _ in },
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),

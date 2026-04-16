@@ -31,6 +31,15 @@ struct ContentViewAdapter: View {
             return favorites.contains { $0.matches(folderPath: normalizedPath, options: session.options) }
         }()
 
+        let surfaceViewModel = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { [weak rendering = readerStore.renderingController] in
+                rendering?.renderedHTMLDocument ?? ""
+            },
+            sourceMarkdownProvider: { [weak document = readerStore.document] in
+                document?.sourceMarkdown ?? ""
+            }
+        )
+
         ContentView(
             document: readerStore.document,
             rendering: readerStore.renderingController,
@@ -51,6 +60,7 @@ struct ContentViewAdapter: View {
                 isAppearanceLocked: appearanceController.isLocked,
                 effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
             ),
+            surfaceViewModel: surfaceViewModel,
             onAction: onAction,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
