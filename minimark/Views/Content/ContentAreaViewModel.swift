@@ -219,6 +219,51 @@ final class ContentAreaViewModel {
         surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
     }
 
+    func dispatchWatchPillAction(_ action: WatchPillAction) {
+        switch action {
+        case .stop:
+            onAction(.stopFolderWatch)
+        case .saveFavorite(let name):
+            onAction(.saveFolderWatchAsFavorite(name))
+        case .removeFavorite:
+            onAction(.removeCurrentWatchFromFavorites)
+        case .revealInFinder:
+            if let url = folderWatchState.activeFolderWatch?.folderURL {
+                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+            }
+        case .toggleAppearanceLock:
+            onAction(.toggleAppearanceLock)
+        case .editSubfolders:
+            onAction(.editSubfolders)
+        }
+    }
+
+    func makeSurfaceConfiguration(for surface: DocumentSurfaceRole) -> DocumentSurfaceConfiguration {
+        surfaceViewModel.documentSurfaceConfiguration(
+            for: surface,
+            fileURL: document.fileURL,
+            renderedHTMLDocument: rendering.renderedHTMLDocument,
+            documentViewMode: sourceEditing.documentViewMode,
+            changedRegions: document.changedRegions,
+            isSourceEditing: sourceEditing.isSourceEditing,
+            overlayTopInset: overlayLayout.insets.scrollTargetTopInset,
+            minimumSurfaceWidth: minimumSurfaceWidth,
+            tocScrollRequest: toc.scrollRequest,
+            canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+            onSharedAction: { [weak self] action, role in
+                guard let self else { return false }
+                return self.surfaceViewModel.handleSharedAction(
+                    action,
+                    for: role,
+                    documentViewMode: self.sourceEditing.documentViewMode,
+                    onDroppedFileURLs: self.handleDroppedFileURLs,
+                    onAction: self.onAction
+                )
+            },
+            onAction: onAction
+        )
+    }
+
     func dispatchTopBarAction(_ action: ReaderTopBarAction) {
         switch action {
         case .openFiles(let urls):

@@ -202,3 +202,98 @@ struct MarkdownSourceFallbackView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
+
+struct DocumentSurfaceHost: View {
+    let configuration: DocumentSurfaceConfiguration
+    let fallbackMarkdown: String
+
+    var body: some View {
+        Group {
+            if configuration.usesWebSurface {
+                MarkdownWebView(
+                    htmlDocument: configuration.htmlDocument,
+                    documentIdentity: configuration.documentIdentity,
+                    accessibilityIdentifier: configuration.accessibilityIdentifier,
+                    accessibilityValue: configuration.accessibilityValue,
+                    reloadToken: configuration.reloadToken,
+                    diagnosticName: configuration.diagnosticName,
+                    postLoadStatusScript: configuration.postLoadStatusScript,
+                    changedRegionNavigationRequest: configuration.changedRegionNavigationRequest,
+                    scrollSyncRequest: configuration.scrollSyncRequest,
+                    tocScrollRequest: configuration.tocScrollRequest,
+                    supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
+                    overlayTopInset: configuration.overlayTopInset,
+                    reloadAnchorProgress: configuration.reloadAnchorProgress,
+                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs,
+                    onAction: configuration.onAction
+                )
+            } else {
+                fallbackSurface
+            }
+        }
+        .frame(minWidth: configuration.minimumWidth)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var fallbackSurface: some View {
+        switch configuration.role {
+        case .preview:
+            NativeMarkdownFallbackView(
+                markdown: fallbackMarkdown,
+                onRetryPreview: { configuration.onAction(.retryFallback) }
+            )
+        case .source:
+            MarkdownSourceFallbackView(
+                markdown: fallbackMarkdown,
+                onRetryHighlighting: { configuration.onAction(.retryFallback) }
+            )
+        }
+    }
+}
+
+struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
+    let documentViewMode: ReaderDocumentViewMode
+    let hasOpenDocument: Bool
+    let showsLoadingOverlay: Bool
+    let loadingOverlayHeadline: String
+    let loadingOverlaySubtitle: String?
+    let emptyStateVariant: ContentEmptyStateView.Variant
+    let currentReaderTheme: ReaderTheme
+    let onDroppedFileURLs: ([URL]) -> Void
+    let previewSurface: PreviewSurface
+    let sourceSurface: SourceSurface
+
+    var body: some View {
+        if showsLoadingOverlay {
+            DocumentLoadingOverlay(
+                theme: currentReaderTheme,
+                headline: loadingOverlayHeadline,
+                subtitle: loadingOverlaySubtitle
+            )
+        } else if !hasOpenDocument {
+            ContentEmptyStateView(
+                variant: emptyStateVariant,
+                theme: currentReaderTheme
+            )
+            .dropDestination(for: URL.self) { urls, _ in
+                let fileURLs = urls.filter { $0.isFileURL }
+                guard !fileURLs.isEmpty else { return false }
+                onDroppedFileURLs(fileURLs)
+                return true
+            }
+        } else {
+            switch documentViewMode {
+            case .preview:
+                previewSurface
+            case .split:
+                HSplitView {
+                    previewSurface
+                    sourceSurface
+                }
+            case .source:
+                sourceSurface
+            }
+        }
+    }
+}
