@@ -23,43 +23,7 @@ struct ContentViewAdapter: View {
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
-    @State private var surfaceViewModel: DocumentSurfaceViewModel
-
-    init(
-        readerStore: ReaderStore,
-        sidebarDocumentController: ReaderSidebarDocumentController,
-        settingsStore: ReaderSettingsStore,
-        appearanceController: WindowAppearanceController,
-        sharedFolderWatchSession: ReaderFolderWatchSession?,
-        canStopSharedFolderWatch: Bool,
-        pendingFolderWatchURL: URL?,
-        onAction: @escaping (ContentViewAction) -> Void,
-        isFolderWatchOptionsPresented: Binding<Bool>,
-        pendingFolderWatchOpenMode: Binding<ReaderFolderWatchOpenMode>,
-        pendingFolderWatchScope: Binding<ReaderFolderWatchScope>,
-        pendingFolderWatchExcludedSubdirectoryPaths: Binding<[String]>
-    ) {
-        self.readerStore = readerStore
-        self.sidebarDocumentController = sidebarDocumentController
-        self.settingsStore = settingsStore
-        self.appearanceController = appearanceController
-        self.sharedFolderWatchSession = sharedFolderWatchSession
-        self.canStopSharedFolderWatch = canStopSharedFolderWatch
-        self.pendingFolderWatchURL = pendingFolderWatchURL
-        self.onAction = onAction
-        self._isFolderWatchOptionsPresented = isFolderWatchOptionsPresented
-        self._pendingFolderWatchOpenMode = pendingFolderWatchOpenMode
-        self._pendingFolderWatchScope = pendingFolderWatchScope
-        self._pendingFolderWatchExcludedSubdirectoryPaths = pendingFolderWatchExcludedSubdirectoryPaths
-        self._surfaceViewModel = State(wrappedValue: DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { [weak rendering = readerStore.renderingController] in
-                rendering?.renderedHTMLDocument ?? ""
-            },
-            sourceMarkdownProvider: { [weak document = readerStore.document] in
-                document?.sourceMarkdown ?? ""
-            }
-        ))
-    }
+    @State private var surfaceViewModel = DocumentSurfaceViewModel()
 
     var body: some View {
         let favorites = settingsStore.currentSettings.favoriteWatchedFolders

@@ -6,14 +6,8 @@ import Testing
 struct DocumentSurfaceViewModelModeTests {
 
     @MainActor
-    private func makeViewModel(
-        renderedHTMLDocument: String = "",
-        sourceMarkdown: String = ""
-    ) -> DocumentSurfaceViewModel {
-        DocumentSurfaceViewModel(
-            renderedHTMLDocument: renderedHTMLDocument,
-            sourceMarkdown: sourceMarkdown
-        )
+    private func makeViewModel() -> DocumentSurfaceViewModel {
+        DocumentSurfaceViewModel()
     }
 
     @Test @MainActor func initialModesAreWeb() {
@@ -85,33 +79,33 @@ struct DocumentSurfaceViewModelModeTests {
     }
 
     @Test @MainActor func handleSurfaceAppear_restoresPreviewToWebWhenContentAvailable() {
-        let vm = makeViewModel(renderedHTMLDocument: "<html></html>", sourceMarkdown: "hello")
+        let vm = makeViewModel()
         vm.previewMode = .nativeFallback
-        vm.handleSurfaceAppear()
+        vm.handleSurfaceAppear(renderedHTMLDocument: "<html></html>", sourceMarkdown: "hello")
         #expect(vm.previewMode == .web)
         #expect(vm.previewReloadToken == 1)
     }
 
     @Test @MainActor func handleSurfaceAppear_doesNotRestorePreviewWhenContentEmpty() {
-        let vm = makeViewModel(renderedHTMLDocument: "", sourceMarkdown: "hello")
+        let vm = makeViewModel()
         vm.previewMode = .nativeFallback
-        vm.handleSurfaceAppear()
+        vm.handleSurfaceAppear(renderedHTMLDocument: "", sourceMarkdown: "hello")
         #expect(vm.previewMode == .nativeFallback)
         #expect(vm.previewReloadToken == 0)
     }
 
     @Test @MainActor func handleSurfaceAppear_doesNotRestoreSourceWhenContentEmpty() {
-        let vm = makeViewModel(renderedHTMLDocument: "<html></html>", sourceMarkdown: "")
+        let vm = makeViewModel()
         vm.sourceMode = .plainTextFallback
-        vm.handleSurfaceAppear()
+        vm.handleSurfaceAppear(renderedHTMLDocument: "<html></html>", sourceMarkdown: "")
         #expect(vm.sourceMode == .plainTextFallback)
         #expect(vm.sourceReloadToken == 0)
     }
 
     @Test @MainActor func handleSurfaceAppear_restoresSourceToWebWhenContentAvailable() {
-        let vm = makeViewModel(renderedHTMLDocument: "<html></html>", sourceMarkdown: "hello")
+        let vm = makeViewModel()
         vm.sourceMode = .plainTextFallback
-        vm.handleSurfaceAppear()
+        vm.handleSurfaceAppear(renderedHTMLDocument: "<html></html>", sourceMarkdown: "hello")
         #expect(vm.sourceMode == .web)
         #expect(vm.sourceReloadToken == 1)
     }
@@ -183,10 +177,7 @@ struct DocumentSurfaceViewModelModeTests {
 struct DocumentSurfaceViewModelSourceHTMLTests {
 
     @Test @MainActor func refreshSourceHTML_producesNonEmptyDocument() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "# Hello" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.refreshSourceHTML(
             markdown: "# Hello",
             settings: .default,
@@ -196,10 +187,7 @@ struct DocumentSurfaceViewModelSourceHTMLTests {
     }
 
     @Test @MainActor func refreshSourceHTML_skipsRefreshWhenInputsUnchanged() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "# Hello" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
         let first = vm.sourceHTMLCache.document
         vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
@@ -207,10 +195,7 @@ struct DocumentSurfaceViewModelSourceHTMLTests {
     }
 
     @Test @MainActor func refreshSourceHTML_refreshesWhenMarkdownChanges() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "# Hello" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
         let first = vm.sourceHTMLCache.document
         vm.refreshSourceHTML(markdown: "# World", settings: .default, isEditable: false)
@@ -218,19 +203,13 @@ struct DocumentSurfaceViewModelSourceHTMLTests {
     }
 
     @Test @MainActor func sourceDocumentIdentity_returnsPathPipeSource() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         let url = URL(fileURLWithPath: "/Users/test/doc.md")
         #expect(vm.sourceDocumentIdentity(for: url) == "/Users/test/doc.md|source")
     }
 
     @Test @MainActor func sourceDocumentIdentity_returnsNilForNilURL() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         #expect(vm.sourceDocumentIdentity(for: nil) == nil)
     }
 }
@@ -239,15 +218,11 @@ struct DocumentSurfaceViewModelSourceHTMLTests {
 struct DocumentSurfaceViewModelConfigurationTests {
 
     @Test @MainActor func previewConfiguration_usesWebWhenModeIsWeb() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "<html></html>" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         let config = vm.documentSurfaceConfiguration(
             for: .preview,
             fileURL: nil,
             renderedHTMLDocument: "<html></html>",
-            sourceMarkdown: "",
             documentViewMode: .preview,
             changedRegions: [],
             isSourceEditing: false,
@@ -263,16 +238,12 @@ struct DocumentSurfaceViewModelConfigurationTests {
     }
 
     @Test @MainActor func previewConfiguration_usesFallbackWhenModeIsNativeFallback() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.previewMode = .nativeFallback
         let config = vm.documentSurfaceConfiguration(
             for: .preview,
             fileURL: nil,
             renderedHTMLDocument: "",
-            sourceMarkdown: "",
             documentViewMode: .preview,
             changedRegions: [],
             isSourceEditing: false,
@@ -287,16 +258,12 @@ struct DocumentSurfaceViewModelConfigurationTests {
     }
 
     @Test @MainActor func sourceConfiguration_usesWebWhenModeIsWeb() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "# Hello" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
         let config = vm.documentSurfaceConfiguration(
             for: .source,
             fileURL: nil,
             renderedHTMLDocument: "",
-            sourceMarkdown: "# Hello",
             documentViewMode: .source,
             changedRegions: [],
             isSourceEditing: false,
@@ -312,16 +279,12 @@ struct DocumentSurfaceViewModelConfigurationTests {
     }
 
     @Test @MainActor func sourceConfiguration_usesFallbackWhenModeIsPlainTextFallback() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.sourceMode = .plainTextFallback
         let config = vm.documentSurfaceConfiguration(
             for: .source,
             fileURL: nil,
             renderedHTMLDocument: "",
-            sourceMarkdown: "",
             documentViewMode: .source,
             changedRegions: [],
             isSourceEditing: false,
@@ -336,16 +299,12 @@ struct DocumentSurfaceViewModelConfigurationTests {
     }
 
     @Test @MainActor func previewConfiguration_includesChangedRegionNavWhenApplicable() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "<html></html>" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.changeNavigation.requestNavigation(.next)
         let config = vm.documentSurfaceConfiguration(
             for: .preview,
             fileURL: nil,
             renderedHTMLDocument: "<html></html>",
-            sourceMarkdown: "",
             documentViewMode: .preview,
             changedRegions: [ChangedRegion(blockIndex: 0, lineRange: 1...2)],
             isSourceEditing: false,
@@ -364,10 +323,7 @@ struct DocumentSurfaceViewModelConfigurationTests {
 struct DocumentSurfaceViewModelSharedActionsTests {
 
     @Test @MainActor func handleSharedAction_scrollSyncObservation_forwardsToCoordinator() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         let handled = vm.handleSharedAction(
             .scrollSyncObservation(ScrollSyncObservation(progress: 0.5, isProgrammatic: false)),
             for: .preview,
@@ -379,10 +335,7 @@ struct DocumentSurfaceViewModelSharedActionsTests {
     }
 
     @Test @MainActor func handleSharedAction_dropTargetingUpdate_updatesDropTargeting() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         let handled = vm.handleSharedAction(
             .dropTargetedChange(DropTargetingUpdate(isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true)),
             for: .preview,
@@ -395,10 +348,7 @@ struct DocumentSurfaceViewModelSharedActionsTests {
     }
 
     @Test @MainActor func handleSharedAction_droppedFileURLs_callsHandler() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         var receivedURLs: [URL] = []
         let handled = vm.handleSharedAction(
             .droppedFileURLs([URL(fileURLWithPath: "/test.md")]),
@@ -412,10 +362,7 @@ struct DocumentSurfaceViewModelSharedActionsTests {
     }
 
     @Test @MainActor func handleSharedAction_unhandledAction_returnsFalse() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         let handled = vm.handleSharedAction(
             .fatalCrash,
             for: .preview,
@@ -427,10 +374,7 @@ struct DocumentSurfaceViewModelSharedActionsTests {
     }
 
     @Test @MainActor func canNavigateChangedRegions_trueWhenNotSourceModeWebWithRegions() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         #expect(vm.canNavigateChangedRegions(
             documentViewMode: .preview,
             changedRegions: [ChangedRegion(blockIndex: 0, lineRange: 1...2)]
@@ -438,10 +382,7 @@ struct DocumentSurfaceViewModelSharedActionsTests {
     }
 
     @Test @MainActor func canNavigateChangedRegions_falseInSourceMode() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         #expect(vm.canNavigateChangedRegions(
             documentViewMode: .source,
             changedRegions: [ChangedRegion(blockIndex: 0, lineRange: 1...2)]
@@ -449,27 +390,18 @@ struct DocumentSurfaceViewModelSharedActionsTests {
     }
 
     @Test @MainActor func canSynchronizeSplitScroll_trueInSplitWithBothWeb() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         #expect(vm.canSynchronizeSplitScroll(documentViewMode: .split) == true)
     }
 
     @Test @MainActor func canSynchronizeSplitScroll_falseWhenSourceIsFallback() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
         vm.sourceMode = .plainTextFallback
         #expect(vm.canSynchronizeSplitScroll(documentViewMode: .split) == false)
     }
 
     @Test @MainActor func scrollSyncObservation_invalidatesObservers() {
-        let vm = DocumentSurfaceViewModel(
-            renderedHTMLDocumentProvider: { "" },
-            sourceMarkdownProvider: { "" }
-        )
+        let vm = DocumentSurfaceViewModel()
 
         var invalidationFired = false
         withObservationTracking {
@@ -477,7 +409,6 @@ struct DocumentSurfaceViewModelSharedActionsTests {
                 for: .preview,
                 fileURL: nil,
                 renderedHTMLDocument: "",
-                sourceMarkdown: "",
                 documentViewMode: .split,
                 changedRegions: [],
                 isSourceEditing: false,

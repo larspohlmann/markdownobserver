@@ -1,19 +1,19 @@
 import Foundation
 import OSLog
 
-enum PreviewMode {
-    case web
-    case nativeFallback
-}
-
-enum SourceMode {
-    case web
-    case plainTextFallback
-}
-
 @MainActor
 @Observable
 final class DocumentSurfaceViewModel {
+
+    enum PreviewMode {
+        case web
+        case nativeFallback
+    }
+
+    enum SourceMode {
+        case web
+        case plainTextFallback
+    }
 
     var previewMode: PreviewMode = .web
     var sourceMode: SourceMode = .web
@@ -25,24 +25,7 @@ final class DocumentSurfaceViewModel {
     var changeNavigation = ChangedRegionNavigationCoordinator()
     var sourceHTMLCache = SourceHTMLDocumentCache()
 
-    private let renderedHTMLDocumentProvider: () -> String
-    private let sourceMarkdownProvider: () -> String
-
-    init(
-        renderedHTMLDocument: String = "",
-        sourceMarkdown: String = ""
-    ) {
-        self.renderedHTMLDocumentProvider = { renderedHTMLDocument }
-        self.sourceMarkdownProvider = { sourceMarkdown }
-    }
-
-    init(
-        renderedHTMLDocumentProvider: @escaping () -> String,
-        sourceMarkdownProvider: @escaping () -> String
-    ) {
-        self.renderedHTMLDocumentProvider = renderedHTMLDocumentProvider
-        self.sourceMarkdownProvider = sourceMarkdownProvider
-    }
+    init() {}
 
     func handleFileIdentityChange() {
         changeNavigation.reset()
@@ -58,17 +41,15 @@ final class DocumentSurfaceViewModel {
         splitScrollCoordinator.reset()
     }
 
-    func handleSurfaceAppear() {
-        refreshSourceHTML(
-            markdown: sourceMarkdownProvider(),
-            settings: .default,
-            isEditable: false
-        )
-        if previewMode == .nativeFallback, !renderedHTMLDocumentProvider().isEmpty {
+    func handleSurfaceAppear(
+        renderedHTMLDocument: String,
+        sourceMarkdown: String
+    ) {
+        if previewMode == .nativeFallback, !renderedHTMLDocument.isEmpty {
             previewReloadToken += 1
             previewMode = .web
         }
-        if sourceMode == .plainTextFallback, !sourceMarkdownProvider().isEmpty {
+        if sourceMode == .plainTextFallback, !sourceMarkdown.isEmpty {
             sourceReloadToken += 1
             sourceMode = .web
         }
@@ -171,7 +152,6 @@ final class DocumentSurfaceViewModel {
         for surface: DocumentSurfaceRole,
         fileURL: URL?,
         renderedHTMLDocument: String,
-        sourceMarkdown: String,
         documentViewMode: ReaderDocumentViewMode,
         changedRegions: [ChangedRegion],
         isSourceEditing: Bool,

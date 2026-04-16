@@ -120,7 +120,10 @@ struct ContentView: View {
             }
             .onAppear {
                 refreshSourceHTMLFromControllers()
-                recoverFallbackSurfaceModes()
+                surfaceViewModel.handleSurfaceAppear(
+                    renderedHTMLDocument: rendering.renderedHTMLDocument,
+                    sourceMarkdown: document.sourceMarkdown
+                )
             }
 
             ReaderTopBar(
@@ -239,7 +242,6 @@ struct ContentView: View {
                 for: surface,
                 fileURL: document.fileURL,
                 renderedHTMLDocument: rendering.renderedHTMLDocument,
-                sourceMarkdown: document.sourceMarkdown,
                 documentViewMode: sourceEditing.documentViewMode,
                 changedRegions: document.changedRegions,
                 isSourceEditing: sourceEditing.isSourceEditing,
@@ -467,18 +469,6 @@ struct ContentView: View {
             settings: settingsStore.currentSettings,
             isEditable: sourceEditing.isSourceEditing
         )
-    }
-
-    private func recoverFallbackSurfaceModes() {
-        if surfaceViewModel.previewMode == .nativeFallback, !rendering.renderedHTMLDocument.isEmpty {
-            surfaceViewModel.previewReloadToken += 1
-            surfaceViewModel.previewMode = .web
-        }
-        if surfaceViewModel.sourceMode == .plainTextFallback,
-           !document.sourceMarkdown.isEmpty {
-            surfaceViewModel.sourceReloadToken += 1
-            surfaceViewModel.sourceMode = .web
-        }
     }
 
     private func handleDroppedFileURLs(_ fileURLs: [URL]) {
