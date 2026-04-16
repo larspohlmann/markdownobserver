@@ -59,6 +59,7 @@ final class ReaderWindowCoordinator {
     private(set) var favoriteWorkspaceController: FavoriteWorkspaceController?
     private(set) var folderWatchFlowController: FolderWatchFlowController?
     private(set) var uiTestLaunchCoordinator: UITestLaunchCoordinator?
+    private(set) var recentHistoryCoordinator: RecentHistoryCoordinator?
 
     private var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
@@ -69,13 +70,15 @@ final class ReaderWindowCoordinator {
         groupStateController: SidebarGroupStateController,
         favoriteWorkspaceController: FavoriteWorkspaceController,
         folderWatchFlowController: FolderWatchFlowController,
-        uiTestLaunchCoordinator: UITestLaunchCoordinator
+        uiTestLaunchCoordinator: UITestLaunchCoordinator,
+        recentHistoryCoordinator: RecentHistoryCoordinator
     ) {
         self.appearanceController = appearanceController
         self.groupStateController = groupStateController
         self.favoriteWorkspaceController = favoriteWorkspaceController
         self.folderWatchFlowController = folderWatchFlowController
         self.uiTestLaunchCoordinator = uiTestLaunchCoordinator
+        self.recentHistoryCoordinator = recentHistoryCoordinator
         configureStoreCallbacks(
             lockedAppearanceProvider: { [weak appearanceController] in appearanceController?.lockedAppearance }
         ) { [weak self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
@@ -241,11 +244,11 @@ final class ReaderWindowCoordinator {
         case .startFavoriteWatch(let favorite):
             startFavoriteWatch(favorite)
         case .startRecentFolderWatch(let recent):
-            startRecentFolderWatch(recent)
+            recentHistoryCoordinator?.startRecentFolderWatch(recent)
         case .editFavoriteWatchedFolders:
             isTitlebarEditingFavorites = true
         case .clearRecentWatchedFolders:
-            clearRecentWatchedFolders()
+            recentHistoryCoordinator?.clearRecentWatchedFolders()
         }
     }
 
@@ -260,33 +263,6 @@ final class ReaderWindowCoordinator {
         case .dismiss:
             isTitlebarEditingFavorites = false
         }
-    }
-
-    func handleOpenRecentFileNotification(_ notification: Notification) {
-        guard let payload = ReaderCommandNotification.Payload(notification: notification),
-              payload.targetWindowNumber == hostWindow?.windowNumber else {
-            return
-        }
-
-        guard let entry = payload.recentFileEntry else {
-            return
-        }
-
-        let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-        openDocumentInCurrentWindow(resolvedURL)
-    }
-
-    func handlePrepareRecentWatchedFolderNotification(_ notification: Notification) {
-        guard let payload = ReaderCommandNotification.Payload(notification: notification),
-              payload.targetWindowNumber == hostWindow?.windowNumber else {
-            return
-        }
-
-        guard let entry = payload.recentWatchedFolderEntry else {
-            return
-        }
-
-        folderWatchFlowController?.prepareRecentWatch(entry)
     }
 
     func handleWindowAccessorUpdate(_ window: NSWindow?) {
@@ -692,18 +668,6 @@ final class ReaderWindowCoordinator {
         settingsStore.clearFavoriteWatchedFolders()
     }
 
-    func startRecentFolderWatch(_ entry: ReaderRecentWatchedFolder) {
-        folderWatchFlowController?.prepareRecentWatch(entry)
-    }
-
-    func clearRecentWatchedFolders() {
-        settingsStore.clearRecentWatchedFolders()
-    }
-
-    func clearRecentManuallyOpenedFiles() {
-        settingsStore.clearRecentManuallyOpenedFiles()
-    }
-
     func startWatchingFolder(
         folderURL: URL,
         options: ReaderFolderWatchOptions,
@@ -848,19 +812,14 @@ final class ReaderWindowCoordinator {
         case .reorderFavoriteWatchedFolders(let ids):
             settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
         case .startRecentManuallyOpenedFile(let entry):
-            let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-            fileOpenCoordinator.open(FileOpenRequest(
-                fileURLs: [resolvedURL], origin: .manual,
-                folderWatchSession: folderWatchFlowController?.sharedFolderWatchSession,
-                slotStrategy: .replaceSelectedSlot
-            ))
+            recentHistoryCoordinator?.openRecentFile(entry, using: fileOpenCoordinator, session: folderWatchFlowController?.sharedFolderWatchSession)
             applyWindowTitlePresentation()
         case .startRecentFolderWatch(let entry):
-            startRecentFolderWatch(entry)
+            recentHistoryCoordinator?.startRecentFolderWatch(entry)
         case .clearRecentWatchedFolders:
-            clearRecentWatchedFolders()
+            recentHistoryCoordinator?.clearRecentWatchedFolders()
         case .clearRecentManuallyOpenedFiles:
-            clearRecentManuallyOpenedFiles()
+            recentHistoryCoordinator?.clearRecentManuallyOpenedFiles()
         case .editSubfolders:
             isEditingSubfolders = true
         case .saveSourceDraft:

@@ -13,6 +13,7 @@ struct ReaderWindowRootView: View {
     @State var groupStateController = SidebarGroupStateController()
     @State var favoriteWorkspaceController = FavoriteWorkspaceController()
     @State var folderWatchFlowController: FolderWatchFlowController
+    @State var recentHistoryCoordinator: RecentHistoryCoordinator
     @State var uiTestLaunchCoordinator = UITestLaunchCoordinator()
 
     init(
@@ -36,6 +37,9 @@ struct ReaderWindowRootView: View {
         )
         _folderWatchFlowController = State(
             wrappedValue: FolderWatchFlowController(settingsStore: settingsStore, sidebarDocumentController: sidebarDocumentController)
+        )
+        _recentHistoryCoordinator = State(
+            wrappedValue: RecentHistoryCoordinator(settingsStore: settingsStore)
         )
     }
 
@@ -285,12 +289,14 @@ struct ReaderWindowRootView: View {
             groupStateController: groupStateController,
             appearanceController: appearanceController
         )
+        recentHistoryCoordinator.configure(folderWatchFlowController: folderWatchFlowController)
         windowCoordinator.configure(
             appearanceController: appearanceController,
             groupStateController: groupStateController,
             favoriteWorkspaceController: favoriteWorkspaceController,
             folderWatchFlowController: folderWatchFlowController,
-            uiTestLaunchCoordinator: uiTestLaunchCoordinator
+            uiTestLaunchCoordinator: uiTestLaunchCoordinator,
+            recentHistoryCoordinator: recentHistoryCoordinator
         )
         windowCoordinator.applyInitialSeedIfNeeded(seed: seed)
         windowCoordinator.refreshSharedFolderWatchState()
@@ -299,10 +305,18 @@ struct ReaderWindowRootView: View {
     private func commandNotificationAwareView<Content: View>(_ view: Content) -> some View {
         view
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.openRecentFile)) { notification in
-                windowCoordinator.handleOpenRecentFileNotification(notification)
+                recentHistoryCoordinator.handleOpenRecentFileNotification(
+                    notification,
+                    hostWindowNumber: windowCoordinator.hostWindow?.windowNumber
+                ) { fileURL in
+                    windowCoordinator.openDocumentInCurrentWindow(fileURL)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
-                windowCoordinator.handlePrepareRecentWatchedFolderNotification(notification)
+                recentHistoryCoordinator.handlePrepareRecentWatchedFolderNotification(
+                    notification,
+                    hostWindowNumber: windowCoordinator.hostWindow?.windowNumber
+                )
             }
     }
 
