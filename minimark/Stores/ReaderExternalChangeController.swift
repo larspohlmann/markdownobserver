@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+enum ReaderExternalChangeKind: Equatable, Sendable {
+    case added
+    case modified
+}
+
 @MainActor
 @Observable
 final class ReaderExternalChangeController {

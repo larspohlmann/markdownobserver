@@ -854,6 +854,13 @@ struct ReaderStoreTestFixture {
         try? FileManager.default.removeItem(at: url)
     }
 
+    var document: ReaderDocumentController { store.document }
+    var rendering: ReaderRenderingController { store.renderingController }
+    var sourceEditing: ReaderSourceEditingController { store.sourceEditingController }
+    var externalChange: ReaderExternalChangeController { store.externalChange }
+    var tocController: ReaderTOCController { store.toc }
+    var folderWatchDispatcherController: ReaderFolderWatchDispatcher { store.folderWatchDispatcher }
+
     func cleanup() {
         try? FileManager.default.removeItem(at: temporaryDirectoryURL)
     }
