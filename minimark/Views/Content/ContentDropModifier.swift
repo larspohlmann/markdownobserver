@@ -20,7 +20,7 @@ struct ContentDropModifier: ViewModifier {
     }
 }
 
-struct FolderDropBlockedOverlayView: View {
+private struct FolderDropBlockedOverlayView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)

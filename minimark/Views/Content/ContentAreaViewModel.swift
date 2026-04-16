@@ -240,9 +240,8 @@ final class ContentAreaViewModel {
             minimumSurfaceWidth: minimumSurfaceWidth,
             tocScrollRequest: toc.scrollRequest,
             canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
-            onSharedAction: { [weak self] action, role in
-                guard let self else { return false }
-                return self.surfaceViewModel.handleSharedAction(
+            onSharedAction: { action, role in
+                self.surfaceViewModel.handleSharedAction(
                     action,
                     for: role,
                     documentViewMode: self.sourceEditing.documentViewMode,
