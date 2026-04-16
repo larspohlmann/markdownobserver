@@ -105,6 +105,15 @@ final class ReaderRenderingController {
         needsAppearanceRender = false
     }
 
+    func reset() {
+        cancelPendingDraftPreviewRender()
+        renderedHTMLDocument = ""
+        lastRefreshAt = nil
+        needsAppearanceRender = false
+        needsImageDirectoryAccess = false
+        appearanceOverride = nil
+    }
+
     func computeChangedRegions(
         diffBaselineMarkdown: String?,
         newMarkdown: String

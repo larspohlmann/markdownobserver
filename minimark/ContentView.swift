@@ -69,6 +69,13 @@ struct ContentView: View {
         ))
     }
 
+    private var statusBarTimestamp: ReaderStatusBarTimestamp? {
+        if let date = externalChange.lastExternalChangeAt { return .updated(date) }
+        if let date = document.fileLastModifiedAt { return .lastModified(date) }
+        if let date = rendering.lastRefreshAt { return .updated(date) }
+        return nil
+    }
+
     private var baseBody: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
@@ -134,6 +141,7 @@ struct ContentView: View {
             ReaderTopBar(
                 document: document,
                 sourceEditing: sourceEditing,
+                statusBarTimestamp: statusBarTimestamp,
                 canStopFolderWatch: folderWatchState.canStopFolderWatch,
                 apps: document.openInApplications,
                 favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,

@@ -12,18 +12,26 @@ struct ReaderTopBarStoreProjection {
 
     @MainActor
     init(store: ReaderStore) {
-        self.init(document: store.document, sourceEditing: store.sourceEditingController)
+        self.init(
+            document: store.document,
+            sourceEditing: store.sourceEditingController,
+            statusBarTimestamp: store.statusBarTimestamp
+        )
     }
 
     @MainActor
-    init(document: ReaderDocumentController, sourceEditing: ReaderSourceEditingController) {
+    init(
+        document: ReaderDocumentController,
+        sourceEditing: ReaderSourceEditingController,
+        statusBarTimestamp: ReaderStatusBarTimestamp?
+    ) {
         self.fileURL = document.fileURL
         self.fileDisplayName = document.fileDisplayName
         self.isSourceEditing = sourceEditing.isSourceEditing
         self.hasUnsavedDraftChanges = sourceEditing.hasUnsavedDraftChanges
         self.canSaveSourceDraft = sourceEditing.canSaveSourceDraft
         self.canDiscardSourceDraft = sourceEditing.canDiscardSourceDraft
-        self.statusBarTimestamp = document.fileLastModifiedAt.map { .lastModified($0) }
+        self.statusBarTimestamp = statusBarTimestamp
         self.isCurrentFileMissing = document.isCurrentFileMissing
     }
 }

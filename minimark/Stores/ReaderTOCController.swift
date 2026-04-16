@@ -31,5 +31,7 @@ final class ReaderTOCController {
     func clear() {
         headings = []
         isVisible = false
+        scrollRequest = nil
+        scrollRequestCounter = 0
     }
 }

@@ -236,13 +236,13 @@ final class ReaderStore {
     }
 
     func clearOpenDocument() {
-        renderingController.cancelPendingDraftPreviewRender()
         // Note: diffBaselineTracker is intentionally NOT reset here.
         // Per-file-URL history is preserved across open/close cycles
         // so the lookback window remains time-based, not session-based.
         securityScopeResolver.endFileAndDirectoryAccess()
 
         document.clearOpenDocument()
+        renderingController.reset()
         sourceEditingController.reset()
         externalChange.clear()
         toc.clear()

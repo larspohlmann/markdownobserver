@@ -393,8 +393,9 @@ struct FolderWatchCoordinationTests {
             openedPrimaryEvents.append(event)
         }
 
-        // With auto-open planner defaults, the first event is opened
-        #expect(openedPrimaryEvents.count <= events.count)
+        // Without an additional handler, only the first planned event is opened via primary
+        #expect(openedPrimaryEvents.count == 1)
+        #expect(openedPrimaryEvents.first?.fileURL == events.first?.fileURL)
     }
 
     @Test @MainActor func folderWatchEventDispatchCoordinatorUsesAdditionalHandlerForLiveEventsWhenConfigured() {
@@ -429,8 +430,9 @@ struct FolderWatchCoordinationTests {
             openedPrimaryEvents.append(event)
         }
 
-        // With additional handler, events go through additional handler
         #expect(openedPrimaryEvents.isEmpty)
+        #expect(additionalOpenEvents.count == events.count)
+        #expect(additionalOpenEvents.map(\.fileURL) == events.map(\.fileURL))
     }
 
     @Test @MainActor func folderWatchEventDispatchCoordinatorDispatchesInitialBatchAsPrimaryThenAdditional() {
