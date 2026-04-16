@@ -194,14 +194,6 @@ final class ReaderStore {
         document.refreshOpenInApplications()
     }
 
-    func openCurrentFileInApplication(_ application: ReaderExternalApplication?) {
-        document.openInApplication(application)
-    }
-
-    func revealCurrentFileInFinder() {
-        document.revealInFinder()
-    }
-
     func presentError(_ error: Error) {
         handle(error)
     }

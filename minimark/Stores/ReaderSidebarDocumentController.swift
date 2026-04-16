@@ -235,13 +235,13 @@ final class ReaderSidebarDocumentController {
 
     func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
         for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.document.fileURL != nil {
-            document.readerStore.openCurrentFileInApplication(application)
+            document.readerStore.document.openInApplication(application)
         }
     }
 
     func revealDocumentsInFinder(_ documentIDs: Set<UUID>) {
         for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.document.fileURL != nil {
-            document.readerStore.revealCurrentFileInFinder()
+            document.readerStore.document.revealInFinder()
         }
     }
 
