@@ -234,3 +234,128 @@ struct DocumentSurfaceViewModelSourceHTMLTests {
         #expect(vm.sourceDocumentIdentity(for: nil) == nil)
     }
 }
+
+@Suite
+struct DocumentSurfaceViewModelConfigurationTests {
+
+    @Test @MainActor func previewConfiguration_usesWebWhenModeIsWeb() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "<html></html>" },
+            sourceMarkdownProvider: { "" }
+        )
+        let config = vm.documentSurfaceConfiguration(
+            for: .preview,
+            fileURL: nil,
+            renderedHTMLDocument: "<html></html>",
+            sourceMarkdown: "",
+            documentViewMode: .preview,
+            changedRegions: [],
+            isSourceEditing: false,
+            overlayTopInset: 0,
+            minimumSurfaceWidth: nil,
+            tocScrollRequest: nil,
+            canAcceptDroppedFileURLs: { _ in true },
+            onSharedAction: { _, _ in false },
+            onAction: { _ in }
+        )
+        #expect(config.usesWebSurface == true)
+        #expect(config.role == .preview)
+    }
+
+    @Test @MainActor func previewConfiguration_usesFallbackWhenModeIsNativeFallback() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        vm.previewMode = .nativeFallback
+        let config = vm.documentSurfaceConfiguration(
+            for: .preview,
+            fileURL: nil,
+            renderedHTMLDocument: "",
+            sourceMarkdown: "",
+            documentViewMode: .preview,
+            changedRegions: [],
+            isSourceEditing: false,
+            overlayTopInset: 0,
+            minimumSurfaceWidth: nil,
+            tocScrollRequest: nil,
+            canAcceptDroppedFileURLs: { _ in true },
+            onSharedAction: { _, _ in false },
+            onAction: { _ in }
+        )
+        #expect(config.usesWebSurface == false)
+    }
+
+    @Test @MainActor func sourceConfiguration_usesWebWhenModeIsWeb() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "# Hello" }
+        )
+        vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
+        let config = vm.documentSurfaceConfiguration(
+            for: .source,
+            fileURL: nil,
+            renderedHTMLDocument: "",
+            sourceMarkdown: "# Hello",
+            documentViewMode: .source,
+            changedRegions: [],
+            isSourceEditing: false,
+            overlayTopInset: 0,
+            minimumSurfaceWidth: nil,
+            tocScrollRequest: nil,
+            canAcceptDroppedFileURLs: { _ in true },
+            onSharedAction: { _, _ in false },
+            onAction: { _ in }
+        )
+        #expect(config.usesWebSurface == true)
+        #expect(config.role == .source)
+    }
+
+    @Test @MainActor func sourceConfiguration_usesFallbackWhenModeIsPlainTextFallback() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        vm.sourceMode = .plainTextFallback
+        let config = vm.documentSurfaceConfiguration(
+            for: .source,
+            fileURL: nil,
+            renderedHTMLDocument: "",
+            sourceMarkdown: "",
+            documentViewMode: .source,
+            changedRegions: [],
+            isSourceEditing: false,
+            overlayTopInset: 0,
+            minimumSurfaceWidth: nil,
+            tocScrollRequest: nil,
+            canAcceptDroppedFileURLs: { _ in true },
+            onSharedAction: { _, _ in false },
+            onAction: { _ in }
+        )
+        #expect(config.usesWebSurface == false)
+    }
+
+    @Test @MainActor func previewConfiguration_includesChangedRegionNavWhenApplicable() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "<html></html>" },
+            sourceMarkdownProvider: { "" }
+        )
+        vm.changeNavigation.requestNavigation(.next)
+        let config = vm.documentSurfaceConfiguration(
+            for: .preview,
+            fileURL: nil,
+            renderedHTMLDocument: "<html></html>",
+            sourceMarkdown: "",
+            documentViewMode: .preview,
+            changedRegions: [ChangedRegion(blockIndex: 0, lineRange: 1...2)],
+            isSourceEditing: false,
+            overlayTopInset: 0,
+            minimumSurfaceWidth: nil,
+            tocScrollRequest: nil,
+            canAcceptDroppedFileURLs: { _ in true },
+            onSharedAction: { _, _ in false },
+            onAction: { _ in }
+        )
+        #expect(config.changedRegionNavigationRequest != nil)
+    }
+}

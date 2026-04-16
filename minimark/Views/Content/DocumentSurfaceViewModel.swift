@@ -108,6 +108,125 @@ final class DocumentSurfaceViewModel {
         return "\(path)|source"
     }
 
+    func documentSurfaceConfiguration(
+        for surface: DocumentSurfaceRole,
+        fileURL: URL?,
+        renderedHTMLDocument: String,
+        sourceMarkdown: String,
+        documentViewMode: ReaderDocumentViewMode,
+        changedRegions: [ChangedRegion],
+        isSourceEditing: Bool,
+        overlayTopInset: CGFloat,
+        minimumSurfaceWidth: CGFloat?,
+        tocScrollRequest: TOCScrollRequest?,
+        canAcceptDroppedFileURLs: @escaping ([URL]) -> Bool,
+        onSharedAction: @escaping (DocumentSurfaceAction, DocumentSurfaceRole) -> Bool,
+        onAction: @escaping (ContentViewAction) -> Void
+    ) -> DocumentSurfaceConfiguration {
+        let canNavigateChangedRegions = documentViewMode != .source
+            && previewMode == .web
+            && !changedRegions.isEmpty
+
+        let canSynchronizeSplitScroll = documentViewMode == .split
+            && previewMode == .web
+            && sourceMode == .web
+
+        func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
+            guard canSynchronizeSplitScroll else { return nil }
+            return splitScrollCoordinator.request(for: surface)
+        }
+
+        let previewReloadAnchorProgress: Double? = {
+            guard canSynchronizeSplitScroll, isSourceEditing else { return nil }
+            return splitScrollCoordinator.latestObservedProgress(for: .source)
+        }()
+
+        switch surface {
+        case .preview:
+            return DocumentSurfaceConfiguration(
+                role: surface,
+                usesWebSurface: previewMode == .web,
+                htmlDocument: renderedHTMLDocument,
+                documentIdentity: fileURL?.standardizedFileURL.path,
+                accessibilityIdentifier: "reader-preview",
+                accessibilityValue: "file=\(fileURL?.lastPathComponent ?? "none")|regions=\(changedRegions.count)|mode=\(documentViewMode.rawValue)|surface=preview",
+                reloadToken: previewReloadToken,
+                diagnosticName: "reader-preview",
+                postLoadStatusScript: nil,
+                changedRegionNavigationRequest: canNavigateChangedRegions ? changeNavigation.currentRequest : nil,
+                scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: tocScrollRequest,
+                supportsInPlaceContentUpdates: true,
+                overlayTopInset: overlayTopInset,
+                reloadAnchorProgress: previewReloadAnchorProgress,
+                minimumWidth: minimumSurfaceWidth,
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onAction: { action in
+                    if onSharedAction(action, .preview) { return }
+                    switch action {
+                    case .fatalCrash:
+                        Self.logger.error("preview web surface hit fatal crash and fell back to native text")
+                        self.previewMode = .nativeFallback
+                    case .changedRegionNavigationResult(let index):
+                        self.changeNavigation.handleNavigationResult(index: index)
+                    case .retryFallback:
+                        self.previewReloadToken += 1
+                        self.previewMode = .web
+                    default:
+                        break
+                    }
+                }
+            )
+        case .source:
+            return DocumentSurfaceConfiguration(
+                role: surface,
+                usesWebSurface: sourceMode == .web,
+                htmlDocument: sourceHTMLCache.document,
+                documentIdentity: sourceDocumentIdentity(for: fileURL),
+                accessibilityIdentifier: "reader-source",
+                accessibilityValue: "file=\(fileURL?.lastPathComponent ?? "none")|mode=\(documentViewMode.rawValue)|surface=source",
+                reloadToken: sourceReloadToken,
+                diagnosticName: "reader-source",
+                postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
+                changedRegionNavigationRequest: nil,
+                scrollSyncRequest: splitScrollRequest(for: surface),
+                tocScrollRequest: tocScrollRequest,
+                supportsInPlaceContentUpdates: false,
+                overlayTopInset: overlayTopInset,
+                reloadAnchorProgress: nil,
+                minimumWidth: minimumSurfaceWidth,
+                canAcceptDroppedFileURLs: canAcceptDroppedFileURLs,
+                onAction: { action in
+                    if onSharedAction(action, .source) { return }
+                    switch action {
+                    case .fatalCrash:
+                        Self.logger.error("source web surface hit fatal crash and fell back to plain text")
+                        self.sourceMode = .plainTextFallback
+                    case .postLoadStatus(let status):
+                        guard let status else {
+                            Self.logger.error("source post-load status probe returned no status")
+                            self.sourceMode = .plainTextFallback
+                            return
+                        }
+                        guard status == "ready" else {
+                            Self.logger.error("source bootstrap status was \(status, privacy: .public); falling back to plain text")
+                            self.sourceMode = .plainTextFallback
+                            return
+                        }
+                        Self.logger.debug("source bootstrap completed successfully")
+                    case .sourceEdit(let markdown):
+                        onAction(.updateSourceDraft(markdown))
+                    case .retryFallback:
+                        self.sourceReloadToken += 1
+                        self.sourceMode = .web
+                    default:
+                        break
+                    }
+                }
+            )
+        }
+    }
+
     static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "DocumentSurfaceViewModel"
