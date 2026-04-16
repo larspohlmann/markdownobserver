@@ -126,10 +126,6 @@ final class ReaderStore {
         )
     }
 
-    var currentSettings: ReaderSettings {
-        settingsStore.currentSettings
-    }
-
     func setOpenAdditionalDocumentForFolderWatchEventHandler(
         _ handler: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
     ) {
@@ -153,14 +149,6 @@ final class ReaderStore {
 
     func setActiveFolderWatchSession(_ session: ReaderFolderWatchSession?) {
         folderWatchDispatcher.setSession(session)
-    }
-
-    func setLastWatchedFolderEventAt(_ date: Date?) {
-        folderWatchDispatcher.lastWatchedFolderEventAt = date
-    }
-
-    func setFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
-        folderWatchDispatcher.autoOpenWarning = warning
     }
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
