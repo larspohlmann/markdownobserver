@@ -6,7 +6,6 @@ import OSLog
 @MainActor
 @Observable
 final class ReaderStore {
-    static let draftPreviewRenderDebounceInterval: Duration = .milliseconds(5)
     static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ReaderStore"
@@ -28,7 +27,7 @@ final class ReaderStore {
     var isCurrentFileMissing: Bool { identity.isCurrentFileMissing }
     var lastError: ReaderPresentableError? { identity.lastError }
     var openInApplications: [ReaderExternalApplication] { identity.openInApplications }
-    var needsImageDirectoryAccess: Bool { identity.needsImageDirectoryAccess }
+    var needsImageDirectoryAccess: Bool { renderingController.needsImageDirectoryAccess }
     var hasOpenDocument: Bool { identity.hasOpenDocument }
     var isDeferredDocument: Bool { identity.isDeferredDocument }
     var windowTitle: String { identity.windowTitle }
@@ -36,9 +35,9 @@ final class ReaderStore {
     // MARK: - Content forwarding
 
     var sourceMarkdown: String { content.sourceMarkdown }
-    var renderedHTMLDocument: String { content.renderedHTMLDocument }
+    var renderedHTMLDocument: String { renderingController.renderedHTMLDocument }
     var changedRegions: [ChangedRegion] { content.changedRegions }
-    var lastRefreshAt: Date? { content.lastRefreshAt }
+    var lastRefreshAt: Date? { renderingController.lastRefreshAt }
     var lastExternalChangeAt: Date? { content.lastExternalChangeAt }
     var fileLastModifiedAt: Date? { content.fileLastModifiedAt }
     var hasUnacknowledgedExternalChange: Bool { content.hasUnacknowledgedExternalChange }
@@ -89,6 +88,7 @@ final class ReaderStore {
     func scrollToTOCHeading(_ heading: TOCHeading) { toc.scrollTo(heading) }
 
     let rendering: ReaderRenderingDependencies
+    let renderingController: ReaderRenderingController
     let file: ReaderFileDependencies
     let folderWatch: ReaderFolderWatchDependencies
     let settingsStore: ReaderSettingsStoring
@@ -97,7 +97,10 @@ final class ReaderStore {
 
     @ObservationIgnored var onExternalChangeKindChanged: (() -> Void)?
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
-    var needsAppearanceRender = false
+    var needsAppearanceRender: Bool {
+        get { renderingController.needsAppearanceRender }
+        set { renderingController.needsAppearanceRender = newValue }
+    }
 
     // MARK: - Internal: accessible to Coordination extensions
     // These properties exist for coordination extensions in Stores/Coordination/.
@@ -112,8 +115,6 @@ final class ReaderStore {
     private(set) var onFolderWatchStopped: (() -> Void)?
 
     @ObservationIgnored private var hasActivatedDeferredSetup = false
-    @ObservationIgnored var pendingDraftPreviewRenderTask: Task<Void, Never>?
-    @ObservationIgnored var appearanceOverride: LockedAppearance?
     @ObservationIgnored var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
     init(
@@ -125,6 +126,11 @@ final class ReaderStore {
         diffBaselineTracker: DiffBaselineTracking? = nil
     ) {
         self.rendering = rendering
+        self.renderingController = ReaderRenderingController(
+            renderingDependencies: rendering,
+            settingsStore: settingsStore,
+            securityScopeResolver: securityScopeResolver
+        )
         self.file = file
         self.folderWatch = folderWatch
         self.settingsStore = settingsStore
@@ -290,7 +296,7 @@ final class ReaderStore {
     }
 
     func clearOpenDocument() {
-        cancelPendingDraftPreviewRender()
+        renderingController.cancelPendingDraftPreviewRender()
         // Note: diffBaselineTracker is intentionally NOT reset here.
         // Per-file-URL history is preserved across open/close cycles
         // so the lookback window remains time-based, not session-based.
