@@ -35,7 +35,7 @@ struct ReaderWindowRootView: View {
             wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
         )
         _folderWatchFlowController = State(
-            wrappedValue: FolderWatchFlowController(sidebarDocumentController: sidebarDocumentController)
+            wrappedValue: FolderWatchFlowController(settingsStore: settingsStore, sidebarDocumentController: sidebarDocumentController)
         )
     }
 
@@ -131,12 +131,12 @@ struct ReaderWindowRootView: View {
         @Bindable var folderWatchFlow = folderWatchFlowController
         return view
             .sheet(item: $warningCoord.activeFlow, onDismiss: {
-                windowCoordinator.dismissFolderWatchAutoOpenWarning()
+                folderWatchFlowController.dismissAutoOpenWarning()
             }) { flow in
                 FolderWatchAutoOpenWarningFlowSheet(
                     flow: flow,
                     onKeepCurrentFiles: {
-                        windowCoordinator.dismissFolderWatchAutoOpenWarning()
+                        folderWatchFlowController.dismissAutoOpenWarning()
                     },
                     onOpenSelectedFiles: {
                         windowCoordinator.openSelectedFolderWatchAutoOpenFiles()
@@ -270,8 +270,8 @@ struct ReaderWindowRootView: View {
             startWatchingFolder: { [windowCoordinator] folderURL, options in
                 windowCoordinator.startWatchingFolder(folderURL: folderURL, options: options)
             },
-            presentFolderWatchOptions: { [windowCoordinator] folderURL, options in
-                windowCoordinator.presentFolderWatchOptions(for: folderURL, options: options)
+            presentFolderWatchOptions: { [folderWatchFlowController] folderURL, options in
+                folderWatchFlowController.presentOptions(for: folderURL, options: options)
             },
             openFileRequest: { [windowCoordinator] request in
                 windowCoordinator.openFileRequest(request)
@@ -280,6 +280,11 @@ struct ReaderWindowRootView: View {
                 folderWatchFlowController.sharedFolderWatchSession != nil
             }
         ))
+        folderWatchFlowController.configure(
+            favoriteWorkspaceController: favoriteWorkspaceController,
+            groupStateController: groupStateController,
+            appearanceController: appearanceController
+        )
         windowCoordinator.configure(
             appearanceController: appearanceController,
             groupStateController: groupStateController,
@@ -402,6 +407,6 @@ struct ReaderWindowRootView: View {
             title: "Choose Folder to Watch",
             message: "Select a folder, then choose watch options."
         ) else { return }
-        windowCoordinator.prepareFolderWatchOptions(for: folderURL)
+        folderWatchFlowController.prepareOptions(for: folderURL)
     }
 }

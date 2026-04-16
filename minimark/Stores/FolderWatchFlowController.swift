@@ -22,10 +22,27 @@ final class FolderWatchFlowController {
         pendingFolderWatchRequest?.folderURL
     }
 
+    private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
 
-    init(sidebarDocumentController: ReaderSidebarDocumentController) {
+    // Cross-references (set via configure())
+    private(set) var favoriteWorkspaceController: FavoriteWorkspaceController?
+    private(set) var groupStateController: SidebarGroupStateController?
+    private(set) var appearanceController: WindowAppearanceController?
+
+    init(settingsStore: ReaderSettingsStore, sidebarDocumentController: ReaderSidebarDocumentController) {
+        self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
+    }
+
+    func configure(
+        favoriteWorkspaceController: FavoriteWorkspaceController,
+        groupStateController: SidebarGroupStateController,
+        appearanceController: WindowAppearanceController
+    ) {
+        self.favoriteWorkspaceController = favoriteWorkspaceController
+        self.groupStateController = groupStateController
+        self.appearanceController = appearanceController
     }
 
     // MARK: - Presentation State
@@ -42,7 +59,7 @@ final class FolderWatchFlowController {
         presentOptions(for: folderURL, options: .default)
     }
 
-    func prepareRecentWatch(_ entry: ReaderRecentWatchedFolder, settingsStore: ReaderSettingsStore) {
+    func prepareRecentWatch(_ entry: ReaderRecentWatchedFolder) {
         let resolvedFolderURL = settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
         presentOptions(for: resolvedFolderURL, options: entry.options)
     }
@@ -85,18 +102,147 @@ final class FolderWatchFlowController {
         }
     }
 
-    func openSelectedAutoOpenFiles(using fileOpenCoordinator: FileOpenCoordinator) {
+    func openSelectedAutoOpenFilesAndRefresh() {
         let selectedFileURLs = warningCoordinator.selectedFileURLs()
         guard !selectedFileURLs.isEmpty else {
             dismissAutoOpenWarning()
             return
         }
         dismissAutoOpenWarning()
-        fileOpenCoordinator.open(FileOpenRequest(
+        sidebarDocumentController.fileOpenCoordinator.open(FileOpenRequest(
             fileURLs: selectedFileURLs,
             origin: .manual,
             slotStrategy: .alwaysAppend
         ))
+    }
+
+    func handleAutoOpenWarningChangeForWindow(
+        _ warning: ReaderFolderWatchAutoOpenWarning?,
+        hostWindow: NSWindow?
+    ) {
+        handleAutoOpenWarningChange(warning) { self.isWarningPresentationAllowed(hostWindow: hostWindow) }
+    }
+
+    func refreshAutoOpenWarningPresentationForWindow(hostWindow: NSWindow?) {
+        refreshAutoOpenWarningPresentation { self.isWarningPresentationAllowed(hostWindow: hostWindow) }
+    }
+
+    // MARK: - Folder Watch Lifecycle
+
+    /// Starts watching a folder, optionally deactivating the current favorite.
+    /// Returns `true` if a favorite was deactivated (so the caller can reset sidebar width).
+    @discardableResult
+    func startWatchingFolder(
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        performInitialAutoOpen: Bool = true
+    ) -> Bool {
+        var didDeactivateFavorite = false
+
+        if favoriteWorkspaceController?.activeFavoriteID != nil {
+            let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+            let matchesActiveFavorite = settingsStore.currentSettings.favoriteWatchedFolders.contains {
+                $0.id == favoriteWorkspaceController?.activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
+            }
+            if !matchesActiveFavorite {
+                favoriteWorkspaceController?.persistFinalState(to: settingsStore)
+                favoriteWorkspaceController?.deactivate()
+                groupStateController?.pinnedGroupIDs = []
+                groupStateController?.collapsedGroupIDs = []
+                didDeactivateFavorite = true
+                Task { @MainActor [appearanceController] in
+                    if appearanceController?.isLocked == true {
+                        appearanceController?.unlock()
+                    }
+                }
+            }
+        }
+
+        do {
+            try sidebarDocumentController.folderWatchCoordinator.startWatchingFolder(
+                folderURL: folderURL,
+                options: options,
+                performInitialAutoOpen: performInitialAutoOpen
+            )
+        } catch {
+            sidebarDocumentController.selectedReaderStore.presentError(error)
+        }
+
+        return didDeactivateFavorite
+    }
+
+    /// Stops the folder watch session and cleans up associated state.
+    /// Does NOT reset `sidebarWidth` or call `refreshWindowPresentation()` — the caller handles those.
+    func stopFolderWatchSession() {
+        dismissAutoOpenWarning()
+        favoriteWorkspaceController?.persistFinalState(to: settingsStore)
+        favoriteWorkspaceController?.deactivate()
+        groupStateController?.pinnedGroupIDs = []
+        groupStateController?.collapsedGroupIDs = []
+        sidebarDocumentController.folderWatchCoordinator.stopFolderWatch()
+        cancelPendingWatch()
+    }
+
+    /// Confirms a pending folder watch request and starts watching.
+    /// Returns `true` if a favorite was deactivated.
+    @discardableResult
+    func confirmFolderWatch(_ options: ReaderFolderWatchOptions) -> Bool {
+        guard let folderURL = pendingFolderWatchRequest?.folderURL else {
+            return false
+        }
+
+        let deactivated = startWatchingFolder(folderURL: folderURL, options: options)
+        cancelPendingWatch()
+        return deactivated
+    }
+
+    /// Updates folder watch exclusions, closing/opening documents as needed.
+    /// Returns `true` on success.
+    @discardableResult
+    func updateFolderWatchExclusions(_ newExcludedPaths: [String]) -> Bool {
+        guard let session = sharedFolderWatchSession else { return false }
+
+        let normalizedOld = Set(
+            session.options.encodedForFolder(session.folderURL).excludedSubdirectoryPaths
+        )
+        let normalizedNew = Set(
+            ReaderFolderWatchOptions(
+                openMode: session.options.openMode,
+                scope: session.options.scope,
+                excludedSubdirectoryPaths: newExcludedPaths
+            ).encodedForFolder(session.folderURL).excludedSubdirectoryPaths
+        )
+
+        guard normalizedOld != normalizedNew else { return true }
+
+        syncFavoriteExclusionsIfNeeded(newExcludedPaths)
+
+        do {
+            try sidebarDocumentController.folderWatchCoordinator.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
+        } catch {
+            sidebarDocumentController.selectedReaderStore.presentError(error)
+            return false
+        }
+
+        let newlyExcludedPaths = normalizedNew.subtracting(normalizedOld)
+        if !newlyExcludedPaths.isEmpty {
+            closeDocumentsInExcludedPaths(Array(newlyExcludedPaths))
+        }
+
+        let newlyIncludedPaths = normalizedOld.subtracting(normalizedNew)
+        if !newlyIncludedPaths.isEmpty, session.options.openMode == .openAllMarkdownFiles {
+            openFilesInNewlyIncludedPaths(Array(newlyIncludedPaths))
+        }
+
+        return true
+    }
+
+    private func syncFavoriteExclusionsIfNeeded(_ excludedPaths: [String]) {
+        guard let favoriteID = favoriteWorkspaceController?.activeFavoriteID else { return }
+        settingsStore.updateFavoriteWatchedFolderExclusions(
+            id: favoriteID,
+            excludedSubdirectoryPaths: excludedPaths
+        )
     }
 
     // MARK: - Exclusions
@@ -132,9 +278,9 @@ final class FolderWatchFlowController {
     }
 
     func openFilesInNewlyIncludedPaths(
-        _ includedPaths: [String],
-        fileOpenCoordinator: FileOpenCoordinator
+        _ includedPaths: [String]
     ) {
+        let fileOpenCoordinator = sidebarDocumentController.fileOpenCoordinator
         let includedPrefixes = includedPaths.map { path in
             let normalized = ReaderFileRouting.normalizedFileURL(
                 URL(fileURLWithPath: path, isDirectory: true)
