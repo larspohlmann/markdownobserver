@@ -34,10 +34,7 @@ struct ContentView: View {
             toc: toc,
             folderWatchState: folderWatchState,
             onAction: onAction,
-            canNavigateChangedRegions: surfaceViewModel.canNavigateChangedRegions(
-                documentViewMode: sourceEditing.documentViewMode,
-                changedRegions: document.changedRegions
-            ),
+            canNavigateChangedRegions: canNavigateChangedRegions,
             onNavigateChangedRegion: { direction in
                 surfaceViewModel.changeNavigation.requestNavigation(direction)
                 surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
@@ -47,6 +44,13 @@ struct ContentView: View {
             pendingFolderWatchScope: $pendingFolderWatchScope,
             pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
         ))
+    }
+
+    private var canNavigateChangedRegions: Bool {
+        surfaceViewModel.canNavigateChangedRegions(
+            documentViewMode: sourceEditing.documentViewMode,
+            changedRegions: document.changedRegions
+        )
     }
 
     private var statusBarTimestamp: ReaderStatusBarTimestamp? {
@@ -295,14 +299,14 @@ struct ContentView: View {
                 }
             }
             .overlay(alignment: .topLeading) { changeNavigationOverlay }
-            .animation(.easeOut(duration: 0.25), value: surfaceViewModel.canNavigateChangedRegions(documentViewMode: sourceEditing.documentViewMode, changedRegions: document.changedRegions))
+            .animation(.easeOut(duration: 0.25), value: canNavigateChangedRegions)
             .overlay(alignment: .top) { watchPillOverlay }
             .animation(.easeOut(duration: 0.25), value: folderWatchState.activeFolderWatch != nil)
     }
 
     @ViewBuilder
     private var changeNavigationOverlay: some View {
-        if surfaceViewModel.canNavigateChangedRegions(documentViewMode: sourceEditing.documentViewMode, changedRegions: document.changedRegions) {
+        if canNavigateChangedRegions {
             ChangeNavigationPill(
                 currentIndex: surfaceViewModel.changeNavigation.currentIndex,
                 totalCount: document.changedRegions.count,
@@ -348,7 +352,7 @@ struct ContentView: View {
                 }
             )
             .padding(.top, overlayInsets.leadingOverlayTopPadding)
-            .padding(.leading, surfaceViewModel.canNavigateChangedRegions(documentViewMode: sourceEditing.documentViewMode, changedRegions: document.changedRegions) ? 150 : 60)
+            .padding(.leading, canNavigateChangedRegions ? 150 : 60)
             .padding(.trailing, 70)
             .environment(\.colorScheme, overlayColorScheme)
             .transition(.asymmetric(

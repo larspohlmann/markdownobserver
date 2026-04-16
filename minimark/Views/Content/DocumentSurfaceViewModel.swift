@@ -182,13 +182,13 @@ final class DocumentSurfaceViewModel {
         onSharedAction: @escaping (DocumentSurfaceAction, DocumentSurfaceRole) -> Bool,
         onAction: @escaping (ContentViewAction) -> Void
     ) -> DocumentSurfaceConfiguration {
-        let canNavigateChangedRegions = documentViewMode != .source
-            && previewMode == .web
-            && !changedRegions.isEmpty
-
-        let canSynchronizeSplitScroll = documentViewMode == .split
-            && previewMode == .web
-            && sourceMode == .web
+        let canNavigateChangedRegions = canNavigateChangedRegions(
+            documentViewMode: documentViewMode,
+            changedRegions: changedRegions
+        )
+        let canSynchronizeSplitScroll = canSynchronizeSplitScroll(
+            documentViewMode: documentViewMode
+        )
 
         func splitScrollRequest(for surface: DocumentSurfaceRole) -> ScrollSyncRequest? {
             guard canSynchronizeSplitScroll else { return nil }
