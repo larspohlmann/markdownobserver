@@ -14,10 +14,19 @@ final class ReaderStore {
     var identity = DocumentIdentity.empty
     var content = DocumentContent.empty
     var editing = DocumentEditing.empty
-    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    var lastWatchedFolderEventAt: Date?
-    var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    var activeFolderWatchSession: ReaderFolderWatchSession? { folderWatchDispatcher.activeFolderWatchSession }
+    var lastWatchedFolderEventAt: Date? {
+        get { folderWatchDispatcher.lastWatchedFolderEventAt }
+        set { folderWatchDispatcher.lastWatchedFolderEventAt = newValue }
+    }
+    var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning? {
+        get { folderWatchDispatcher.autoOpenWarning }
+        set { folderWatchDispatcher.autoOpenWarning = newValue }
+    }
+    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
+        get { folderWatchDispatcher.pendingFileSelectionRequest }
+        set { folderWatchDispatcher.pendingFileSelectionRequest = newValue }
+    }
 
     // MARK: - Identity forwarding
 
@@ -89,6 +98,7 @@ final class ReaderStore {
 
     let externalChange = ReaderExternalChangeController()
     let sourceEditingController = ReaderSourceEditingController()
+    let folderWatchDispatcher: ReaderFolderWatchDispatcher
     let rendering: ReaderRenderingDependencies
     let renderingController: ReaderRenderingController
     let file: ReaderFileDependencies
@@ -112,11 +122,11 @@ final class ReaderStore {
     // - onFolderWatchStarted/Stopped: read-only from extensions (called, never reassigned);
     //   set exclusively through setFolderWatchStateCallbacks(_:onStopped:)
     let diffBaselineTracker: DiffBaselineTracking
-    private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
-    private(set) var onFolderWatchStopped: (() -> Void)?
+
+    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
+    var onFolderWatchStopped: (() -> Void)? { folderWatchDispatcher.onFolderWatchStopped }
 
     @ObservationIgnored private var hasActivatedDeferredSetup = false
-    @ObservationIgnored var folderWatchEventDispatchCoordinator = ReaderFolderWatchEventDispatchCoordinator()
 
     init(
         rendering: ReaderRenderingDependencies,
@@ -126,6 +136,7 @@ final class ReaderStore {
         securityScopeResolver: SecurityScopeResolver,
         diffBaselineTracker: DiffBaselineTracking? = nil
     ) {
+        self.folderWatchDispatcher = ReaderFolderWatchDispatcher(folderWatchDependencies: folderWatch)
         self.rendering = rendering
         self.renderingController = ReaderRenderingController(
             renderingDependencies: rendering,
@@ -184,7 +195,7 @@ final class ReaderStore {
     }
 
     var isWatchingFolder: Bool {
-        activeFolderWatchSession != nil
+        folderWatchDispatcher.isWatchingFolder
     }
 
     var currentSettings: ReaderSettings {
@@ -194,7 +205,7 @@ final class ReaderStore {
     func setOpenAdditionalDocumentForFolderWatchEventHandler(
         _ handler: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
     ) {
-        folderWatchEventDispatchCoordinator.setAdditionalOpenHandler(handler)
+        folderWatchDispatcher.setAdditionalOpenHandler(handler)
     }
 
     func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
@@ -209,20 +220,19 @@ final class ReaderStore {
         onStarted: ((ReaderFolderWatchSession) -> Void)?,
         onStopped: (() -> Void)?
     ) {
-        onFolderWatchStarted = onStarted
-        onFolderWatchStopped = onStopped
+        folderWatchDispatcher.setStateCallbacks(onStarted: onStarted, onStopped: onStopped)
     }
 
     func setActiveFolderWatchSession(_ session: ReaderFolderWatchSession?) {
-        activeFolderWatchSession = session
+        folderWatchDispatcher.setSession(session)
     }
 
     func setLastWatchedFolderEventAt(_ date: Date?) {
-        lastWatchedFolderEventAt = date
+        folderWatchDispatcher.lastWatchedFolderEventAt = date
     }
 
     func setFolderWatchAutoOpenWarning(_ warning: ReaderFolderWatchAutoOpenWarning?) {
-        folderWatchAutoOpenWarning = warning
+        folderWatchDispatcher.autoOpenWarning = warning
     }
 
     func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
@@ -244,7 +254,7 @@ final class ReaderStore {
         let modificationDate = file.io.modificationDate(for: normalizedURL)
         content.fileLastModifiedAt = modificationDate == .distantPast ? nil : modificationDate
         if let folderWatchSession {
-            activeFolderWatchSession = folderWatchSession
+            folderWatchDispatcher.setSession(folderWatchSession)
         }
     }
 
@@ -296,7 +306,7 @@ final class ReaderStore {
     }
 
     func dismissFolderWatchAutoOpenWarning() {
-        folderWatchAutoOpenWarning = nil
+        folderWatchDispatcher.dismissAutoOpenWarning()
     }
 
     func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
