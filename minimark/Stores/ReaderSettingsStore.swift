@@ -152,7 +152,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func resetFontSize()
 }
 
-@MainActor protocol ReaderSidebarConfigWriting: AnyObject {
+@MainActor protocol ReaderPreferencesWriting: AnyObject {
     func updateNotificationsEnabled(_ isEnabled: Bool)
     func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
@@ -206,7 +206,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 }
 
 typealias ReaderSettingsWriting = ReaderThemeWriting
-    & ReaderSidebarConfigWriting
+    & ReaderPreferencesWriting
     & ReaderFavoriteWriting
     & ReaderRecentWriting
     & ReaderTrustedFolderWriting

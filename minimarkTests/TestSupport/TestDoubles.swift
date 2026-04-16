@@ -434,11 +434,15 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
     func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
         var next = subject.value
+        let existing = next.favoriteWatchedFolders
         let ordered = orderedIDs.compactMap { id in
-            next.favoriteWatchedFolders.first(where: { $0.id == id })
+            existing.first(where: { $0.id == id })
         }
-        next.favoriteWatchedFolders = ordered
-        recordedFavoriteWatchedFolders = ordered
+        let orderedIDSet = Set(ordered.map(\.id))
+        let remaining = existing.filter { !orderedIDSet.contains($0.id) }
+        let reordered = ordered + remaining
+        next.favoriteWatchedFolders = reordered
+        recordedFavoriteWatchedFolders = reordered
         subject.send(next)
     }
 
@@ -454,6 +458,9 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
             scope: existing.options.scope,
             excludedSubdirectoryPaths: excludedSubdirectoryPaths
         ).encodedForFolder(folderURL)
+        guard existing.options != normalizedOptions else {
+            return
+        }
         next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
             id: existing.id,
             name: existing.name,
