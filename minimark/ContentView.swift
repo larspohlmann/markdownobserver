@@ -214,11 +214,6 @@ struct ContentView: View {
         return "file=\(fileName)|regions=\(document.changedRegions.count)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=preview"
     }
 
-    var sourceAccessibilityValue: String {
-        let fileName = document.fileURL?.lastPathComponent ?? "none"
-        return "file=\(fileName)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=source"
-    }
-
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
             documentViewMode: sourceEditing.documentViewMode,
