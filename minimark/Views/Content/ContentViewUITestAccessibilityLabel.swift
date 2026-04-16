@@ -2,10 +2,11 @@ import SwiftUI
 
 struct ContentViewUITestAccessibilityLabel: View {
     let isEnabled: Bool
-    let value: String
+    let makeValue: () -> String
 
     var body: some View {
         if isEnabled {
+            let value = makeValue()
             Text(value)
                 .font(.system(size: 8, weight: .regular, design: .monospaced))
                 .foregroundStyle(.secondary)

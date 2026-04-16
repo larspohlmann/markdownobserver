@@ -22,10 +22,7 @@ struct ChangeNavigationOverlayView: View {
             .padding(.top, topPadding)
             .padding(.leading, 8)
             .environment(\.colorScheme, colorScheme)
-            .transition(.asymmetric(
-                insertion: .opacity.combined(with: .move(edge: .top)),
-                removal: .opacity
-            ))
+            .transition(.overlayPill)
         }
     }
 }

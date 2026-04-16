@@ -45,8 +45,6 @@ final class ContentAreaViewModel {
         self.onAction = onAction
     }
 
-    // MARK: - Derivations
-
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
         if let date = externalChange.lastExternalChangeAt { return .updated(date) }
         if let date = document.fileLastModifiedAt { return .lastModified(date) }
@@ -128,8 +126,6 @@ final class ContentAreaViewModel {
         ReaderUITestLaunchConfiguration.current.isUITestModeEnabled
     }
 
-    // MARK: - Actions
-
     func handleAppear() {
         refreshSourceHTMLFromControllers()
         surfaceViewModel.handleSurfaceAppear(
@@ -199,18 +195,12 @@ final class ContentAreaViewModel {
 
     func promptForImageDirectoryAccess() {
         guard let directoryURL = document.fileURL?.deletingLastPathComponent() else { return }
-
-        let panel = NSOpenPanel()
-        panel.title = "Grant Image Access"
-        panel.message = "Select the folder containing your images to display them in the preview."
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = false
-        panel.prompt = "Grant Access"
-        panel.directoryURL = directoryURL
-
-        guard panel.runModal() == .OK, let selectedURL = panel.url else { return }
+        guard let selectedURL = MarkdownOpenPanel.pickFolder(
+            directoryURL: directoryURL,
+            title: "Grant Image Access",
+            message: "Select the folder containing your images to display them in the preview.",
+            prompt: "Grant Access"
+        ) else { return }
         onAction(.grantImageDirectoryAccess(selectedURL))
     }
 

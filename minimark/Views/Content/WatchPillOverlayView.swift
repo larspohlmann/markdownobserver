@@ -24,10 +24,7 @@ struct WatchPillOverlayView: View {
             .padding(.leading, leadingPadding)
             .padding(.trailing, trailingPadding)
             .environment(\.colorScheme, colorScheme)
-            .transition(.asymmetric(
-                insertion: .opacity.combined(with: .move(edge: .top)),
-                removal: .opacity
-            ))
+            .transition(.overlayPill)
         }
     }
 }

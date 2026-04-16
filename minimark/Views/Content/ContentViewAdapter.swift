@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// Intermediate view that narrows the `@Observable` observation scope for `ContentView`.
-///
-/// `ReaderWindowRootView.body` re-evaluates whenever any of its 6+ observed objects change.
-/// By moving the `ContentViewFolderWatchState` and `ContentAreaViewModel` construction here,
-/// the reads from `sidebarDocumentController`, `settingsStore`, and `appearanceController`
-/// are tracked only for this view's body — not for the entire root or sidebar workspace view.
+/// Narrows the `@Observable` observation scope for `ContentView`: reads from the sidebar
+/// controller, settings store, and appearance controller are tracked only for this view's
+/// body, not for the root or sidebar workspace view.
 struct ContentViewAdapter: View {
     let readerStore: ReaderStore
     let sidebarDocumentController: ReaderSidebarDocumentController

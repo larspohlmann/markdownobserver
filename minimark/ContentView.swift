@@ -34,7 +34,7 @@ struct ContentView: View {
         .overlay(alignment: .bottomLeading) {
             ContentViewUITestAccessibilityLabel(
                 isEnabled: viewModel.isUITestModeEnabled,
-                value: viewModel.previewAccessibilityValue
+                makeValue: { viewModel.previewAccessibilityValue }
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
