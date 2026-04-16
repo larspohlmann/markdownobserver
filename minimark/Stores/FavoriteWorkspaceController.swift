@@ -167,6 +167,9 @@ final class FavoriteWorkspaceController {
             options: entry.options,
             performInitialAutoOpen: false
         )
+        // Refresh shared state so sharedFolderWatchSession is available
+        // for file opening and document sync below.
+        folderWatchFlowController?.refreshSharedState()
 
         // Open restored files
         let restoredFileURLs = entry.existingOpenDocumentFileURLs(relativeTo: resolvedURL)
