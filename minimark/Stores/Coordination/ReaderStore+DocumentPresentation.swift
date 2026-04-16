@@ -35,23 +35,23 @@ extension ReaderStore {
         identity.fileURL = fileURL
         identity.fileDisplayName = fileURL.lastPathComponent
         content.savedMarkdown = loaded.markdown
-        editing.draftMarkdown = nil
-        editing.pendingSavedDraftDiffBaselineMarkdown = nil
+        sourceEditingController.draftMarkdown = nil
+        sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
         content.sourceMarkdown = loaded.markdown
-        editing.sourceEditorSeedMarkdown = loaded.markdown
+        sourceEditingController.sourceEditorSeedMarkdown = loaded.markdown
         content.fileLastModifiedAt = loaded.modificationDate
 
         if resetDocumentViewMode {
-            editing.documentViewMode = .preview
+            sourceEditingController.documentViewMode = .preview
         }
 
         content.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
-        editing.unsavedChangedRegions = []
-        editing.isSourceEditing = false
-        editing.hasUnsavedDraftChanges = false
+        sourceEditingController.unsavedChangedRegions = []
+        sourceEditingController.isSourceEditing = false
+        sourceEditingController.hasUnsavedDraftChanges = false
         toc.clear()
     }
 

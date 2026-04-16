@@ -44,18 +44,18 @@ final class ReaderStore {
 
     // MARK: - Editing forwarding
 
-    var documentViewMode: ReaderDocumentViewMode { editing.documentViewMode }
-    var sourceEditorSeedMarkdown: String { editing.sourceEditorSeedMarkdown }
-    var unsavedChangedRegions: [ChangedRegion] { editing.unsavedChangedRegions }
-    var isSourceEditing: Bool { editing.isSourceEditing }
-    var hasUnsavedDraftChanges: Bool { editing.hasUnsavedDraftChanges }
-    var canSaveSourceDraft: Bool { editing.canSaveSourceDraft }
-    var canDiscardSourceDraft: Bool { editing.canDiscardSourceDraft }
+    var documentViewMode: ReaderDocumentViewMode { sourceEditingController.documentViewMode }
+    var sourceEditorSeedMarkdown: String { sourceEditingController.sourceEditorSeedMarkdown }
+    var unsavedChangedRegions: [ChangedRegion] { sourceEditingController.unsavedChangedRegions }
+    var isSourceEditing: Bool { sourceEditingController.isSourceEditing }
+    var hasUnsavedDraftChanges: Bool { sourceEditingController.hasUnsavedDraftChanges }
+    var canSaveSourceDraft: Bool { sourceEditingController.canSaveSourceDraft }
+    var canDiscardSourceDraft: Bool { sourceEditingController.canDiscardSourceDraft }
 
     // MARK: - Cross-group computed properties
 
     var canStartSourceEditing: Bool {
-        identity.hasOpenDocument && !identity.isCurrentFileMissing && !editing.isSourceEditing
+        identity.hasOpenDocument && !identity.isCurrentFileMissing && !sourceEditingController.isSourceEditing
     }
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
@@ -66,7 +66,7 @@ final class ReaderStore {
     }
 
     var decoratedWindowTitle: String {
-        (externalChange.hasUnacknowledgedExternalChange || editing.hasUnsavedDraftChanges)
+        (externalChange.hasUnacknowledgedExternalChange || sourceEditingController.hasUnsavedDraftChanges)
             ? "* \(identity.windowTitle)" : identity.windowTitle
     }
 
@@ -88,6 +88,7 @@ final class ReaderStore {
     func scrollToTOCHeading(_ heading: TOCHeading) { toc.scrollTo(heading) }
 
     let externalChange = ReaderExternalChangeController()
+    let sourceEditingController = ReaderSourceEditingController()
     let rendering: ReaderRenderingDependencies
     let renderingController: ReaderRenderingController
     let file: ReaderFileDependencies
@@ -197,20 +198,11 @@ final class ReaderStore {
     }
 
     func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
-        guard hasOpenDocument else {
-            editing.documentViewMode = .preview
-            return
-        }
-
-        guard documentViewMode != mode else {
-            return
-        }
-
-        editing.documentViewMode = mode
+        sourceEditingController.setViewMode(mode, hasOpenDocument: hasOpenDocument)
     }
 
     func toggleDocumentViewMode() {
-        setDocumentViewMode(documentViewMode.next)
+        sourceEditingController.toggleViewMode()
     }
 
     func setFolderWatchStateCallbacks(
@@ -298,6 +290,7 @@ final class ReaderStore {
         identity = .empty
         content = .empty
         editing = .empty
+        sourceEditingController.reset()
 
         folderWatch.settler.clearSettling()
     }
@@ -307,12 +300,12 @@ final class ReaderStore {
     }
 
     func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
-        editing.draftMarkdown = transition.draftMarkdown
+        sourceEditingController.draftMarkdown = transition.draftMarkdown
         content.sourceMarkdown = transition.sourceMarkdown
-        editing.sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
-        editing.unsavedChangedRegions = transition.unsavedChangedRegions
-        editing.isSourceEditing = transition.isSourceEditing
-        editing.hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
+        sourceEditingController.sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
+        sourceEditingController.unsavedChangedRegions = transition.unsavedChangedRegions
+        sourceEditingController.isSourceEditing = transition.isSourceEditing
+        sourceEditingController.hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
     }
 
     func refreshOpenInApplications() {

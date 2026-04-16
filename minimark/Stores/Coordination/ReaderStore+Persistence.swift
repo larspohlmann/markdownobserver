@@ -21,7 +21,7 @@ extension ReaderStore {
                 newMarkdown: draftMarkdown
             )
             content.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
-            editing.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
             externalChange.clear()
             identity.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
@@ -86,7 +86,7 @@ extension ReaderStore {
     }
 
     func handlePendingSavedDraftChangeIfNeeded() -> Bool {
-        guard let diffBaselineMarkdown = editing.pendingSavedDraftDiffBaselineMarkdown,
+        guard let diffBaselineMarkdown = sourceEditingController.pendingSavedDraftDiffBaselineMarkdown,
               let fileURL,
               !isSourceEditing else {
             return false
@@ -103,12 +103,12 @@ extension ReaderStore {
             Self.logger.error(
                 "draft baseline load failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
             )
-            editing.pendingSavedDraftDiffBaselineMarkdown = nil
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
 
         guard loaded.markdown == sourceMarkdown else {
-            editing.pendingSavedDraftDiffBaselineMarkdown = nil
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
 
@@ -117,8 +117,8 @@ extension ReaderStore {
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
-        editing.unsavedChangedRegions = []
-        editing.pendingSavedDraftDiffBaselineMarkdown = nil
+        sourceEditingController.unsavedChangedRegions = []
+        sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
         return true
     }
 

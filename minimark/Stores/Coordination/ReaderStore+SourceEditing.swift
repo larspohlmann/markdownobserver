@@ -37,7 +37,7 @@ extension ReaderStore {
 
     func saveSourceDraft() {
         guard isSourceEditing,
-              let draftMarkdown = editing.draftMarkdown,
+              let draftMarkdown = sourceEditingController.draftMarkdown,
               let fileURL else {
             logSaveError("save requested without active editable document: \(saveLogContext(for: fileURL))")
             handle(ReaderError.noOpenFileInReader)
