@@ -9,16 +9,6 @@ struct ContentView: View {
         static let splitPaneMinimumWidth: CGFloat = 320
     }
 
-    enum PreviewMode {
-        case web
-        case nativeFallback
-    }
-
-    enum SourceMode {
-        case web
-        case plainTextFallback
-    }
-
     static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ContentView"
