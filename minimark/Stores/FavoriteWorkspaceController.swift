@@ -201,10 +201,15 @@ final class FavoriteWorkspaceController {
         guard let session = folderWatchFlowController?.sharedFolderWatchSession,
               let favorite = matchingCurrentSession() else { return }
 
+        let currentURLs = openDocumentFileURLs()
+        // Don't overwrite saved documents with an empty list — this can happen
+        // when the sync fires (via .onChange) before restored files are opened.
+        guard !currentURLs.isEmpty || favorite.openDocumentRelativePaths.isEmpty else { return }
+
         settingsStore.updateFavoriteWatchedFolderOpenDocuments(
             id: favorite.id,
             folderURL: session.folderURL,
-            openDocumentFileURLs: openDocumentFileURLs()
+            openDocumentFileURLs: currentURLs
         )
     }
 
