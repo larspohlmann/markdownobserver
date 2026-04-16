@@ -13,6 +13,7 @@ struct ReaderWindowRootView: View {
     @State var groupStateController = SidebarGroupStateController()
     @State var favoriteWorkspaceController = FavoriteWorkspaceController()
     @State var folderWatchFlowController: FolderWatchFlowController
+    @State var uiTestLaunchCoordinator = UITestLaunchCoordinator()
 
     init(
         seed: ReaderWindowSeed?,
@@ -264,11 +265,27 @@ struct ReaderWindowRootView: View {
     private func performInitialSetupIfNeeded() {
         guard !windowCoordinator.hasOpenedInitialFile else { return }
         windowCoordinator.hasOpenedInitialFile = true
+        uiTestLaunchCoordinator.configure(actions: UITestLaunchCoordinator.Actions(
+            hostWindow: { [windowCoordinator] in windowCoordinator.hostWindow },
+            startWatchingFolder: { [windowCoordinator] folderURL, options in
+                windowCoordinator.startWatchingFolder(folderURL: folderURL, options: options)
+            },
+            presentFolderWatchOptions: { [windowCoordinator] folderURL, options in
+                windowCoordinator.presentFolderWatchOptions(for: folderURL, options: options)
+            },
+            openFileRequest: { [windowCoordinator] request in
+                windowCoordinator.openFileRequest(request)
+            },
+            isSessionActive: { [folderWatchFlowController] in
+                folderWatchFlowController.sharedFolderWatchSession != nil
+            }
+        ))
         windowCoordinator.configure(
             appearanceController: appearanceController,
             groupStateController: groupStateController,
             favoriteWorkspaceController: favoriteWorkspaceController,
-            folderWatchFlowController: folderWatchFlowController
+            folderWatchFlowController: folderWatchFlowController,
+            uiTestLaunchCoordinator: uiTestLaunchCoordinator
         )
         windowCoordinator.applyInitialSeedIfNeeded(seed: seed)
         windowCoordinator.refreshSharedFolderWatchState()

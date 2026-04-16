@@ -36,8 +36,6 @@ final class ReaderWindowCoordinator {
     var hasOpenedInitialFile = false
     var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
     let dockTileWindowToken = UUID()
-    var hasAppliedUITestLaunchConfiguration = false
-    var uiTestWatchFlowTask: Task<Void, Never>?
     var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     var lastAppliedSidebarDelta: CGFloat = 0
     var isTitlebarEditingFavorites = false
@@ -60,6 +58,7 @@ final class ReaderWindowCoordinator {
     private(set) var groupStateController: SidebarGroupStateController?
     private(set) var favoriteWorkspaceController: FavoriteWorkspaceController?
     private(set) var folderWatchFlowController: FolderWatchFlowController?
+    private(set) var uiTestLaunchCoordinator: UITestLaunchCoordinator?
 
     private var fileOpenCoordinator: FileOpenCoordinator {
         sidebarDocumentController.fileOpenCoordinator
@@ -69,12 +68,14 @@ final class ReaderWindowCoordinator {
         appearanceController: WindowAppearanceController,
         groupStateController: SidebarGroupStateController,
         favoriteWorkspaceController: FavoriteWorkspaceController,
-        folderWatchFlowController: FolderWatchFlowController
+        folderWatchFlowController: FolderWatchFlowController,
+        uiTestLaunchCoordinator: UITestLaunchCoordinator
     ) {
         self.appearanceController = appearanceController
         self.groupStateController = groupStateController
         self.favoriteWorkspaceController = favoriteWorkspaceController
         self.folderWatchFlowController = folderWatchFlowController
+        self.uiTestLaunchCoordinator = uiTestLaunchCoordinator
         configureStoreCallbacks(
             lockedAppearanceProvider: { [weak appearanceController] in appearanceController?.lockedAppearance }
         ) { [weak self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
@@ -300,7 +301,7 @@ final class ReaderWindowCoordinator {
 
     func handleHostWindowChange() {
         refreshWindowShellState()
-        applyUITestLaunchConfigurationIfNeeded()
+        uiTestLaunchCoordinator?.applyConfigurationIfNeeded()
         if hostWindow != nil, hasPendingFolderWatchOpenEvents {
             flushQueuedFolderWatchOpens()
         }
@@ -1010,90 +1011,6 @@ final class ReaderWindowCoordinator {
                 favoriteWorkspaceController?.updateLockedAppearance(appearanceController.lockedAppearance)
             }
         }
-    }
-
-    // MARK: - UI Test Flow
-
-    func applyUITestLaunchConfigurationIfNeeded() {
-        guard !hasAppliedUITestLaunchConfiguration else {
-            return
-        }
-
-        let action = resolvedUITestLaunchAction()
-        switch action {
-        case .none:
-            break
-        case .simulateGroupedSidebar:
-            startUITestGroupedSidebarFlow()
-        case .simulateAutoOpenWatchFlow:
-            startUITestAutoOpenWatchFlow()
-        case .presentWatchFolderSheet(let watchFolderURL):
-            applyScreenshotWindowSize()
-            var options = ReaderFolderWatchOptions.default
-            if ProcessInfo.processInfo.environment[
-                ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
-            ] == "includeSubfolders" {
-                options.scope = .includeSubfolders
-            }
-            presentFolderWatchOptions(for: watchFolderURL, options: options)
-        case .startWatchingFolder(let watchFolderURL):
-            startWatchingFolder(folderURL: watchFolderURL, options: .default)
-        }
-        hasAppliedUITestLaunchConfiguration = true
-    }
-
-    private func resolvedUITestLaunchAction() -> ReaderWindowUITestLaunchAction {
-        ReaderWindowUITestFlowSupport.resolveLaunchAction(
-            configuration: ReaderUITestLaunchConfiguration.current,
-            hostWindowAvailable: hostWindow != nil
-        )
-    }
-
-    private func applyScreenshotWindowSize() {
-        guard let sizeStr = ProcessInfo.processInfo.environment[
-            ReaderUITestLaunchConfiguration.screenshotWindowSizeEnvironmentKey
-        ], !sizeStr.isEmpty else { return }
-
-        let parts = sizeStr.split(separator: "x").compactMap { Double($0) }
-        guard parts.count == 2 else { return }
-
-        if let window = hostWindow {
-            let frame = NSRect(
-                x: window.frame.origin.x,
-                y: window.frame.origin.y,
-                width: parts[0],
-                height: parts[1]
-            )
-            window.setFrame(frame, display: true, animate: false)
-        }
-    }
-
-    private func startUITestGroupedSidebarFlow() {
-        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { [self] fileURLs in
-            openFileRequest(FileOpenRequest(
-                fileURLs: fileURLs,
-                origin: .manual
-            ))
-        }
-    }
-
-    private func startUITestAutoOpenWatchFlow() {
-        ReaderWindowUITestFlowSupport.startAutoOpenWatchFlow(
-            startWatchingFolder: { [self] watchFolderURL in
-                startWatchingFolder(folderURL: watchFolderURL, options: .default)
-            },
-            cancelExistingTask: { [self] in
-                uiTestWatchFlowTask?.cancel()
-            },
-            waitForFolderWatchStartup: { [folderWatchFlowController] in
-                await ReaderWindowUITestFlowSupport.waitForFolderWatchStartup {
-                    folderWatchFlowController?.sharedFolderWatchSession != nil
-                }
-            },
-            assignTask: { [self] task in
-                uiTestWatchFlowTask = task
-            }
-        )
     }
 
     // MARK: - Appearance Reapplication
