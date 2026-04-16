@@ -52,10 +52,10 @@ final class SidebarRowStateComputer {
         let indicatorState = deriveIndicatorState(from: store)
         return SidebarRowState(
             id: document.id,
-            title: store.fileDisplayName.isEmpty ? "Untitled" : store.fileDisplayName,
-            lastModified: store.fileLastModifiedAt,
-            sortDate: store.fileLastModifiedAt ?? store.lastExternalChangeAt ?? store.lastRefreshAt,
-            isFileMissing: store.isCurrentFileMissing,
+            title: store.document.fileDisplayName.isEmpty ? "Untitled" : store.document.fileDisplayName,
+            lastModified: store.document.fileLastModifiedAt,
+            sortDate: store.document.fileLastModifiedAt ?? store.externalChange.lastExternalChangeAt ?? store.renderingController.lastRefreshAt,
+            isFileMissing: store.document.isCurrentFileMissing,
             indicatorState: indicatorState,
             indicatorPulseToken: pulseTokens[document.id] ?? 0
         )

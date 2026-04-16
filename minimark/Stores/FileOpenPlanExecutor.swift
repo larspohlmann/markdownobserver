@@ -52,7 +52,7 @@ final class FileOpenPlanExecutor {
             let fileURL = assignment.fileURL
 
             if let existingDocument = documentList.document(for: fileURL) {
-                if existingDocument.readerStore.isDeferredDocument, assignment.loadMode == .loadFully {
+                if existingDocument.readerStore.document.isDeferredDocument, assignment.loadMode == .loadFully {
                     let store = existingDocument.readerStore
                     let effectiveSession = delegate.resolvedFolderWatchSession(
                         for: fileURL,
@@ -117,7 +117,7 @@ final class FileOpenPlanExecutor {
                 )
             }
 
-            guard targetDocument.readerStore.fileURL != nil else {
+            guard targetDocument.readerStore.document.fileURL != nil else {
                 continue
             }
 
@@ -139,7 +139,7 @@ final class FileOpenPlanExecutor {
 
         // In screenshot mode, override selection to a specific document by filename
         if let targetFile = ProcessInfo.processInfo.environment["MINIMARK_SCREENSHOT_SELECT_FILE"],
-           let match = documentList.documents.first(where: { $0.readerStore.fileURL?.lastPathComponent == targetFile }) {
+           let match = documentList.documents.first(where: { $0.readerStore.document.fileURL?.lastPathComponent == targetFile }) {
             delegate.selectedDocumentID = match.id
         }
 
@@ -149,9 +149,9 @@ final class FileOpenPlanExecutor {
 
     func selectDocumentWithNewestModificationDate() {
         let newest = documentList.documents
-            .filter { $0.readerStore.fileURL != nil }
+            .filter { $0.readerStore.document.fileURL != nil }
             .max(by: {
-                ($0.readerStore.fileLastModifiedAt ?? .distantPast) < ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+                ($0.readerStore.document.fileLastModifiedAt ?? .distantPast) < ($1.readerStore.document.fileLastModifiedAt ?? .distantPast)
             })
         if let newest {
             delegate?.selectDocument(newest.id)
@@ -162,9 +162,9 @@ final class FileOpenPlanExecutor {
         count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
     ) {
         let deferredDocs = documentList.documents
-            .filter { $0.readerStore.isDeferredDocument }
+            .filter { $0.readerStore.document.isDeferredDocument }
             .sorted {
-                ($0.readerStore.fileLastModifiedAt ?? .distantPast) > ($1.readerStore.fileLastModifiedAt ?? .distantPast)
+                ($0.readerStore.document.fileLastModifiedAt ?? .distantPast) > ($1.readerStore.document.fileLastModifiedAt ?? .distantPast)
             }
 
         for document in deferredDocs.prefix(count) {
@@ -184,7 +184,7 @@ final class FileOpenPlanExecutor {
         case .deferThenMaterializeNewest(let count):
             materializeNewestDeferredDocuments(count: count)
         case .deferThenMaterializeSelected:
-            if delegate.selectedReaderStore.isDeferredDocument {
+            if delegate.selectedReaderStore.document.isDeferredDocument {
                 let store = delegate.selectedReaderStore
                 scheduleLoadWithOverlay(on: store) {
                     store.materializeDeferredDocument()

@@ -104,7 +104,7 @@ extension ReaderStore {
         }
 
         let normalizedIncomingURL = Self.normalizedFileURL(url)
-        if let fileURL, Self.normalizedFileURL(fileURL) == normalizedIncomingURL {
+        if let fileURL = document.fileURL, Self.normalizedFileURL(fileURL) == normalizedIncomingURL {
             return
         }
 
@@ -165,7 +165,7 @@ extension ReaderStore {
         initialDiffBaselineMarkdown: String?
     ) {
         guard origin.shouldNotifyFileAutoLoaded,
-              activeFolderWatchSession != nil,
+              folderWatchDispatcher.activeFolderWatchSession != nil,
               settingsStore.currentSettings.notificationsEnabled else {
             return
         }
@@ -173,7 +173,7 @@ extension ReaderStore {
         folderWatch.systemNotifier.notifyFileChanged(
             normalizedURL,
             changeKind: initialDiffBaselineMarkdown == nil ? .added : .modified,
-            watchedFolderURL: activeFolderWatchSession?.folderURL
+            watchedFolderURL: folderWatchDispatcher.activeFolderWatchSession?.folderURL
         )
     }
 
@@ -183,13 +183,13 @@ extension ReaderStore {
         forceHighlight: Bool = true,
         acknowledgeExternalChange: Bool = true
     ) {
-        guard let fileURL else {
+        guard let fileURL = document.fileURL else {
             return
         }
 
         reloadCurrentFile(
             at: fileURL,
-            diffBaselineMarkdown: forceHighlight ? sourceMarkdown : nil,
+            diffBaselineMarkdown: forceHighlight ? document.sourceMarkdown : nil,
             acknowledgeExternalChange: acknowledgeExternalChange
         )
     }

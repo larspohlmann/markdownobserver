@@ -3,11 +3,11 @@ import Foundation
 extension ReaderStore {
     func scheduleDraftPreviewRender() {
         renderingController.scheduleDraftPreviewRender(
-            sourceMarkdown: sourceMarkdown,
-            changedRegions: changedRegions,
-            unsavedChangedRegions: unsavedChangedRegions,
-            fileURL: fileURL,
-            folderWatchSession: activeFolderWatchSession
+            sourceMarkdown: document.sourceMarkdown,
+            changedRegions: document.changedRegions,
+            unsavedChangedRegions: sourceEditingController.unsavedChangedRegions,
+            fileURL: document.fileURL,
+            folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
         )
     }
 
@@ -17,22 +17,22 @@ extension ReaderStore {
 
     func renderCurrentMarkdownImmediately() throws {
         try renderingController.renderImmediately(
-            sourceMarkdown: sourceMarkdown,
-            changedRegions: changedRegions,
-            unsavedChangedRegions: unsavedChangedRegions,
-            fileURL: fileURL,
-            folderWatchSession: activeFolderWatchSession
+            sourceMarkdown: document.sourceMarkdown,
+            changedRegions: document.changedRegions,
+            unsavedChangedRegions: sourceEditingController.unsavedChangedRegions,
+            fileURL: document.fileURL,
+            folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
         )
     }
 
     func renderWithAppearance(_ appearance: LockedAppearance) throws {
         try renderingController.renderWithAppearance(
             appearance,
-            sourceMarkdown: sourceMarkdown,
-            changedRegions: changedRegions,
-            unsavedChangedRegions: unsavedChangedRegions,
-            fileURL: fileURL,
-            folderWatchSession: activeFolderWatchSession
+            sourceMarkdown: document.sourceMarkdown,
+            changedRegions: document.changedRegions,
+            unsavedChangedRegions: sourceEditingController.unsavedChangedRegions,
+            fileURL: document.fileURL,
+            folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
         )
     }
 

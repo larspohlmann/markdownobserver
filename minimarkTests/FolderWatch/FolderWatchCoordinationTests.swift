@@ -781,7 +781,7 @@ struct FolderWatchCoordinationTests {
         view.windowCoordinator.openAdditionalDocumentInCurrentWindow(markdownURL)
 
         #expect(focusedURLs.isEmpty)
-        #expect(view.sidebarDocumentController.selectedReaderStore.fileURL?.path == markdownURL.path)
+        #expect(view.sidebarDocumentController.selectedReaderStore.document.fileURL?.path == markdownURL.path)
     }
 
     @Test @MainActor func openAdditionalDocumentsInCurrentWindowKeepsBatchLocal() throws {
@@ -831,11 +831,11 @@ struct FolderWatchCoordinationTests {
         ))
 
         #expect(focusedURLs.isEmpty)
-        #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL?.path }) == Set([
+        #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.readerStore.document.fileURL?.path }) == Set([
             alphaURL.path,
             zetaURL.path
         ]))
-        #expect(view.sidebarDocumentController.selectedReaderStore.fileURL?.path == zetaURL.path)
+        #expect(view.sidebarDocumentController.selectedReaderStore.document.fileURL?.path == zetaURL.path)
     }
 
     @Test @MainActor func readerWindowCoordinatorResolvesTitleFromSelectedDocumentState() throws {

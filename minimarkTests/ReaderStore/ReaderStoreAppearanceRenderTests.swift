@@ -15,11 +15,11 @@ struct ReaderStoreAppearanceRenderTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
-        #expect(!fixture.store.needsAppearanceRender)
+        #expect(!fixture.store.renderingController.needsAppearanceRender)
 
         fixture.store.setAppearanceOverride(testAppearance)
 
-        #expect(fixture.store.needsAppearanceRender)
+        #expect(fixture.store.renderingController.needsAppearanceRender)
     }
 
     @Test @MainActor func renderWithAppearanceClearsNeedsAppearanceRender() throws {
@@ -29,11 +29,11 @@ struct ReaderStoreAppearanceRenderTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
-        #expect(fixture.store.needsAppearanceRender)
+        #expect(fixture.store.renderingController.needsAppearanceRender)
 
         try fixture.store.renderWithAppearance(testAppearance)
 
-        #expect(!fixture.store.needsAppearanceRender)
+        #expect(!fixture.store.renderingController.needsAppearanceRender)
     }
 
     @Test @MainActor func renderCurrentMarkdownClearsNeedsAppearanceRender() throws {
@@ -43,10 +43,10 @@ struct ReaderStoreAppearanceRenderTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
-        #expect(fixture.store.needsAppearanceRender)
+        #expect(fixture.store.renderingController.needsAppearanceRender)
 
         try fixture.store.renderCurrentMarkdownImmediately()
 
-        #expect(!fixture.store.needsAppearanceRender)
+        #expect(!fixture.store.renderingController.needsAppearanceRender)
     }
 }

@@ -337,8 +337,8 @@ struct ReaderSidebarGroupingTests {
 
         let documentStates = harness.documents.map { document in
             ReaderDocumentIndicatorState(
-                hasUnacknowledgedExternalChange: document.readerStore.hasUnacknowledgedExternalChange,
-                isCurrentFileMissing: document.readerStore.isCurrentFileMissing,
+                hasUnacknowledgedExternalChange: document.readerStore.externalChange.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: document.readerStore.document.isCurrentFileMissing,
                 unacknowledgedExternalChangeKind: document.readerStore.externalChange.unacknowledgedExternalChangeKind
             )
         }

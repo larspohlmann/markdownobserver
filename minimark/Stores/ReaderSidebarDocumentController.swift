@@ -174,7 +174,7 @@ final class ReaderSidebarDocumentController {
         selectedDocumentID = documentID
         let store = selectedReaderStore
 
-        if store.isDeferredDocument {
+        if store.document.isDeferredDocument {
             scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
             }
@@ -234,13 +234,13 @@ final class ReaderSidebarDocumentController {
     // MARK: - Document actions
 
     func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
-        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
+        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.document.fileURL != nil {
             document.readerStore.openCurrentFileInApplication(application)
         }
     }
 
     func revealDocumentsInFinder(_ documentIDs: Set<UUID>) {
-        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.fileURL != nil {
+        for document in documentList.orderedDocuments(matching: documentIDs) where document.readerStore.document.fileURL != nil {
             document.readerStore.revealCurrentFileInFinder()
         }
     }

@@ -12,11 +12,11 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.startEditingSource()
 
-        #expect(fixture.store.isSourceEditing)
-        #expect(!fixture.store.hasUnsavedDraftChanges)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
-        #expect(fixture.store.sourceEditorSeedMarkdown == "# Initial")
-        #expect(fixture.store.unsavedChangedRegions.isEmpty)
+        #expect(fixture.store.sourceEditingController.isSourceEditing)
+        #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
+        #expect(fixture.store.sourceEditingController.sourceEditorSeedMarkdown == "# Initial")
+        #expect(fixture.store.sourceEditingController.unsavedChangedRegions.isEmpty)
     }
 
     @Test @MainActor func updatingDraftRendersPreviewFromDraftAndTracksUnsavedChanges() async throws {
@@ -31,17 +31,17 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.updateSourceDraft("# Draft")
 
-        #expect(fixture.store.isSourceEditing)
-        #expect(fixture.store.hasUnsavedDraftChanges)
-        #expect(fixture.store.sourceMarkdown == "# Draft")
-        #expect(fixture.store.unsavedChangedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.sourceEditingController.isSourceEditing)
+        #expect(fixture.store.sourceEditingController.hasUnsavedDraftChanges)
+        #expect(fixture.store.document.sourceMarkdown == "# Draft")
+        #expect(fixture.store.sourceEditingController.unsavedChangedRegions == [Self.sampleChangedRegion])
 
         let renderedDraft = await waitUntil {
-            fixture.store.renderedHTMLDocument.contains("# Draft")
+            fixture.store.renderingController.renderedHTMLDocument.contains("# Draft")
         }
 
         #expect(renderedDraft)
-        #expect(fixture.store.renderedHTMLDocument.contains("# Draft"))
+        #expect(fixture.store.renderingController.renderedHTMLDocument.contains("# Draft"))
     }
 
     @Test @MainActor func saveDraftWritesToDiskAndShowsSavedDiffInPreview() throws {
@@ -59,11 +59,11 @@ struct ReaderStoreSourceEditingTests {
 
         let persistedMarkdown = try String(contentsOf: fixture.primaryFileURL, encoding: .utf8)
         #expect(persistedMarkdown == "# Saved Draft")
-        #expect(!fixture.store.isSourceEditing)
-        #expect(!fixture.store.hasUnsavedDraftChanges)
-        #expect(fixture.store.sourceMarkdown == "# Saved Draft")
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.unsavedChangedRegions.isEmpty)
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
+        #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
+        #expect(fixture.store.document.sourceMarkdown == "# Saved Draft")
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.sourceEditingController.unsavedChangedRegions.isEmpty)
     }
 
     @Test @MainActor func autoOpenedWatchedFolderDraftSaveReacquiresFolderScopeWhenFileScopeFails() throws {
@@ -97,7 +97,7 @@ struct ReaderStoreSourceEditingTests {
         let persistedMarkdown = try String(contentsOf: fixture.primaryFileURL, encoding: .utf8)
         #expect(persistedMarkdown == "# Autoloaded Save")
         #expect(
-            fixture.store.activeFolderWatchSession.map { ReaderFileRouting.normalizedFileURL($0.folderURL).path } == normalizedFolderPath
+            fixture.store.folderWatchDispatcher.activeFolderWatchSession.map { ReaderFileRouting.normalizedFileURL($0.folderURL).path } == normalizedFolderPath
         )
         #expect(
             fixture.securityScope.accessedURLs
@@ -134,7 +134,7 @@ struct ReaderStoreSourceEditingTests {
         let result = fixture.store.securityScopeResolver.tryReauthorizeWatchedFolder(
             after: permissionDeniedError,
             for: fixture.primaryFileURL,
-            folderWatchSession: fixture.store.activeFolderWatchSession
+            folderWatchSession: fixture.store.folderWatchDispatcher.activeFolderWatchSession
         )
         if let updatedSession = result.updatedSession {
             fixture.store.setActiveFolderWatchSession(updatedSession)
@@ -142,7 +142,7 @@ struct ReaderStoreSourceEditingTests {
 
         #expect(result.succeeded)
         #expect(requestedFolderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
-        #expect(fixture.store.activeFolderWatchSession?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        #expect(fixture.store.folderWatchDispatcher.activeFolderWatchSession?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
         #expect(fixture.settings.recordedRecentWatchedFolders.first?.folderPath == fixture.temporaryDirectoryURL.path)
         #expect(fixture.securityScope.accessedURLs.contains(where: { $0.path == fixture.temporaryDirectoryURL.path }))
     }
@@ -161,10 +161,10 @@ struct ReaderStoreSourceEditingTests {
         fixture.store.saveSourceDraft()
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.sourceMarkdown == "# Saved Draft")
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.store.lastExternalChangeAt == nil)
+        #expect(fixture.store.document.sourceMarkdown == "# Saved Draft")
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.lastExternalChangeAt == nil)
         #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
 
@@ -178,11 +178,11 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.discardSourceDraft()
 
-        #expect(!fixture.store.isSourceEditing)
-        #expect(!fixture.store.hasUnsavedDraftChanges)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
-        #expect(fixture.store.unsavedChangedRegions.isEmpty)
-        #expect(fixture.store.renderedHTMLDocument.contains("# Initial"))
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
+        #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
+        #expect(fixture.store.sourceEditingController.unsavedChangedRegions.isEmpty)
+        #expect(fixture.store.renderingController.renderedHTMLDocument.contains("# Initial"))
     }
 
     @Test @MainActor func externalChangeWhileEditingKeepsDraftInMemory() throws {
@@ -199,9 +199,9 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.isSourceEditing)
-        #expect(fixture.store.sourceMarkdown == "# Draft")
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.sourceEditingController.isSourceEditing)
+        #expect(fixture.store.document.sourceMarkdown == "# Draft")
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func discardAfterExternalChangeReloadsCurrentDiskVersion() throws {
@@ -219,10 +219,10 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.discardSourceDraft()
 
-        #expect(!fixture.store.isSourceEditing)
-        #expect(!fixture.store.hasUnsavedDraftChanges)
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.store.sourceMarkdown == "# External")
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
+        #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.sourceMarkdown == "# External")
     }
 
     // MARK: - Guard paths
@@ -234,8 +234,8 @@ struct ReaderStoreSourceEditingTests {
         // No openFile call — store has no open document.
         fixture.store.startEditingSource()
 
-        #expect(!fixture.store.isSourceEditing)
-        #expect(!fixture.store.hasUnsavedDraftChanges)
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
+        #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
     }
 
     @Test @MainActor func startEditingIsNoOpWhenCurrentFileIsMissing() throws {
@@ -246,11 +246,11 @@ struct ReaderStoreSourceEditingTests {
         fixture.delete(fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.isCurrentFileMissing)
+        #expect(fixture.store.document.isCurrentFileMissing)
 
         fixture.store.startEditingSource()
 
-        #expect(!fixture.store.isSourceEditing)
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
     }
 
     @Test @MainActor func startEditingIsNoOpWhenAlreadyEditing() throws {
@@ -264,8 +264,8 @@ struct ReaderStoreSourceEditingTests {
         // Second call while already editing must not reset the draft.
         fixture.store.startEditingSource()
 
-        #expect(fixture.store.isSourceEditing)
-        #expect(fixture.store.sourceMarkdown == "# Draft")
+        #expect(fixture.store.sourceEditingController.isSourceEditing)
+        #expect(fixture.store.document.sourceMarkdown == "# Draft")
     }
 
     @Test @MainActor func updateDraftIsNoOpWhenNotEditing() throws {
@@ -276,9 +276,9 @@ struct ReaderStoreSourceEditingTests {
         // updateSourceDraft without startEditingSource — must be a no-op.
         fixture.store.updateSourceDraft("# Should Not Apply")
 
-        #expect(!fixture.store.isSourceEditing)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
-        #expect(!fixture.store.hasUnsavedDraftChanges)
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
+        #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
     }
 
     @Test @MainActor func discardDraftIsNoOpWhenNotEditing() throws {
@@ -289,8 +289,8 @@ struct ReaderStoreSourceEditingTests {
         // discardSourceDraft without an active editing session must be a no-op.
         fixture.store.discardSourceDraft()
 
-        #expect(!fixture.store.isSourceEditing)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(!fixture.store.sourceEditingController.isSourceEditing)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
     }
 }
 

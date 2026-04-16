@@ -56,7 +56,7 @@ struct ReaderStoreSecurityScopeFlowTests {
 
         let result = resolver.effectiveAccessibleFileURL(
             for: fixture.primaryFileURL, reason: "test",
-            folderWatchSession: fixture.store.activeFolderWatchSession
+            folderWatchSession: fixture.store.folderWatchDispatcher.activeFolderWatchSession
         )
 
         #expect(result.lastPathComponent == "first.md")

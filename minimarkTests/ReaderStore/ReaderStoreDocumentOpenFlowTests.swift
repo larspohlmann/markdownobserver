@@ -18,10 +18,10 @@ struct ReaderStoreDocumentOpenFlowTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        #expect(fixture.store.fileURL != nil)
-        #expect(fixture.store.fileDisplayName == "first.md")
-        #expect(fixture.store.documentLoadState == .ready)
-        #expect(fixture.store.renderedHTMLDocument.contains("Initial"))
+        #expect(fixture.store.document.fileURL != nil)
+        #expect(fixture.store.document.fileDisplayName == "first.md")
+        #expect(fixture.store.document.documentLoadState == .ready)
+        #expect(fixture.store.renderingController.renderedHTMLDocument.contains("Initial"))
     }
 
     @Test @MainActor func openFileStartsFileWatcher() throws {
@@ -40,8 +40,8 @@ struct ReaderStoreDocumentOpenFlowTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.openFile(at: fixture.secondaryFileURL)
 
-        #expect(fixture.store.fileDisplayName == "second.md")
-        #expect(fixture.store.renderedHTMLDocument.contains("Second"))
+        #expect(fixture.store.document.fileDisplayName == "second.md")
+        #expect(fixture.store.renderingController.renderedHTMLDocument.contains("Second"))
     }
 
     @Test @MainActor func handleIncomingOpenURLDeduplicatesCurrentFile() throws {
@@ -63,7 +63,7 @@ struct ReaderStoreDocumentOpenFlowTests {
         let missingFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("nonexistent.md")
         fixture.store.openFile(at: missingFileURL)
 
-        #expect(fixture.store.lastError != nil || fixture.store.isCurrentFileMissing)
+        #expect(fixture.store.document.lastError != nil || fixture.store.document.isCurrentFileMissing)
     }
 
     @Test @MainActor func openFileRecordsRecentHistory() throws {

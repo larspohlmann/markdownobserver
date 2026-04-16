@@ -215,18 +215,18 @@ struct EditFolderWatchExclusionsTests {
 
         #expect(controller.documents.count == 2)
 
-        let docA = controller.documents.first { $0.readerStore.fileURL == fileA }
+        let docA = controller.documents.first { $0.readerStore.document.fileURL == fileA }
         #expect(docA != nil)
         controller.selectDocument(docA?.id)
-        #expect(controller.selectedDocument?.readerStore.fileURL == fileA)
+        #expect(controller.selectedDocument?.readerStore.document.fileURL == fileA)
 
         controller.closeDocument(docA!.id)
 
         #expect(controller.documents.count == 1)
         let selected = controller.selectedDocument
         #expect(selected != nil)
-        #expect(selected?.readerStore.fileURL == fileB)
-        #expect(selected?.readerStore.isDeferredDocument == false)
+        #expect(selected?.readerStore.document.fileURL == fileB)
+        #expect(selected?.readerStore.document.isDeferredDocument == false)
 
         try? FileManager.default.removeItem(at: tempDir)
     }

@@ -700,7 +700,7 @@ final class ReaderWindowCoordinator {
     }
 
     func currentSidebarOpenDocumentFileURLs() -> [URL] {
-        sidebarDocumentController.documents.compactMap { $0.readerStore.fileURL }
+        sidebarDocumentController.documents.compactMap { $0.readerStore.document.fileURL }
     }
 
     func clearFavoriteWatchedFolders() {
@@ -1106,7 +1106,7 @@ final class ReaderWindowCoordinator {
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
                 let store = document.readerStore
-                guard store.hasOpenDocument, !store.isDeferredDocument else { continue }
+                guard store.document.hasOpenDocument, !store.document.isDeferredDocument else { continue }
 
                 if document.id == sidebarDocumentController.selectedDocumentID {
                     try? store.renderWithAppearance(appearance)
@@ -1121,7 +1121,7 @@ final class ReaderWindowCoordinator {
         guard let appearanceController else { return }
         guard let document = sidebarDocumentController.selectedDocument else { return }
         let store = document.readerStore
-        guard store.needsAppearanceRender, store.hasOpenDocument, !store.isDeferredDocument else { return }
+        guard store.renderingController.needsAppearanceRender, store.document.hasOpenDocument, !store.document.isDeferredDocument else { return }
         Task { @MainActor in
             try? store.renderWithAppearance(appearanceController.effectiveAppearance)
         }

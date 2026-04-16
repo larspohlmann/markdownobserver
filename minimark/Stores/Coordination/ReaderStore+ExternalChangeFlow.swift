@@ -3,12 +3,12 @@ import Foundation
 extension ReaderStore {
     func refreshFromExternalChange() {
         guard settingsStore.currentSettings.autoRefreshOnExternalChange,
-              !isSourceEditing,
-              let fileURL else {
+              !sourceEditingController.isSourceEditing,
+              let fileURL = document.fileURL else {
             return
         }
         let baseline = diffBaselineTracker.recordAndSelectBaseline(
-            markdown: sourceMarkdown,
+            markdown: document.sourceMarkdown,
             for: fileURL,
             at: .now
         )
@@ -20,7 +20,7 @@ extension ReaderStore {
     }
 
     func handleObservedFileChange() {
-        if let fileURL, folderWatch.settler.handleChangeIfNeeded(fileURL: fileURL, loader: { url in try self.loadMarkdownFile(at: url) }) {
+        if let fileURL = document.fileURL, folderWatch.settler.handleChangeIfNeeded(fileURL: fileURL, loader: { url in try self.loadMarkdownFile(at: url) }) {
             return
         }
 
@@ -29,7 +29,7 @@ extension ReaderStore {
         }
 
         noteObservedExternalChange(kind: .modified)
-        if let fileURL,
+        if let fileURL = document.fileURL,
            settingsStore.currentSettings.notificationsEnabled {
             folderWatch.systemNotifier.notifyFileChanged(
                 fileURL,
@@ -38,13 +38,13 @@ extension ReaderStore {
             )
         }
 
-        if isSourceEditing {
+        if sourceEditingController.isSourceEditing {
             return
         }
 
-        if isCurrentFileMissing || currentDocumentHasBeenDeleted {
+        if document.isCurrentFileMissing || currentDocumentHasBeenDeleted {
             reloadCurrentFile(
-                at: fileURL,
+                at: document.fileURL,
                 diffBaselineMarkdown: nil,
                 acknowledgeExternalChange: false
             )
@@ -55,14 +55,14 @@ extension ReaderStore {
     }
 
     var fileURLForCurrentDocument: URL? {
-        guard let fileURL else {
+        guard let fileURL = document.fileURL else {
             return nil
         }
         return Self.normalizedFileURL(fileURL)
     }
 
     private var watchedFolderURLForCurrentFile: URL? {
-        guard let activeFolderWatchSession,
+        guard let activeFolderWatchSession = folderWatchDispatcher.activeFolderWatchSession,
               let fileURL = fileURLForCurrentDocument else {
             return nil
         }
@@ -82,7 +82,7 @@ extension ReaderStore {
     }
 
     private var currentDocumentHasBeenDeleted: Bool {
-        guard let fileURL else {
+        guard let fileURL = document.fileURL else {
             return false
         }
 

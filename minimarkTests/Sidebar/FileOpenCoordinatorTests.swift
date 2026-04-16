@@ -75,7 +75,7 @@ struct FileOpenCoordinatorTests {
         ))
 
         let existingDocID = harness.controller.documents.first(where: {
-            $0.readerStore.fileURL?.lastPathComponent == "alpha.md"
+            $0.readerStore.document.fileURL?.lastPathComponent == "alpha.md"
         })!.id
 
         let plan = coordinator.buildPlan(for: FileOpenRequest(
@@ -193,7 +193,7 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 3)
-        let openFileNames = Set(harness.controller.documents.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        let openFileNames = Set(harness.controller.documents.compactMap { $0.readerStore.document.fileURL?.lastPathComponent })
         #expect(openFileNames == ["alpha.md", "beta.md", "zeta.md"])
     }
 
@@ -208,7 +208,7 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 2)
-        let orderedNames = harness.controller.documents.compactMap { $0.readerStore.fileURL?.lastPathComponent }
+        let orderedNames = harness.controller.documents.compactMap { $0.readerStore.document.fileURL?.lastPathComponent }
         #expect(orderedNames == ["alpha.md", "zeta.md"])
     }
 
@@ -224,7 +224,7 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "alpha.md")
+        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "alpha.md")
     }
 
     @Test @MainActor func openWithDeferThenMaterializeDefersAllFiles() throws {
@@ -238,8 +238,8 @@ struct FileOpenCoordinatorTests {
             materializationStrategy: .deferThenMaterializeNewest(count: 1)
         ))
 
-        let deferredCount = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }.count
-        let loadedCount = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument && $0.readerStore.fileURL != nil }.count
+        let deferredCount = harness.controller.documents.filter { $0.readerStore.document.isDeferredDocument }.count
+        let loadedCount = harness.controller.documents.filter { !$0.readerStore.document.isDeferredDocument && $0.readerStore.document.fileURL != nil }.count
 
         #expect(deferredCount == 1)
         #expect(loadedCount == 1)
@@ -279,7 +279,7 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 2)
-        let openFileNames = Set(harness.controller.documents.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        let openFileNames = Set(harness.controller.documents.compactMap { $0.readerStore.document.fileURL?.lastPathComponent })
         #expect(openFileNames == ["alpha.md", "zeta.md"])
     }
 
@@ -294,6 +294,6 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.fileURL == nil)
+        #expect(harness.controller.selectedReaderStore.document.fileURL == nil)
     }
 }

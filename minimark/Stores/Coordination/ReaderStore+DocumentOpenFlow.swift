@@ -20,7 +20,7 @@ extension ReaderStore {
                 setActiveFolderWatchSession(securityScopeResolver.normalizedFolderWatchSession(folderWatchSession))
             }
             let readURL = securityScopeResolver.effectiveAccessibleFileURL(
-                for: normalizedURL, reason: "open", folderWatchSession: activeFolderWatchSession
+                for: normalizedURL, reason: "open", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
             )
             document.currentOpenOrigin = origin
 
@@ -55,19 +55,19 @@ extension ReaderStore {
         folderWatchSession: ReaderFolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        guard documentLoadState == .deferred || documentLoadState == .loading,
-              let url = fileURL else {
+        guard document.documentLoadState == .deferred || document.documentLoadState == .loading,
+              let url = document.fileURL else {
             return
         }
 
-        if documentLoadState == .deferred {
+        if document.documentLoadState == .deferred {
             transitionToLoading()
         }
 
         openFile(
             at: url,
             origin: origin ?? document.currentOpenOrigin,
-            folderWatchSession: folderWatchSession ?? activeFolderWatchSession,
+            folderWatchSession: folderWatchSession ?? folderWatchDispatcher.activeFolderWatchSession,
             initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
         )
 

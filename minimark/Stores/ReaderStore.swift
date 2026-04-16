@@ -12,41 +12,7 @@ final class ReaderStore {
     )
 
     let document: ReaderDocumentController
-    var activeFolderWatchSession: ReaderFolderWatchSession? { folderWatchDispatcher.activeFolderWatchSession }
-    var lastWatchedFolderEventAt: Date? {
-        get { folderWatchDispatcher.lastWatchedFolderEventAt }
-        set { folderWatchDispatcher.lastWatchedFolderEventAt = newValue }
-    }
-    var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning? {
-        get { folderWatchDispatcher.autoOpenWarning }
-        set { folderWatchDispatcher.autoOpenWarning = newValue }
-    }
 
-    // MARK: - Document forwarding
-
-    var fileURL: URL? { document.fileURL }
-    var fileDisplayName: String { document.fileDisplayName }
-    var documentLoadState: ReaderDocumentLoadState { document.documentLoadState }
-    var isCurrentFileMissing: Bool { document.isCurrentFileMissing }
-    var lastError: ReaderPresentableError? { document.lastError }
-    var hasOpenDocument: Bool { document.hasOpenDocument }
-    var isDeferredDocument: Bool { document.isDeferredDocument }
-    var windowTitle: String { document.windowTitle }
-    var sourceMarkdown: String { document.sourceMarkdown }
-    var renderedHTMLDocument: String { renderingController.renderedHTMLDocument }
-    var changedRegions: [ChangedRegion] { document.changedRegions }
-    var lastRefreshAt: Date? { renderingController.lastRefreshAt }
-    var lastExternalChangeAt: Date? { externalChange.lastExternalChangeAt }
-    var fileLastModifiedAt: Date? { document.fileLastModifiedAt }
-    var hasUnacknowledgedExternalChange: Bool { externalChange.hasUnacknowledgedExternalChange }
-
-    // MARK: - Editing forwarding
-
-    var documentViewMode: ReaderDocumentViewMode { sourceEditingController.documentViewMode }
-    var sourceEditorSeedMarkdown: String { sourceEditingController.sourceEditorSeedMarkdown }
-    var unsavedChangedRegions: [ChangedRegion] { sourceEditingController.unsavedChangedRegions }
-    var isSourceEditing: Bool { sourceEditingController.isSourceEditing }
-    var hasUnsavedDraftChanges: Bool { sourceEditingController.hasUnsavedDraftChanges }
     // MARK: - Cross-group computed properties
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
@@ -73,10 +39,6 @@ final class ReaderStore {
     let settingsStore: ReaderSettingsStoring
     let securityScopeResolver: SecurityScopeResolver
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
-    var needsAppearanceRender: Bool {
-        get { renderingController.needsAppearanceRender }
-        set { renderingController.needsAppearanceRender = newValue }
-    }
 
     // MARK: - Internal: accessible to Coordination extensions
     // These properties exist for coordination extensions in Stores/Coordination/.
@@ -139,7 +101,7 @@ final class ReaderStore {
             }
 
         folderWatch.settler.configure(
-            currentFileURL: { [weak self] in self?.fileURL },
+            currentFileURL: { [weak self] in self?.document.fileURL },
             loadFile: { [weak self] url in
                 guard let self else { throw ReaderError.noOpenFileInReader }
                 return try self.loadMarkdownFile(at: url)
@@ -175,7 +137,7 @@ final class ReaderStore {
     }
 
     func setDocumentViewMode(_ mode: ReaderDocumentViewMode) {
-        sourceEditingController.setViewMode(mode, hasOpenDocument: hasOpenDocument)
+        sourceEditingController.setViewMode(mode, hasOpenDocument: document.hasOpenDocument)
     }
 
     func toggleDocumentViewMode() {
@@ -269,7 +231,7 @@ final class ReaderStore {
     }
 
     func startWatchingCurrentFile() {
-        guard let fileURL else {
+        guard let fileURL = document.fileURL else {
             return
         }
 

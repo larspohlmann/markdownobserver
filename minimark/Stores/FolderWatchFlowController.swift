@@ -110,14 +110,14 @@ final class FolderWatchFlowController {
         }
 
         let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
-            doc.readerStore.fileURL.map { url in
+            doc.readerStore.document.fileURL.map { url in
                 let normalized = ReaderFileRouting.normalizedFileURL(url).path
                 return excludedPrefixes.contains { normalized.hasPrefix($0) }
             }
         } ?? false
 
         let documentsToClose = sidebarDocumentController.documents.filter { doc in
-            guard let fileURL = doc.readerStore.fileURL else { return false }
+            guard let fileURL = doc.readerStore.document.fileURL else { return false }
             let normalized = ReaderFileRouting.normalizedFileURL(fileURL).path
             return excludedPrefixes.contains { normalized.hasPrefix($0) }
         }
@@ -147,7 +147,7 @@ final class FolderWatchFlowController {
 
             let alreadyOpenPaths = Set(
                 sidebarDocumentController.documents.compactMap {
-                    $0.readerStore.fileURL.map { ReaderFileRouting.normalizedFileURL($0).path }
+                    $0.readerStore.document.fileURL.map { ReaderFileRouting.normalizedFileURL($0).path }
                 }
             )
 

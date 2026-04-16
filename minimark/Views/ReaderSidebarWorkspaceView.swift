@@ -326,19 +326,19 @@ private struct ReaderSidebarDocumentRow: View {
     }
 
     private var effectiveOpenInApplications: [ReaderExternalApplication] {
-        guard let firstReaderStore = effectiveReaderStores.first(where: { $0.fileURL != nil }) else {
+        guard let firstReaderStore = effectiveReaderStores.first(where: { $0.document.fileURL != nil }) else {
             return []
         }
 
         return firstReaderStore.document.openInApplications.filter { application in
             effectiveReaderStores
-                .filter { $0.fileURL != nil }
+                .filter { $0.document.fileURL != nil }
                 .allSatisfy { $0.document.openInApplications.contains(application) }
         }
     }
 
     private var hasAnyOpenFile: Bool {
-        effectiveReaderStores.contains(where: { $0.fileURL != nil })
+        effectiveReaderStores.contains(where: { $0.document.fileURL != nil })
     }
 
     private var watchingDocumentCount: Int {

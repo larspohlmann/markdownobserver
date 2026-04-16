@@ -10,7 +10,7 @@ extension ReaderStore {
     ) throws {
         do {
             let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-                for: fileURL, reason: "write", folderWatchSession: activeFolderWatchSession
+                for: fileURL, reason: "write", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
             )
             try file.io.write(draftMarkdown, to: accessibleURL)
             document.savedMarkdown = draftMarkdown
@@ -26,7 +26,7 @@ extension ReaderStore {
             document.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
             document.lastError = nil
-            let modifiedAtDescription = fileLastModifiedAt?.description ?? "nil"
+            let modifiedAtDescription = document.fileLastModifiedAt?.description ?? "nil"
             logSaveInfo(
                 "save succeeded: \(saveLogContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
             )
@@ -40,7 +40,7 @@ extension ReaderStore {
             }
 
             let result = securityScopeResolver.tryReauthorizeWatchedFolder(
-                after: error, for: fileURL, folderWatchSession: activeFolderWatchSession
+                after: error, for: fileURL, folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
             )
             guard result.succeeded else {
                 throw error
@@ -87,13 +87,13 @@ extension ReaderStore {
 
     func handlePendingSavedDraftChangeIfNeeded() -> Bool {
         guard let diffBaselineMarkdown = sourceEditingController.pendingSavedDraftDiffBaselineMarkdown,
-              let fileURL,
-              !isSourceEditing else {
+              let fileURL = document.fileURL,
+              !sourceEditingController.isSourceEditing else {
             return false
         }
 
         let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-            for: fileURL, reason: "read", folderWatchSession: activeFolderWatchSession
+            for: fileURL, reason: "read", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
         )
         let loaded: (markdown: String, modificationDate: Date)
         do {
@@ -107,7 +107,7 @@ extension ReaderStore {
             return false
         }
 
-        guard loaded.markdown == sourceMarkdown else {
+        guard loaded.markdown == document.sourceMarkdown else {
             sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
@@ -124,7 +124,7 @@ extension ReaderStore {
 
     func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
         let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-            for: url, reason: "read", folderWatchSession: activeFolderWatchSession
+            for: url, reason: "read", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
         )
         return try file.io.load(at: accessibleURL)
     }
@@ -133,12 +133,12 @@ extension ReaderStore {
 
     func saveLogContext(for url: URL?) -> String {
         let filePath = redactedPathText(for: url)
-        let watchedFolderPath = redactedPathText(for: activeFolderWatchSession?.folderURL)
+        let watchedFolderPath = redactedPathText(for: folderWatchDispatcher.activeFolderWatchSession?.folderURL)
         let ctx = securityScopeResolver.context
         let fileScopeURL = redactedPathText(for: ctx.fileToken?.url)
         let folderScopeURL = redactedPathText(for: ctx.folderToken?.url)
         let accessibleFilePath = redactedPathText(for: ctx.accessibleFileURL)
-        return "file=\(filePath) origin=\(document.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        return "file=\(filePath) origin=\(document.currentOpenOrigin.rawValue) editing=\(sourceEditingController.isSourceEditing) unsaved=\(sourceEditingController.hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
     func redactedPathText(for url: URL?) -> String {

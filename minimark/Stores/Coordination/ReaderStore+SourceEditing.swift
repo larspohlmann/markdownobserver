@@ -32,10 +32,10 @@ extension ReaderStore {
     }
 
     func saveSourceDraft() {
-        guard isSourceEditing,
+        guard sourceEditingController.isSourceEditing,
               let draftMarkdown = sourceEditingController.draftMarkdown,
-              let fileURL else {
-            logSaveError("save requested without active editable document: \(saveLogContext(for: fileURL))")
+              let fileURL = document.fileURL else {
+            logSaveError("save requested without active editable document: \(saveLogContext(for: document.fileURL))")
             handle(ReaderError.noOpenFileInReader)
             return
         }
@@ -60,9 +60,9 @@ extension ReaderStore {
     func discardSourceDraft() {
         guard sourceEditingController.isSourceEditing else { return }
 
-        if hasUnacknowledgedExternalChange {
+        if externalChange.hasUnacknowledgedExternalChange {
             reloadCurrentFile(
-                at: fileURL,
+                at: document.fileURL,
                 diffBaselineMarkdown: nil,
                 acknowledgeExternalChange: true
             )

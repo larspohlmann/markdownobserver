@@ -191,13 +191,13 @@ final class FolderWatchSessionCoordinator {
 
 extension FolderWatchSessionCoordinator: ReaderFolderWatchControllerDelegate {
     func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
-        delegate?.selectedReaderStore.fileURL
+        delegate?.selectedReaderStore.document.fileURL
     }
 
     func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
         guard let delegate else { return [] }
         return delegate.documents.compactMap { document in
-            document.readerStore.isDeferredDocument ? nil : document.readerStore.fileURL
+            document.readerStore.document.isDeferredDocument ? nil : document.readerStore.document.fileURL
         }
     }
 

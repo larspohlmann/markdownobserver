@@ -15,12 +15,12 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.store.lastExternalChangeAt != nil)
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.lastExternalChangeAt != nil)
     }
 
     @Test @MainActor func statusBarTimestampUsesFilesystemModificationTimeAndPrefersExternalChangeTime() throws {
@@ -31,11 +31,11 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        #expect(fixture.store.statusBarTimestamp == .lastModified(fixture.store.fileLastModifiedAt!))
+        #expect(fixture.store.statusBarTimestamp == .lastModified(fixture.store.document.fileLastModifiedAt!))
 
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.statusBarTimestamp == .updated(fixture.store.lastExternalChangeAt!))
+        #expect(fixture.store.statusBarTimestamp == .updated(fixture.store.externalChange.lastExternalChangeAt!))
     }
 
     @Test @MainActor func handleObservedFileChangePostsSystemNotification() throws {
@@ -167,23 +167,23 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        #expect(fixture.store.decoratedWindowTitle == "\(fixture.store.windowTitle)")
+        #expect(fixture.store.decoratedWindowTitle == "\(fixture.store.document.windowTitle)")
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
 
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.decoratedWindowTitle == "* \(fixture.store.windowTitle)")
+        #expect(fixture.store.decoratedWindowTitle == "* \(fixture.store.document.windowTitle)")
     }
 
     @Test @MainActor func readerStoreKeepsDocumentViewModeInPreviewWithoutOpenDocument() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        #expect(fixture.store.documentViewMode == .preview)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
 
         fixture.store.setDocumentViewMode(.split)
 
-        #expect(fixture.store.documentViewMode == .preview)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
 
     @Test @MainActor func readerStoreCanSwitchToSourceAndResetsToPreviewForNewFile() throws {
@@ -193,11 +193,11 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.setDocumentViewMode(.source)
 
-        #expect(fixture.store.documentViewMode == .source)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .source)
 
         fixture.store.openFile(at: fixture.secondaryFileURL)
 
-        #expect(fixture.store.documentViewMode == .preview)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
 
     @Test @MainActor func readerStoreCanSwitchToSplitAndResetsToPreviewForNewFile() throws {
@@ -207,11 +207,11 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.setDocumentViewMode(.split)
 
-        #expect(fixture.store.documentViewMode == .split)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .split)
 
         fixture.store.openFile(at: fixture.secondaryFileURL)
 
-        #expect(fixture.store.documentViewMode == .preview)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
 
     @Test @MainActor func readerStoreCyclesDocumentViewModesInPreviewSplitSourceOrder() throws {
@@ -220,16 +220,16 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL)
 
-        #expect(fixture.store.documentViewMode == .preview)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
 
         fixture.store.toggleDocumentViewMode()
-        #expect(fixture.store.documentViewMode == .split)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .split)
 
         fixture.store.toggleDocumentViewMode()
-        #expect(fixture.store.documentViewMode == .source)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .source)
 
         fixture.store.toggleDocumentViewMode()
-        #expect(fixture.store.documentViewMode == .preview)
+        #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
 
     @Test @MainActor func manualReloadCurrentFileClearsPendingState() throws {
@@ -239,12 +239,12 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.write(content: "# Updated", to: fixture.primaryFileURL)
         fixture.store.reloadCurrentFile(forceHighlight: true, acknowledgeExternalChange: true)
 
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func autoRefreshEnabledReloadsContentButKeepsPendingState() throws {
@@ -255,14 +255,14 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.sourceMarkdown == "# Modified")
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.sourceMarkdown == "# Modified")
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func externalDeletionMarksOpenDocumentAsMissingEvenWhenAutoRefreshIsDisabled() throws {
@@ -270,18 +270,18 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        let originalMarkdown = fixture.store.sourceMarkdown
-        let originalHTML = fixture.store.renderedHTMLDocument
+        let originalMarkdown = fixture.store.document.sourceMarkdown
+        let originalHTML = fixture.store.renderingController.renderedHTMLDocument
         fixture.delete(fixture.primaryFileURL)
 
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.isCurrentFileMissing)
-        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
-        #expect(fixture.store.sourceMarkdown == originalMarkdown)
-        #expect(fixture.store.renderedHTMLDocument == originalHTML)
-        #expect(fixture.store.lastError?.message.contains("Failed to read file") == true)
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.isCurrentFileMissing)
+        #expect(fixture.store.document.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
+        #expect(fixture.store.document.sourceMarkdown == originalMarkdown)
+        #expect(fixture.store.renderingController.renderedHTMLDocument == originalHTML)
+        #expect(fixture.store.document.lastError?.message.contains("Failed to read file") == true)
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func recreatedMissingDocumentClearsMissingStateOnNextObservedChange() throws {
@@ -292,13 +292,13 @@ struct ReaderStoreExternalChangeTests {
         fixture.delete(fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.isCurrentFileMissing)
+        #expect(fixture.store.document.isCurrentFileMissing)
 
         fixture.write(content: "# Restored", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(!fixture.store.isCurrentFileMissing)
-        #expect(fixture.store.sourceMarkdown == "# Restored")
+        #expect(!fixture.store.document.isCurrentFileMissing)
+        #expect(fixture.store.document.sourceMarkdown == "# Restored")
     }
 
     @Test @MainActor func folderWatchAutoOpenIgnoresInitialWatcherNoiseWhenContentIsUnchanged() throws {
@@ -309,14 +309,14 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
-        #expect(fixture.store.changedRegions.isEmpty)
+        #expect(fixture.store.document.changedRegions.isEmpty)
 
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.sourceMarkdown == "# Initial")
-        #expect(fixture.store.changedRegions.isEmpty)
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.store.lastExternalChangeAt == nil)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
+        #expect(fixture.store.document.changedRegions.isEmpty)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.lastExternalChangeAt == nil)
     }
 
     @Test @MainActor func folderWatchAutoOpenAddedFileDoesNotHighlightItsInitialSettlingWrite() throws {
@@ -331,9 +331,9 @@ struct ReaderStoreExternalChangeTests {
         fixture.write(content: "# Updated Once", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions.isEmpty)
-        #expect(fixture.store.sourceMarkdown == "# Updated Once")
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions.isEmpty)
+        #expect(fixture.store.document.sourceMarkdown == "# Updated Once")
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func folderWatchModifiedFileAutoOpenShowsChangedRegionsImmediately() throws {
@@ -351,9 +351,9 @@ struct ReaderStoreExternalChangeTests {
             initialDiffBaselineMarkdown: "# Initial"
         )
 
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.sourceMarkdown == "# Updated Once")
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.sourceMarkdown == "# Updated Once")
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func folderWatchAutoOpenWithoutOwnedWatchDoesNotPostDuplicateSystemNotification() throws {
@@ -375,14 +375,14 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         fixture.store.handleObservedFileChange()
-        #expect(fixture.store.changedRegions.isEmpty)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(fixture.store.document.changedRegions.isEmpty)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Updated Again", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.sourceMarkdown == "# Updated Again")
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.sourceMarkdown == "# Updated Again")
     }
 
     @Test @MainActor func folderWatchModifiedFileAutoOpenStillHighlightsLaterExternalRefresh() throws {
@@ -400,14 +400,14 @@ struct ReaderStoreExternalChangeTests {
         )
 
         fixture.store.handleObservedFileChange()
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
 
         fixture.write(content: "# Updated Twice", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.sourceMarkdown == "# Updated Twice")
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.sourceMarkdown == "# Updated Twice")
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func folderWatchAutoOpenAddedFileAbsorbsInitialChangedContentWithoutIndicators() throws {
@@ -422,16 +422,16 @@ struct ReaderStoreExternalChangeTests {
         fixture.write(content: "# Settled Initial Content", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions.isEmpty)
-        #expect(fixture.store.sourceMarkdown == "# Settled Initial Content")
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions.isEmpty)
+        #expect(fixture.store.document.sourceMarkdown == "# Settled Initial Content")
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.write(content: "# Real Follow Up Change", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.sourceMarkdown == "# Real Follow Up Change")
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.sourceMarkdown == "# Real Follow Up Change")
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func folderWatchAutoOpenRecoversContentWhenInitialSettlingWriteMissesWatcherEvent() async throws {
@@ -445,19 +445,19 @@ struct ReaderStoreExternalChangeTests {
         fixture.write(content: "", to: fixture.primaryFileURL)
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
-        #expect(fixture.store.sourceMarkdown.isEmpty)
-        #expect(fixture.store.documentLoadState == .settlingAutoOpen)
+        #expect(fixture.store.document.sourceMarkdown.isEmpty)
+        #expect(fixture.store.document.documentLoadState == .settlingAutoOpen)
 
         fixture.write(content: "# Settled Initial Content", to: fixture.primaryFileURL)
 
         let settled = await waitUntil(timeout: .seconds(1)) {
-            fixture.store.sourceMarkdown == "# Settled Initial Content"
+            fixture.store.document.sourceMarkdown == "# Settled Initial Content"
         }
 
         #expect(settled)
-        #expect(fixture.store.changedRegions.isEmpty)
-        #expect(fixture.store.documentLoadState == .ready)
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions.isEmpty)
+        #expect(fixture.store.document.documentLoadState == .ready)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func folderWatchAutoOpenEmptyFileKeepsSettlingStateUntilContentArrives() async throws {
@@ -471,21 +471,21 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        #expect(fixture.store.documentLoadState == .settlingAutoOpen)
+        #expect(fixture.store.document.documentLoadState == .settlingAutoOpen)
 
         try? await Task.sleep(for: .milliseconds(60))
 
-        #expect(fixture.store.documentLoadState == .settlingAutoOpen)
-        #expect(fixture.store.sourceMarkdown.isEmpty)
+        #expect(fixture.store.document.documentLoadState == .settlingAutoOpen)
+        #expect(fixture.store.document.sourceMarkdown.isEmpty)
 
         fixture.write(content: "# Arrived Later", to: fixture.primaryFileURL)
 
         let settled = await waitUntil(timeout: .seconds(1)) {
-            fixture.store.documentLoadState == .ready && fixture.store.sourceMarkdown == "# Arrived Later"
+            fixture.store.document.documentLoadState == .ready && fixture.store.document.sourceMarkdown == "# Arrived Later"
         }
 
         #expect(settled)
-        #expect(fixture.store.changedRegions.isEmpty)
+        #expect(fixture.store.document.changedRegions.isEmpty)
     }
 
     @Test @MainActor func folderWatchAutoOpenedAddedFileHighlightsExternalRefreshAfterSettlingWindowExpires() async throws {
@@ -503,9 +503,9 @@ struct ReaderStoreExternalChangeTests {
         fixture.write(content: "# Later External Change", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
-        #expect(fixture.store.sourceMarkdown == "# Later External Change")
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.sourceMarkdown == "# Later External Change")
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func manualOpenStillHighlightsOnFirstExternalRefresh() throws {
@@ -517,12 +517,12 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .manual)
 
-        #expect(fixture.store.documentLoadState == .ready)
+        #expect(fixture.store.document.documentLoadState == .ready)
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.changedRegions == [Self.sampleChangedRegion])
+        #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
     }
 
         @Test @MainActor func manualOpenWithinWatchedFolderUsesFolderScopeWithoutRetryingChildFileScope() throws {
@@ -546,7 +546,7 @@ struct ReaderStoreExternalChangeTests {
                 folderWatchSession: session
             )
 
-            #expect(fixture.store.sourceMarkdown == "# Initial")
+            #expect(fixture.store.document.sourceMarkdown == "# Initial")
             #expect(
                 fixture.securityScope.accessedURLs.map(ReaderFileRouting.normalizedFileURL) == [
                     ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL),
@@ -562,11 +562,11 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.store.openFile(at: fixture.secondaryFileURL)
 
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
     }
 
@@ -597,15 +597,15 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.openFile(at: missingFileURL)
         fixture.store.openFile(at: missingFileURL)
 
-        #expect(fixture.store.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
+        #expect(fixture.store.document.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
         #expect(fixture.watcher.startCallCount == initialStartCallCount)
         #expect(fixture.watcher.stopCallCount == initialStopCallCount)
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.watcher.emitChange()
         await Task.yield()
 
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.notifier.fileChangeNotifications.count == 1)
     }
 
@@ -614,13 +614,13 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
     }
 
     @Test @MainActor func currentWatchedFileRetainsDedicatedFileWatcherOwnership() throws {
@@ -668,7 +668,7 @@ struct ReaderStoreExternalChangeTests {
             )
         ])
 
-        #expect(!fixture.store.hasUnacknowledgedExternalChange)
+        #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.notifier.fileChangeNotifications.isEmpty)
         #expect(fixture.watcher.startCallCount == 1)
     }
@@ -692,7 +692,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.watcher.emitChange()
         await Task.yield()
 
-        #expect(fixture.store.hasUnacknowledgedExternalChange)
+        #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.notifier.fileChangeNotifications.count == 1)
     }
 
@@ -729,7 +729,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(openedAdditionalDocuments == [ReaderFileRouting.normalizedFileURL(fourthFileURL)])
         #expect(openedEvents[0].kind == .added)
         #expect(openedEvents[0].previousMarkdown == nil)
-        #expect(fixture.store.lastWatchedFolderEventAt != nil)
+        #expect(fixture.store.folderWatchDispatcher.lastWatchedFolderEventAt != nil)
     }
 
     @Test @MainActor func watchedFolderAddedFilesOpenAsAdditionalDocumentsEvenWhenWatcherOwnerHasNoOpenDocument() throws {
@@ -755,10 +755,10 @@ struct ReaderStoreExternalChangeTests {
             ReaderFolderWatchChangeEvent(fileURL: createdFileURL, kind: .added)
         ])
 
-        #expect(fixture.store.fileURL == nil)
+        #expect(fixture.store.document.fileURL == nil)
         #expect(openedEvents.map(\.fileURL) == [ReaderFileRouting.normalizedFileURL(createdFileURL)])
         #expect(openedEvents.map(\.kind) == [.added])
-        #expect(fixture.store.lastWatchedFolderEventAt != nil)
+        #expect(fixture.store.folderWatchDispatcher.lastWatchedFolderEventAt != nil)
     }
 
     @Test @MainActor func watchedFolderModifiedFilesForwardPreviousMarkdownToAdditionalDocumentCallback() throws {
@@ -821,9 +821,9 @@ struct ReaderStoreExternalChangeTests {
         )
 
         #expect(openedAdditionalDocuments == Array(fileURLs.prefix(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))
-        #expect(fixture.store.folderWatchAutoOpenWarning?.autoOpenedFileCount == autoOpenLimit)
-        #expect(fixture.store.folderWatchAutoOpenWarning?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
-        #expect(fixture.store.folderWatchAutoOpenWarning?.omittedFileURLs == Array(fileURLs.dropFirst(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))
+        #expect(fixture.store.folderWatchDispatcher.autoOpenWarning?.autoOpenedFileCount == autoOpenLimit)
+        #expect(fixture.store.folderWatchDispatcher.autoOpenWarning?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        #expect(fixture.store.folderWatchDispatcher.autoOpenWarning?.omittedFileURLs == Array(fileURLs.dropFirst(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))
     }
 
 }
@@ -843,7 +843,7 @@ extension ReaderStoreExternalChangeTests {
         fixture.store.handleIncomingOpenURL(fixture.primaryFileURL, origin: .manual)
 
         #expect(fixture.watcher.startCallCount == initialWatchCallCount)
-        #expect(fixture.store.sourceMarkdown == "# Initial")
+        #expect(fixture.store.document.sourceMarkdown == "# Initial")
     }
 
     @Test @MainActor func handleIncomingOpenURLIgnoresNonMarkdownFiles() throws {
@@ -855,7 +855,7 @@ extension ReaderStoreExternalChangeTests {
 
         fixture.store.handleIncomingOpenURL(txtURL, origin: .manual)
 
-        #expect(!fixture.store.hasOpenDocument)
+        #expect(!fixture.store.document.hasOpenDocument)
     }
 }
 

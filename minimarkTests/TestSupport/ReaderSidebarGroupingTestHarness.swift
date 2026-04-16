@@ -63,7 +63,7 @@ struct ReaderSidebarGroupingTestHarness {
     func documentsInSubdirectory(_ name: String) -> [ReaderSidebarDocumentController.Document] {
         let subURL = temporaryDirectoryURL.appendingPathComponent(name, isDirectory: true)
         return documents.filter { doc in
-            doc.readerStore.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)
+            doc.readerStore.document.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)
         }
     }
 
