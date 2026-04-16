@@ -108,6 +108,65 @@ final class DocumentSurfaceViewModel {
         return "\(path)|source"
     }
 
+    func handleSharedAction(
+        _ action: DocumentSurfaceAction,
+        for surface: DocumentSurfaceRole,
+        documentViewMode: ReaderDocumentViewMode,
+        onDroppedFileURLs: @escaping ([URL]) -> Void,
+        onAction: @escaping (ContentViewAction) -> Void
+    ) -> Bool {
+        switch action {
+        case .scrollSyncObservation(let observation):
+            handleScrollSyncObservation(
+                observation,
+                from: surface,
+                documentViewMode: documentViewMode
+            )
+            return true
+        case .tocHeadingsExtracted(let headings):
+            onAction(.updateTOCHeadings(headings))
+            return true
+        case .droppedFileURLs(let urls):
+            onDroppedFileURLs(urls)
+            return true
+        case .dropTargetedChange(let update):
+            dropTargeting.update(for: surface, update: update)
+            return true
+        default:
+            return false
+        }
+    }
+
+    func handleScrollSyncObservation(
+        _ observation: ScrollSyncObservation,
+        from surface: DocumentSurfaceRole,
+        documentViewMode: ReaderDocumentViewMode
+    ) {
+        let shouldSync = canSynchronizeSplitScroll(documentViewMode: documentViewMode)
+        splitScrollCoordinator.handleObservation(
+            observation,
+            from: surface,
+            shouldSync: shouldSync
+        )
+    }
+
+    func canNavigateChangedRegions(
+        documentViewMode: ReaderDocumentViewMode,
+        changedRegions: [ChangedRegion]
+    ) -> Bool {
+        documentViewMode != .source
+            && previewMode == .web
+            && !changedRegions.isEmpty
+    }
+
+    func canSynchronizeSplitScroll(
+        documentViewMode: ReaderDocumentViewMode
+    ) -> Bool {
+        documentViewMode == .split
+            && previewMode == .web
+            && sourceMode == .web
+    }
+
     func documentSurfaceConfiguration(
         for surface: DocumentSurfaceRole,
         fileURL: URL?,

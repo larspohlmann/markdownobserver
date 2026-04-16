@@ -359,3 +359,109 @@ struct DocumentSurfaceViewModelConfigurationTests {
         #expect(config.changedRegionNavigationRequest != nil)
     }
 }
+
+@Suite
+struct DocumentSurfaceViewModelSharedActionsTests {
+
+    @Test @MainActor func handleSharedAction_scrollSyncObservation_forwardsToCoordinator() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        let handled = vm.handleSharedAction(
+            .scrollSyncObservation(ScrollSyncObservation(progress: 0.5, isProgrammatic: false)),
+            for: .preview,
+            documentViewMode: .split,
+            onDroppedFileURLs: { _ in },
+            onAction: { _ in }
+        )
+        #expect(handled == true)
+    }
+
+    @Test @MainActor func handleSharedAction_dropTargetingUpdate_updatesDropTargeting() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        let handled = vm.handleSharedAction(
+            .dropTargetedChange(DropTargetingUpdate(isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true)),
+            for: .preview,
+            documentViewMode: .preview,
+            onDroppedFileURLs: { _ in },
+            onAction: { _ in }
+        )
+        #expect(handled == true)
+        #expect(vm.dropTargeting.isDragTargeted)
+    }
+
+    @Test @MainActor func handleSharedAction_droppedFileURLs_callsHandler() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        var receivedURLs: [URL] = []
+        let handled = vm.handleSharedAction(
+            .droppedFileURLs([URL(fileURLWithPath: "/test.md")]),
+            for: .preview,
+            documentViewMode: .preview,
+            onDroppedFileURLs: { urls in receivedURLs = urls },
+            onAction: { _ in }
+        )
+        #expect(handled == true)
+        #expect(receivedURLs.count == 1)
+    }
+
+    @Test @MainActor func handleSharedAction_unhandledAction_returnsFalse() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        let handled = vm.handleSharedAction(
+            .fatalCrash,
+            for: .preview,
+            documentViewMode: .preview,
+            onDroppedFileURLs: { _ in },
+            onAction: { _ in }
+        )
+        #expect(handled == false)
+    }
+
+    @Test @MainActor func canNavigateChangedRegions_trueWhenNotSourceModeWebWithRegions() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        #expect(vm.canNavigateChangedRegions(
+            documentViewMode: .preview,
+            changedRegions: [ChangedRegion(blockIndex: 0, lineRange: 1...2)]
+        ) == true)
+    }
+
+    @Test @MainActor func canNavigateChangedRegions_falseInSourceMode() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        #expect(vm.canNavigateChangedRegions(
+            documentViewMode: .source,
+            changedRegions: [ChangedRegion(blockIndex: 0, lineRange: 1...2)]
+        ) == false)
+    }
+
+    @Test @MainActor func canSynchronizeSplitScroll_trueInSplitWithBothWeb() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        #expect(vm.canSynchronizeSplitScroll(documentViewMode: .split) == true)
+    }
+
+    @Test @MainActor func canSynchronizeSplitScroll_falseWhenSourceIsFallback() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        vm.sourceMode = .plainTextFallback
+        #expect(vm.canSynchronizeSplitScroll(documentViewMode: .split) == false)
+    }
+}
