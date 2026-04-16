@@ -28,7 +28,7 @@ extension ReaderStore {
             return
         }
 
-        noteObservedExternalChange(kind: .modified)
+        externalChange.noteObservedExternalChange(kind: .modified)
         if let fileURL = document.fileURL,
            settingsStore.currentSettings.notificationsEnabled {
             folderWatch.systemNotifier.notifyFileChanged(

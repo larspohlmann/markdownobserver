@@ -139,19 +139,11 @@ final class ReaderStore {
         folderWatchDispatcher.setStateCallbacks(onStarted: onStarted, onStopped: onStopped)
     }
 
-    func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
-        externalChange.noteObservedExternalChange(kind: kind)
-    }
-
     /// Marks this document as live-auto-opened: sets the external change
     /// indicator and clears the settler so subsequent edits are not absorbed.
     func markAsLiveAutoOpened() {
-        noteObservedExternalChange(kind: .added)
+        externalChange.noteObservedExternalChange(kind: .added)
         folderWatch.settler.clearSettling()
-    }
-
-    func clearExternalChangeIndicator() {
-        externalChange.clear()
     }
 
     func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
