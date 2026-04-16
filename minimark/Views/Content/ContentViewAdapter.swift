@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// Intermediate view that narrows the `@Observable` observation scope for `ContentView`.
-///
-/// `ReaderWindowRootView.body` re-evaluates whenever any of its 6+ observed objects change.
-/// By moving the `ContentViewFolderWatchState` construction here, the reads from
-/// `sidebarDocumentController`, `settingsStore`, and `appearanceController` are tracked
-/// only for this view's body — not for the entire root or sidebar workspace view.
+/// Narrows the `@Observable` observation scope for `ContentView`: reads from the sidebar
+/// controller, settings store, and appearance controller are tracked only for this view's
+/// body, not for the root or sidebar workspace view.
 struct ContentViewAdapter: View {
     let readerStore: ReaderStore
     let sidebarDocumentController: ReaderSidebarDocumentController
@@ -33,28 +30,34 @@ struct ContentViewAdapter: View {
             return favorites.contains { $0.matches(folderPath: normalizedPath, options: session.options) }
         }()
 
-        ContentView(
+        let folderWatchState = ContentViewFolderWatchState(
+            activeFolderWatch: sharedFolderWatchSession,
+            isFolderWatchInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
+            isFolderWatchInitialScanFailed: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
+            canStopFolderWatch: canStopSharedFolderWatch,
+            pendingFolderWatchURL: pendingFolderWatchURL,
+            isCurrentWatchAFavorite: isCurrentWatchAFavorite,
+            favoriteWatchedFolders: favorites,
+            recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+            recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
+            isAppearanceLocked: appearanceController.isLocked,
+            effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
+        )
+
+        let viewModel = ContentAreaViewModel(
             document: readerStore.document,
             rendering: readerStore.renderingController,
             sourceEditing: readerStore.sourceEditingController,
             externalChange: readerStore.externalChange,
             toc: readerStore.toc,
             settingsStore: settingsStore,
-            folderWatchState: ContentViewFolderWatchState(
-                activeFolderWatch: sharedFolderWatchSession,
-                isFolderWatchInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
-                isFolderWatchInitialScanFailed: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
-                canStopFolderWatch: canStopSharedFolderWatch,
-                pendingFolderWatchURL: pendingFolderWatchURL,
-                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                favoriteWatchedFolders: favorites,
-                recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
-                recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
-                isAppearanceLocked: appearanceController.isLocked,
-                effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
-            ),
+            folderWatchState: folderWatchState,
             surfaceViewModel: surfaceViewModel,
-            onAction: onAction,
+            onAction: onAction
+        )
+
+        ContentView(
+            viewModel: viewModel,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
             pendingFolderWatchScope: $pendingFolderWatchScope,
