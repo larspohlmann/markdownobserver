@@ -14,8 +14,8 @@ extension ReaderStore {
             )
             try file.io.write(draftMarkdown, to: accessibleURL)
             document.savedMarkdown = draftMarkdown
-            let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
-            applySourceEditingTransition(transition)
+            sourceEditingController.finishSession(markdown: draftMarkdown)
+            document.sourceMarkdown = draftMarkdown
             document.changedRegions = changedRegions(
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown

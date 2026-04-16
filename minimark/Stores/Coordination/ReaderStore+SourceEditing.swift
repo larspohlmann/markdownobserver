@@ -2,35 +2,31 @@ import Foundation
 
 extension ReaderStore {
     func startEditingSource() {
-        guard sourceEditingCoordinator.canStart(
-            hasOpenDocument: hasOpenDocument,
-            isCurrentFileMissing: isCurrentFileMissing,
-            isSourceEditing: isSourceEditing
-        ) else {
-            return
+        let wasEditing = sourceEditingController.isSourceEditing
+        sourceEditingController.startEditing(
+            savedMarkdown: document.savedMarkdown,
+            hasOpenDocument: document.hasOpenDocument,
+            isCurrentFileMissing: document.isCurrentFileMissing
+        )
+        if !wasEditing && sourceEditingController.isSourceEditing {
+            document.sourceMarkdown = document.savedMarkdown
+            clearLastError()
         }
-
-        let transition = sourceEditingCoordinator.beginSession(markdown: document.savedMarkdown)
-        applySourceEditingTransition(transition)
-        clearLastError()
     }
 
     func updateSourceDraft(_ markdown: String) {
-        guard sourceEditingCoordinator.canUpdate(isSourceEditing: isSourceEditing) else {
-            return
-        }
+        guard sourceEditingController.isSourceEditing else { return }
 
         let unsavedChangedRegions = changedRegions(
             diffBaselineMarkdown: document.savedMarkdown,
             newMarkdown: markdown
         )
-        let transition = sourceEditingCoordinator.updateDraft(
-            markdown: markdown,
-            sourceEditorSeedMarkdown: sourceEditorSeedMarkdown,
-            diffBaselineMarkdown: document.savedMarkdown,
+        sourceEditingController.updateDraft(
+            markdown,
+            savedMarkdown: document.savedMarkdown,
             unsavedChangedRegions: unsavedChangedRegions
         )
-        applySourceEditingTransition(transition)
+        document.sourceMarkdown = markdown
 
         scheduleDraftPreviewRender()
     }
@@ -62,9 +58,7 @@ extension ReaderStore {
     }
 
     func discardSourceDraft() {
-        guard sourceEditingCoordinator.canDiscard(isSourceEditing: isSourceEditing) else {
-            return
-        }
+        guard sourceEditingController.isSourceEditing else { return }
 
         if hasUnacknowledgedExternalChange {
             reloadCurrentFile(
@@ -75,8 +69,8 @@ extension ReaderStore {
             return
         }
 
-        let transition = sourceEditingCoordinator.finishSession(markdown: document.savedMarkdown)
-        applySourceEditingTransition(transition)
+        sourceEditingController.finishSession(markdown: document.savedMarkdown)
+        document.sourceMarkdown = document.savedMarkdown
 
         do {
             try renderCurrentMarkdownImmediately()

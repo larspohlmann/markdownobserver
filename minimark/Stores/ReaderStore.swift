@@ -100,8 +100,6 @@ final class ReaderStore {
     let folderWatch: ReaderFolderWatchDependencies
     let settingsStore: ReaderSettingsStoring
     let securityScopeResolver: SecurityScopeResolver
-    let sourceEditingCoordinator = ReaderSourceEditingCoordinator()
-
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
     var needsAppearanceRender: Bool {
         get { renderingController.needsAppearanceRender }
@@ -276,15 +274,6 @@ final class ReaderStore {
 
     func dismissFolderWatchAutoOpenWarning() {
         folderWatchDispatcher.dismissAutoOpenWarning()
-    }
-
-    func applySourceEditingTransition(_ transition: ReaderSourceEditingTransition) {
-        sourceEditingController.draftMarkdown = transition.draftMarkdown
-        document.sourceMarkdown = transition.sourceMarkdown
-        sourceEditingController.sourceEditorSeedMarkdown = transition.sourceEditorSeedMarkdown
-        sourceEditingController.unsavedChangedRegions = transition.unsavedChangedRegions
-        sourceEditingController.isSourceEditing = transition.isSourceEditing
-        sourceEditingController.hasUnsavedDraftChanges = transition.hasUnsavedDraftChanges
     }
 
     func refreshOpenInApplications() {
