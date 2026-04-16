@@ -66,7 +66,9 @@ enum ReaderTopBarAction {
 }
 
 struct ReaderTopBar: View {
-    var readerStore: ReaderStore
+    let document: ReaderDocumentController
+    let sourceEditing: ReaderSourceEditingController
+    let statusBarTimestamp: ReaderStatusBarTimestamp?
     let canStopFolderWatch: Bool
     let apps: [ReaderExternalApplication]
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
@@ -83,7 +85,11 @@ struct ReaderTopBar: View {
     @State private var isEditingFavorites = false
 
     var body: some View {
-        let projection = ReaderTopBarStoreProjection(store: readerStore)
+        let projection = ReaderTopBarStoreProjection(
+            document: document,
+            sourceEditing: sourceEditing,
+            statusBarTimestamp: statusBarTimestamp
+        )
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -94,7 +100,7 @@ struct ReaderTopBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 OpenInMenuButton(
-                    hasFile: readerStore.fileURL != nil,
+                    hasFile: document.fileURL != nil,
                     hasActiveFolderWatch: canStopFolderWatch,
                     apps: apps,
                     favoriteWatchedFolders: favoriteWatchedFolders,
@@ -132,14 +138,14 @@ struct ReaderTopBar: View {
             Divider()
                 .overlay(Color.primary.opacity(0.10))
         }
-        .task(id: readerStore.fileURL) {
-            readerStore.refreshOpenInApplications()
+        .task(id: document.fileURL) {
+            document.refreshOpenInApplications()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in
-            readerStore.refreshOpenInApplications()
+            document.refreshOpenInApplications()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
-            readerStore.refreshOpenInApplications()
+            document.refreshOpenInApplications()
         }
         .sheet(isPresented: $isEditingFavorites) {
             EditFavoritesSheet(

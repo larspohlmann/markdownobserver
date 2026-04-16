@@ -9,9 +9,9 @@ private struct ReaderWindowStoreCallbackConfigurator {
 
     func configure(_ store: ReaderStore) {
         if let lockedAppearance = lockedAppearanceProvider() {
-            store.setAppearanceOverride(lockedAppearance)
+            store.renderingController.setAppearanceOverride(lockedAppearance)
         }
-        store.setOpenAdditionalDocumentForFolderWatchEventHandler { event, folderWatchSession, origin in
+        store.folderWatchDispatcher.setAdditionalOpenHandler { event, folderWatchSession, origin in
             onOpenAdditionalDocument(
                 event.fileURL,
                 folderWatchSession,
@@ -967,6 +967,24 @@ final class ReaderWindowCoordinator {
             clearRecentManuallyOpenedFiles()
         case .editSubfolders:
             isEditingSubfolders = true
+        case .saveSourceDraft:
+            sidebarDocumentController.selectedReaderStore.saveSourceDraft()
+        case .discardSourceDraft:
+            sidebarDocumentController.selectedReaderStore.discardSourceDraft()
+        case .startSourceEditing:
+            sidebarDocumentController.selectedReaderStore.startEditingSource()
+        case .updateSourceDraft(let markdown):
+            sidebarDocumentController.selectedReaderStore.updateSourceDraft(markdown)
+        case .grantImageDirectoryAccess(let url):
+            sidebarDocumentController.selectedReaderStore.grantImageDirectoryAccess(folderURL: url)
+        case .openInApplication(let app):
+            sidebarDocumentController.selectedReaderStore.document.openInApplication(app)
+        case .revealInFinder:
+            sidebarDocumentController.selectedReaderStore.document.revealInFinder()
+        case .presentError(let error):
+            sidebarDocumentController.selectedReaderStore.handle(error)
+        case .updateTOCHeadings(let headings):
+            sidebarDocumentController.selectedReaderStore.toc.updateHeadings(headings)
         }
     }
 
@@ -977,7 +995,7 @@ final class ReaderWindowCoordinator {
         if appearanceController.isLocked {
             appearanceController.unlock()
             for document in sidebarDocumentController.documents {
-                document.readerStore.clearAppearanceOverride()
+                document.readerStore.renderingController.clearAppearanceOverride()
             }
             if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
                 favoriteWorkspaceController?.updateLockedAppearance(nil)
@@ -986,7 +1004,7 @@ final class ReaderWindowCoordinator {
             appearanceController.lock()
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
-                document.readerStore.setAppearanceOverride(appearance)
+                document.readerStore.renderingController.setAppearanceOverride(appearance)
             }
             if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
                 favoriteWorkspaceController?.updateLockedAppearance(appearanceController.lockedAppearance)

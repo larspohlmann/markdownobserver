@@ -10,7 +10,7 @@ extension ContentView {
     func documentSurfacePane(for surface: DocumentSurfaceRole) -> some View {
         DocumentSurfaceHost(
             configuration: documentSurfaceConfiguration(for: surface),
-            fallbackMarkdown: readerStore.sourceMarkdown
+            fallbackMarkdown: document.sourceMarkdown
         )
     }
 
@@ -20,8 +20,8 @@ extension ContentView {
             return DocumentSurfaceConfiguration(
                 role: surface,
                 usesWebSurface: previewMode == .web,
-                htmlDocument: readerStore.renderedHTMLDocument,
-                documentIdentity: readerStore.fileURL?.standardizedFileURL.path,
+                htmlDocument: rendering.renderedHTMLDocument,
+                documentIdentity: document.fileURL?.standardizedFileURL.path,
                 accessibilityIdentifier: "reader-preview",
                 accessibilityValue: previewAccessibilityValue,
                 reloadToken: previewReloadToken,
@@ -29,7 +29,7 @@ extension ContentView {
                 postLoadStatusScript: nil,
                 changedRegionNavigationRequest: canNavigateChangedRegions ? changeNavigation.currentRequest : nil,
                 scrollSyncRequest: splitScrollRequest(for: surface),
-                tocScrollRequest: readerStore.tocScrollRequest,
+                tocScrollRequest: toc.scrollRequest,
                 supportsInPlaceContentUpdates: true,
                 overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: previewReloadAnchorProgress,
@@ -64,7 +64,7 @@ extension ContentView {
                 postLoadStatusScript: "window.__minimarkSourceBootstrapStatus || null",
                 changedRegionNavigationRequest: nil,
                 scrollSyncRequest: splitScrollRequest(for: surface),
-                tocScrollRequest: readerStore.tocScrollRequest,
+                tocScrollRequest: toc.scrollRequest,
                 supportsInPlaceContentUpdates: false,
                 overlayTopInset: overlayInsets.scrollTargetTopInset,
                 reloadAnchorProgress: nil,
@@ -89,7 +89,7 @@ extension ContentView {
                         }
                         Self.logger.debug("source bootstrap completed successfully")
                     case .sourceEdit(let markdown):
-                        readerStore.updateSourceDraft(markdown)
+                        onAction(.updateSourceDraft(markdown))
                     case .retryFallback:
                         sourceReloadToken += 1
                         sourceMode = .web
@@ -104,7 +104,7 @@ extension ContentView {
     // MARK: - Source document identity and HTML refresh
 
     var sourceDocumentIdentity: String? {
-        guard let path = readerStore.fileURL?.standardizedFileURL.path else {
+        guard let path = document.fileURL?.standardizedFileURL.path else {
             return nil
         }
 
@@ -113,9 +113,9 @@ extension ContentView {
 
     func refreshSourceHTML() {
         sourceHTMLCache.refreshIfNeeded(
-            markdown: readerStore.sourceEditorSeedMarkdown,
-            settings: readerStore.currentSettings,
-            isEditable: readerStore.isSourceEditing
+            markdown: sourceEditing.sourceEditorSeedMarkdown,
+            settings: settingsStore.currentSettings,
+            isEditable: sourceEditing.isSourceEditing
         )
     }
 
@@ -129,7 +129,7 @@ extension ContentView {
             handleScrollSyncObservation(observation, from: surface)
             return true
         case .tocHeadingsExtracted(let headings):
-            readerStore.updateTOCHeadings(headings)
+            onAction(.updateTOCHeadings(headings))
             return true
         case .droppedFileURLs(let urls):
             handleDroppedFileURLs(urls)
@@ -160,7 +160,7 @@ extension ContentView {
         }
 
         let slotStrategy: FileOpenRequest.SlotStrategy =
-            readerStore.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
+            document.fileURL == nil ? .reuseEmptySlotForFirst : .alwaysAppend
         onAction(.requestFileOpen(FileOpenRequest(
             fileURLs: markdownURLs,
             origin: .manual,
@@ -175,10 +175,10 @@ extension ContentView {
         }
 
         let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
-        let currentURL = readerStore.fileURL.map(ReaderFileRouting.normalizedFileURL)
-        if readerStore.hasUnsavedDraftChanges,
+        let currentURL = document.fileURL.map(ReaderFileRouting.normalizedFileURL)
+        if sourceEditing.hasUnsavedDraftChanges,
            currentURL != normalizedIncomingURL {
-            readerStore.presentError(ReaderError.unsavedDraftRequiresResolution)
+            onAction(.presentError(ReaderError.unsavedDraftRequiresResolution))
             return
         }
 
@@ -216,7 +216,7 @@ extension ContentView {
 
     var previewReloadAnchorProgress: Double? {
         guard canSynchronizeSplitScroll,
-              readerStore.isSourceEditing else {
+              sourceEditing.isSourceEditing else {
             return nil
         }
 

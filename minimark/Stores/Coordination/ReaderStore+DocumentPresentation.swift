@@ -20,11 +20,10 @@ extension ReaderStore {
         )
         try renderCurrentMarkdownImmediately()
         if acknowledgeExternalChange {
-            content.hasUnacknowledgedExternalChange = false
-            content.unacknowledgedExternalChangeKind = .modified
+            externalChange.clear()
         }
-        identity.isCurrentFileMissing = false
-        identity.lastError = nil
+        document.isCurrentFileMissing = false
+        document.lastError = nil
     }
 
     func applyLoadedDocumentState(
@@ -33,37 +32,36 @@ extension ReaderStore {
         diffBaselineMarkdown: String?,
         resetDocumentViewMode: Bool
     ) {
-        identity.fileURL = fileURL
-        identity.fileDisplayName = fileURL.lastPathComponent
-        content.savedMarkdown = loaded.markdown
-        editing.draftMarkdown = nil
-        editing.pendingSavedDraftDiffBaselineMarkdown = nil
-        content.sourceMarkdown = loaded.markdown
-        editing.sourceEditorSeedMarkdown = loaded.markdown
-        content.fileLastModifiedAt = loaded.modificationDate
+        document.fileURL = fileURL
+        document.fileDisplayName = fileURL.lastPathComponent
+        document.savedMarkdown = loaded.markdown
+        sourceEditingController.draftMarkdown = nil
+        sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
+        document.sourceMarkdown = loaded.markdown
+        sourceEditingController.sourceEditorSeedMarkdown = loaded.markdown
+        document.fileLastModifiedAt = loaded.modificationDate
 
         if resetDocumentViewMode {
-            editing.documentViewMode = .preview
+            sourceEditingController.documentViewMode = .preview
         }
 
-        content.changedRegions = changedRegions(
+        document.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
-        editing.unsavedChangedRegions = []
-        editing.isSourceEditing = false
-        editing.hasUnsavedDraftChanges = false
-        tocHeadings = []
-        isTOCVisible = false
+        sourceEditingController.unsavedChangedRegions = []
+        sourceEditingController.isSourceEditing = false
+        sourceEditingController.hasUnsavedDraftChanges = false
+        toc.clear()
     }
 
     func presentMissingDocument(at fileURL: URL, error: Error) {
-        identity.fileURL = fileURL
-        identity.fileDisplayName = fileURL.lastPathComponent
-        content.fileLastModifiedAt = nil
-        identity.openInApplications = []
-        identity.isCurrentFileMissing = true
-        identity.lastError = ReaderPresentableError(from: error)
+        document.fileURL = fileURL
+        document.fileDisplayName = fileURL.lastPathComponent
+        document.fileLastModifiedAt = nil
+        document.openInApplications = []
+        document.isCurrentFileMissing = true
+        document.lastError = ReaderPresentableError(from: error)
         folderWatch.settler.clearSettling()
     }
 

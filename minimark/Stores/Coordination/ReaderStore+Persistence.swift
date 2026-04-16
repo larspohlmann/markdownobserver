@@ -13,20 +13,19 @@ extension ReaderStore {
                 for: fileURL, reason: "write", folderWatchSession: activeFolderWatchSession
             )
             try file.io.write(draftMarkdown, to: accessibleURL)
-            content.savedMarkdown = draftMarkdown
-            let transition = sourceEditingCoordinator.finishSession(markdown: draftMarkdown)
-            applySourceEditingTransition(transition)
-            content.changedRegions = changedRegions(
+            document.savedMarkdown = draftMarkdown
+            sourceEditingController.finishSession(markdown: draftMarkdown)
+            document.sourceMarkdown = draftMarkdown
+            document.changedRegions = changedRegions(
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
             )
-            content.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
-            editing.pendingSavedDraftDiffBaselineMarkdown = content.changedRegions.isEmpty ? nil : diffBaselineMarkdown
-            content.hasUnacknowledgedExternalChange = false
-            content.unacknowledgedExternalChangeKind = .modified
-            identity.isCurrentFileMissing = false
+            document.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = document.changedRegions.isEmpty ? nil : diffBaselineMarkdown
+            externalChange.clear()
+            document.isCurrentFileMissing = false
             try renderCurrentMarkdownImmediately()
-            identity.lastError = nil
+            document.lastError = nil
             let modifiedAtDescription = fileLastModifiedAt?.description ?? "nil"
             logSaveInfo(
                 "save succeeded: \(saveLogContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
@@ -87,7 +86,7 @@ extension ReaderStore {
     }
 
     func handlePendingSavedDraftChangeIfNeeded() -> Bool {
-        guard let diffBaselineMarkdown = editing.pendingSavedDraftDiffBaselineMarkdown,
+        guard let diffBaselineMarkdown = sourceEditingController.pendingSavedDraftDiffBaselineMarkdown,
               let fileURL,
               !isSourceEditing else {
             return false
@@ -104,22 +103,22 @@ extension ReaderStore {
             Self.logger.error(
                 "draft baseline load failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public) description=\(nsError.localizedDescription, privacy: .private)"
             )
-            editing.pendingSavedDraftDiffBaselineMarkdown = nil
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
 
         guard loaded.markdown == sourceMarkdown else {
-            editing.pendingSavedDraftDiffBaselineMarkdown = nil
+            sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
             return false
         }
 
-        content.fileLastModifiedAt = loaded.modificationDate
-        content.changedRegions = changedRegions(
+        document.fileLastModifiedAt = loaded.modificationDate
+        document.changedRegions = changedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
-        editing.unsavedChangedRegions = []
-        editing.pendingSavedDraftDiffBaselineMarkdown = nil
+        sourceEditingController.unsavedChangedRegions = []
+        sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
         return true
     }
 
@@ -139,7 +138,7 @@ extension ReaderStore {
         let fileScopeURL = redactedPathText(for: ctx.fileToken?.url)
         let folderScopeURL = redactedPathText(for: ctx.folderToken?.url)
         let accessibleFilePath = redactedPathText(for: ctx.accessibleFileURL)
-        return "file=\(filePath) origin=\(identity.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        return "file=\(filePath) origin=\(document.currentOpenOrigin.rawValue) editing=\(isSourceEditing) unsaved=\(hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
     }
 
     func redactedPathText(for url: URL?) -> String {

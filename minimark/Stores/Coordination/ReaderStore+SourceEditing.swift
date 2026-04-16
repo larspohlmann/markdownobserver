@@ -2,42 +2,38 @@ import Foundation
 
 extension ReaderStore {
     func startEditingSource() {
-        guard sourceEditingCoordinator.canStart(
-            hasOpenDocument: hasOpenDocument,
-            isCurrentFileMissing: isCurrentFileMissing,
-            isSourceEditing: isSourceEditing
-        ) else {
-            return
+        let wasEditing = sourceEditingController.isSourceEditing
+        sourceEditingController.startEditing(
+            savedMarkdown: document.savedMarkdown,
+            hasOpenDocument: document.hasOpenDocument,
+            isCurrentFileMissing: document.isCurrentFileMissing
+        )
+        if !wasEditing && sourceEditingController.isSourceEditing {
+            document.sourceMarkdown = document.savedMarkdown
+            clearLastError()
         }
-
-        let transition = sourceEditingCoordinator.beginSession(markdown: content.savedMarkdown)
-        applySourceEditingTransition(transition)
-        clearLastError()
     }
 
     func updateSourceDraft(_ markdown: String) {
-        guard sourceEditingCoordinator.canUpdate(isSourceEditing: isSourceEditing) else {
-            return
-        }
+        guard sourceEditingController.isSourceEditing else { return }
 
         let unsavedChangedRegions = changedRegions(
-            diffBaselineMarkdown: content.savedMarkdown,
+            diffBaselineMarkdown: document.savedMarkdown,
             newMarkdown: markdown
         )
-        let transition = sourceEditingCoordinator.updateDraft(
-            markdown: markdown,
-            sourceEditorSeedMarkdown: sourceEditorSeedMarkdown,
-            diffBaselineMarkdown: content.savedMarkdown,
+        sourceEditingController.updateDraft(
+            markdown,
+            savedMarkdown: document.savedMarkdown,
             unsavedChangedRegions: unsavedChangedRegions
         )
-        applySourceEditingTransition(transition)
+        document.sourceMarkdown = markdown
 
         scheduleDraftPreviewRender()
     }
 
     func saveSourceDraft() {
         guard isSourceEditing,
-              let draftMarkdown = editing.draftMarkdown,
+              let draftMarkdown = sourceEditingController.draftMarkdown,
               let fileURL else {
             logSaveError("save requested without active editable document: \(saveLogContext(for: fileURL))")
             handle(ReaderError.noOpenFileInReader)
@@ -49,7 +45,7 @@ extension ReaderStore {
                 "save requested: \(saveLogContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
             )
             cancelPendingDraftPreviewRender()
-            let diffBaselineMarkdown = content.savedMarkdown
+            let diffBaselineMarkdown = document.savedMarkdown
             try persistSourceDraft(
                 draftMarkdown,
                 to: fileURL,
@@ -62,9 +58,7 @@ extension ReaderStore {
     }
 
     func discardSourceDraft() {
-        guard sourceEditingCoordinator.canDiscard(isSourceEditing: isSourceEditing) else {
-            return
-        }
+        guard sourceEditingController.isSourceEditing else { return }
 
         if hasUnacknowledgedExternalChange {
             reloadCurrentFile(
@@ -75,8 +69,8 @@ extension ReaderStore {
             return
         }
 
-        let transition = sourceEditingCoordinator.finishSession(markdown: content.savedMarkdown)
-        applySourceEditingTransition(transition)
+        sourceEditingController.finishSession(markdown: document.savedMarkdown)
+        document.sourceMarkdown = document.savedMarkdown
 
         do {
             try renderCurrentMarkdownImmediately()

@@ -19,4 +19,13 @@ enum ContentViewAction {
     case clearRecentWatchedFolders
     case clearRecentManuallyOpenedFiles
     case editSubfolders
+    case saveSourceDraft
+    case discardSourceDraft
+    case startSourceEditing
+    case updateSourceDraft(String)
+    case grantImageDirectoryAccess(URL)
+    case openInApplication(ReaderExternalApplication?)
+    case revealInFinder
+    case presentError(Error)
+    case updateTOCHeadings([TOCHeading])
 }

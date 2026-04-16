@@ -131,9 +131,9 @@ final class ReaderSidebarDocumentController {
             rowStateComputer: rowStateComputer
         )
         selectedDocumentID = initialDocument.id
-        selectedWindowTitle = initialDocument.readerStore.windowTitle
-        selectedFileURL = initialDocument.readerStore.fileURL
-        selectedHasUnacknowledgedExternalChange = initialDocument.readerStore.hasUnacknowledgedExternalChange
+        selectedWindowTitle = initialDocument.readerStore.document.windowTitle
+        selectedFileURL = initialDocument.readerStore.document.fileURL
+        selectedHasUnacknowledgedExternalChange = initialDocument.readerStore.externalChange.hasUnacknowledgedExternalChange
         rowStateComputer.rebuildAllRowStates(from: documentList.documents)
         folderWatchCoordinator.delegate = self
         fileOpenPlanExecutor.delegate = self
@@ -262,15 +262,15 @@ final class ReaderSidebarDocumentController {
 
     func bindSelectedStore() {
         let store = selectedReaderStore
-        selectedWindowTitle = store.windowTitle
-        selectedFileURL = store.fileURL
-        selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
+        selectedWindowTitle = store.document.windowTitle
+        selectedFileURL = store.document.fileURL
+        selectedHasUnacknowledgedExternalChange = store.externalChange.hasUnacknowledgedExternalChange
 
         observationManager.bindSelectedStore(store) { [weak self] in
             guard let self else { return }
-            self.selectedWindowTitle = store.windowTitle
-            self.selectedFileURL = store.fileURL
-            self.selectedHasUnacknowledgedExternalChange = store.hasUnacknowledgedExternalChange
+            self.selectedWindowTitle = store.document.windowTitle
+            self.selectedFileURL = store.document.fileURL
+            self.selectedHasUnacknowledgedExternalChange = store.externalChange.hasUnacknowledgedExternalChange
         }
     }
 

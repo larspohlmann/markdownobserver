@@ -37,20 +37,20 @@ final class SidebarObservationManager {
 
         for document in documents where documentObservationTasks[document.id] == nil {
             let documentID = document.id
-            document.readerStore.onExternalChangeKindChanged = {
+            document.readerStore.externalChange.onStateChanged = {
                 onStoreChanged(documentID)
             }
             documentObservationTasks[document.id] = Task { [weak self] in
                 let store = document.readerStore
-                defer { store.onExternalChangeKindChanged = nil }
+                defer { store.externalChange.onStateChanged = nil }
                 while !Task.isCancelled {
                     let cancelled = await Self.awaitObservationChange {
-                        _ = store.fileDisplayName
-                        _ = store.fileLastModifiedAt
-                        _ = store.lastExternalChangeAt
-                        _ = store.lastRefreshAt
-                        _ = store.isCurrentFileMissing
-                        _ = store.hasUnacknowledgedExternalChange
+                        _ = store.document.fileDisplayName
+                        _ = store.document.fileLastModifiedAt
+                        _ = store.externalChange.lastExternalChangeAt
+                        _ = store.renderingController.lastRefreshAt
+                        _ = store.document.isCurrentFileMissing
+                        _ = store.externalChange.hasUnacknowledgedExternalChange
                     }
                     if cancelled { break }
                     guard self != nil else { break }
@@ -71,9 +71,9 @@ final class SidebarObservationManager {
         selectedStoreObservationTask = Task { [weak self] in
             while !Task.isCancelled {
                 let cancelled = await Self.awaitObservationChange {
-                    _ = store.windowTitle
-                    _ = store.fileURL
-                    _ = store.hasUnacknowledgedExternalChange
+                    _ = store.document.windowTitle
+                    _ = store.document.fileURL
+                    _ = store.externalChange.hasUnacknowledgedExternalChange
                 }
                 if cancelled { break }
                 guard let self,
