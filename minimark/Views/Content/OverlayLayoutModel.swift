@@ -1,5 +1,4 @@
 import CoreGraphics
-import Foundation
 
 struct OverlayLayoutModel: Equatable, Sendable {
     let isSourceEditing: Bool
