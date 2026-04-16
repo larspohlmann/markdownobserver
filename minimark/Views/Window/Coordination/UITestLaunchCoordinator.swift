@@ -23,7 +23,7 @@ final class UITestLaunchCoordinator {
     }
 
     func applyConfigurationIfNeeded() {
-        guard !hasAppliedConfiguration else {
+        guard !hasAppliedConfiguration, actions != nil else {
             return
         }
 

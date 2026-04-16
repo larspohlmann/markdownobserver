@@ -273,18 +273,18 @@ struct ReaderWindowRootView: View {
         guard !windowCoordinator.hasOpenedInitialFile else { return }
         windowCoordinator.hasOpenedInitialFile = true
         uiTestLaunchCoordinator.configure(actions: UITestLaunchCoordinator.Actions(
-            hostWindow: { [windowCoordinator] in windowCoordinator.hostWindow },
-            startWatchingFolder: { [windowCoordinator] folderURL, options in
-                windowCoordinator.startWatchingFolder(folderURL: folderURL, options: options)
+            hostWindow: { [weak windowCoordinator] in windowCoordinator?.hostWindow },
+            startWatchingFolder: { [weak windowCoordinator] folderURL, options in
+                windowCoordinator?.startWatchingFolder(folderURL: folderURL, options: options)
             },
-            presentFolderWatchOptions: { [folderWatchFlowController] folderURL, options in
-                folderWatchFlowController.presentOptions(for: folderURL, options: options)
+            presentFolderWatchOptions: { [weak folderWatchFlowController] folderURL, options in
+                folderWatchFlowController?.presentOptions(for: folderURL, options: options)
             },
-            openFileRequest: { [windowCoordinator] request in
-                windowCoordinator.openFileRequest(request)
+            openFileRequest: { [weak windowCoordinator] request in
+                windowCoordinator?.openFileRequest(request)
             },
-            isSessionActive: { [folderWatchFlowController] in
-                folderWatchFlowController.sharedFolderWatchSession != nil
+            isSessionActive: { [weak folderWatchFlowController] in
+                folderWatchFlowController?.sharedFolderWatchSession != nil
             }
         ))
         favoriteWorkspaceController.configure(

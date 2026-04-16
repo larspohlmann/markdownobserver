@@ -26,9 +26,9 @@ final class FolderWatchFlowController {
     private let sidebarDocumentController: ReaderSidebarDocumentController
 
     // Cross-references (set via configure())
-    private(set) var favoriteWorkspaceController: FavoriteWorkspaceController?
-    private(set) var groupStateController: SidebarGroupStateController?
-    private(set) var appearanceController: WindowAppearanceController?
+    private(set) weak var favoriteWorkspaceController: FavoriteWorkspaceController?
+    private(set) weak var groupStateController: SidebarGroupStateController?
+    private(set) weak var appearanceController: WindowAppearanceController?
 
     init(settingsStore: ReaderSettingsStore, sidebarDocumentController: ReaderSidebarDocumentController) {
         self.settingsStore = settingsStore

@@ -7,10 +7,10 @@ final class FavoriteWorkspaceController {
     private let settingsStore: any ReaderSettingsReading & ReaderFavoriteWriting
 
     // Cross-references (set via configure())
-    private var sidebarDocumentController: ReaderSidebarDocumentController?
-    private var folderWatchFlowController: FolderWatchFlowController?
-    private var groupStateController: SidebarGroupStateController?
-    private var appearanceController: WindowAppearanceController?
+    private weak var sidebarDocumentController: ReaderSidebarDocumentController?
+    private weak var folderWatchFlowController: FolderWatchFlowController?
+    private weak var groupStateController: SidebarGroupStateController?
+    private weak var appearanceController: WindowAppearanceController?
 
     private(set) var activeFavoriteID: UUID?
     private(set) var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
