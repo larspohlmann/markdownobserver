@@ -59,7 +59,11 @@ final class DocumentSurfaceViewModel {
     }
 
     func handleSurfaceAppear() {
-        refreshSourceHTML()
+        refreshSourceHTML(
+            markdown: sourceMarkdownProvider(),
+            settings: .default,
+            isEditable: false
+        )
         if previewMode == .nativeFallback, !renderedHTMLDocumentProvider().isEmpty {
             previewReloadToken += 1
             previewMode = .web
@@ -88,15 +92,20 @@ final class DocumentSurfaceViewModel {
     }
 
     func refreshSourceHTML(
-        markdown: String? = nil,
-        settings: ReaderSettings? = nil,
-        isEditable: Bool? = nil
+        markdown: String,
+        settings: ReaderSettings,
+        isEditable: Bool
     ) {
         sourceHTMLCache.refreshIfNeeded(
-            markdown: markdown ?? sourceMarkdownProvider(),
-            settings: settings ?? .default,
-            isEditable: isEditable ?? false
+            markdown: markdown,
+            settings: settings,
+            isEditable: isEditable
         )
+    }
+
+    func sourceDocumentIdentity(for fileURL: URL?) -> String? {
+        guard let path = fileURL?.standardizedFileURL.path else { return nil }
+        return "\(path)|source"
     }
 
     static let logger = Logger(

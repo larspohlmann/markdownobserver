@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import minimark
 
@@ -175,5 +176,61 @@ struct DocumentSurfaceViewModelModeTests {
         )
         vm.handleDocumentViewModeChange(.split)
         #expect(vm.splitScrollCoordinator.request(for: .source) != nil)
+    }
+}
+
+@Suite
+struct DocumentSurfaceViewModelSourceHTMLTests {
+
+    @Test @MainActor func refreshSourceHTML_producesNonEmptyDocument() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "# Hello" }
+        )
+        vm.refreshSourceHTML(
+            markdown: "# Hello",
+            settings: .default,
+            isEditable: false
+        )
+        #expect(!vm.sourceHTMLCache.document.isEmpty)
+    }
+
+    @Test @MainActor func refreshSourceHTML_skipsRefreshWhenInputsUnchanged() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "# Hello" }
+        )
+        vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
+        let first = vm.sourceHTMLCache.document
+        vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
+        #expect(vm.sourceHTMLCache.document == first)
+    }
+
+    @Test @MainActor func refreshSourceHTML_refreshesWhenMarkdownChanges() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "# Hello" }
+        )
+        vm.refreshSourceHTML(markdown: "# Hello", settings: .default, isEditable: false)
+        let first = vm.sourceHTMLCache.document
+        vm.refreshSourceHTML(markdown: "# World", settings: .default, isEditable: false)
+        #expect(vm.sourceHTMLCache.document != first)
+    }
+
+    @Test @MainActor func sourceDocumentIdentity_returnsPathPipeSource() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        let url = URL(fileURLWithPath: "/Users/test/doc.md")
+        #expect(vm.sourceDocumentIdentity(for: url) == "/Users/test/doc.md|source")
+    }
+
+    @Test @MainActor func sourceDocumentIdentity_returnsNilForNilURL() {
+        let vm = DocumentSurfaceViewModel(
+            renderedHTMLDocumentProvider: { "" },
+            sourceMarkdownProvider: { "" }
+        )
+        #expect(vm.sourceDocumentIdentity(for: nil) == nil)
     }
 }
