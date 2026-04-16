@@ -21,10 +21,6 @@ final class ReaderStore {
         get { folderWatchDispatcher.autoOpenWarning }
         set { folderWatchDispatcher.autoOpenWarning = newValue }
     }
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
-        get { folderWatchDispatcher.pendingFileSelectionRequest }
-        set { folderWatchDispatcher.pendingFileSelectionRequest = newValue }
-    }
 
     // MARK: - Document forwarding
 
@@ -33,8 +29,6 @@ final class ReaderStore {
     var documentLoadState: ReaderDocumentLoadState { document.documentLoadState }
     var isCurrentFileMissing: Bool { document.isCurrentFileMissing }
     var lastError: ReaderPresentableError? { document.lastError }
-    var openInApplications: [ReaderExternalApplication] { document.openInApplications }
-    var needsImageDirectoryAccess: Bool { renderingController.needsImageDirectoryAccess }
     var hasOpenDocument: Bool { document.hasOpenDocument }
     var isDeferredDocument: Bool { document.isDeferredDocument }
     var windowTitle: String { document.windowTitle }
@@ -53,14 +47,7 @@ final class ReaderStore {
     var unsavedChangedRegions: [ChangedRegion] { sourceEditingController.unsavedChangedRegions }
     var isSourceEditing: Bool { sourceEditingController.isSourceEditing }
     var hasUnsavedDraftChanges: Bool { sourceEditingController.hasUnsavedDraftChanges }
-    var canSaveSourceDraft: Bool { sourceEditingController.canSaveSourceDraft }
-    var canDiscardSourceDraft: Bool { sourceEditingController.canDiscardSourceDraft }
-
     // MARK: - Cross-group computed properties
-
-    var canStartSourceEditing: Bool {
-        document.hasOpenDocument && !document.isCurrentFileMissing && !sourceEditingController.isSourceEditing
-    }
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
         if let date = externalChange.lastExternalChangeAt { return .updated(date) }
@@ -74,22 +61,7 @@ final class ReaderStore {
             ? "* \(document.windowTitle)" : document.windowTitle
     }
 
-    // MARK: - Table of Contents
     let toc = ReaderTOCController()
-    var tocHeadings: [TOCHeading] { toc.headings }
-    var isTOCVisible: Bool {
-        get { toc.isVisible }
-        set { toc.isVisible = newValue }
-    }
-    var tocScrollRequest: TOCScrollRequest? {
-        get { toc.scrollRequest }
-        set { toc.scrollRequest = newValue }
-    }
-    var tocScrollRequestCounter: Int { toc.scrollRequestCounter }
-
-    func updateTOCHeadings(_ headings: [TOCHeading]) { toc.updateHeadings(headings) }
-    func toggleTOC() { toc.toggle() }
-    func scrollToTOCHeading(_ heading: TOCHeading) { toc.scrollTo(heading) }
 
     let externalChange = ReaderExternalChangeController()
     let sourceEditingController = ReaderSourceEditingController()
@@ -190,10 +162,6 @@ final class ReaderStore {
                 self?.document.documentLoadState = state
             }
         )
-    }
-
-    var isWatchingFolder: Bool {
-        folderWatchDispatcher.isWatchingFolder
     }
 
     var currentSettings: ReaderSettings {

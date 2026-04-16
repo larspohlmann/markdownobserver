@@ -330,10 +330,10 @@ private struct ReaderSidebarDocumentRow: View {
             return []
         }
 
-        return firstReaderStore.openInApplications.filter { application in
+        return firstReaderStore.document.openInApplications.filter { application in
             effectiveReaderStores
                 .filter { $0.fileURL != nil }
-                .allSatisfy { $0.openInApplications.contains(application) }
+                .allSatisfy { $0.document.openInApplications.contains(application) }
         }
     }
 
