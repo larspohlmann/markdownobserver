@@ -524,148 +524,14 @@ final class ReaderWindowCoordinator {
     }
 
     var isSharedFolderWatchAFavorite: Bool {
-        favoriteMatchingSharedFolderWatchSession() != nil
-    }
-
-    func saveSharedFolderWatchAsFavorite(name: String) {
-        guard let session = folderWatchFlowController?.sharedFolderWatchSession else {
-            return
-        }
-        guard let groupStateController else { return }
-        let groupSnapshot = groupStateController.persistenceSnapshot
-        var workspaceState = ReaderFavoriteWorkspaceState.from(
-            settings: settingsStore.currentSettings,
-            pinnedGroupIDs: groupSnapshot.pinnedGroupIDs,
-            collapsedGroupIDs: groupSnapshot.collapsedGroupIDs,
-            sidebarWidth: sidebarWidth
-        )
-        workspaceState.fileSortMode = groupSnapshot.fileSortMode
-        workspaceState.groupSortMode = groupSnapshot.sortMode
-        workspaceState.lockedAppearance = appearanceController?.lockedAppearance
-        workspaceState.manualGroupOrder = groupSnapshot.manualGroupOrder
-        settingsStore.addFavoriteWatchedFolder(
-            name: name,
-            folderURL: session.folderURL,
-            options: session.options,
-            openDocumentFileURLs: currentSidebarOpenDocumentFileURLs(),
-            workspaceState: workspaceState
-        )
-
-        if let created = favoriteMatchingSharedFolderWatchSession() {
-            favoriteWorkspaceController?.activate(id: created.id, workspaceState: created.workspaceState)
-        }
-    }
-
-    func removeSharedFolderWatchFromFavorites() {
-        guard let match = favoriteMatchingSharedFolderWatchSession() else {
-            return
-        }
-        settingsStore.removeFavoriteWatchedFolder(id: match.id)
-        favoriteWorkspaceController?.deactivate()
+        favoriteWorkspaceController?.isCurrentWatchAFavorite ?? false
     }
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
-        // Restore appearance FIRST so the controller is in the correct lock state
-        // before activeFavoriteWorkspaceState triggers onChange persistence.
-        if let lockedAppearance = entry.workspaceState.lockedAppearance {
-            appearanceController?.restore(from: lockedAppearance)
-        } else if appearanceController?.isLocked == true {
-            appearanceController?.unlock()
-        }
-
-        // Set active favorite and restore workspace state
-        favoriteWorkspaceController?.activate(id: entry.id, workspaceState: entry.workspaceState)
-        groupStateController?.applyWorkspaceState(entry.workspaceState)
-        sidebarWidth = entry.workspaceState.sidebarWidth
-
-        let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
-        startWatchingFolder(
-            folderURL: resolvedURL,
-            options: entry.options,
-            performInitialAutoOpen: false
-        )
-
-        let restoredFileURLs = entry.existingOpenDocumentFileURLs(relativeTo: resolvedURL)
-        if let session = folderWatchFlowController?.sharedFolderWatchSession,
-           !restoredFileURLs.isEmpty {
-            fileOpenCoordinator.open(FileOpenRequest(
-                fileURLs: restoredFileURLs,
-                origin: .folderWatchInitialBatchAutoOpen,
-                folderWatchSession: session,
-                slotStrategy: .reuseEmptySlotForFirst,
-                materializationStrategy: .deferThenMaterializeNewest(count: ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
-            ))
-            refreshWindowPresentation()
-        }
-
-        syncSharedFavoriteOpenDocumentsIfNeeded()
-
-        if entry.options.openMode == .openAllMarkdownFiles {
-            discoverNewFilesForFavorite(entry, resolvedFolderURL: resolvedURL)
-        }
-    }
-
-    private func discoverNewFilesForFavorite(
-        _ entry: ReaderFavoriteWatchedFolder,
-        resolvedFolderURL: URL
-    ) {
-        sidebarDocumentController.folderWatchCoordinator.scanCurrentMarkdownFiles { [weak self] scannedURLs in
-            guard let self,
-                  let session = folderWatchFlowController?.sharedFolderWatchSession else {
-                return
-            }
-
-            let newFileURLs = entry.newFileURLs(fromScanned: scannedURLs, relativeTo: resolvedFolderURL)
-            if !newFileURLs.isEmpty {
-                fileOpenCoordinator.open(FileOpenRequest(
-                    fileURLs: newFileURLs,
-                    origin: .folderWatchInitialBatchAutoOpen,
-                    folderWatchSession: session,
-                    slotStrategy: .alwaysAppend,
-                    materializationStrategy: .deferOnly
-                ))
-                sidebarDocumentController.selectDocumentWithNewestModificationDate()
-                refreshWindowPresentation()
-            }
-
-            settingsStore.updateFavoriteWatchedFolderKnownDocuments(
-                id: entry.id,
-                folderURL: resolvedFolderURL,
-                knownDocumentFileURLs: scannedURLs
-            )
-        }
-    }
-
-    func syncSharedFavoriteOpenDocumentsIfNeeded() {
-        guard let session = folderWatchFlowController?.sharedFolderWatchSession,
-              let favorite = favoriteMatchingSharedFolderWatchSession() else {
-            return
-        }
-
-        settingsStore.updateFavoriteWatchedFolderOpenDocuments(
-            id: favorite.id,
-            folderURL: session.folderURL,
-            openDocumentFileURLs: currentSidebarOpenDocumentFileURLs()
-        )
-    }
-
-    func favoriteMatchingSharedFolderWatchSession() -> ReaderFavoriteWatchedFolder? {
-        guard let session = folderWatchFlowController?.sharedFolderWatchSession else {
-            return nil
-        }
-        return favoriteWorkspaceController?.matchingFavorite(
-            folderURL: session.folderURL,
-            options: session.options,
-            in: settingsStore.currentSettings.favoriteWatchedFolders
-        )
-    }
-
-    func currentSidebarOpenDocumentFileURLs() -> [URL] {
-        sidebarDocumentController.documents.compactMap { $0.readerStore.document.fileURL }
-    }
-
-    func clearFavoriteWatchedFolders() {
-        settingsStore.clearFavoriteWatchedFolders()
+        guard let favoriteWorkspaceController else { return }
+        let restoredSidebarWidth = favoriteWorkspaceController.startFavoriteWatch(entry)
+        sidebarWidth = restoredSidebarWidth
+        refreshWindowPresentation()
     }
 
     func startWatchingFolder(
@@ -747,10 +613,6 @@ final class ReaderWindowCoordinator {
         return result
     }
 
-    func persistFinalWorkspaceStateIfNeeded() {
-        favoriteWorkspaceController?.persistFinalState(to: settingsStore)
-    }
-
     // MARK: - Warning Flow
 
     func confirmFolderWatch(_ options: ReaderFolderWatchOptions) {
@@ -796,15 +658,15 @@ final class ReaderWindowCoordinator {
         case .stopFolderWatch:
             stopFolderWatch()
         case .saveFolderWatchAsFavorite(let name):
-            saveSharedFolderWatchAsFavorite(name: name)
+            favoriteWorkspaceController?.saveAsFavorite(name: name, currentSidebarWidth: sidebarWidth)
         case .removeCurrentWatchFromFavorites:
-            removeSharedFolderWatchFromFavorites()
+            favoriteWorkspaceController?.removeFromFavorites()
         case .toggleAppearanceLock:
             toggleAppearanceLock()
         case .startFavoriteWatch(let fav):
             startFavoriteWatch(fav)
         case .clearFavoriteWatchedFolders:
-            clearFavoriteWatchedFolders()
+            favoriteWorkspaceController?.clearAll()
         case .renameFavoriteWatchedFolder(let id, let name):
             settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
         case .removeFavoriteWatchedFolder(let id):

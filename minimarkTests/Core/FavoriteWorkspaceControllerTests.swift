@@ -4,15 +4,20 @@ import Testing
 
 @Suite
 struct FavoriteWorkspaceControllerTests {
+    @MainActor private func makeController() -> FavoriteWorkspaceController {
+        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        return FavoriteWorkspaceController(settingsStore: store)
+    }
+
     @Test @MainActor func initialStateIsInactive() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         #expect(controller.activeFavoriteID == nil)
         #expect(controller.activeFavoriteWorkspaceState == nil)
         #expect(!controller.isActive)
     }
 
     @Test @MainActor func activateSetsIDAndWorkspaceState() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         let id = UUID()
         let state = ReaderFavoriteWorkspaceState.from(
             settings: .default, pinnedGroupIDs: ["pinned"], collapsedGroupIDs: [], sidebarWidth: 300
@@ -24,7 +29,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func deactivateClearsBothProperties() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         controller.activate(
             id: UUID(),
             workspaceState: .from(settings: .default, pinnedGroupIDs: [], collapsedGroupIDs: [], sidebarWidth: 250)
@@ -36,7 +41,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func updateSidebarWidthWhenActive() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         controller.activate(
             id: UUID(),
             workspaceState: .from(settings: .default, pinnedGroupIDs: [], collapsedGroupIDs: [], sidebarWidth: 250)
@@ -46,13 +51,13 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func updateSidebarWidthWhenInactiveIsNoOp() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         controller.updateSidebarWidth(320)
         #expect(controller.activeFavoriteWorkspaceState == nil)
     }
 
     @Test @MainActor func updateLockedAppearanceMutatesState() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         controller.activate(
             id: UUID(),
             workspaceState: .from(settings: .default, pinnedGroupIDs: [], collapsedGroupIDs: [], sidebarWidth: 250)
@@ -63,7 +68,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func updateSidebarPositionMutatesState() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         controller.activate(
             id: UUID(),
             workspaceState: .from(settings: .default, pinnedGroupIDs: [], collapsedGroupIDs: [], sidebarWidth: 250)
@@ -73,7 +78,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func updateGroupStateMutatesRelevantFields() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         controller.activate(
             id: UUID(),
             workspaceState: .from(settings: .default, pinnedGroupIDs: [], collapsedGroupIDs: [], sidebarWidth: 250)
@@ -92,7 +97,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func matchingFavoriteFindsMatchByFolderPathAndOptions() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder")
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
         let options = ReaderFolderWatchOptions(
@@ -106,7 +111,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func matchingFavoriteReturnsNilWhenNoMatch() {
-        let controller = FavoriteWorkspaceController()
+        let controller = makeController()
         let result = controller.matchingFavorite(
             folderURL: URL(fileURLWithPath: "/tmp/no-match"), options: .default, in: []
         )
@@ -114,8 +119,8 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func persistFinalStateWritesToSettingsStore() {
-        let controller = FavoriteWorkspaceController()
         let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let controller = FavoriteWorkspaceController(settingsStore: store)
         store.addFavoriteWatchedFolder(name: "Persist", folderURL: URL(fileURLWithPath: "/tmp/persist"), options: .default)
         let favoriteID = store.currentSettings.favoriteWatchedFolders.first!.id
         var workspaceState = ReaderFavoriteWorkspaceState.from(
@@ -131,8 +136,8 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func persistFinalStateIsNoOpWhenInactive() {
-        let controller = FavoriteWorkspaceController()
         let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let controller = FavoriteWorkspaceController(settingsStore: store)
         store.addFavoriteWatchedFolder(name: "NoOp", folderURL: URL(fileURLWithPath: "/tmp/no-persist"), options: .default)
         controller.persistFinalState(to: store)
         let persisted = store.currentSettings.favoriteWatchedFolders.first!

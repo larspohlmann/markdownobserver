@@ -11,7 +11,7 @@ struct ReaderWindowRootView: View {
     @State var windowCoordinator: ReaderWindowCoordinator
     @State var appearanceController: WindowAppearanceController
     @State var groupStateController = SidebarGroupStateController()
-    @State var favoriteWorkspaceController = FavoriteWorkspaceController()
+    @State var favoriteWorkspaceController: FavoriteWorkspaceController
     @State var folderWatchFlowController: FolderWatchFlowController
     @State var recentHistoryCoordinator: RecentHistoryCoordinator
     @State var uiTestLaunchCoordinator = UITestLaunchCoordinator()
@@ -34,6 +34,9 @@ struct ReaderWindowRootView: View {
         )
         _appearanceController = State(
             wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
+        )
+        _favoriteWorkspaceController = State(
+            wrappedValue: FavoriteWorkspaceController(settingsStore: settingsStore)
         )
         _folderWatchFlowController = State(
             wrappedValue: FolderWatchFlowController(settingsStore: settingsStore, sidebarDocumentController: sidebarDocumentController)
@@ -218,10 +221,10 @@ struct ReaderWindowRootView: View {
             }
             .onChange(of: folderWatchFlowController.sharedFolderWatchSession) { _, _ in
                 windowCoordinator.refreshWindowShellRegistrationAndTitle()
-                windowCoordinator.syncSharedFavoriteOpenDocumentsIfNeeded()
+                favoriteWorkspaceController.syncOpenDocumentsIfNeeded()
             }
             .onChange(of: windowCoordinator.openDocumentPathTracker.openDocumentPaths) { _, _ in
-                windowCoordinator.syncSharedFavoriteOpenDocumentsIfNeeded()
+                favoriteWorkspaceController.syncOpenDocumentsIfNeeded()
             }
     }
 
@@ -284,6 +287,12 @@ struct ReaderWindowRootView: View {
                 folderWatchFlowController.sharedFolderWatchSession != nil
             }
         ))
+        favoriteWorkspaceController.configure(
+            sidebarDocumentController: sidebarDocumentController,
+            folderWatchFlowController: folderWatchFlowController,
+            groupStateController: groupStateController,
+            appearanceController: appearanceController
+        )
         folderWatchFlowController.configure(
             favoriteWorkspaceController: favoriteWorkspaceController,
             groupStateController: groupStateController,
