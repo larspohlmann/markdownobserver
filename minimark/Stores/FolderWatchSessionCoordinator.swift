@@ -10,7 +10,6 @@ protocol FolderWatchSessionCoordinatorDelegate: AnyObject {
     func document(for fileURL: URL) -> Document?
     func selectDocumentWithNewestModificationDate()
     func handleFolderWatchOpenRequest(_ request: FileOpenRequest)
-    func refreshRowStates()
 }
 
 @MainActor
@@ -234,16 +233,9 @@ extension FolderWatchSessionCoordinator: ReaderFolderWatchControllerDelegate {
         guard let delegate else { return }
         for url in urls {
             if let doc = delegate.document(for: url) {
-                doc.readerStore.noteObservedExternalChange(kind: .added)
-                // The settler was started during openFile for initial-change absorption.
-                // Now that the external-change indicator is set, clear the settler so
-                // subsequent file edits are handled normally by handleObservedFileChange.
-                doc.readerStore.folderWatch.settler.clearSettling()
+                doc.readerStore.markAsLiveAutoOpened()
             }
         }
-        // Row states were last computed before the external change indicators
-        // were set, so rebuild now to pick up the indicator state change.
-        delegate.refreshRowStates()
     }
 
     func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {

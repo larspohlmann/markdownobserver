@@ -205,6 +205,13 @@ final class ReaderStore {
         externalChange.noteObservedExternalChange(kind: kind)
     }
 
+    /// Marks this document as live-auto-opened: sets the external change
+    /// indicator and clears the settler so subsequent edits are not absorbed.
+    func markAsLiveAutoOpened() {
+        noteObservedExternalChange(kind: .added)
+        folderWatch.settler.clearSettling()
+    }
+
     func clearExternalChangeIndicator() {
         externalChange.clear()
     }

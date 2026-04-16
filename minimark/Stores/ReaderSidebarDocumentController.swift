@@ -282,10 +282,6 @@ extension ReaderSidebarDocumentController: FolderWatchSessionCoordinatorDelegate
     func handleFolderWatchOpenRequest(_ request: FileOpenRequest) {
         fileOpenCoordinator.open(request)
     }
-
-    func refreshRowStates() {
-        rowStateComputer.rebuildAllRowStates(from: documents)
-    }
 }
 
 extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {

@@ -37,18 +37,12 @@ final class SidebarObservationManager {
 
         for document in documents where documentObservationTasks[document.id] == nil {
             let documentID = document.id
-            document.readerStore.externalChange.onExternalChangeKindChanged = {
-                onStoreChanged(documentID)
-            }
             document.readerStore.externalChange.onStateChanged = {
                 onStoreChanged(documentID)
             }
             documentObservationTasks[document.id] = Task { [weak self] in
                 let store = document.readerStore
-                defer {
-                    store.externalChange.onExternalChangeKindChanged = nil
-                    store.externalChange.onStateChanged = nil
-                }
+                defer { store.externalChange.onStateChanged = nil }
                 while !Task.isCancelled {
                     let cancelled = await Self.awaitObservationChange {
                         _ = store.document.fileDisplayName
