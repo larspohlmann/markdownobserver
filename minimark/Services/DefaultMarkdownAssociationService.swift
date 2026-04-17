@@ -2,7 +2,7 @@ import Foundation
 import CoreServices
 import UniformTypeIdentifiers
 
-protocol ReaderDefaultMarkdownAssociationHandling {
+protocol DefaultMarkdownAssociationHandling {
     func setCurrentAppAsDefaultForMarkdown() throws -> MarkdownAssociationUpdateResult
 }
 
@@ -74,7 +74,7 @@ enum MarkdownAssociationError: LocalizedError, Equatable {
     }
 }
 
-final class ReaderDefaultMarkdownAssociationService: ReaderDefaultMarkdownAssociationHandling {
+final class DefaultMarkdownAssociationService: DefaultMarkdownAssociationHandling {
     private let launchServices: LaunchServicesControlling
     private let typeResolver: MarkdownContentTypeResolving
     private let appBundle: Bundle

@@ -3,14 +3,14 @@ import Combine
 import Foundation
 import UserNotifications
 
-struct ReaderUserNotificationSettings: Equatable, Sendable {
+struct UserNotificationSettings: Equatable, Sendable {
     let authorizationStatus: UNAuthorizationStatus
     let alertSetting: UNNotificationSetting
     let soundSetting: UNNotificationSetting
     let notificationCenterSetting: UNNotificationSetting
 }
 
-protocol ReaderUserNotificationCentering: AnyObject {
+protocol UserNotificationCentering: AnyObject {
     var delegate: UNUserNotificationCenterDelegate? { get set }
 
     func requestAuthorization(
@@ -19,7 +19,7 @@ protocol ReaderUserNotificationCentering: AnyObject {
     )
 
     func notificationSettings(
-        completionHandler: @escaping @Sendable (ReaderUserNotificationSettings) -> Void
+        completionHandler: @escaping @Sendable (UserNotificationSettings) -> Void
     )
 
     func add(
@@ -28,13 +28,13 @@ protocol ReaderUserNotificationCentering: AnyObject {
     )
 }
 
-extension UNUserNotificationCenter: ReaderUserNotificationCentering {
+extension UNUserNotificationCenter: UserNotificationCentering {
     func notificationSettings(
-        completionHandler: @escaping @Sendable (ReaderUserNotificationSettings) -> Void
+        completionHandler: @escaping @Sendable (UserNotificationSettings) -> Void
     ) {
         getNotificationSettings { settings in
             completionHandler(
-                ReaderUserNotificationSettings(
+                UserNotificationSettings(
                     authorizationStatus: settings.authorizationStatus,
                     alertSetting: settings.alertSetting,
                     soundSetting: settings.soundSetting,
@@ -45,11 +45,11 @@ extension UNUserNotificationCenter: ReaderUserNotificationCentering {
     }
 }
 
-protocol ReaderNotificationSettingsOpening {
+protocol NotificationSettingsOpening {
     func openNotificationSettings()
 }
 
-struct ReaderSystemNotificationSettingsOpener: ReaderNotificationSettingsOpening {
+struct SystemNotificationSettingsOpener: NotificationSettingsOpening {
     private static let notificationSettingsURL = URL(
         string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
     )
@@ -62,7 +62,7 @@ struct ReaderSystemNotificationSettingsOpener: ReaderNotificationSettingsOpening
     }
 }
 
-enum ReaderNotificationAuthorizationState: Equatable {
+enum NotificationAuthorizationState: Equatable {
     case notDetermined
     case denied
     case authorized
@@ -82,14 +82,14 @@ enum ReaderNotificationAuthorizationState: Equatable {
     }
 }
 
-struct ReaderNotificationStatus: Equatable {
-    let authorizationState: ReaderNotificationAuthorizationState
+struct NotificationStatus: Equatable {
+    let authorizationState: NotificationAuthorizationState
     let alertsEnabled: Bool
     let soundsEnabled: Bool
     let notificationCenterEnabled: Bool
 
     init(
-        authorizationState: ReaderNotificationAuthorizationState,
+        authorizationState: NotificationAuthorizationState,
         alertsEnabled: Bool,
         soundsEnabled: Bool,
         notificationCenterEnabled: Bool
@@ -100,15 +100,15 @@ struct ReaderNotificationStatus: Equatable {
         self.notificationCenterEnabled = notificationCenterEnabled
     }
 
-    static let unknown = ReaderNotificationStatus(
+    static let unknown = NotificationStatus(
         authorizationState: .unknown,
         alertsEnabled: false,
         soundsEnabled: false,
         notificationCenterEnabled: false
     )
 
-    init(settings: ReaderUserNotificationSettings) {
-        authorizationState = ReaderNotificationAuthorizationState(settings.authorizationStatus)
+    init(settings: UserNotificationSettings) {
+        authorizationState = NotificationAuthorizationState(settings.authorizationStatus)
         alertsEnabled = settings.alertSetting == .enabled
         soundsEnabled = settings.soundSetting == .enabled
         notificationCenterEnabled = settings.notificationCenterSetting == .enabled
@@ -155,7 +155,7 @@ struct ReaderNotificationStatus: Equatable {
     }
 }
 
-protocol ReaderSystemNotifying {
+protocol SystemNotifying {
     func notifyFileChanged(
         _ fileURL: URL,
         changeKind: FolderWatchChangeKind,
@@ -163,12 +163,12 @@ protocol ReaderSystemNotifying {
     )
 }
 
-private enum ReaderSystemNotificationUserInfoKey {
+private enum SystemNotificationUserInfoKey {
     static let filePath = "filePath"
     static let watchedFolderPath = "watchedFolderPath"
 }
 
-private enum ReaderSystemNotificationEvent {
+private enum SystemNotificationEvent {
     case fileChanged(changeKind: FolderWatchChangeKind)
 
     var titleText: String {
@@ -183,7 +183,7 @@ private enum ReaderSystemNotificationEvent {
     }
 }
 
-private struct ReaderSystemNotificationDescriptor {
+private struct SystemNotificationDescriptor {
     let title: String
     let subtitle: String
     let body: String
@@ -201,7 +201,7 @@ private struct ReaderSystemNotificationDescriptor {
         self.userInfo = userInfo
     }
 
-    init(fileURL: URL, watchedFolderURL: URL?, event: ReaderSystemNotificationEvent) {
+    init(fileURL: URL, watchedFolderURL: URL?, event: SystemNotificationEvent) {
         let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         let normalizedWatchedFolderURL = watchedFolderURL.map(FileRouting.normalizedFileURL)
         let fileName = normalizedFileURL.lastPathComponent
@@ -211,21 +211,21 @@ private struct ReaderSystemNotificationDescriptor {
         body = ""
 
         var userInfo: [AnyHashable: Any] = [
-            ReaderSystemNotificationUserInfoKey.filePath: normalizedFileURL.path
+            SystemNotificationUserInfoKey.filePath: normalizedFileURL.path
         ]
         if let normalizedWatchedFolderURL {
-            userInfo[ReaderSystemNotificationUserInfoKey.watchedFolderPath] = normalizedWatchedFolderURL.path
+            userInfo[SystemNotificationUserInfoKey.watchedFolderPath] = normalizedWatchedFolderURL.path
         }
         self.userInfo = userInfo
     }
 }
 
-protocol ReaderNotificationTargetFocusing {
+protocol NotificationTargetFocusing {
     @discardableResult
     func focusNotificationTarget(fileURL: URL?, watchedFolderURL: URL?) -> Bool
 }
 
-struct ReaderNotificationTargetFocusCoordinator: ReaderNotificationTargetFocusing {
+struct NotificationTargetFocusCoordinator: NotificationTargetFocusing {
     @discardableResult
     func focusNotificationTarget(fileURL: URL?, watchedFolderURL: URL?) -> Bool {
         if Thread.isMainThread {
@@ -248,19 +248,19 @@ struct ReaderNotificationTargetFocusCoordinator: ReaderNotificationTargetFocusin
     }
 }
 
-final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotifying, UNUserNotificationCenterDelegate {
-    static let shared = ReaderSystemNotifier()
+final class SystemNotifier: NSObject, ObservableObject, SystemNotifying, UNUserNotificationCenterDelegate {
+    static let shared = SystemNotifier()
 
-    @Published private(set) var notificationStatus: ReaderNotificationStatus = .unknown
+    @Published private(set) var notificationStatus: NotificationStatus = .unknown
 
-    private let notificationCenter: ReaderUserNotificationCentering
-    private let settingsOpener: ReaderNotificationSettingsOpening
-    private let notificationTargetFocuser: ReaderNotificationTargetFocusing
+    private let notificationCenter: UserNotificationCentering
+    private let settingsOpener: NotificationSettingsOpening
+    private let notificationTargetFocuser: NotificationTargetFocusing
 
     init(
-        notificationCenter: ReaderUserNotificationCentering = UNUserNotificationCenter.current(),
-        settingsOpener: ReaderNotificationSettingsOpening = ReaderSystemNotificationSettingsOpener(),
-        notificationTargetFocuser: ReaderNotificationTargetFocusing = ReaderNotificationTargetFocusCoordinator()
+        notificationCenter: UserNotificationCentering = UNUserNotificationCenter.current(),
+        settingsOpener: NotificationSettingsOpening = SystemNotificationSettingsOpener(),
+        notificationTargetFocuser: NotificationTargetFocusing = NotificationTargetFocusCoordinator()
     ) {
         self.notificationCenter = notificationCenter
         self.settingsOpener = settingsOpener
@@ -290,7 +290,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
     func sendTestNotification(after delay: TimeInterval = 5) {
         let roundedDelay = max(delay.rounded(.up), 1)
         postNotification(
-            ReaderSystemNotificationDescriptor(
+            SystemNotificationDescriptor(
                 title: "Test notification",
                 subtitle: "Background delivery check",
                 body: "This test was scheduled by MarkdownObserver. Switch away from the app before it fires to verify background delivery.",
@@ -306,7 +306,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
         watchedFolderURL: URL?
     ) {
         postNotification(
-            ReaderSystemNotificationDescriptor(
+            SystemNotificationDescriptor(
                 fileURL: fileURL,
                 watchedFolderURL: watchedFolderURL,
                 event: .fileChanged(changeKind: changeKind)
@@ -332,8 +332,8 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
     }
 
     func handleNotificationResponseUserInfo(_ userInfo: [AnyHashable: Any]) {
-        let fileURL = Self.url(from: userInfo[ReaderSystemNotificationUserInfoKey.filePath])
-        let watchedFolderURL = Self.url(from: userInfo[ReaderSystemNotificationUserInfoKey.watchedFolderPath])
+        let fileURL = Self.url(from: userInfo[SystemNotificationUserInfoKey.filePath])
+        let watchedFolderURL = Self.url(from: userInfo[SystemNotificationUserInfoKey.watchedFolderPath])
 
         _ = notificationTargetFocuser.focusNotificationTarget(
             fileURL: fileURL,
@@ -342,7 +342,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
     }
 
     private func postNotification(
-        _ descriptor: ReaderSystemNotificationDescriptor,
+        _ descriptor: SystemNotificationDescriptor,
         timeInterval: TimeInterval? = nil
     ) {
         ensureAuthorizationIfNeeded { [weak self] isAuthorized in
@@ -358,7 +358,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
     }
 
     private func addNotificationRequest(
-        _ descriptor: ReaderSystemNotificationDescriptor,
+        _ descriptor: SystemNotificationDescriptor,
         timeInterval: TimeInterval?
     ) {
         let trigger = timeInterval.map {
@@ -391,12 +391,12 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
     }
 
     private func handleAuthorizationState(
-        _ settings: ReaderUserNotificationSettings,
+        _ settings: UserNotificationSettings,
         completion: @escaping @Sendable (Bool) -> Void
     ) {
         updateNotificationStatus(with: settings)
 
-        switch ReaderNotificationAuthorizationState(settings.authorizationStatus) {
+        switch NotificationAuthorizationState(settings.authorizationStatus) {
         case .authorized:
             completion(true)
         case .denied, .unknown:
@@ -409,8 +409,8 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
         }
     }
 
-    private func updateNotificationStatus(with settings: ReaderUserNotificationSettings) {
-        let status = ReaderNotificationStatus(settings: settings)
+    private func updateNotificationStatus(with settings: UserNotificationSettings) {
+        let status = NotificationStatus(settings: settings)
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 return

@@ -1,13 +1,13 @@
 import AppKit
 import Foundation
 
-protocol ReaderFileActionHandling {
+protocol FileActionHandling {
     func registeredApplications(for fileURL: URL) throws -> [ExternalApplication]
     func open(fileURL: URL, in application: ExternalApplication?) throws
     func revealInFinder(fileURL: URL) throws
 }
 
-final class ReaderFileActionService: ReaderFileActionHandling {
+final class FileActionService: FileActionHandling {
     private let workspace: WorkspaceControlling
 
     init(workspace: WorkspaceControlling = NSWorkspace.shared) {

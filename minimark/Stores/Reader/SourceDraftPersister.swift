@@ -14,7 +14,7 @@ final class SourceDraftPersister {
     private let renderingController: ReaderRenderingController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let securityScopeResolver: SecurityScopeResolver
-    private let fileIO: ReaderDocumentIO
+    private let fileIO: DocumentIO
     private let saveLogFormatter: SaveLogFormatter
 
     init(
@@ -24,7 +24,7 @@ final class SourceDraftPersister {
         renderingController: ReaderRenderingController,
         folderWatchDispatcher: FolderWatchDispatcher,
         securityScopeResolver: SecurityScopeResolver,
-        fileIO: ReaderDocumentIO,
+        fileIO: DocumentIO,
         saveLogFormatter: SaveLogFormatter
     ) {
         self.document = document

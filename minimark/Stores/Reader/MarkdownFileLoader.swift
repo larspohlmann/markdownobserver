@@ -3,9 +3,9 @@ import Foundation
 @MainActor
 final class MarkdownFileLoader {
     private let securityScopeResolver: SecurityScopeResolver
-    private let fileIO: ReaderDocumentIO
+    private let fileIO: DocumentIO
 
-    init(securityScopeResolver: SecurityScopeResolver, fileIO: ReaderDocumentIO) {
+    init(securityScopeResolver: SecurityScopeResolver, fileIO: DocumentIO) {
         self.securityScopeResolver = securityScopeResolver
         self.fileIO = fileIO
     }

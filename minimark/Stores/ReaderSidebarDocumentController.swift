@@ -87,15 +87,15 @@ final class ReaderSidebarDocumentController {
                 ),
                 file: FileDependencies(
                     watcher: FileChangeWatcher(),
-                    io: ReaderDocumentIOService(),
-                    actions: ReaderFileActionService()
+                    io: DocumentIOService(),
+                    actions: FileActionService()
                 ),
                 folderWatch: FolderWatchDependencies(
                     autoOpenPlanner: FolderWatchAutoOpenPlanner(
                         minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                     ),
                     settler: settler,
-                    systemNotifier: ReaderSystemNotifier.shared
+                    systemNotifier: SystemNotifier.shared
                 ),
                 settingsStore: settingsStore,
                 securityScopeResolver: securityScopeResolver
@@ -108,7 +108,7 @@ final class ReaderSidebarDocumentController {
                 folderWatcher: FolderChangeWatcher(),
                 settingsStore: settingsStore,
                 securityScope: SecurityScopedResourceAccess(),
-                systemNotifier: ReaderSystemNotifier.shared,
+                systemNotifier: SystemNotifier.shared,
                 folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner(
                     minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                 )

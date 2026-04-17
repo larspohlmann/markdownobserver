@@ -3,11 +3,11 @@ import SwiftUI
 
 struct ReaderSettingsView: View {
     private var settingsStore: ReaderSettingsStore
-    @ObservedObject private var notificationNotifier: ReaderSystemNotifier
+    @ObservedObject private var notificationNotifier: SystemNotifier
 
     init(
         settingsStore: ReaderSettingsStore,
-        notificationNotifier: ReaderSystemNotifier = .shared
+        notificationNotifier: SystemNotifier = .shared
     ) {
         self.settingsStore = settingsStore
         self.notificationNotifier = notificationNotifier
@@ -243,7 +243,7 @@ private struct SettingsSectionContainer<Content: View>: View {
 }
 
 private struct NotificationStatusCard: View {
-    let status: ReaderNotificationStatus
+    let status: NotificationStatus
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

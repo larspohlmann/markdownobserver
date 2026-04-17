@@ -623,8 +623,8 @@ final class TestReaderAutoOpenSettler: ReaderAutoOpenSettling {
     }
 }
 
-final class TestReaderDocumentIO: ReaderDocumentIO {
-    private let realIO = ReaderDocumentIOService()
+final class TestReaderDocumentIO: DocumentIO {
+    private let realIO = DocumentIOService()
 
     func load(at accessibleURL: URL) throws -> (markdown: String, modificationDate: Date) {
         try realIO.load(at: accessibleURL)
@@ -639,7 +639,7 @@ final class TestReaderDocumentIO: ReaderDocumentIO {
     }
 }
 
-final class TestReaderFileActions: ReaderFileActionHandling {
+final class TestReaderFileActions: FileActionHandling {
     func registeredApplications(for fileURL: URL) throws -> [ExternalApplication] {
         []
     }
@@ -668,7 +668,7 @@ final class TestWorkspace: WorkspaceControlling {
     func activateFileViewerSelecting(_ fileURLs: [URL]) {}
 }
 
-final class TestReaderSystemNotifier: ReaderSystemNotifying {
+final class TestReaderSystemNotifier: SystemNotifying {
     struct FileChangeNotification: Equatable {
         let fileURL: URL
         let changeKind: FolderWatchChangeKind
@@ -692,7 +692,7 @@ final class TestReaderSystemNotifier: ReaderSystemNotifying {
     }
 }
 
-final class TestNotificationTargetFocuser: ReaderNotificationTargetFocusing {
+final class TestNotificationTargetFocuser: NotificationTargetFocusing {
     private(set) var focusedTargets: [(fileURL: URL?, watchedFolderURL: URL?)] = []
     var focusResult = true
 
@@ -705,14 +705,14 @@ final class TestNotificationTargetFocuser: ReaderNotificationTargetFocusing {
     }
 }
 
-final class TestUserNotificationCenter: ReaderUserNotificationCentering {
+final class TestUserNotificationCenter: UserNotificationCentering {
     weak var delegate: UNUserNotificationCenterDelegate?
 
     private(set) var requestAuthorizationCallCount = 0
     private(set) var addedRequests: [UNNotificationRequest] = []
     private(set) var recordedEvents: [String] = []
     var authorizationRequestResult = true
-    var currentNotificationSettings = ReaderUserNotificationSettings(
+    var currentNotificationSettings = UserNotificationSettings(
         authorizationStatus: .notDetermined,
         alertSetting: .disabled,
         soundSetting: .disabled,
@@ -726,7 +726,7 @@ final class TestUserNotificationCenter: ReaderUserNotificationCentering {
         recordedEvents.append("requestAuthorization")
         requestAuthorizationCallCount += 1
         if authorizationRequestResult {
-            currentNotificationSettings = ReaderUserNotificationSettings(
+            currentNotificationSettings = UserNotificationSettings(
                 authorizationStatus: .authorized,
                 alertSetting: .enabled,
                 soundSetting: .disabled,
@@ -737,7 +737,7 @@ final class TestUserNotificationCenter: ReaderUserNotificationCentering {
     }
 
     func notificationSettings(
-        completionHandler: @escaping (ReaderUserNotificationSettings) -> Void
+        completionHandler: @escaping (UserNotificationSettings) -> Void
     ) {
         recordedEvents.append("notificationSettings")
         completionHandler(currentNotificationSettings)
@@ -879,7 +879,7 @@ struct ReaderStoreTestFixture {
         let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
         store = ReaderStore(
             rendering: RenderingDependencies(renderer: renderer, differ: differ),
-            file: FileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
+            file: FileDependencies(watcher: watcher, io: DocumentIOService(), actions: fileActions),
             folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
@@ -956,7 +956,7 @@ struct ReaderSidebarControllerTestHarness {
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
                     file: FileDependencies(
-                        watcher: fileWatcher, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                        watcher: fileWatcher, io: DocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
