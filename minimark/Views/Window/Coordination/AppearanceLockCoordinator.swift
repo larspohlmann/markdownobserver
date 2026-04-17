@@ -58,9 +58,16 @@ final class AppearanceLockCoordinator {
                 guard store.document.hasOpenDocument, !store.document.isDeferredDocument else { continue }
 
                 if document.id == sidebarDocumentController.selectedDocumentID {
-                    try? store.renderWithAppearance(appearance)
+                    try? store.renderingController.renderWithAppearance(
+                        appearance,
+                        sourceMarkdown: store.document.sourceMarkdown,
+                        changedRegions: store.document.changedRegions,
+                        unsavedChangedRegions: store.sourceEditingController.unsavedChangedRegions,
+                        fileURL: store.document.fileURL,
+                        folderWatchSession: store.folderWatchDispatcher.activeFolderWatchSession
+                    )
                 } else {
-                    store.setAppearanceOverride(appearance)
+                    store.renderingController.setAppearanceOverride(appearance)
                 }
             }
         }
@@ -74,7 +81,14 @@ final class AppearanceLockCoordinator {
               store.document.hasOpenDocument,
               !store.document.isDeferredDocument else { return }
         Task { @MainActor in
-            try? store.renderWithAppearance(appearanceController.effectiveAppearance)
+            try? store.renderingController.renderWithAppearance(
+                appearanceController.effectiveAppearance,
+                sourceMarkdown: store.document.sourceMarkdown,
+                changedRegions: store.document.changedRegions,
+                unsavedChangedRegions: store.sourceEditingController.unsavedChangedRegions,
+                fileURL: store.document.fileURL,
+                folderWatchSession: store.folderWatchDispatcher.activeFolderWatchSession
+            )
         }
     }
 }

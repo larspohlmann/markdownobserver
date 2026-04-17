@@ -17,7 +17,7 @@ struct ReaderStoreAppearanceRenderTests {
 
         #expect(!fixture.store.renderingController.needsAppearanceRender)
 
-        fixture.store.setAppearanceOverride(testAppearance)
+        fixture.store.renderingController.setAppearanceOverride(testAppearance)
 
         #expect(fixture.store.renderingController.needsAppearanceRender)
     }
@@ -28,10 +28,17 @@ struct ReaderStoreAppearanceRenderTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
 
-        fixture.store.setAppearanceOverride(testAppearance)
+        fixture.store.renderingController.setAppearanceOverride(testAppearance)
         #expect(fixture.store.renderingController.needsAppearanceRender)
 
-        try fixture.store.renderWithAppearance(testAppearance)
+        try fixture.store.renderingController.renderWithAppearance(
+            testAppearance,
+            sourceMarkdown: fixture.store.document.sourceMarkdown,
+            changedRegions: fixture.store.document.changedRegions,
+            unsavedChangedRegions: fixture.store.sourceEditingController.unsavedChangedRegions,
+            fileURL: fixture.store.document.fileURL,
+            folderWatchSession: fixture.store.folderWatchDispatcher.activeFolderWatchSession
+        )
 
         #expect(!fixture.store.renderingController.needsAppearanceRender)
     }
@@ -42,10 +49,16 @@ struct ReaderStoreAppearanceRenderTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
 
-        fixture.store.setAppearanceOverride(testAppearance)
+        fixture.store.renderingController.setAppearanceOverride(testAppearance)
         #expect(fixture.store.renderingController.needsAppearanceRender)
 
-        try fixture.store.renderCurrentMarkdownImmediately()
+        try fixture.store.renderingController.renderImmediately(
+            sourceMarkdown: fixture.store.document.sourceMarkdown,
+            changedRegions: fixture.store.document.changedRegions,
+            unsavedChangedRegions: fixture.store.sourceEditingController.unsavedChangedRegions,
+            fileURL: fixture.store.document.fileURL,
+            folderWatchSession: fixture.store.folderWatchDispatcher.activeFolderWatchSession
+        )
 
         #expect(!fixture.store.renderingController.needsAppearanceRender)
     }
