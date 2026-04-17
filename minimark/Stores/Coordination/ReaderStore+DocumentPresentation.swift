@@ -96,55 +96,12 @@ extension ReaderStore {
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String
     ) {
-        let now = Date()
-        folderWatch.settler.beginSettling(
-            folderWatch.settler.makePendingContext(
-                origin: origin,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
-                loadedMarkdown: loadedMarkdown,
-                now: now
-            )
-        )
-        if let initialDiffBaselineMarkdown {
-            _ = diffBaselineTracker.recordAndSelectBaseline(
-                markdown: initialDiffBaselineMarkdown,
-                for: normalizedURL,
-                at: now
-            )
-        }
-        document.refreshOpenInApplications()
-        recordRecentManualOpenIfNeeded(accessibleURL, origin: origin)
-        notifyAutoLoadedFileIfNeeded(
-            normalizedURL,
+        postOpenEffects.apply(
+            accessibleURL: accessibleURL,
+            normalizedURL: normalizedURL,
             origin: origin,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-        startWatchingCurrentFile()
-    }
-
-    func recordRecentManualOpenIfNeeded(_ accessibleURL: URL, origin: ReaderOpenOrigin) {
-        guard origin == .manual else {
-            return
-        }
-
-        settingsStore.addRecentManuallyOpenedFile(accessibleURL)
-    }
-
-    func notifyAutoLoadedFileIfNeeded(
-        _ normalizedURL: URL,
-        origin: ReaderOpenOrigin,
-        initialDiffBaselineMarkdown: String?
-    ) {
-        guard origin.shouldNotifyFileAutoLoaded,
-              folderWatchDispatcher.activeFolderWatchSession != nil,
-              settingsStore.currentSettings.notificationsEnabled else {
-            return
-        }
-
-        folderWatch.systemNotifier.notifyFileChanged(
-            normalizedURL,
-            changeKind: initialDiffBaselineMarkdown == nil ? .added : .modified,
-            watchedFolderURL: folderWatchDispatcher.activeFolderWatchSession?.folderURL
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown,
+            loadedMarkdown: loadedMarkdown
         )
     }
 

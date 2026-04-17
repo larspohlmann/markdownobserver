@@ -41,6 +41,7 @@ final class ReaderStore {
     let fileLoader: MarkdownFileLoader
     let saveLogFormatter: SaveLogFormatter
     let presenter: DocumentPresenter
+    let postOpenEffects: PostOpenEffects
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -106,6 +107,20 @@ final class ReaderStore {
             settler: folderWatch.settler,
             fileLoader: self.fileLoader
         )
+        self.postOpenEffects = PostOpenEffects(
+            document: self.document,
+            settingsStore: settingsStore,
+            folderWatchDispatcher: folderWatchDispatcher,
+            folderWatch: folderWatch,
+            diffBaselineTracker: self.diffBaselineTracker,
+            fileWatcher: file.watcher
+        )
+        self.postOpenEffects.onError = { [document = self.document] error in
+            document.handle(error)
+        }
+        self.postOpenEffects.onObservedFileChange = { [weak self] in
+            self?.handleObservedFileChange()
+        }
     }
 
     func activateDeferredSetupIfNeeded() {
@@ -182,20 +197,7 @@ final class ReaderStore {
     }
 
     func startWatchingCurrentFile() {
-        guard let fileURL = document.fileURL else {
-            return
-        }
-
-        do {
-            try file.watcher.startWatching(fileURL: fileURL) { [weak self] in
-                guard let self else { return }
-                Task { @MainActor [self] in
-                    self.handleObservedFileChange()
-                }
-            }
-        } catch {
-            handle(error)
-        }
+        postOpenEffects.startWatchingCurrentFile()
     }
 
 
