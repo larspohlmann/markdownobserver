@@ -92,7 +92,7 @@ extension ReaderStore {
     func handleIncomingOpenURL(
         _ url: URL,
         origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         guard url.isFileURL else {

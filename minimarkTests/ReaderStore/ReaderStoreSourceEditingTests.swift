@@ -72,8 +72,8 @@ struct ReaderStoreSourceEditingTests {
         let normalizedPrimaryFilePath = ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL).path
         let normalizedFolderPath = ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL).path
 
-        let folderOptions = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(
+        let folderOptions = FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(
             folderURL: fixture.temporaryDirectoryURL,
             options: folderOptions,
             startedAt: .now
@@ -122,8 +122,8 @@ struct ReaderStoreSourceEditingTests {
         )
         defer { fixture.cleanup() }
 
-        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(
+        let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(
             folderURL: fixture.temporaryDirectoryURL,
             options: options,
             startedAt: .now

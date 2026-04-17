@@ -164,7 +164,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         openDocumentFileURLs: [URL],
         workspaceState: ReaderFavoriteWorkspaceState
     )
@@ -188,7 +188,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 }
 
 @MainActor protocol ReaderRecentWatchedFolderWriting: AnyObject {
-    func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
+    func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions)
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
 }
@@ -394,7 +394,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
         workspaceState: ReaderFavoriteWorkspaceState = .from(
             settings: .default,
@@ -445,7 +445,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
     // MARK: - ReaderRecentWatchedFolderWriting
 
-    func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions) {
+    func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions) {
         recentWatchedFolders.addRecentWatchedFolder(folderURL, options: options)
     }
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {

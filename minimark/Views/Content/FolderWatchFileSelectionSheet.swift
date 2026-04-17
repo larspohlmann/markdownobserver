@@ -5,7 +5,7 @@ struct FolderWatchFileSelectionSheetWrapper: View {
     let onSkip: () -> Void
     let onConfirm: ([URL]) -> Void
 
-    init(request: ReaderFolderWatchFileSelectionRequest, onSkip: @escaping () -> Void, onConfirm: @escaping ([URL]) -> Void) {
+    init(request: FolderWatchFileSelectionRequest, onSkip: @escaping () -> Void, onConfirm: @escaping ([URL]) -> Void) {
         _model = StateObject(wrappedValue: FolderWatchFileSelectionModel(
             folderURL: request.folderURL,
             fileURLs: request.allFileURLs

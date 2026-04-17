@@ -4,14 +4,14 @@ import Foundation
 struct FolderWatchOpenBatch: Equatable, Sendable {
     let fileURLs: [URL]
     let initialDiffBaselineMarkdownByURL: [URL: String]
-    let folderWatchSession: ReaderFolderWatchSession?
+    let folderWatchSession: FolderWatchSession?
     let openOrigin: ReaderOpenOrigin
 }
 
 @MainActor
 final class FolderWatchOpenBatcher: ObservableObject {
-    private var queuedEvents: [ReaderFolderWatchChangeEvent] = []
-    private var queuedFolderWatchSession: ReaderFolderWatchSession?
+    private var queuedEvents: [FolderWatchChangeEvent] = []
+    private var queuedFolderWatchSession: FolderWatchSession?
     private var queuedOpenOrigin: ReaderOpenOrigin = .manual
     private var flushTask: Task<Void, Never>?
     private var flushRetryCount = 0
@@ -25,8 +25,8 @@ final class FolderWatchOpenBatcher: ObservableObject {
     }
 
     func enqueue(
-        _ event: ReaderFolderWatchChangeEvent,
-        folderWatchSession: ReaderFolderWatchSession?,
+        _ event: FolderWatchChangeEvent,
+        folderWatchSession: FolderWatchSession?,
         origin: ReaderOpenOrigin,
         onFlushRequested: @escaping @MainActor () -> Void
     ) {
@@ -97,14 +97,14 @@ final class FolderWatchOpenBatcher: ObservableObject {
     }
 
     private func mergedEvent(
-        existing: ReaderFolderWatchChangeEvent,
-        incoming: ReaderFolderWatchChangeEvent
-    ) -> ReaderFolderWatchChangeEvent {
+        existing: FolderWatchChangeEvent,
+        incoming: FolderWatchChangeEvent
+    ) -> FolderWatchChangeEvent {
         guard existing.kind == .added else {
             return incoming
         }
 
-        return ReaderFolderWatchChangeEvent(
+        return FolderWatchChangeEvent(
             fileURL: existing.fileURL,
             kind: .added,
             previousMarkdown: nil

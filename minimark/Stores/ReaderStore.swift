@@ -50,7 +50,7 @@ final class ReaderStore {
     //   set exclusively through folderWatchDispatcher.setStateCallbacks(onStarted:onStopped:)
     let diffBaselineTracker: DiffBaselineTracking
 
-    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
+    var onFolderWatchStarted: ((FolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
     var onFolderWatchStopped: (() -> Void)? { folderWatchDispatcher.onFolderWatchStopped }
 
     @ObservationIgnored private var hasActivatedDeferredSetup = false
@@ -133,7 +133,7 @@ final class ReaderStore {
         folderWatch.settler.clearSettling()
     }
 
-    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
+    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: FolderWatchSession?) {
         document.deferFile(at: url, origin: origin)
         if let folderWatchSession {
             folderWatchDispatcher.setSession(folderWatchSession)

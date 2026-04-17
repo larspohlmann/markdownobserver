@@ -11,7 +11,7 @@ struct FolderWatchOptionsViewModel {
     // MARK: - Inputs
 
     var folderURL: URL?
-    var scope: ReaderFolderWatchScope = .selectedFolderOnly
+    var scope: FolderWatchScope = .selectedFolderOnly
     var excludedSubdirectoryPaths: [String] = []
 
     /// Total subdirectory count from the completed scan, or `nil` while loading / no scan.
@@ -79,7 +79,7 @@ struct FolderWatchOptionsViewModel {
         }
 
         let activeSubdirectoryCount = max(0, subdirectoryCount - effectiveExcludedSubdirectoryCount)
-        return max(0, activeSubdirectoryCount - ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold)
+        return max(0, activeSubdirectoryCount - FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold)
     }
 
     var exceedsSupportedSubdirectoryLimit: Bool {
@@ -97,7 +97,7 @@ struct FolderWatchOptionsViewModel {
 
         guard scope == .includeSubfolders,
               let subdirectoryCount,
-              subdirectoryCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold else {
+              subdirectoryCount > FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold else {
             return false
         }
 
@@ -113,7 +113,7 @@ struct FolderWatchOptionsViewModel {
             return false
         }
 
-        return subdirectoryCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        return subdirectoryCount > FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
     }
 
     var thresholdWarningTitle: String {
@@ -136,7 +136,7 @@ struct FolderWatchOptionsViewModel {
             return "Deactivate \(remainingSubdirectoriesToDeactivateCount) more \(noun) to reach the optimization threshold."
         }
 
-        return "This exceeds the optimization threshold of \(ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold). Deactivate one or more subdirectories before starting to reduce freeze risk."
+        return "This exceeds the optimization threshold of \(FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold). Deactivate one or more subdirectories before starting to reduce freeze risk."
     }
 
     var optimizationCardTitle: String {
@@ -167,7 +167,7 @@ struct FolderWatchOptionsViewModel {
         }
 
         if requiresHardLimitRefusal {
-            return "Detected more than \(ReaderFolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount) subdirectories. To avoid long freezes, this configuration cannot be started. Choose Selected Folder instead."
+            return "Detected more than \(FolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount) subdirectories. To avoid long freezes, this configuration cannot be started. Choose Selected Folder instead."
         }
 
         return thresholdWarningVisible

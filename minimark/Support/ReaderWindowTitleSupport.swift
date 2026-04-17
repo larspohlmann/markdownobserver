@@ -59,7 +59,7 @@ struct ReaderWindowTitleFormatter {
 
     static func resolveWindowTitle(
         documentTitle: String,
-        activeFolderWatch: ReaderFolderWatchSession?,
+        activeFolderWatch: FolderWatchSession?,
         hasUnacknowledgedExternalChange: Bool
     ) -> String {
         let documentTitleWithPendingState = hasUnacknowledgedExternalChange

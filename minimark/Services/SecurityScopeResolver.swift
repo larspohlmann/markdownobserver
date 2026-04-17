@@ -38,7 +38,7 @@ final class SecurityScopeResolver {
     func effectiveAccessibleFileURL(
         for url: URL,
         reason: String,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) -> URL {
         let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
         ensureFolderWatchAccessIfNeeded(for: normalizedURL, reason: reason, folderWatchSession: folderWatchSession)
@@ -92,7 +92,7 @@ final class SecurityScopeResolver {
     func ensureFolderWatchAccessIfNeeded(
         for fileURL: URL,
         reason: String,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) {
         guard let folderWatchSession,
               watchedFolderSession(folderWatchSession, appliesTo: fileURL) else {
@@ -110,7 +110,7 @@ final class SecurityScopeResolver {
 
     func folderScopedAccessibleFileURL(
         for fileURL: URL,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) -> URL? {
         guard let folderWatchSession,
               watchedFolderSession(folderWatchSession, appliesTo: fileURL),
@@ -137,13 +137,13 @@ final class SecurityScopeResolver {
         return URL(fileURLWithPath: relativePath, relativeTo: folderToken.url).standardizedFileURL
     }
 
-    func resolvedWatchedFolderAccessURL(for session: ReaderFolderWatchSession) -> URL {
+    func resolvedWatchedFolderAccessURL(for session: FolderWatchSession) -> URL {
         settingsStore.resolvedRecentWatchedFolderURL(matching: session.folderURL) ?? session.folderURL
     }
 
     // MARK: - Folder Session Helpers
 
-    func watchedFolderSession(_ session: ReaderFolderWatchSession, appliesTo fileURL: URL) -> Bool {
+    func watchedFolderSession(_ session: FolderWatchSession, appliesTo fileURL: URL) -> Bool {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
         let normalizedWatchedFolderURL = ReaderFileRouting.normalizedFileURL(session.folderURL)
 
@@ -158,8 +158,8 @@ final class SecurityScopeResolver {
         }
     }
 
-    func normalizedFolderWatchSession(_ session: ReaderFolderWatchSession) -> ReaderFolderWatchSession {
-        ReaderFolderWatchSession(
+    func normalizedFolderWatchSession(_ session: FolderWatchSession) -> FolderWatchSession {
+        FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(session.folderURL),
             options: session.options,
             startedAt: session.startedAt
@@ -170,13 +170,13 @@ final class SecurityScopeResolver {
 
     struct ReauthorizationResult {
         let succeeded: Bool
-        let updatedSession: ReaderFolderWatchSession?
+        let updatedSession: FolderWatchSession?
     }
 
     func tryReauthorizeWatchedFolder(
         after error: Error,
         for fileURL: URL,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) -> ReauthorizationResult {
         guard isPermissionDeniedWriteError(error),
               let folderWatchSession,
@@ -208,7 +208,7 @@ final class SecurityScopeResolver {
         context.folderToken?.endAccess()
         context.folderToken = securityScope.beginAccess(to: selectedFolderURL)
 
-        let updatedSession = ReaderFolderWatchSession(
+        let updatedSession = FolderWatchSession(
             folderURL: watchedFolderURL,
             options: folderWatchSession.options,
             startedAt: folderWatchSession.startedAt
@@ -252,7 +252,7 @@ final class SecurityScopeResolver {
 
     func activateTrustedImageFolderAccessIfNeeded(
         for directoryURL: URL?,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) {
         guard let directoryURL else { return }
 
@@ -297,7 +297,7 @@ final class SecurityScopeResolver {
     private func deriveFileSecurityScopeFromFolderIfNeeded(
         for fileURL: URL,
         reason: String,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) {
         guard let folderWatchSession,
               watchedFolderSession(folderWatchSession, appliesTo: fileURL),

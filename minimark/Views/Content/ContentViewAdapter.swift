@@ -9,7 +9,7 @@ struct ContentViewAdapter: View {
     let settingsStore: ReaderSettingsStore
     let appearanceController: WindowAppearanceController
 
-    let sharedFolderWatchSession: ReaderFolderWatchSession?
+    let sharedFolderWatchSession: FolderWatchSession?
     let canStopSharedFolderWatch: Bool
     let pendingFolderWatchURL: URL?
 
@@ -17,7 +17,7 @@ struct ContentViewAdapter: View {
 
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
+    @Binding var pendingFolderWatchScope: FolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
     @State private var surfaceViewModel = DocumentSurfaceViewModel()

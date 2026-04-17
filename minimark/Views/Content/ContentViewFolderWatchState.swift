@@ -1,7 +1,7 @@
 import Foundation
 
 struct ContentViewFolderWatchState {
-    let activeFolderWatch: ReaderFolderWatchSession?
+    let activeFolderWatch: FolderWatchSession?
     let isFolderWatchInitialScanInProgress: Bool
     let isFolderWatchInitialScanFailed: Bool
     let canStopFolderWatch: Bool

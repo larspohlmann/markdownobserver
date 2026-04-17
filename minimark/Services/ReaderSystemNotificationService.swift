@@ -158,7 +158,7 @@ struct ReaderNotificationStatus: Equatable {
 protocol ReaderSystemNotifying {
     func notifyFileChanged(
         _ fileURL: URL,
-        changeKind: ReaderFolderWatchChangeKind,
+        changeKind: FolderWatchChangeKind,
         watchedFolderURL: URL?
     )
 }
@@ -169,7 +169,7 @@ private enum ReaderSystemNotificationUserInfoKey {
 }
 
 private enum ReaderSystemNotificationEvent {
-    case fileChanged(changeKind: ReaderFolderWatchChangeKind)
+    case fileChanged(changeKind: FolderWatchChangeKind)
 
     var titleText: String {
         switch self {
@@ -302,7 +302,7 @@ final class ReaderSystemNotifier: NSObject, ObservableObject, ReaderSystemNotify
 
     func notifyFileChanged(
         _ fileURL: URL,
-        changeKind: ReaderFolderWatchChangeKind,
+        changeKind: FolderWatchChangeKind,
         watchedFolderURL: URL?
     ) {
         postNotification(

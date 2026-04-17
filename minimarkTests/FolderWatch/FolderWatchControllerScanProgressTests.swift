@@ -19,7 +19,7 @@ struct FolderWatchControllerScanProgressTests {
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             performInitialAutoOpen: false
         )
 
@@ -48,7 +48,7 @@ struct FolderWatchControllerScanProgressTests {
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             performInitialAutoOpen: false
         )
 

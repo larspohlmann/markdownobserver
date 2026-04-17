@@ -1,7 +1,7 @@
 import Foundation
 
 extension ReaderStore {
-    func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
+    func handleObservedWatchedFolderChanges(_ markdownFileEvents: [FolderWatchChangeEvent]) {
         folderWatchDispatcher.handleObservedWatchedFolderChanges(
             markdownFileEvents,
             currentDocumentFileURL: fileURLForCurrentDocument
@@ -16,8 +16,8 @@ extension ReaderStore {
     }
 
     func openInitialMarkdownFilesFromWatchedFolder(
-        _ markdownFileEvents: [ReaderFolderWatchChangeEvent],
-        session: ReaderFolderWatchSession
+        _ markdownFileEvents: [FolderWatchChangeEvent],
+        session: FolderWatchSession
     ) {
         folderWatchDispatcher.openInitialMarkdownFilesFromWatchedFolder(
             markdownFileEvents,

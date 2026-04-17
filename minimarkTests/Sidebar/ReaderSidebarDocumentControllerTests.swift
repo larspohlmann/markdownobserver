@@ -16,8 +16,8 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let folderOptions = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(
+        let folderOptions = FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: folderOptions,
             startedAt: .now
@@ -85,9 +85,9 @@ struct ReaderSidebarDocumentControllerTests {
         coordinator.open(FileOpenRequest(
             fileURLs: [missingFileURL],
             origin: .folderWatchAutoOpen,
-            folderWatchSession: ReaderFolderWatchSession(
+            folderWatchSession: FolderWatchSession(
                 folderURL: harness.temporaryDirectoryURL,
-                options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
+                options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
                 startedAt: .now
             ),
             slotStrategy: .alwaysAppend
@@ -137,7 +137,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -224,7 +224,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
 
         let topLevelDocumentIDs: Set<UUID> = Set(harness.controller.documents.compactMap { document in
@@ -239,7 +239,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
         )
 
         #expect(harness.controller.folderWatchCoordinator.watchedDocumentIDs() == Set(harness.controller.documents.map(\.id)))
@@ -311,7 +311,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: directoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
         )
 
         try? await Task.sleep(for: .milliseconds(300))
@@ -332,7 +332,7 @@ struct ReaderSidebarDocumentControllerTests {
         let favoriteEntry = ReaderFavoriteWatchedFolder(
             name: "Docs",
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             openDocumentFileURLs: [
                 harness.primaryFileURL,
                 harness.secondaryFileURL,
@@ -429,7 +429,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
         #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest != nil)
@@ -449,7 +449,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             performInitialAutoOpen: false
         )
 
@@ -470,7 +470,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
 
         let autoOpenLimit = FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
@@ -481,7 +481,7 @@ struct ReaderSidebarDocumentControllerTests {
         }
 
         harness.folderWatchControllerWatcher.emitChangedMarkdownEvents(
-            fileURLs.map { ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added) }
+            fileURLs.map { FolderWatchChangeEvent(fileURL: $0, kind: .added) }
         )
 
         await Task.yield()
@@ -589,7 +589,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
         let documentIDsToClose = Set(harness.controller.documents.prefix(2).map(\.id))
@@ -619,7 +619,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
         )
 
         // The includeSubfolders path runs the scan asynchronously.
@@ -641,9 +641,9 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
             startedAt: .now
         )
 
@@ -727,7 +727,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
         #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
@@ -752,7 +752,7 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -826,7 +826,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
         #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
@@ -930,7 +930,7 @@ struct ReaderSidebarDocumentControllerTests {
             fileURLs.append(fileURL)
         }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -979,7 +979,7 @@ struct ReaderSidebarDocumentControllerTests {
             ofItemAtPath: zetaURL.path
         )
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -1032,7 +1032,7 @@ struct ReaderSidebarDocumentControllerTests {
             ofItemAtPath: betaURL.path
         )
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -1083,11 +1083,11 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
 
         harness.folderWatchControllerWatcher.emitChangedMarkdownEvents([
-            ReaderFolderWatchChangeEvent(fileURL: harness.secondaryFileURL, kind: .added)
+            FolderWatchChangeEvent(fileURL: harness.secondaryFileURL, kind: .added)
         ])
 
         await Task.yield()
@@ -1122,11 +1122,11 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
 
         harness.folderWatchControllerWatcher.emitChangedMarkdownEvents([
-            ReaderFolderWatchChangeEvent(fileURL: harness.secondaryFileURL, kind: .added)
+            FolderWatchChangeEvent(fileURL: harness.secondaryFileURL, kind: .added)
         ])
 
         let autoOpenedDoc = try #require(await waitUntil(timeout: .seconds(2)) {
@@ -1189,7 +1189,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try harness.controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: harness.temporaryDirectoryURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         )
 
         for document in harness.controller.documents {

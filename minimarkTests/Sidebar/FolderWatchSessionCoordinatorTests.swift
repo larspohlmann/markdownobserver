@@ -74,7 +74,7 @@ struct FolderWatchSessionCoordinatorTests {
         let owner = FolderWatchSessionCoordinator(makeFolderWatchController: {
             fatalError("Should not be called")
         })
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/test"),
             options: .default,
             startedAt: .now

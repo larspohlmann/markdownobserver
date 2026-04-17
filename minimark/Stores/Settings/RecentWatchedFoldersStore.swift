@@ -23,7 +23,7 @@ import Observation
         self.bookmarkRefreshing = bookmarkRefreshing
     }
 
-    func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions) {
+    func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions) {
         mutate(coalescePersistence: false) { entries in
             entries = ReaderRecentHistory.insertingUniqueWatchedFolder(
                 folderURL,

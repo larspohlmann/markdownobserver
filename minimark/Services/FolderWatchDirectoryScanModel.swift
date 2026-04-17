@@ -32,9 +32,9 @@ struct FolderWatchDirectoryNode: Identifiable, Equatable, Sendable {
 
 final class FolderWatchDirectoryScanModel: ObservableObject {
     nonisolated private enum ScanLimit {
-        static let maximumTraversalDepth = ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth
+        static let maximumTraversalDepth = FolderWatchPerformancePolicy.maximumIncludedSubfolderDepth
         static let maximumVisitedDirectories = 20_000
-        static let maximumSupportedSubdirectoryCount = ReaderFolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount
+        static let maximumSupportedSubdirectoryCount = FolderWatchPerformancePolicy.maximumSupportedSubdirectoryCount
         static let cacheableSubdirectoryThreshold = 2_000
     }
 

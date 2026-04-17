@@ -196,7 +196,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
         workspaceState: ReaderFavoriteWorkspaceState = .from(
             settings: .default,
@@ -341,7 +341,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions) {
+    func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions) {
         var next = subject.value
         next.recentWatchedFolders = ReaderRecentHistory.insertingUniqueWatchedFolder(
             folderURL,
@@ -453,7 +453,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         }
         let existing = next.favoriteWatchedFolders[index]
         let folderURL = URL(fileURLWithPath: existing.folderPath, isDirectory: true)
-        let normalizedOptions = ReaderFolderWatchOptions(
+        let normalizedOptions = FolderWatchOptions(
             openMode: existing.options.openMode,
             scope: existing.options.scope,
             excludedSubdirectoryPaths: excludedSubdirectoryPaths
@@ -492,7 +492,7 @@ final class TestSettingsKeyValueStorage: ReaderSettingsKeyValueStoring {
 }
 
 final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
-    private var onMarkdownFilesAddedOrChanged: (([ReaderFolderWatchChangeEvent]) -> Void)?
+    private var onMarkdownFilesAddedOrChanged: (([FolderWatchChangeEvent]) -> Void)?
 
     var startCallCount = 0
     var stopCallCount = 0
@@ -512,7 +512,7 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
         folderURL: URL,
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL],
-        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([ReaderFolderWatchChangeEvent]) -> Void
+        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([FolderWatchChangeEvent]) -> Void
     ) throws {
         startCallCount += 1
         lastIncludeSubfolders = includeSubfolders
@@ -544,7 +544,7 @@ final class TestFolderWatcher: FolderChangeWatching, @unchecked Sendable {
         cachedMarkdownFileURLsToReturn
     }
 
-    func emitChangedMarkdownEvents(_ events: [ReaderFolderWatchChangeEvent]) {
+    func emitChangedMarkdownEvents(_ events: [FolderWatchChangeEvent]) {
         onMarkdownFilesAddedOrChanged?(events)
     }
 }
@@ -671,7 +671,7 @@ final class TestWorkspace: WorkspaceControlling {
 final class TestReaderSystemNotifier: ReaderSystemNotifying {
     struct FileChangeNotification: Equatable {
         let fileURL: URL
-        let changeKind: ReaderFolderWatchChangeKind
+        let changeKind: FolderWatchChangeKind
         let watchedFolderURL: URL?
     }
 
@@ -679,7 +679,7 @@ final class TestReaderSystemNotifier: ReaderSystemNotifying {
 
     func notifyFileChanged(
         _ fileURL: URL,
-        changeKind: ReaderFolderWatchChangeKind,
+        changeKind: FolderWatchChangeKind,
         watchedFolderURL: URL?
     ) {
         fileChangeNotifications.append(
@@ -789,7 +789,7 @@ func makeTestApplicationBundle(
 final class TestFolderWatchControllerDelegate: FolderWatchControllerDelegate {
     var currentDocumentFileURL: URL?
     var openDocumentFileURLs: [URL] = []
-    private(set) var handledEvents: [ReaderFolderWatchChangeEvent] = []
+    private(set) var handledEvents: [FolderWatchChangeEvent] = []
     private(set) var selectNewestDocumentCallCount = 0
     private(set) var stateDidChangeCallCount = 0
 
@@ -803,8 +803,8 @@ final class TestFolderWatchControllerDelegate: FolderWatchControllerDelegate {
 
     func folderWatchController(
         _ controller: FolderWatchController,
-        handleEvents events: [ReaderFolderWatchChangeEvent],
-        in session: ReaderFolderWatchSession,
+        handleEvents events: [FolderWatchChangeEvent],
+        in session: FolderWatchSession,
         origin: ReaderOpenOrigin
     ) {
         handledEvents.append(contentsOf: events)

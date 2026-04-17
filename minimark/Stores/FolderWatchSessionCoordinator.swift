@@ -19,9 +19,9 @@ final class FolderWatchSessionCoordinator {
 
     // MARK: - State
 
-    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+    private(set) var activeFolderWatchSession: FolderWatchSession?
     private(set) var selectedFolderWatchAutoOpenWarning: FolderWatchAutoOpenWarning?
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    var pendingFileSelectionRequest: FolderWatchFileSelectionRequest?
     private(set) var isFolderWatchInitialScanInProgress: Bool
     private(set) var didFolderWatchInitialScanFail: Bool
     private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
@@ -71,7 +71,7 @@ final class FolderWatchSessionCoordinator {
 
     func startWatchingFolder(
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         performInitialAutoOpen: Bool = true
     ) throws {
         try folderWatchController.startWatching(
@@ -150,8 +150,8 @@ final class FolderWatchSessionCoordinator {
 
     func resolvedFolderWatchSession(
         for fileURL: URL,
-        requestedSession: ReaderFolderWatchSession?
-    ) -> ReaderFolderWatchSession? {
+        requestedSession: FolderWatchSession?
+    ) -> FolderWatchSession? {
         if let requestedSession {
             return requestedSession
         }
@@ -203,8 +203,8 @@ extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
 
     func folderWatchController(
         _ controller: FolderWatchController,
-        handleEvents events: [ReaderFolderWatchChangeEvent],
-        in session: ReaderFolderWatchSession,
+        handleEvents events: [FolderWatchChangeEvent],
+        in session: FolderWatchSession,
         origin: ReaderOpenOrigin
     ) {
         let diffBaselineByURL: [URL: String] = Dictionary(

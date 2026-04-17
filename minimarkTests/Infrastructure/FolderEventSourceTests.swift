@@ -19,7 +19,7 @@ struct FolderEventSourceTests {
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -51,7 +51,7 @@ struct FolderEventSourceTests {
         try "# Before".write(to: existingFileURL, atomically: true, encoding: .utf8)
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -87,7 +87,7 @@ struct FolderEventSourceTests {
         try "# Before".write(to: includedFileURL, atomically: true, encoding: .utf8)
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(
             folderURL: directoryURL,
@@ -157,7 +157,7 @@ struct FolderEventSourceTests {
         try "# Version 0".write(to: fileURL, atomically: true, encoding: .utf8)
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -195,7 +195,7 @@ struct FolderEventSourceTests {
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -227,7 +227,7 @@ struct FolderEventSourceTests {
         try "# Stable".write(to: stableFileURL, atomically: true, encoding: .utf8)
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -263,7 +263,7 @@ struct FolderEventSourceTests {
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -298,7 +298,7 @@ struct FolderEventSourceTests {
         try "# Round 1".write(to: fileURL, atomically: true, encoding: .utf8)
 
         let watcher = makeFSEventsWatcher()
-        var firstRoundEvents: [ReaderFolderWatchChangeEvent] = []
+        var firstRoundEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             firstRoundEvents.append(contentsOf: events)
@@ -320,7 +320,7 @@ struct FolderEventSourceTests {
         try "# Round 2".write(to: fileURL, atomically: true, encoding: .utf8)
         try? await Task.sleep(for: .milliseconds(200))
 
-        var secondRoundEvents: [ReaderFolderWatchChangeEvent] = []
+        var secondRoundEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             secondRoundEvents.append(contentsOf: events)
@@ -358,7 +358,7 @@ struct FolderEventSourceTests {
         try "# B".write(to: fileB, atomically: true, encoding: .utf8)
 
         let watcher = makeFSEventsWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -402,7 +402,7 @@ struct FolderEventSourceTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)

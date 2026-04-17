@@ -89,7 +89,7 @@ struct ReaderFavoriteWorkspaceStateTests {
         let favorite = ReaderFavoriteWatchedFolder(
             name: "Integration Test",
             folderPath: "/tmp/integration",
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: []
@@ -117,7 +117,7 @@ struct ReaderFavoriteWorkspaceStateTests {
     @Test @MainActor func workspaceStateUpdatePersistsAndRoundTrips() {
         let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
         let folderURL = URL(fileURLWithPath: "/tmp/roundtrip")
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .selectedFolderOnly,
             excludedSubdirectoryPaths: []
@@ -168,7 +168,7 @@ struct ReaderFavoriteWorkspaceStateTests {
         let favorite = ReaderFavoriteWatchedFolder(
             name: "Legacy",
             folderPath: "/tmp/legacy",
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly,
                 excludedSubdirectoryPaths: []

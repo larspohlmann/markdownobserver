@@ -5,7 +5,7 @@ import Observation
 @MainActor
 private struct ReaderWindowStoreCallbackConfigurator {
     let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
-    let onOpenAdditionalDocument: (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
+    let onOpenAdditionalDocument: (URL, FolderWatchSession?, ReaderOpenOrigin, String?) -> Void
 
     func configure(_ store: ReaderStore) {
         if let lockedAppearance = lockedAppearanceProvider() {
@@ -44,9 +44,9 @@ final class ReaderWindowCoordinator {
 
     private struct RegisteredWindowIdentity: Equatable {
         let windowID: ObjectIdentifier
-        let folderWatchSession: ReaderFolderWatchSession?
+        let folderWatchSession: FolderWatchSession?
 
-        init?(window: NSWindow?, folderWatchSession: ReaderFolderWatchSession?) {
+        init?(window: NSWindow?, folderWatchSession: FolderWatchSession?) {
             guard let window else { return nil }
             self.windowID = ObjectIdentifier(window)
             self.folderWatchSession = folderWatchSession
@@ -105,7 +105,7 @@ final class ReaderWindowCoordinator {
 
     func configureStoreCallbacks(
         lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil },
-        onOpenAdditionalDocument: @escaping (URL, ReaderFolderWatchSession?, ReaderOpenOrigin, String?) -> Void
+        onOpenAdditionalDocument: @escaping (URL, FolderWatchSession?, ReaderOpenOrigin, String?) -> Void
     ) {
         sidebarDocumentController.setStoreConfigurator { store in
             ReaderWindowStoreCallbackConfigurator(
@@ -115,7 +115,7 @@ final class ReaderWindowCoordinator {
         }
     }
 
-    private func resolveWindowTitle(activeFolderWatch: ReaderFolderWatchSession?) -> String {
+    private func resolveWindowTitle(activeFolderWatch: FolderWatchSession?) -> String {
         ReaderWindowTitleFormatter.resolveWindowTitle(
             documentTitle: sidebarDocumentController.selectedWindowTitle,
             activeFolderWatch: activeFolderWatch,
@@ -125,7 +125,7 @@ final class ReaderWindowCoordinator {
 
     private func registerWindow(
         _ hostWindow: NSWindow?,
-        activeFolderWatch: ReaderFolderWatchSession?
+        activeFolderWatch: FolderWatchSession?
     ) {
         ReaderWindowRegistry.shared.registerWindow(
             hostWindow,
@@ -156,8 +156,8 @@ final class ReaderWindowCoordinator {
     }
 
     func enqueueFolderWatchOpen(
-        _ event: ReaderFolderWatchChangeEvent,
-        folderWatchSession: ReaderFolderWatchSession?,
+        _ event: FolderWatchChangeEvent,
+        folderWatchSession: FolderWatchSession?,
         origin: ReaderOpenOrigin
     ) {
         folderWatchOpenCoordinator.enqueue(
@@ -172,8 +172,8 @@ final class ReaderWindowCoordinator {
     func folderWatchChangeEvent(
         for fileURL: URL,
         initialDiffBaselineMarkdown: String?
-    ) -> ReaderFolderWatchChangeEvent {
-        ReaderFolderWatchChangeEvent(
+    ) -> FolderWatchChangeEvent {
+        FolderWatchChangeEvent(
             fileURL: fileURL,
             kind: initialDiffBaselineMarkdown == nil ? .added : .modified,
             previousMarkdown: initialDiffBaselineMarkdown
@@ -456,7 +456,7 @@ final class ReaderWindowCoordinator {
     func openDocumentInSelectedSlot(
         at fileURL: URL,
         origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
@@ -476,7 +476,7 @@ final class ReaderWindowCoordinator {
 
     func openAdditionalDocument(
         _ fileURL: URL,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         origin: ReaderOpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -496,7 +496,7 @@ final class ReaderWindowCoordinator {
 
     func openAdditionalDocumentInCurrentWindow(
         _ fileURL: URL,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         origin: ReaderOpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -536,7 +536,7 @@ final class ReaderWindowCoordinator {
 
     func startWatchingFolder(
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         performInitialAutoOpen: Bool = true
     ) {
         let deactivated = folderWatchFlowController?.startWatchingFolder(
@@ -615,7 +615,7 @@ final class ReaderWindowCoordinator {
 
     // MARK: - Warning Flow
 
-    func confirmFolderWatch(_ options: ReaderFolderWatchOptions) {
+    func confirmFolderWatch(_ options: FolderWatchOptions) {
         let deactivated = folderWatchFlowController?.confirmFolderWatch(options) ?? false
         if deactivated {
             sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth

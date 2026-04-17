@@ -18,7 +18,7 @@ struct FolderWatchDispatcherTests {
     @Test("setSession updates activeFolderWatchSession")
     func setSessionUpdatesSession() {
         let sut = makeSUT()
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/test"),
             options: .default,
             startedAt: Date()
@@ -38,7 +38,7 @@ struct FolderWatchDispatcherTests {
     func isWatchingFolderReflectsSession() {
         let sut = makeSUT()
         #expect(!sut.isWatchingFolder)
-        sut.setSession(ReaderFolderWatchSession(
+        sut.setSession(FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/test"),
             options: .default,
             startedAt: Date()

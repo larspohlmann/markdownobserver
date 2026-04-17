@@ -43,8 +43,8 @@ struct ReaderStoreSecurityScopeFlowTests {
 
         let resolver = fixture.store.securityScopeResolver
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
 
         fixture.settings.addRecentWatchedFolder(folderURL, options: options)
         fixture.store.folderWatchDispatcher.setSession(session)
@@ -97,8 +97,8 @@ struct ReaderStoreSecurityScopeFlowTests {
 
         let resolver = fixture.store.securityScopeResolver
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
 
         resolver.context.folderToken = fixture.securityScope.beginAccess(to: folderURL)
 
@@ -118,8 +118,8 @@ struct ReaderStoreSecurityScopeFlowTests {
 
         let resolver = fixture.store.securityScopeResolver
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
 
         let directChild = folderURL.appendingPathComponent("file.md")
         let subfolderChild = folderURL.appendingPathComponent("sub/file.md")
@@ -134,8 +134,8 @@ struct ReaderStoreSecurityScopeFlowTests {
 
         let resolver = fixture.store.securityScopeResolver
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
 
         let subfolderChild = folderURL.appendingPathComponent("sub/nested/file.md")
 

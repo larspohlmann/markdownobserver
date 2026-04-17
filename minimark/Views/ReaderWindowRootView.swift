@@ -54,7 +54,7 @@ struct ReaderWindowRootView: View {
     private var pendingFolderWatchOpenModeBinding: Binding<FolderWatchOpenMode> {
         Binding(
             get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.openMode ?? ReaderFolderWatchOptions.default.openMode
+                folderWatchFlowController.pendingFolderWatchRequest?.options.openMode ?? FolderWatchOptions.default.openMode
             },
             set: { [folderWatchFlowController] newValue in
                 folderWatchFlowController.updatePendingRequest { request in
@@ -64,10 +64,10 @@ struct ReaderWindowRootView: View {
         )
     }
 
-    private var pendingFolderWatchScopeBinding: Binding<ReaderFolderWatchScope> {
+    private var pendingFolderWatchScopeBinding: Binding<FolderWatchScope> {
         Binding(
             get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.scope ?? ReaderFolderWatchOptions.default.scope
+                folderWatchFlowController.pendingFolderWatchRequest?.options.scope ?? FolderWatchOptions.default.scope
             },
             set: { [folderWatchFlowController] newValue in
                 folderWatchFlowController.updatePendingRequest { request in

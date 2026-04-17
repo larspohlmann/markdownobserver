@@ -4,10 +4,10 @@ import SwiftUI
 struct FolderWatchOptionsSheet: View {
     let folderURL: URL?
     @Binding var openMode: FolderWatchOpenMode
-    @Binding var scope: ReaderFolderWatchScope
+    @Binding var scope: FolderWatchScope
     @Binding var excludedSubdirectoryPaths: [String]
     let onCancel: () -> Void
-    let onConfirm: (ReaderFolderWatchOptions) -> Void
+    let onConfirm: (FolderWatchOptions) -> Void
 
     @StateObject private var directoryScanModel = FolderWatchDirectoryScanModel()
     @State private var viewModel = FolderWatchOptionsViewModel()
@@ -116,7 +116,7 @@ struct FolderWatchOptionsSheet: View {
         )
     }
 
-    private var scopeSelectionBinding: Binding<ReaderFolderWatchScope> {
+    private var scopeSelectionBinding: Binding<FolderWatchScope> {
         Binding(
             get: {
                 scope
@@ -226,9 +226,9 @@ struct FolderWatchOptionsSheet: View {
 
                     Picker("Folder scope", selection: scopeSelectionBinding) {
                         Text("Selected Folder")
-                            .tag(ReaderFolderWatchScope.selectedFolderOnly)
+                            .tag(FolderWatchScope.selectedFolderOnly)
                         Text("Include Subfolders")
-                            .tag(ReaderFolderWatchScope.includeSubfolders)
+                            .tag(FolderWatchScope.includeSubfolders)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -376,7 +376,7 @@ struct FolderWatchOptionsSheet: View {
         }
         .onChange(of: directoryScanModel.summary?.subdirectoryCount) { _, newCount in
             syncViewModel()
-            guard let newCount, newCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
+            guard let newCount, newCount > FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
                   ProcessInfo.processInfo.environment[
                       ReaderUITestLaunchConfiguration.screenshotOpenExclusionEnvironmentKey
                   ] == "true" else { return }
@@ -412,7 +412,7 @@ struct FolderWatchOptionsSheet: View {
         }
         .sheet(isPresented: $isLargeTreeDialogPresented) {
             LargeFolderExclusionDialog(
-                threshold: ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
+                threshold: FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
                 scanModel: directoryScanModel,
                 expandedDirectoryPaths: $expandedDirectoryPaths,
                 excludedSubdirectoryPaths: Binding(
@@ -446,7 +446,7 @@ struct FolderWatchOptionsSheet: View {
         }
 
         onConfirm(
-            ReaderFolderWatchOptions(
+            FolderWatchOptions(
                 openMode: openMode,
                 scope: scope,
                 excludedSubdirectoryPaths: normalizedExcludedSubdirectoryPaths
@@ -725,7 +725,7 @@ private struct LargeFolderExclusionDialog: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Label("Depth limit: \(ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels", systemImage: "arrow.down.to.line.compact")
+                    Label("Depth limit: \(FolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels", systemImage: "arrow.down.to.line.compact")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.orange)
                         .padding(.horizontal, 8)

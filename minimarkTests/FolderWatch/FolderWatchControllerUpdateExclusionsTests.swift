@@ -8,7 +8,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
 
     @Test func updateExclusionsRestartsWatcherWithNewPaths() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
-        let initialOptions = ReaderFolderWatchOptions(
+        let initialOptions = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: ["/tmp/test-folder/excluded"]
@@ -68,7 +68,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
 
     @Test func updateExclusionsSkipsRestartWhenUnchanged() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: ["/tmp/test-folder/excluded"]

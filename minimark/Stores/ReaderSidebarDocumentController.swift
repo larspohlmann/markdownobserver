@@ -294,8 +294,8 @@ extension ReaderSidebarDocumentController: FolderWatchSessionCoordinatorDelegate
 extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {
     func resolvedFolderWatchSession(
         for fileURL: URL,
-        requestedSession: ReaderFolderWatchSession?
-    ) -> ReaderFolderWatchSession? {
+        requestedSession: FolderWatchSession?
+    ) -> FolderWatchSession? {
         folderWatchCoordinator.resolvedFolderWatchSession(
             for: fileURL,
             requestedSession: requestedSession

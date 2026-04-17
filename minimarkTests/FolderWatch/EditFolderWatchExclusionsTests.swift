@@ -20,7 +20,7 @@ struct EditFolderWatchExclusionsTests {
             storageKey: "reader.settings.edit-excl-bookmark.\(UUID().uuidString)"
         )
 
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: []
@@ -65,7 +65,7 @@ struct EditFolderWatchExclusionsTests {
         store.addFavoriteWatchedFolder(
             name: "Test",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: exclusions
@@ -94,7 +94,7 @@ struct EditFolderWatchExclusionsTests {
         store.addFavoriteWatchedFolder(
             name: "Test",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders
             )
@@ -120,7 +120,7 @@ struct EditFolderWatchExclusionsTests {
         store.addFavoriteWatchedFolder(
             name: "Test",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders
             )
@@ -200,7 +200,7 @@ struct EditFolderWatchExclusionsTests {
         let coordinator = FileOpenCoordinator(controller: controller)
         try controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: tempDir,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly
             ),
@@ -234,7 +234,7 @@ struct EditFolderWatchExclusionsTests {
     @Test func updateExclusionsPreservesSessionProperties() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        let initialOptions = ReaderFolderWatchOptions(
+        let initialOptions = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: [normalizedFolderURL.path + "/excluded"]

@@ -9,7 +9,7 @@ struct ReaderSidebarDeferredLoadingTests {
         defer { harness.cleanup() }
 
         let store = harness.controller.documents[0].readerStore
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -30,7 +30,7 @@ struct ReaderSidebarDeferredLoadingTests {
         defer { harness.cleanup() }
 
         let store = harness.controller.documents[0].readerStore
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -55,7 +55,7 @@ struct ReaderSidebarDeferredLoadingTests {
 
         let store = harness.controller.documents[0].readerStore
         let missingURL = harness.temporaryDirectoryURL.appendingPathComponent("gone.md")
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -71,7 +71,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -120,7 +120,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -156,7 +156,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -184,7 +184,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -216,7 +216,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -247,7 +247,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -296,7 +296,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -338,7 +338,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -381,7 +381,7 @@ struct ReaderSidebarDeferredLoadingTests {
         defer { harness.cleanup() }
 
         let store = harness.controller.documents[0].readerStore
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -402,7 +402,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now
@@ -440,7 +440,7 @@ struct ReaderSidebarDeferredLoadingTests {
         defer { harness.cleanup() }
 
         let store = harness.controller.documents[0].readerStore
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
             startedAt: .now

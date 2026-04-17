@@ -4,7 +4,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
     let id: UUID
     var name: String
     let folderPath: String
-    let options: ReaderFolderWatchOptions
+    let options: FolderWatchOptions
     let bookmarkData: Data?
     let openDocumentRelativePaths: [String]
     let allKnownRelativePaths: [String]
@@ -40,7 +40,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         id: UUID = UUID(),
         name: String,
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
         allKnownRelativePaths: [String] = [],
         workspaceState: ReaderFavoriteWorkspaceState = .from(
@@ -78,7 +78,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         id: UUID = UUID(),
         name: String,
         folderPath: String,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         bookmarkData: Data?,
         openDocumentRelativePaths: [String] = [],
         allKnownRelativePaths: [String] = [],
@@ -113,7 +113,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         folderPath = try container.decode(String.self, forKey: .folderPath)
-        options = try container.decode(ReaderFolderWatchOptions.self, forKey: .options)
+        options = try container.decode(FolderWatchOptions.self, forKey: .options)
         bookmarkData = try container.decodeIfPresent(Data.self, forKey: .bookmarkData)
 
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(
@@ -174,7 +174,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
 
     func resolvedOpenDocumentFileURLs(
         relativeTo folderURL: URL,
-        options overrideOptions: ReaderFolderWatchOptions? = nil
+        options overrideOptions: FolderWatchOptions? = nil
     ) -> [URL] {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         let effectiveOptions = overrideOptions ?? options
@@ -199,7 +199,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
     static func scopedOpenDocumentRelativePaths(
         from fileURLs: [URL],
         relativeTo folderURL: URL,
-        options: ReaderFolderWatchOptions
+        options: FolderWatchOptions
     ) -> [String] {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         let folderPath = normalizedFolderURL.path
@@ -232,7 +232,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
     private static func scopedOpenDocumentRelativePaths(
         fromRelativePaths relativePaths: [String],
         relativeTo folderURL: URL,
-        options: ReaderFolderWatchOptions
+        options: FolderWatchOptions
     ) -> [String] {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         let candidateURLs = relativePaths.compactMap { path -> URL? in
@@ -256,7 +256,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
 
     private static func fileURLIsInScope(
         _ fileURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         folderPath: String,
         folderPathWithSlash: String,
         excludedPathSet: Set<String>
@@ -283,7 +283,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
 
     private static func excludedPathSet(
         relativeTo folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         folderPathWithSlash: String
     ) -> Set<String> {
         guard options.scope == .includeSubfolders else {
@@ -314,7 +314,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         }.sorted()
     }
 
-    func matches(folderPath: String, options: ReaderFolderWatchOptions) -> Bool {
+    func matches(folderPath: String, options: FolderWatchOptions) -> Bool {
         self.folderPath == folderPath && self.options == options
     }
 }
@@ -323,7 +323,7 @@ nonisolated enum ReaderFavoriteHistory {
     static func insertingUniqueFavorite(
         name: String,
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
         workspaceState: ReaderFavoriteWorkspaceState = .from(
             settings: .default,

@@ -13,7 +13,7 @@ struct SidebarScanProgressView: View {
         }
     }
 
-    private func footerContent(session: ReaderFolderWatchSession) -> some View {
+    private func footerContent(session: FolderWatchSession) -> some View {
         HStack(spacing: 6) {
             if let progress = controller.folderWatchCoordinator.contentScanProgress, !progress.isFinished {
                 ProgressView(value: Double(progress.completed), total: max(Double(progress.total), 1))

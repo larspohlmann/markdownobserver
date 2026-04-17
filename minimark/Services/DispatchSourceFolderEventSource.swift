@@ -28,7 +28,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         pollingInterval: DispatchTimeInterval = .seconds(1),
         fallbackPollingInterval: DispatchTimeInterval = .seconds(3),
         recursiveEventSourceSafetyPollingInterval: DispatchTimeInterval = .seconds(
-            ReaderFolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
+            FolderWatchPerformancePolicy.recursiveEventSourceSafetyPollingIntervalSeconds
         ),
         maximumDirectoryEventSourceCount: Int = 128
     ) {

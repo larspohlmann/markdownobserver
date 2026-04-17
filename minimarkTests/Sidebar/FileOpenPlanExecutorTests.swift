@@ -38,8 +38,8 @@ struct FileOpenPlanExecutorTests {
 
         func resolvedFolderWatchSession(
             for fileURL: URL,
-            requestedSession: ReaderFolderWatchSession?
-        ) -> ReaderFolderWatchSession? {
+            requestedSession: FolderWatchSession?
+        ) -> FolderWatchSession? {
             requestedSession
         }
     }

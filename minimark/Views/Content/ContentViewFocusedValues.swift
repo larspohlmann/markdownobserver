@@ -10,7 +10,7 @@ struct ContentViewFocusedValues: ViewModifier {
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
+    @Binding var pendingFolderWatchScope: FolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
     private func openOrAppendDocument(_ fileURL: URL) {

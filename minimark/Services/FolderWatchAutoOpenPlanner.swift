@@ -1,20 +1,20 @@
 import Foundation
 
 struct FolderWatchAutoOpenPlan: Equatable, Sendable {
-    let autoOpenEvents: [ReaderFolderWatchChangeEvent]
+    let autoOpenEvents: [FolderWatchChangeEvent]
     let warning: FolderWatchAutoOpenWarning?
 }
 
 protocol FolderWatchAutoOpenPlanning: AnyObject {
     func initialPlan(
-        for events: [ReaderFolderWatchChangeEvent],
-        activeSession: ReaderFolderWatchSession?,
+        for events: [FolderWatchChangeEvent],
+        activeSession: FolderWatchSession?,
         currentDocumentFileURL: URL?
     ) -> FolderWatchAutoOpenPlan
 
     func livePlan(
-        for events: [ReaderFolderWatchChangeEvent],
-        activeSession: ReaderFolderWatchSession?,
+        for events: [FolderWatchChangeEvent],
+        activeSession: FolderWatchSession?,
         currentDocumentFileURL: URL?
     ) -> FolderWatchAutoOpenPlan
 
@@ -35,8 +35,8 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
     }
 
     func initialPlan(
-        for events: [ReaderFolderWatchChangeEvent],
-        activeSession: ReaderFolderWatchSession?,
+        for events: [FolderWatchChangeEvent],
+        activeSession: FolderWatchSession?,
         currentDocumentFileURL: URL?
     ) -> FolderWatchAutoOpenPlan {
         let eligibleEvents = eligibleEvents(
@@ -70,9 +70,9 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
     }
 
     func liveOpenEvents(
-        for events: [ReaderFolderWatchChangeEvent],
+        for events: [FolderWatchChangeEvent],
         currentDocumentFileURL: URL?
-    ) -> [ReaderFolderWatchChangeEvent] {
+    ) -> [FolderWatchChangeEvent] {
         livePlan(
             for: events,
             activeSession: nil,
@@ -81,8 +81,8 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
     }
 
     func livePlan(
-        for events: [ReaderFolderWatchChangeEvent],
-        activeSession: ReaderFolderWatchSession?,
+        for events: [FolderWatchChangeEvent],
+        activeSession: FolderWatchSession?,
         currentDocumentFileURL: URL?
     ) -> FolderWatchAutoOpenPlan {
         let eligible = eligibleEvents(from: events, currentDocumentFileURL: currentDocumentFileURL)
@@ -122,12 +122,12 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
     }
 
     private func eligibleEvents(
-        from events: [ReaderFolderWatchChangeEvent],
+        from events: [FolderWatchChangeEvent],
         currentDocumentFileURL: URL?
-    ) -> [ReaderFolderWatchChangeEvent] {
+    ) -> [FolderWatchChangeEvent] {
         events
             .map {
-                ReaderFolderWatchChangeEvent(
+                FolderWatchChangeEvent(
                     fileURL: ReaderFileRouting.normalizedFileURL($0.fileURL),
                     kind: $0.kind,
                     previousMarkdown: $0.previousMarkdown
@@ -144,9 +144,9 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
     }
 
     private func eventsWithAgedDiffBaselines(
-        from events: [ReaderFolderWatchChangeEvent],
+        from events: [FolderWatchChangeEvent],
         now: Date
-    ) -> [ReaderFolderWatchChangeEvent] {
+    ) -> [FolderWatchChangeEvent] {
         events.map { event in
             guard event.kind == .modified, let previousMarkdown = event.previousMarkdown else {
                 return event
@@ -158,7 +158,7 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
                 for: fileURL,
                 at: now
             )
-            return ReaderFolderWatchChangeEvent(
+            return FolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .modified,
                 previousMarkdown: baseline

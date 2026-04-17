@@ -12,7 +12,7 @@ enum FolderWatchToolbarAction {
 }
 
 struct FolderWatchToolbarButton: View {
-    let activeFolderWatch: ReaderFolderWatchSession?
+    let activeFolderWatch: FolderWatchSession?
     let isInitialScanInProgress: Bool
     let didInitialScanFail: Bool
     let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]

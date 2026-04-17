@@ -27,7 +27,7 @@ final class FolderWatchController {
 
     weak var delegate: FolderWatchControllerDelegate?
 
-    private(set) var activeFolderWatchSession: ReaderFolderWatchSession? {
+    private(set) var activeFolderWatchSession: FolderWatchSession? {
         didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
@@ -55,7 +55,7 @@ final class FolderWatchController {
         didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest? {
+    var pendingFileSelectionRequest: FolderWatchFileSelectionRequest? {
         didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
@@ -79,7 +79,7 @@ final class FolderWatchController {
 
     func startWatching(
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         performInitialAutoOpen: Bool = true
     ) throws {
         stopWatching()
@@ -111,7 +111,7 @@ final class FolderWatchController {
                 }
             }
 
-            let session = ReaderFolderWatchSession(
+            let session = FolderWatchSession(
                 folderURL: normalizedFolderURL,
                 options: options,
                 startedAt: .now
@@ -203,7 +203,7 @@ final class FolderWatchController {
             throw FolderWatchUpdateError.noActiveWatch
         }
 
-        let updatedOptions = ReaderFolderWatchOptions(
+        let updatedOptions = FolderWatchOptions(
             openMode: session.options.openMode,
             scope: session.options.scope,
             excludedSubdirectoryPaths: paths
@@ -238,7 +238,7 @@ final class FolderWatchController {
         )
     }
 
-    func watchApplies(normalizedFileURL: URL, toNormalizedFolderAt normalizedFolderURL: URL, scope: ReaderFolderWatchScope) -> Bool {
+    func watchApplies(normalizedFileURL: URL, toNormalizedFolderAt normalizedFolderURL: URL, scope: FolderWatchScope) -> Bool {
         switch scope {
         case .selectedFolderOnly:
             return normalizedFileURL.deletingLastPathComponent().path == normalizedFolderURL.path
@@ -288,7 +288,7 @@ final class FolderWatchController {
         }
     }
 
-    private func handleObservedWatchedFolderChanges(_ markdownFileEvents: [ReaderFolderWatchChangeEvent]) {
+    private func handleObservedWatchedFolderChanges(_ markdownFileEvents: [FolderWatchChangeEvent]) {
         guard let session = activeFolderWatchSession else {
             return
         }
@@ -308,8 +308,8 @@ final class FolderWatchController {
     }
 
     private func eventsExcludingOpenDocuments(
-        _ events: [ReaderFolderWatchChangeEvent]
-    ) -> [ReaderFolderWatchChangeEvent] {
+        _ events: [FolderWatchChangeEvent]
+    ) -> [FolderWatchChangeEvent] {
         let openDocumentURLs = Set((delegate?.folderWatchControllerOpenDocumentFileURLs(self) ?? []).map {
             ReaderFileRouting.normalizedFileURL($0)
         })
@@ -324,8 +324,8 @@ final class FolderWatchController {
     }
 
     private func dispatchOpenEvents(
-        _ events: [ReaderFolderWatchChangeEvent],
-        session: ReaderFolderWatchSession,
+        _ events: [FolderWatchChangeEvent],
+        session: FolderWatchSession,
         origin: ReaderOpenOrigin
     ) {
         guard !events.isEmpty else {
@@ -346,7 +346,7 @@ final class FolderWatchController {
     }
 
     private func loadInitialMarkdownFilesOffMainActor(
-        for session: ReaderFolderWatchSession,
+        for session: FolderWatchSession,
         folderURL: URL,
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
@@ -386,7 +386,7 @@ final class FolderWatchController {
         }
     }
 
-    private func applyInitialAutoOpenMarkdownScanFailure(for session: ReaderFolderWatchSession) {
+    private func applyInitialAutoOpenMarkdownScanFailure(for session: FolderWatchSession) {
         guard activeFolderWatchSession == session else {
             return
         }
@@ -397,14 +397,14 @@ final class FolderWatchController {
 
     private func applyInitialAutoOpenMarkdownURLs(
         _ markdownURLs: [URL],
-        for session: ReaderFolderWatchSession
+        for session: FolderWatchSession
     ) {
         guard activeFolderWatchSession == session else {
             return
         }
 
         if markdownURLs.count > FolderWatchAutoOpenPolicy.performanceWarningFileCount {
-            pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
+            pendingFileSelectionRequest = FolderWatchFileSelectionRequest(
                 folderURL: session.folderURL,
                 session: session,
                 allFileURLs: markdownURLs
@@ -435,14 +435,14 @@ final class FolderWatchController {
 
         if !deferURLs.isEmpty {
             let deferEvents = deferURLs.map {
-                ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+                FolderWatchChangeEvent(fileURL: $0, kind: .added)
             }
             dispatchOpenEvents(deferEvents, session: session, origin: .folderWatchInitialBatchAutoOpen)
         }
 
         if !loadURLs.isEmpty {
             let loadEvents = loadURLs.map {
-                ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added)
+                FolderWatchChangeEvent(fileURL: $0, kind: .added)
             }
             dispatchOpenEvents(loadEvents, session: session, origin: .folderWatchAutoOpen)
         }
