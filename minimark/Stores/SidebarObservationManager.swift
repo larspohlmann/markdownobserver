@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 
 @MainActor
 final class SidebarObservationManager {
@@ -44,7 +43,7 @@ final class SidebarObservationManager {
                 let store = document.documentStore
                 defer { store.externalChange.onStateChanged = nil }
                 while !Task.isCancelled {
-                    let cancelled = await Self.awaitObservationChange {
+                    let cancelled = await ObservationAsyncChange.next {
                         _ = store.document.fileDisplayName
                         _ = store.document.fileLastModifiedAt
                         _ = store.externalChange.lastExternalChangeAt
@@ -70,7 +69,7 @@ final class SidebarObservationManager {
         selectedStoreObservationTask?.cancel()
         selectedStoreObservationTask = Task { [weak self] in
             while !Task.isCancelled {
-                let cancelled = await Self.awaitObservationChange {
+                let cancelled = await ObservationAsyncChange.next {
                     _ = store.document.windowTitle
                     _ = store.document.fileURL
                     _ = store.externalChange.hasUnacknowledgedExternalChange
@@ -80,49 +79,6 @@ final class SidebarObservationManager {
                       self.selectedStoreBindingGeneration == generation else { break }
                 onChange()
             }
-        }
-    }
-
-    // MARK: - Observation helpers
-
-    private static func awaitObservationChange(
-        tracking: @escaping @MainActor () -> Void
-    ) async -> Bool {
-        let box = ObservationContinuationBox()
-        return await withTaskCancellationHandler {
-            await withUnsafeContinuation { continuation in
-                box.store(continuation)
-                if Task.isCancelled {
-                    box.resume(returning: true)
-                    return
-                }
-                withObservationTracking {
-                    tracking()
-                } onChange: {
-                    box.resume(returning: false)
-                }
-            }
-        } onCancel: {
-            box.resume(returning: true)
-        }
-    }
-
-    private final class ObservationContinuationBox: @unchecked Sendable {
-        private nonisolated(unsafe) var continuation: UnsafeContinuation<Bool, Never>?
-        private nonisolated let lock = NSLock()
-
-        nonisolated func store(_ continuation: UnsafeContinuation<Bool, Never>) {
-            lock.lock()
-            self.continuation = continuation
-            lock.unlock()
-        }
-
-        nonisolated func resume(returning value: Bool) {
-            lock.lock()
-            let c = continuation
-            continuation = nil
-            lock.unlock()
-            c?.resume(returning: value)
         }
     }
 }
