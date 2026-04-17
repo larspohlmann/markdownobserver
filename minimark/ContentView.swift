@@ -44,10 +44,12 @@ struct ContentView: View {
     private var mainStack: some View {
         VStack(spacing: 0) {
             ContentStatusBanner(
-                isCurrentFileMissing: document.isCurrentFileMissing,
-                fileDisplayName: document.fileDisplayName,
-                errorMessage: document.lastError?.message,
-                needsImageDirectoryAccess: rendering.needsImageDirectoryAccess,
+                state: DocumentStatusBannerState(
+                    isCurrentFileMissing: document.isCurrentFileMissing,
+                    fileDisplayName: document.fileDisplayName,
+                    errorMessage: document.lastError?.message,
+                    needsImageDirectoryAccess: rendering.needsImageDirectoryAccess
+                ),
                 topPadding: viewModel.overlayLayout.statusBannerTopPadding,
                 onGrantImageAccess: viewModel.promptForImageDirectoryAccess
             )
