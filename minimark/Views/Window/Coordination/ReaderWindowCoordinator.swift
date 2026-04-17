@@ -27,7 +27,7 @@ private struct ReaderWindowStoreCallbackConfigurator {
 final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
-    private let folderWatchOpenCoordinator = ReaderFolderWatchOpenCoordinator()
+    private let folderWatchOpenCoordinator = FolderWatchOpenBatcher()
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state

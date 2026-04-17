@@ -291,7 +291,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchOpenCoordinatorDeduplicatesAndBuildsLatestBatch() {
-        let coordinator = ReaderFolderWatchOpenCoordinator()
+        let coordinator = FolderWatchOpenBatcher()
         let watchSession = ReaderFolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -330,7 +330,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchOpenCoordinatorPreservesAddedSemanticsWhenModifiedArrivesBeforeFlush() {
-        let coordinator = ReaderFolderWatchOpenCoordinator()
+        let coordinator = FolderWatchOpenBatcher()
         let watchSession = ReaderFolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),

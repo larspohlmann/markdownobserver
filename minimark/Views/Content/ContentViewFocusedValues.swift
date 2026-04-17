@@ -9,7 +9,7 @@ struct ContentViewFocusedValues: ViewModifier {
     let canNavigateChangedRegions: Bool
     let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
-    @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
+    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
     @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 

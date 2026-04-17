@@ -3,7 +3,7 @@ import SwiftUI
 
 struct FolderWatchOptionsSheet: View {
     let folderURL: URL?
-    @Binding var openMode: ReaderFolderWatchOpenMode
+    @Binding var openMode: FolderWatchOpenMode
     @Binding var scope: ReaderFolderWatchScope
     @Binding var excludedSubdirectoryPaths: [String]
     let onCancel: () -> Void
@@ -105,7 +105,7 @@ struct FolderWatchOptionsSheet: View {
         scope == .includeSubfolders
     }
 
-    private var openModeSelectionBinding: Binding<ReaderFolderWatchOpenMode> {
+    private var openModeSelectionBinding: Binding<FolderWatchOpenMode> {
         Binding(
             get: {
                 openMode
@@ -205,9 +205,9 @@ struct FolderWatchOptionsSheet: View {
 
                     Picker("Watch start mode", selection: openModeSelectionBinding) {
                         Text("Open Existing")
-                            .tag(ReaderFolderWatchOpenMode.openAllMarkdownFiles)
+                            .tag(FolderWatchOpenMode.openAllMarkdownFiles)
                         Text("Watch Only")
-                            .tag(ReaderFolderWatchOpenMode.watchChangesOnly)
+                            .tag(FolderWatchOpenMode.watchChangesOnly)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()

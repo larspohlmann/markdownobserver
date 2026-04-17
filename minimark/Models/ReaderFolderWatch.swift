@@ -13,7 +13,7 @@ nonisolated enum ReaderFolderWatchPerformancePolicy {
     static let recursiveEventSourceSafetyPollingIntervalSeconds = 5
 }
 
-nonisolated enum ReaderFolderWatchOpenMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
+nonisolated enum FolderWatchOpenMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case openAllMarkdownFiles
     case watchChangesOnly
 
@@ -46,7 +46,7 @@ nonisolated enum ReaderFolderWatchScope: String, CaseIterable, Identifiable, Has
 }
 
 nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Sendable {
-    var openMode: ReaderFolderWatchOpenMode
+    var openMode: FolderWatchOpenMode
     var scope: ReaderFolderWatchScope
     var excludedSubdirectoryPaths: [String]
 
@@ -57,7 +57,7 @@ nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Senda
     )
 
     init(
-        openMode: ReaderFolderWatchOpenMode,
+        openMode: FolderWatchOpenMode,
         scope: ReaderFolderWatchScope,
         excludedSubdirectoryPaths: [String] = []
     ) {
@@ -74,7 +74,7 @@ nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Senda
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        openMode = try container.decode(ReaderFolderWatchOpenMode.self, forKey: .openMode)
+        openMode = try container.decode(FolderWatchOpenMode.self, forKey: .openMode)
         scope = try container.decode(ReaderFolderWatchScope.self, forKey: .scope)
         excludedSubdirectoryPaths = try container.decodeIfPresent([String].self, forKey: .excludedSubdirectoryPaths) ?? []
     }

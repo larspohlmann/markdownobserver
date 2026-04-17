@@ -51,7 +51,7 @@ struct ReaderWindowRootView: View {
         return effectiveMode.sidebarPlacement
     }
 
-    private var pendingFolderWatchOpenModeBinding: Binding<ReaderFolderWatchOpenMode> {
+    private var pendingFolderWatchOpenModeBinding: Binding<FolderWatchOpenMode> {
         Binding(
             get: { [folderWatchFlowController] in
                 folderWatchFlowController.pendingFolderWatchRequest?.options.openMode ?? ReaderFolderWatchOptions.default.openMode

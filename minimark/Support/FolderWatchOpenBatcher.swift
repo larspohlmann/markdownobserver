@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-struct ReaderFolderWatchOpenBatch: Equatable, Sendable {
+struct FolderWatchOpenBatch: Equatable, Sendable {
     let fileURLs: [URL]
     let initialDiffBaselineMarkdownByURL: [URL: String]
     let folderWatchSession: ReaderFolderWatchSession?
@@ -9,7 +9,7 @@ struct ReaderFolderWatchOpenBatch: Equatable, Sendable {
 }
 
 @MainActor
-final class ReaderFolderWatchOpenCoordinator: ObservableObject {
+final class FolderWatchOpenBatcher: ObservableObject {
     private var queuedEvents: [ReaderFolderWatchChangeEvent] = []
     private var queuedFolderWatchSession: ReaderFolderWatchSession?
     private var queuedOpenOrigin: ReaderOpenOrigin = .manual
@@ -48,7 +48,7 @@ final class ReaderFolderWatchOpenCoordinator: ObservableObject {
     func consumeBatchIfPossible(
         canFlushImmediately: Bool,
         onFlushRequested: @escaping @MainActor () -> Void
-    ) -> ReaderFolderWatchOpenBatch? {
+    ) -> FolderWatchOpenBatch? {
         guard !queuedEvents.isEmpty else {
             flushTask = nil
             return nil
@@ -65,7 +65,7 @@ final class ReaderFolderWatchOpenCoordinator: ObservableObject {
         }
 
         let queuedEvents = queuedEvents
-        let batch = ReaderFolderWatchOpenBatch(
+        let batch = FolderWatchOpenBatch(
             fileURLs: queuedEvents.map(\.fileURL),
             initialDiffBaselineMarkdownByURL: queuedEvents.reduce(into: [:]) { result, event in
                 guard let previousMarkdown = event.previousMarkdown else {
