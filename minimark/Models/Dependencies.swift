@@ -7,12 +7,12 @@ struct RenderingDependencies {
 
 struct FileDependencies {
     let watcher: FileChangeWatching
-    let io: ReaderDocumentIO
-    let actions: ReaderFileActionHandling
+    let io: DocumentIO
+    let actions: FileActionHandling
 }
 
 struct FolderWatchDependencies {
     let autoOpenPlanner: FolderWatchAutoOpenPlanning
     let settler: ReaderAutoOpenSettling
-    let systemNotifier: ReaderSystemNotifying
+    let systemNotifier: SystemNotifying
 }

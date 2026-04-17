@@ -18,7 +18,7 @@ final class FolderWatchController {
     private let folderWatcher: FolderChangeWatching
     private let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     private let securityScope: SecurityScopedResourceAccessing
-    private let systemNotifier: ReaderSystemNotifying
+    private let systemNotifier: SystemNotifying
     private let folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning
 
     private var folderSecurityScopeToken: SecurityScopedAccessToken?
@@ -63,7 +63,7 @@ final class FolderWatchController {
         folderWatcher: FolderChangeWatching,
         settingsStore: ReaderSettingsReading & ReaderRecentWriting,
         securityScope: SecurityScopedResourceAccessing,
-        systemNotifier: ReaderSystemNotifying,
+        systemNotifier: SystemNotifying,
         folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning
     ) {
         self.folderWatcher = folderWatcher

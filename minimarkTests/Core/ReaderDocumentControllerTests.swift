@@ -6,9 +6,9 @@ import Foundation
 @Suite("ReaderDocumentController")
 struct ReaderDocumentControllerTests {
     private func makeSUT(
-        io: ReaderDocumentIO = ReaderDocumentIOService(),
+        io: DocumentIO = DocumentIOService(),
         watcher: FileChangeWatching = TestFileWatcher(),
-        fileActions: ReaderFileActionHandling = TestReaderFileActions()
+        fileActions: FileActionHandling = TestReaderFileActions()
     ) -> ReaderDocumentController {
         let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
         return ReaderDocumentController(

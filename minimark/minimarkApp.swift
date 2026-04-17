@@ -11,7 +11,7 @@ struct MarkdownObserverApp: App {
         _settingsStore = State(wrappedValue: settingsStore)
         ReaderUITestWindowBootstrapper.shared.configure(settingsStore: settingsStore)
 
-        ReaderSystemNotifier.shared.configure()
+        SystemNotifier.shared.configure()
 
         NSWindow.allowsAutomaticWindowTabbing = false
         applyAppAppearanceIfAvailable(settingsStore.currentSettings.appAppearance)
@@ -66,7 +66,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        ReaderSystemNotifier.shared.refreshNotificationStatus()
+        SystemNotifier.shared.refreshNotificationStatus()
     }
 }
 

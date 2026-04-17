@@ -175,7 +175,7 @@ struct EditFolderWatchExclusionsTests {
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
                     file: FileDependencies(
-                        watcher: fw, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                        watcher: fw, io: DocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),

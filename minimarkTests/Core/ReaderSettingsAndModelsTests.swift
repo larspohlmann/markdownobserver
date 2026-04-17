@@ -647,7 +647,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSystemNotifierConfigureDoesNotRequestAuthorization() {
         let notificationCenter = TestUserNotificationCenter()
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
 
         notifier.configure()
 
@@ -657,13 +657,13 @@ struct ReaderSettingsAndModelsTests {
 
     @Test @MainActor func readerSystemNotifierConfigureRefreshesNotificationStatus() async {
         let notificationCenter = TestUserNotificationCenter()
-        notificationCenter.currentNotificationSettings = ReaderUserNotificationSettings(
+        notificationCenter.currentNotificationSettings = UserNotificationSettings(
             authorizationStatus: .denied,
             alertSetting: .disabled,
             soundSetting: .disabled,
             notificationCenterSetting: .enabled
         )
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
 
         notifier.configure()
 
@@ -676,7 +676,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSystemNotifierRequestsAuthorizationBeforePostingFirstNotification() throws {
         let notificationCenter = TestUserNotificationCenter()
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
         let fileURL = watchedFolderURL.appendingPathComponent("roadmap.md")
 
@@ -705,7 +705,7 @@ struct ReaderSettingsAndModelsTests {
     @Test func readerSystemNotifierRoutesNotificationClicksToTargetFocuser() {
         let notificationCenter = TestUserNotificationCenter()
         let focuser = TestNotificationTargetFocuser()
-        let notifier = ReaderSystemNotifier(
+        let notifier = SystemNotifier(
             notificationCenter: notificationCenter,
             notificationTargetFocuser: focuser
         )
@@ -722,13 +722,13 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSystemNotifierSchedulesDelayedTestNotification() throws {
         let notificationCenter = TestUserNotificationCenter()
-        notificationCenter.currentNotificationSettings = ReaderUserNotificationSettings(
+        notificationCenter.currentNotificationSettings = UserNotificationSettings(
             authorizationStatus: .authorized,
             alertSetting: .enabled,
             soundSetting: .disabled,
             notificationCenterSetting: .enabled
         )
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
 
         notifier.sendTestNotification()
 
@@ -741,7 +741,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSystemNotifierPostsAddedNotificationWithCorrectContent() throws {
         let notificationCenter = TestUserNotificationCenter()
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
         let fileURL = watchedFolderURL.appendingPathComponent("new-file.md")
 
@@ -760,7 +760,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSystemNotifierPostsModifiedNotificationWithCorrectContent() throws {
         let notificationCenter = TestUserNotificationCenter()
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
         let fileURL = watchedFolderURL.appendingPathComponent("edited.md")
 
@@ -779,7 +779,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSystemNotifierPostsDeletedNotificationWithCorrectContent() throws {
         let notificationCenter = TestUserNotificationCenter()
-        let notifier = ReaderSystemNotifier(notificationCenter: notificationCenter)
+        let notifier = SystemNotifier(notificationCenter: notificationCenter)
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
         let fileURL = watchedFolderURL.appendingPathComponent("removed.md")
 
