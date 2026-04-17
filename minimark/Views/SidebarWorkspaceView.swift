@@ -9,8 +9,8 @@ enum SidebarWorkspaceMetrics {
 }
 
 struct SidebarWorkspaceView<Detail: View>: View {
-    @Environment(SidebarDocumentController.self) private var controller
     @Environment(SettingsStore.self) private var settingsStore
+    @Environment(SidebarDocumentController.self) private var controller
     @Environment(SidebarGroupStateController.self) private var groupState
     let sidebarPlacement: MultiFileDisplayMode.SidebarPlacement
     let sidebarWidth: CGFloat
@@ -697,9 +697,9 @@ private struct SidebarGroupDropIndicator: View {
 }
 
 private struct SidebarGroupListContent: View {
-    @Environment(SidebarGroupStateController.self) private var groupState
-    @Environment(SidebarDocumentController.self) private var controller
     @Environment(SettingsStore.self) private var settingsStore
+    @Environment(SidebarDocumentController.self) private var controller
+    @Environment(SidebarGroupStateController.self) private var groupState
     @Binding var selectedDocumentIDs: Set<UUID>
     let watchedDocumentIDs: Set<UUID>
     let onUpdateSelection: (Set<UUID>) -> Void
