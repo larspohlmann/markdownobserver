@@ -193,7 +193,7 @@ struct FolderWatchOptionsSheet: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
-            .accessibilityIdentifier("folder-watch-summary-card")
+            .accessibilityIdentifier(.folderWatchSummaryCard)
 
             // MARK: Option rows
             VStack(spacing: 0) {
@@ -325,7 +325,7 @@ struct FolderWatchOptionsSheet: View {
                 Button("Cancel") {
                     onCancel()
                 }
-                .accessibilityIdentifier("folder-watch-cancel-button")
+                .accessibilityIdentifier(.folderWatchCancelButton)
                 .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
@@ -338,7 +338,7 @@ struct FolderWatchOptionsSheet: View {
                         Text("Start Watching")
                     }
                 }
-                .accessibilityIdentifier("folder-watch-start-button")
+                .accessibilityIdentifier(.folderWatchStartButton)
                 .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
                 .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
@@ -349,7 +349,7 @@ struct FolderWatchOptionsSheet: View {
         .padding(24)
         .frame(width: Metrics.width)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("folder-watch-sheet")
+        .accessibilityIdentifier(.folderWatchSheet)
         .onAppear {
             syncViewModel()
             scheduleDirectoryScanRefresh()
@@ -629,7 +629,7 @@ struct FolderWatchLargeTreeWarningCard: View {
                     } label: {
                         Label("Choose subdirectories to deactivate", systemImage: "line.3.horizontal.decrease.circle")
                     }
-                    .accessibilityIdentifier("folder-watch-choose-subdirectories-button")
+                    .accessibilityIdentifier(.folderWatchChooseSubdirectoriesButton)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
@@ -856,7 +856,7 @@ private struct LargeFolderExclusionDialog: View {
                 Button("Start Watching") {
                     onConfirm()
                 }
-                .accessibilityIdentifier("folder-watch-dialog-start-button")
+                .accessibilityIdentifier(.folderWatchDialogStartButton)
                 .buttonStyle(
                     FolderWatchPrimaryActionButtonStyle(
                         tint: remainingToDeactivateCount == 0 ? .accentColor : .orange

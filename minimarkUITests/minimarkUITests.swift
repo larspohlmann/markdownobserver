@@ -7,10 +7,10 @@
 import XCTest
 
 final class minimarkUITests: XCTestCase {
-    private let watchFolderSheetIdentifier = "folder-watch-sheet"
-    private let cancelButtonIdentifier = "folder-watch-cancel-button"
-    private let startButtonIdentifier = "folder-watch-start-button"
-    private let previewSummaryIdentifier = "reader-preview-summary"
+    private let watchFolderSheetIdentifier = ReaderAccessibilityID.folderWatchSheet.rawValue
+    private let cancelButtonIdentifier = ReaderAccessibilityID.folderWatchCancelButton.rawValue
+    private let startButtonIdentifier = ReaderAccessibilityID.folderWatchStartButton.rawValue
+    private let previewSummaryIdentifier = ReaderAccessibilityID.readerPreviewSummary.rawValue
     private let uiTestModeArgument = "-minimark-ui-test"
     private let presentWatchFolderSheetArgument = "-minimark-present-watch-folder-sheet"
     private let autoStartWatchFolderArgument = "-minimark-auto-start-watch-folder"
@@ -20,7 +20,9 @@ final class minimarkUITests: XCTestCase {
     private let reviewExclusionsButtonTitle = "Choose subdirectories to deactivate"
     private let deactivateAllButtonTitle = "Deactivate All"
     private let startWatchingAnywayButtonTitle = "Start Watching Anyway"
-    private let dialogStartButtonIdentifier = "folder-watch-dialog-start-button"
+    private let dialogStartButtonIdentifier = ReaderAccessibilityID.folderWatchDialogStartButton.rawValue
+    private let sidebarGroupToggleIdentifier = ReaderAccessibilityID.sidebarGroupToggle.rawValue
+    private let sidebarColumnIdentifier = ReaderAccessibilityID.sidebarColumn.rawValue
     private let simulateGroupedSidebarArgument = "-minimark-simulate-grouped-sidebar"
 
     override func setUpWithError() throws {
@@ -73,14 +75,14 @@ final class minimarkUITests: XCTestCase {
 
         let preview = app.descendants(matching: .any).matching(identifier: previewSummaryIdentifier).firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
-        waitForElement(preview, valueContaining: "file=auto-open.md", timeout: 8)
+        waitForPreviewSummary(preview, matching: { $0.fileName == "auto-open.md" }, timeout: 8)
 
-        waitForElement(preview, valueNotContaining: "regions=0", timeout: 12)
-        waitForElement(preview, valueContaining: "file=auto-open.md", timeout: 8)
+        waitForPreviewSummary(preview, matching: { $0.regionCount > 0 }, timeout: 12)
+        waitForPreviewSummary(preview, matching: { $0.fileName == "auto-open.md" }, timeout: 8)
 
-        let previewValue = preview.value as? String
-        XCTAssertNotNil(previewValue)
-        XCTAssertFalse(previewValue?.contains("regions=0") ?? true)
+        let parsed = currentPreviewSummary(preview)
+        XCTAssertNotNil(parsed)
+        XCTAssertGreaterThan(parsed?.regionCount ?? 0, 0)
     }
 
     @MainActor
@@ -116,7 +118,7 @@ final class minimarkUITests: XCTestCase {
 
         let preview = app.descendants(matching: .any).matching(identifier: previewSummaryIdentifier).firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
-        waitForElement(preview, valueContaining: "file=none", timeout: 3)
+        waitForPreviewSummary(preview, matching: { $0.fileName == "none" }, timeout: 3)
     }
 
     @MainActor
@@ -188,7 +190,7 @@ final class minimarkUITests: XCTestCase {
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
 
-        let groupToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
+        let groupToggles = app.buttons.matching(identifier: sidebarGroupToggleIdentifier)
         waitForCondition(timeout: 8) {
             groupToggles.count >= 3
         }
@@ -196,7 +198,8 @@ final class minimarkUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(groupToggles.count, 3, "Should have at least 3 folder groups")
 
         let groupPredicate = NSPredicate(
-            format: "identifier == 'sidebar-group-toggle' AND (value CONTAINS[c] 'project' OR value CONTAINS[c] 'docs' OR value CONTAINS[c] 'plans')"
+            format: "identifier == %@ AND (value CONTAINS[c] 'project' OR value CONTAINS[c] 'docs' OR value CONTAINS[c] 'plans')",
+            sidebarGroupToggleIdentifier
         )
         let groupHeaders = app.buttons.matching(groupPredicate)
         XCTAssertGreaterThanOrEqual(groupHeaders.count, 2, "Should show disambiguated folder group headers")
@@ -218,7 +221,7 @@ final class minimarkUITests: XCTestCase {
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
 
-        let customToggle = app.buttons.matching(identifier: "sidebar-group-toggle").firstMatch
+        let customToggle = app.buttons.matching(identifier: sidebarGroupToggleIdentifier).firstMatch
         XCTAssertTrue(customToggle.waitForExistence(timeout: 8), "Grouped sidebar should expose custom group toggle buttons")
     }
 
@@ -233,7 +236,7 @@ final class minimarkUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertTrue(window.waitForExistence(timeout: 10), "Window should appear")
 
-        let groupToggles = app.buttons.matching(identifier: "sidebar-group-toggle")
+        let groupToggles = app.buttons.matching(identifier: sidebarGroupToggleIdentifier)
         waitForCondition(timeout: 10) {
             groupToggles.count >= 3
         }
@@ -266,7 +269,7 @@ final class minimarkUITests: XCTestCase {
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
         app.launch()
 
-        let sidebar = app.scrollViews.matching(identifier: "sidebar-column").firstMatch
+        let sidebar = app.scrollViews.matching(identifier: sidebarColumnIdentifier).firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 8), "Sidebar should appear")
 
         waitForCondition(timeout: 8) {
@@ -328,16 +331,26 @@ final class minimarkUITests: XCTestCase {
         return directoryURL
     }
 
-    private func waitForElement(_ element: XCUIElement, valueContaining substring: String, timeout: TimeInterval) {
-        let predicate = NSPredicate(format: "value CONTAINS %@", substring)
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout), .completed)
+    private func currentPreviewSummary(_ element: XCUIElement) -> ReaderPreviewAccessibilitySummary? {
+        guard let raw = element.value as? String else { return nil }
+        return ReaderPreviewAccessibilitySummary(rawValue: raw)
     }
 
-    private func waitForElement(_ element: XCUIElement, valueNotContaining substring: String, timeout: TimeInterval) {
-        let predicate = NSPredicate(format: "NOT (value CONTAINS %@)", substring)
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout), .completed)
+    private func waitForPreviewSummary(
+        _ element: XCUIElement,
+        matching predicate: @escaping (ReaderPreviewAccessibilitySummary) -> Bool,
+        timeout: TimeInterval
+    ) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let summary = currentPreviewSummary(element), predicate(summary) {
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        XCTFail(
+            "Preview summary did not match within \(timeout)s (last value: \(String(describing: element.value)))"
+        )
     }
 
     private func waitForCondition(timeout: TimeInterval, condition: @escaping () -> Bool) {

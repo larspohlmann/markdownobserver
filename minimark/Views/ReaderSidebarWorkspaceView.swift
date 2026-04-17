@@ -478,7 +478,7 @@ private struct ReaderSidebarDocumentRow: View {
         )
         .animation(.easeInOut(duration: 0.15), value: isSelected)
         .padding(.vertical, 2)
-        .accessibilityIdentifier("sidebar-document-\(title)")
+        .accessibilityIdentifier(ReaderAccessibilityID.sidebarDocument(title: title))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
@@ -787,7 +787,7 @@ private struct SidebarGroupListContent: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
         }
-        .accessibilityIdentifier("sidebar-column")
+        .accessibilityIdentifier(.sidebarColumn)
     }
 
     private func groupedSection(
@@ -1050,7 +1050,7 @@ private struct SidebarPinnableGroupHeader: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityIdentifier("sidebar-group-toggle")
+        .accessibilityIdentifier(.sidebarGroupToggle)
         .accessibilityLabel(isExpanded ? "Collapse group" : "Expand group")
         .accessibilityValue(groupDisplayName)
     }

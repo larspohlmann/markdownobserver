@@ -117,9 +117,16 @@ final class ContentAreaViewModel {
             && (sourceEditing.documentViewMode != .preview || sourceEditing.isSourceEditing)
     }
 
+    var previewAccessibilitySummary: ReaderPreviewAccessibilitySummary {
+        ReaderPreviewAccessibilitySummary(
+            fileName: document.fileURL?.lastPathComponent ?? "none",
+            regionCount: document.changedRegions.count,
+            mode: sourceEditing.documentViewMode
+        )
+    }
+
     var previewAccessibilityValue: String {
-        let fileName = document.fileURL?.lastPathComponent ?? "none"
-        return "file=\(fileName)|regions=\(document.changedRegions.count)|mode=\(sourceEditing.documentViewMode.rawValue)|surface=preview"
+        previewAccessibilitySummary.description
     }
 
     var isUITestModeEnabled: Bool {
