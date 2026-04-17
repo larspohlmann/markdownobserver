@@ -319,7 +319,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
     }
 }
 
-nonisolated enum ReaderFavoriteHistory {
+nonisolated enum FavoriteHistory {
     static func insertingUniqueFavorite(
         name: String,
         folderURL: URL,

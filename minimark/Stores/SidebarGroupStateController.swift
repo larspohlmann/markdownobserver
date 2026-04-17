@@ -178,7 +178,7 @@ final class SidebarGroupStateController {
         pinnedGroupIDs: Set<String>
     ) {
         let sortedDocuments = fileSortMode.sorted(documents) { document in
-            ReaderSidebarSortDescriptor(
+            SidebarSortDescriptor(
                 displayName: document.documentStore.document.fileDisplayName,
                 lastChangedAt: document.documentStore.document.fileLastModifiedAt
                     ?? document.documentStore.externalChange.lastExternalChangeAt

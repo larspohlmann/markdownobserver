@@ -6,7 +6,7 @@ import Testing
 struct WindowFolderWatchOpenControllerTests {
 
     @Test @MainActor func enqueueAddsPendingEvent() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let controller = WindowFolderWatchOpenController(
@@ -28,7 +28,7 @@ struct WindowFolderWatchOpenControllerTests {
     }
 
     @Test @MainActor func flushWithoutHostWindowKeepsPendingEvents() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         var afterFlushCallCount = 0
@@ -55,7 +55,7 @@ struct WindowFolderWatchOpenControllerTests {
     }
 
     @Test @MainActor func flushWithHostWindowConsumesBatchAndInvokesAfterFlush() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         var isAttached = false

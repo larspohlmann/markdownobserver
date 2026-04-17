@@ -9,7 +9,7 @@ struct MarkdownObserverApp: App {
     init() {
         let settingsStore = SettingsStore()
         _settingsStore = State(wrappedValue: settingsStore)
-        ReaderUITestWindowBootstrapper.shared.configure(settingsStore: settingsStore)
+        UITestWindowBootstrapper.shared.configure(settingsStore: settingsStore)
 
         SystemNotifier.shared.configure()
 
@@ -58,7 +58,7 @@ struct MarkdownObserverApp: App {
 
 private final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        ReaderUITestWindowBootstrapper.shared.openInitialWindowIfNeeded()
+        UITestWindowBootstrapper.shared.openInitialWindowIfNeeded()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -71,8 +71,8 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @MainActor
-private final class ReaderUITestWindowBootstrapper {
-    static let shared = ReaderUITestWindowBootstrapper()
+private final class UITestWindowBootstrapper {
+    static let shared = UITestWindowBootstrapper()
 
     private var settingsStore: SettingsStore?
     private var windowController: HostedWindowController?

@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class SourceEditingController {
-    var documentViewMode: ReaderDocumentViewMode = .preview
+    var documentViewMode: DocumentViewMode = .preview
     var isSourceEditing: Bool = false
     var hasUnsavedDraftChanges: Bool = false
     var draftMarkdown: String?
@@ -83,7 +83,7 @@ final class SourceEditingController {
 
     // MARK: - View mode
 
-    func setViewMode(_ mode: ReaderDocumentViewMode, hasOpenDocument: Bool) {
+    func setViewMode(_ mode: DocumentViewMode, hasOpenDocument: Bool) {
         guard hasOpenDocument else {
             documentViewMode = .preview
             return

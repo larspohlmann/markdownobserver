@@ -8,9 +8,9 @@ struct WindowShellControllerTests {
     @MainActor
     private func makeShell(
         folderWatchSession: FolderWatchSession? = nil
-    ) throws -> (WindowShellController, ReaderSidebarControllerTestHarness) {
+    ) throws -> (WindowShellController, SidebarControllerTestHarness) {
         WindowRegistry.shared.resetForTesting()
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         let shell = WindowShellController(
             sidebarDocumentController: harness.controller,
             folderWatchSessionProvider: { folderWatchSession }

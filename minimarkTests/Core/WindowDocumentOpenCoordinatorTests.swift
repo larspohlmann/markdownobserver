@@ -11,9 +11,9 @@ struct WindowDocumentOpenCoordinatorTests {
         onAfterTitle: @escaping () -> Void = {},
         onAfterRefresh: @escaping () -> Void = {},
         onPrepareRecentFolderWatch: @escaping (URL, FolderWatchOptions) -> Void = { _, _ in }
-    ) throws -> (WindowDocumentOpenCoordinator, WindowFolderWatchOpenController, ReaderSidebarControllerTestHarness) {
+    ) throws -> (WindowDocumentOpenCoordinator, WindowFolderWatchOpenController, SidebarControllerTestHarness) {
         WindowRegistry.shared.resetForTesting()
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         let folderWatchOpen = WindowFolderWatchOpenController(
             fileOpenCoordinator: harness.controller.fileOpenCoordinator,
             isHostWindowAttached: { false },
