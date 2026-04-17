@@ -38,6 +38,8 @@ final class ReaderStore {
     let folderWatch: FolderWatchDependencies
     let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     let securityScopeResolver: SecurityScopeResolver
+    let fileLoader: MarkdownFileLoader
+    let saveLogFormatter: SaveLogFormatter
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -68,7 +70,8 @@ final class ReaderStore {
             settingsStore: settingsStore,
             settler: folderWatch.settler
         )
-        self.folderWatchDispatcher = FolderWatchDispatcher(folderWatchDependencies: folderWatch)
+        let folderWatchDispatcher = FolderWatchDispatcher(folderWatchDependencies: folderWatch)
+        self.folderWatchDispatcher = folderWatchDispatcher
         self.rendering = rendering
         self.renderingController = ReaderRenderingController(
             renderingDependencies: rendering,
@@ -81,6 +84,16 @@ final class ReaderStore {
         self.securityScopeResolver = securityScopeResolver
         self.diffBaselineTracker = diffBaselineTracker ?? DiffBaselineTracker(
             minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
+        )
+        self.fileLoader = MarkdownFileLoader(
+            securityScopeResolver: securityScopeResolver,
+            fileIO: file.io
+        )
+        self.saveLogFormatter = SaveLogFormatter(
+            securityScopeResolver: securityScopeResolver,
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            folderWatchDispatcher: folderWatchDispatcher
         )
     }
 

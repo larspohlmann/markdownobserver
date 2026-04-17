@@ -123,40 +123,27 @@ extension ReaderStore {
     }
 
     func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
-        let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
-            for: url, reason: "read", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
+        try fileLoader.load(
+            at: url,
+            folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
         )
-        return try file.io.load(at: accessibleURL)
     }
 
     // MARK: - Logging
 
     func saveLogContext(for url: URL?) -> String {
-        let filePath = redactedPathText(for: url)
-        let watchedFolderPath = redactedPathText(for: folderWatchDispatcher.activeFolderWatchSession?.folderURL)
-        let ctx = securityScopeResolver.context
-        let fileScopeURL = redactedPathText(for: ctx.fileToken?.url)
-        let folderScopeURL = redactedPathText(for: ctx.folderToken?.url)
-        let accessibleFilePath = redactedPathText(for: ctx.accessibleFileURL)
-        return "file=\(filePath) origin=\(document.currentOpenOrigin.rawValue) editing=\(sourceEditingController.isSourceEditing) unsaved=\(sourceEditingController.hasUnsavedDraftChanges) fileScope=\(ctx.fileToken != nil) fileScopeStarted=\(ctx.fileToken?.didStartAccess == true) fileScopeURL=\(fileScopeURL) folderScope=\(ctx.folderToken != nil) folderScopeStarted=\(ctx.folderToken?.didStartAccess == true) folderScopeURL=\(folderScopeURL) accessibleFileURL=\(accessibleFilePath) watchedFolder=\(watchedFolderPath)"
+        saveLogFormatter.saveContext(for: url)
     }
 
     func redactedPathText(for url: URL?) -> String {
-        guard let url else {
-            return "none"
-        }
-
-        let normalizedURL = Self.normalizedFileURL(url)
-        let name = normalizedURL.lastPathComponent.isEmpty ? "root" : normalizedURL.lastPathComponent
-        let pathHash = String(normalizedURL.path.hashValue.magnitude, radix: 16)
-        return "\(name)#\(pathHash)"
+        saveLogFormatter.redactedPath(for: url)
     }
 
     func logSaveInfo(_ message: String) {
-        Self.logger.info("\(message, privacy: .public)")
+        saveLogFormatter.logInfo(message)
     }
 
     func logSaveError(_ message: String) {
-        Self.logger.error("\(message, privacy: .public)")
+        saveLogFormatter.logError(message)
     }
 }
