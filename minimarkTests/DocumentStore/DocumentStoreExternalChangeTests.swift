@@ -46,7 +46,7 @@ struct DocumentStoreExternalChangeTests {
         fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
-            TestReaderSystemNotifier.FileChangeNotification(
+            TestSystemNotifier.FileChangeNotification(
                 fileURL: FileRouting.normalizedFileURL(fixture.primaryFileURL),
                 changeKind: .modified,
                 watchedFolderURL: nil
@@ -63,7 +63,7 @@ struct DocumentStoreExternalChangeTests {
         fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
-            TestReaderSystemNotifier.FileChangeNotification(
+            TestSystemNotifier.FileChangeNotification(
                 fileURL: FileRouting.normalizedFileURL(fixture.primaryFileURL),
                 changeKind: .deleted,
                 watchedFolderURL: nil
@@ -83,7 +83,7 @@ struct DocumentStoreExternalChangeTests {
         fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         #expect(fixture.notifier.fileChangeNotifications == [
-            TestReaderSystemNotifier.FileChangeNotification(
+            TestSystemNotifier.FileChangeNotification(
                 fileURL: FileRouting.normalizedFileURL(fixture.primaryFileURL),
                 changeKind: .added,
                 watchedFolderURL: FileRouting.normalizedFileURL(folderURL)
@@ -107,7 +107,7 @@ struct DocumentStoreExternalChangeTests {
         )
 
         #expect(fixture.notifier.fileChangeNotifications == [
-            TestReaderSystemNotifier.FileChangeNotification(
+            TestSystemNotifier.FileChangeNotification(
                 fileURL: FileRouting.normalizedFileURL(fixture.primaryFileURL),
                 changeKind: .modified,
                 watchedFolderURL: FileRouting.normalizedFileURL(folderURL)
@@ -128,7 +128,7 @@ struct DocumentStoreExternalChangeTests {
         fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
-            TestReaderSystemNotifier.FileChangeNotification(
+            TestSystemNotifier.FileChangeNotification(
                 fileURL: FileRouting.normalizedFileURL(fixture.primaryFileURL),
                 changeKind: .modified,
                 watchedFolderURL: FileRouting.normalizedFileURL(folderURL)

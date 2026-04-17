@@ -175,12 +175,12 @@ struct EditFolderWatchExclusionsTests {
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
                     file: FileDependencies(
-                        watcher: fw, io: DocumentIOService(), actions: TestReaderFileActions()
+                        watcher: fw, io: DocumentIOService(), actions: TestFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: AutoOpenSettler(settlingInterval: 1.0),
-                        systemNotifier: TestReaderSystemNotifier()
+                        systemNotifier: TestSystemNotifier()
                     ),
                     settingsStore: settingsStore,
                     securityScopeResolver: securityScopeResolver
@@ -191,7 +191,7 @@ struct EditFolderWatchExclusionsTests {
                     folderWatcher: controllerWatcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    systemNotifier: TestReaderSystemNotifier(),
+                    systemNotifier: TestSystemNotifier(),
                     folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
@@ -249,7 +249,7 @@ struct EditFolderWatchExclusionsTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 

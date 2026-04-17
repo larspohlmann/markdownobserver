@@ -5,7 +5,7 @@ import Testing
 @Suite
 struct FavoriteWorkspaceControllerTests {
     @MainActor private func makeController() -> FavoriteWorkspaceController {
-        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let store = TestSettingsStore(autoRefreshOnExternalChange: false)
         return FavoriteWorkspaceController(settingsStore: store)
     }
 
@@ -119,7 +119,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func persistFinalStateWritesToSettingsStore() {
-        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let store = TestSettingsStore(autoRefreshOnExternalChange: false)
         let controller = FavoriteWorkspaceController(settingsStore: store)
         store.addFavoriteWatchedFolder(name: "Persist", folderURL: URL(fileURLWithPath: "/tmp/persist"), options: .default)
         let favoriteID = store.currentSettings.favoriteWatchedFolders.first!.id
@@ -136,7 +136,7 @@ struct FavoriteWorkspaceControllerTests {
     }
 
     @Test @MainActor func persistFinalStateIsNoOpWhenInactive() {
-        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let store = TestSettingsStore(autoRefreshOnExternalChange: false)
         let controller = FavoriteWorkspaceController(settingsStore: store)
         store.addFavoriteWatchedFolder(name: "NoOp", folderURL: URL(fileURLWithPath: "/tmp/no-persist"), options: .default)
         controller.persistFinalState(to: store)

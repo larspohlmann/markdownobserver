@@ -43,12 +43,12 @@ struct DocumentCloseCoordinatorTests {
                 renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
             ),
             file: FileDependencies(
-                watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestReaderFileActions()
+                watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestFileActions()
             ),
             folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
-                systemNotifier: TestReaderSystemNotifier()
+                systemNotifier: TestSystemNotifier()
             ),
             settingsStore: settingsStore,
             securityScopeResolver: securityScopeResolver

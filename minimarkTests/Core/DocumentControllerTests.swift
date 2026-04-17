@@ -8,9 +8,9 @@ struct DocumentControllerTests {
     private func makeSUT(
         io: DocumentIO = DocumentIOService(),
         watcher: FileChangeWatching = TestFileWatcher(),
-        fileActions: FileActionHandling = TestReaderFileActions()
+        fileActions: FileActionHandling = TestFileActions()
     ) -> DocumentController {
-        let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
+        let settings = TestSettingsStore(autoRefreshOnExternalChange: true)
         return DocumentController(
             fileDependencies: FileDependencies(watcher: watcher, io: io, actions: fileActions),
             settingsStore: settings,

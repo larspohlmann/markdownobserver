@@ -24,7 +24,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
@@ -57,7 +57,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
@@ -83,7 +83,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 

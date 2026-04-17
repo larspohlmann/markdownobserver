@@ -54,7 +54,7 @@ struct FolderWatchSessionCoordinatorTests {
                 folderWatcher: TestFolderWatcher(),
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
-                systemNotifier: TestReaderSystemNotifier(),
+                systemNotifier: TestSystemNotifier(),
                 folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
             )
         })
@@ -131,7 +131,7 @@ struct FolderWatchSessionCoordinatorTests {
                 folderWatcher: TestFolderWatcher(),
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
-                systemNotifier: TestReaderSystemNotifier(),
+                systemNotifier: TestSystemNotifier(),
                 folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
             )
         })

@@ -273,12 +273,12 @@ struct SidebarDocumentControllerTests {
                             renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                         ),
                         file: FileDependencies(
-                            watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestReaderFileActions()
+                            watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestFileActions()
                         ),
                         folderWatch: FolderWatchDependencies(
                             autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                             settler: settler,
-                            systemNotifier: TestReaderSystemNotifier()
+                            systemNotifier: TestSystemNotifier()
                         ),
                         settingsStore: settingsStore,
                         securityScopeResolver: securityScopeResolver
@@ -298,7 +298,7 @@ struct SidebarDocumentControllerTests {
                     ),
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    systemNotifier: TestReaderSystemNotifier(),
+                    systemNotifier: TestSystemNotifier(),
                     folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
@@ -1269,12 +1269,12 @@ struct SidebarDocumentControllerTests {
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
                     file: FileDependencies(
-                        watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestReaderFileActions()
+                        watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
-                        systemNotifier: TestReaderSystemNotifier()
+                        systemNotifier: TestSystemNotifier()
                     ),
                     settingsStore: settingsStore,
                     securityScopeResolver: securityScopeResolver
@@ -1286,7 +1286,7 @@ struct SidebarDocumentControllerTests {
                     folderWatcher: TestFolderWatcher(),
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    systemNotifier: TestReaderSystemNotifier(),
+                    systemNotifier: TestSystemNotifier(),
                     folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
