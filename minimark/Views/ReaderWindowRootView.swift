@@ -146,7 +146,7 @@ struct ReaderWindowRootView: View {
                         folderWatchFlowController.dismissAutoOpenWarning()
                     },
                     onOpenSelectedFiles: {
-                        windowCoordinator.openSelectedFolderWatchAutoOpenFiles()
+                        windowCoordinator.folderWatchSession.openSelectedAutoOpenFiles()
                     }
                 )
             }
@@ -184,7 +184,7 @@ struct ReaderWindowRootView: View {
                         folderURL: session.folderURL,
                         currentExcludedSubdirectoryPaths: session.options.excludedSubdirectoryPaths,
                         onConfirm: { newExclusions in
-                            if windowCoordinator.updateFolderWatchExclusions(newExclusions) {
+                            if windowCoordinator.folderWatchSession.updateExclusions(newExclusions) {
                                 windowCoordinator.isEditingSubfolders = false
                             }
                         },
@@ -231,14 +231,14 @@ struct ReaderWindowRootView: View {
     private func windowLifecycleChangeObservers<Content: View>(_ view: Content) -> some View {
         view
             .onChange(of: sidebarDocumentController.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning) { _, warning in
-                windowCoordinator.handleFolderWatchAutoOpenWarningChange(warning)
+                windowCoordinator.folderWatchSession.handleAutoOpenWarningChange(warning)
             }
             .onChange(of: sidebarDocumentController.folderWatchCoordinator.activeFolderWatchSession) { _, _ in
                 windowCoordinator.refreshWindowShellState()
             }
             .onChange(of: folderWatchFlowController.isFolderWatchOptionsPresented) { _, isPresented in
                 if !isPresented {
-                    windowCoordinator.refreshFolderWatchAutoOpenWarningPresentation()
+                    windowCoordinator.folderWatchSession.refreshAutoOpenWarningPresentation()
                 }
             }
             .onChange(of: groupStateController.persistenceSnapshot) { oldSnapshot, newSnapshot in
@@ -265,7 +265,7 @@ struct ReaderWindowRootView: View {
                     return
                 }
                 windowCoordinator.refreshWindowPresentation()
-                windowCoordinator.refreshFolderWatchAutoOpenWarningPresentation()
+                windowCoordinator.folderWatchSession.refreshAutoOpenWarningPresentation()
             }
     }
 
@@ -275,7 +275,7 @@ struct ReaderWindowRootView: View {
         uiTestLaunchCoordinator.configure(actions: UITestLaunchCoordinator.Actions(
             hostWindow: { [weak windowCoordinator] in windowCoordinator?.shell.hostWindow },
             startWatchingFolder: { [weak windowCoordinator] folderURL, options in
-                windowCoordinator?.startWatchingFolder(folderURL: folderURL, options: options)
+                windowCoordinator?.folderWatchSession.startWatchingFolder(folderURL: folderURL, options: options)
             },
             presentFolderWatchOptions: { [weak folderWatchFlowController] folderURL, options in
                 folderWatchFlowController?.presentOptions(for: folderURL, options: options)

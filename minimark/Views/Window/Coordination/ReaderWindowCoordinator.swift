@@ -14,6 +14,7 @@ final class ReaderWindowCoordinator {
     private(set) var appearanceLock: AppearanceLockCoordinator!
     private(set) var contentActions: ContentViewActionRouter!
     private(set) var sidebarMetrics: WindowSidebarMetricsController!
+    private(set) var folderWatchSession: WindowFolderWatchSessionFlow!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -97,6 +98,13 @@ final class ReaderWindowCoordinator {
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
             hostWindowProvider: { [weak self] in self?.shell.hostWindow }
         )
+        self.folderWatchSession = WindowFolderWatchSessionFlow(
+            folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            sidebarMetrics: sidebarMetrics,
+            hostWindowProvider: { [weak self] in self?.shell.hostWindow },
+            refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
+        )
         self.contentActions = ContentViewActionRouter(
             documentOpen: documentOpen,
             appearanceLock: appearanceLock,
@@ -108,9 +116,9 @@ final class ReaderWindowCoordinator {
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
             sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
             applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
-            confirmFolderWatch: { [weak self] options in self?.confirmFolderWatch(options) },
-            stopFolderWatch: { [weak self] in self?.stopFolderWatch() },
-            startFavoriteWatch: { [weak self] favorite in self?.startFavoriteWatch(favorite) },
+            confirmFolderWatch: { [weak self] options in self?.folderWatchSession.confirm(options) },
+            stopFolderWatch: { [weak self] in self?.folderWatchSession.stop() },
+            startFavoriteWatch: { [weak self] favorite in self?.folderWatchSession.startFavoriteWatch(favorite) },
             setEditingSubfolders: { [weak self] value in self?.isEditingSubfolders = value },
             setEditingFavorites: { [weak self] value in self?.isTitlebarEditingFavorites = value }
         )
@@ -212,61 +220,4 @@ final class ReaderWindowCoordinator {
         shell.clearDockTile()
     }
 
-    // MARK: - Composite folder-watch flows (mutate sidebarMetrics + refresh)
-
-    func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
-        guard let favoriteWorkspaceController else { return }
-        sidebarMetrics.width = favoriteWorkspaceController.startFavoriteWatch(entry)
-        refreshWindowPresentation()
-    }
-
-    func startWatchingFolder(
-        folderURL: URL,
-        options: FolderWatchOptions,
-        performInitialAutoOpen: Bool = true
-    ) {
-        let deactivated = folderWatchFlowController?.startWatchingFolder(
-            folderURL: folderURL,
-            options: options,
-            performInitialAutoOpen: performInitialAutoOpen
-        ) ?? false
-        if deactivated {
-            sidebarMetrics.resetToIdealWidth()
-        }
-        refreshWindowPresentation()
-    }
-
-    @discardableResult
-    func updateFolderWatchExclusions(_ newExcludedPaths: [String]) -> Bool {
-        let result = folderWatchFlowController?.updateFolderWatchExclusions(newExcludedPaths) ?? false
-        refreshWindowPresentation()
-        return result
-    }
-
-    func confirmFolderWatch(_ options: FolderWatchOptions) {
-        let deactivated = folderWatchFlowController?.confirmFolderWatch(options) ?? false
-        if deactivated {
-            sidebarMetrics.resetToIdealWidth()
-        }
-        refreshWindowPresentation()
-    }
-
-    func stopFolderWatch() {
-        folderWatchFlowController?.stopFolderWatchSession()
-        sidebarMetrics.resetToIdealWidth()
-        refreshWindowPresentation()
-    }
-
-    func handleFolderWatchAutoOpenWarningChange(_ warning: FolderWatchAutoOpenWarning?) {
-        folderWatchFlowController?.handleAutoOpenWarningChangeForWindow(warning, hostWindow: shell.hostWindow)
-    }
-
-    func refreshFolderWatchAutoOpenWarningPresentation() {
-        folderWatchFlowController?.refreshAutoOpenWarningPresentationForWindow(hostWindow: shell.hostWindow)
-    }
-
-    func openSelectedFolderWatchAutoOpenFiles() {
-        folderWatchFlowController?.openSelectedAutoOpenFilesAndRefresh()
-        refreshWindowPresentation()
-    }
 }
