@@ -110,6 +110,13 @@ private struct ContentAreaHost: View {
         viewModel.applyHostInputs(folderWatchState: folderWatchState, onAction: onAction)
         return ContentView(
             viewModel: viewModel,
+            toc: documentStore.toc,
+            document: documentStore.document,
+            rendering: documentStore.renderingController,
+            sourceEditing: documentStore.sourceEditingController,
+            settingsStore: settingsStore,
+            surfaceViewModel: viewModel.surfaceViewModel,
+            folderWatchState: folderWatchState,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
             pendingFolderWatchScope: $pendingFolderWatchScope,

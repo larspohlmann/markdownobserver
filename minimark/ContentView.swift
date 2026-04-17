@@ -4,6 +4,13 @@ import SwiftUI
 
 struct ContentView: View {
     let viewModel: ContentAreaViewModel
+    @Bindable var toc: TOCController
+    let document: DocumentController
+    let rendering: RenderingController
+    let sourceEditing: SourceEditingController
+    let settingsStore: SettingsStore
+    let surfaceViewModel: DocumentSurfaceViewModel
+    let folderWatchState: ContentViewFolderWatchState
 
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
@@ -12,10 +19,10 @@ struct ContentView: View {
 
     var body: some View {
         baseBody.modifier(ContentViewFocusedValues(
-            document: viewModel.document,
-            sourceEditing: viewModel.sourceEditing,
-            toc: viewModel.toc,
-            folderWatchState: viewModel.folderWatchState,
+            document: document,
+            sourceEditing: sourceEditing,
+            toc: toc,
+            folderWatchState: folderWatchState,
             onAction: viewModel.onAction,
             canNavigateChangedRegions: viewModel.canNavigateChangedRegions,
             onNavigateChangedRegion: viewModel.requestChangeNavigation,
@@ -44,10 +51,10 @@ struct ContentView: View {
     private var mainStack: some View {
         VStack(spacing: 0) {
             ContentStatusBanner(
-                isCurrentFileMissing: viewModel.document.isCurrentFileMissing,
-                fileDisplayName: viewModel.document.fileDisplayName,
-                errorMessage: viewModel.document.lastError?.message,
-                needsImageDirectoryAccess: viewModel.rendering.needsImageDirectoryAccess,
+                isCurrentFileMissing: document.isCurrentFileMissing,
+                fileDisplayName: document.fileDisplayName,
+                errorMessage: document.lastError?.message,
+                needsImageDirectoryAccess: rendering.needsImageDirectoryAccess,
                 topPadding: viewModel.overlayLayout.statusBannerTopPadding,
                 onGrantImageAccess: viewModel.promptForImageDirectoryAccess
             )
@@ -55,22 +62,22 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .modifier(ContentDropModifier(
-            isBlockedFolderDropTargeted: viewModel.surfaceViewModel.dropTargeting.isBlockedFolderDropTargeted,
-            isDragTargeted: viewModel.surfaceViewModel.dropTargeting.isDragTargeted
+            isBlockedFolderDropTargeted: surfaceViewModel.dropTargeting.isBlockedFolderDropTargeted,
+            isDragTargeted: surfaceViewModel.dropTargeting.isDragTargeted
         ))
         .onAppear { viewModel.handleAppear() }
     }
 
     private var topBar: some View {
         TopBar(
-            document: viewModel.document,
-            sourceEditing: viewModel.sourceEditing,
+            document: document,
+            sourceEditing: sourceEditing,
             statusBarTimestamp: viewModel.statusBarTimestamp,
-            canStopFolderWatch: viewModel.folderWatchState.canStopFolderWatch,
-            apps: viewModel.document.openInApplications,
-            favoriteWatchedFolders: viewModel.folderWatchState.favoriteWatchedFolders,
-            recentWatchedFolders: viewModel.folderWatchState.recentWatchedFolders,
-            recentManuallyOpenedFiles: viewModel.folderWatchState.recentManuallyOpenedFiles,
+            canStopFolderWatch: folderWatchState.canStopFolderWatch,
+            apps: document.openInApplications,
+            favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+            recentWatchedFolders: folderWatchState.recentWatchedFolders,
+            recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
             iconProvider: appIconImage(for:),
             onAction: viewModel.dispatchTopBarAction
         )
@@ -81,39 +88,36 @@ struct ContentView: View {
         documentSurfaceLayout
             .overlay(alignment: .topTrailing) { utilityRail }
             .overlayPreferenceValue(TOCButtonAnchorKey.self) { anchor in
-                if viewModel.toc.isVisible, let anchor {
+                if toc.isVisible, let anchor {
                     TOCOverlayView(
-                        headings: viewModel.toc.headings,
+                        headings: toc.headings,
                         buttonAnchor: anchor,
                         colorScheme: viewModel.overlayColorScheme,
-                        onDismiss: { viewModel.toc.isVisible = false },
-                        onSelectHeading: { viewModel.toc.scrollTo($0) }
+                        onDismiss: { toc.isVisible = false },
+                        onSelectHeading: { toc.scrollTo($0) }
                     )
                 }
             }
             .overlay(alignment: .topLeading) { changeNavigationOverlay }
             .animation(.easeOut(duration: 0.25), value: viewModel.canNavigateChangedRegions)
             .overlay(alignment: .top) { watchPillOverlay }
-            .animation(.easeOut(duration: 0.25), value: viewModel.folderWatchState.activeFolderWatch != nil)
+            .animation(.easeOut(duration: 0.25), value: folderWatchState.activeFolderWatch != nil)
     }
 
     private var utilityRail: some View {
         ContentUtilityRailView(
             state: ContentUtilityRailState(
-                hasFile: viewModel.document.fileURL != nil,
-                documentViewMode: viewModel.sourceEditing.documentViewMode,
-                showEditButton: viewModel.showSourceEditingControls && !viewModel.sourceEditing.isSourceEditing,
-                canStartSourceEditing: viewModel.document.hasOpenDocument
-                    && !viewModel.document.isCurrentFileMissing
-                    && !viewModel.sourceEditing.isSourceEditing,
-                hasTOCHeadings: !viewModel.toc.headings.isEmpty
+                hasFile: document.fileURL != nil,
+                documentViewMode: sourceEditing.documentViewMode,
+                showEditButton: viewModel.showSourceEditingControls && !sourceEditing.isSourceEditing,
+                canStartSourceEditing: document.hasOpenDocument
+                    && !document.isCurrentFileMissing
+                    && !sourceEditing.isSourceEditing,
+                hasTOCHeadings: !toc.headings.isEmpty
             ),
-            isTOCVisible: Binding(
-                get: { viewModel.toc.isVisible },
-                set: { viewModel.toc.isVisible = $0 }
-            ),
+            isTOCVisible: $toc.isVisible,
             onSetDocumentViewMode: { mode in
-                viewModel.sourceEditing.setViewMode(mode, hasOpenDocument: viewModel.document.hasOpenDocument)
+                sourceEditing.setViewMode(mode, hasOpenDocument: document.hasOpenDocument)
             },
             onStartSourceEditing: { viewModel.onAction(.startSourceEditing) }
         )
@@ -125,12 +129,12 @@ struct ContentView: View {
         ChangeNavigationOverlayView(
             state: ChangeNavigationState(
                 canNavigate: viewModel.canNavigateChangedRegions,
-                currentIndex: viewModel.surfaceViewModel.changeNavigation.currentIndex,
-                totalCount: viewModel.document.changedRegions.count
+                currentIndex: surfaceViewModel.changeNavigation.currentIndex,
+                totalCount: document.changedRegions.count
             ),
             insets: viewModel.overlayLayout.insets,
             colorScheme: viewModel.overlayColorScheme,
-            settingsStore: viewModel.settingsStore,
+            settingsStore: settingsStore,
             onNavigate: viewModel.requestChangeNavigation
         )
     }
@@ -138,10 +142,10 @@ struct ContentView: View {
     private var watchPillOverlay: some View {
         WatchPillOverlayView(
             state: WatchPillState(
-                activeFolderWatch: viewModel.folderWatchState.activeFolderWatch,
-                isCurrentWatchAFavorite: viewModel.folderWatchState.isCurrentWatchAFavorite,
-                canStop: viewModel.folderWatchState.canStopFolderWatch,
-                isAppearanceLocked: viewModel.folderWatchState.isAppearanceLocked
+                activeFolderWatch: folderWatchState.activeFolderWatch,
+                isCurrentWatchAFavorite: folderWatchState.isCurrentWatchAFavorite,
+                canStop: folderWatchState.canStopFolderWatch,
+                isAppearanceLocked: folderWatchState.isAppearanceLocked
             ),
             insets: viewModel.overlayLayout.insets,
             hasChangeNavigation: viewModel.canNavigateChangedRegions,
@@ -152,8 +156,8 @@ struct ContentView: View {
 
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
-            documentViewMode: viewModel.sourceEditing.documentViewMode,
-            hasOpenDocument: viewModel.document.hasOpenDocument,
+            documentViewMode: sourceEditing.documentViewMode,
+            hasOpenDocument: document.hasOpenDocument,
             showsLoadingOverlay: viewModel.shouldShowDocumentLoadingOverlay,
             loadingOverlayHeadline: viewModel.loadingOverlayHeadline,
             loadingOverlaySubtitle: viewModel.loadingOverlaySubtitle,
@@ -162,11 +166,11 @@ struct ContentView: View {
             onDroppedFileURLs: viewModel.handleDroppedFileURLs,
             previewSurface: DocumentSurfaceHost(
                 configuration: viewModel.makeSurfaceConfiguration(for: .preview),
-                fallbackMarkdown: viewModel.document.sourceMarkdown
+                fallbackMarkdown: document.sourceMarkdown
             ),
             sourceSurface: DocumentSurfaceHost(
                 configuration: viewModel.makeSurfaceConfiguration(for: .source),
-                fallbackMarkdown: viewModel.document.sourceMarkdown
+                fallbackMarkdown: document.sourceMarkdown
             )
         )
     }
@@ -202,6 +206,20 @@ struct ContentView: View {
     let sourceEditing = SourceEditingController()
     let externalChange = ExternalChangeController()
     let toc = TOCController()
+    let surfaceViewModel = DocumentSurfaceViewModel()
+    let folderWatchState = ContentViewFolderWatchState(
+        activeFolderWatch: nil,
+        isFolderWatchInitialScanInProgress: false,
+        isFolderWatchInitialScanFailed: false,
+        canStopFolderWatch: false,
+        pendingFolderWatchURL: nil,
+        isCurrentWatchAFavorite: false,
+        favoriteWatchedFolders: [],
+        recentWatchedFolders: [],
+        recentManuallyOpenedFiles: [],
+        isAppearanceLocked: false,
+        effectiveReaderTheme: .blackOnWhite
+    )
 
     let viewModel = ContentAreaViewModel(
         document: document,
@@ -210,25 +228,20 @@ struct ContentView: View {
         externalChange: externalChange,
         toc: toc,
         settingsStore: settingsStore,
-        folderWatchState: ContentViewFolderWatchState(
-            activeFolderWatch: nil,
-            isFolderWatchInitialScanInProgress: false,
-            isFolderWatchInitialScanFailed: false,
-            canStopFolderWatch: false,
-            pendingFolderWatchURL: nil,
-            isCurrentWatchAFavorite: false,
-            favoriteWatchedFolders: [],
-            recentWatchedFolders: [],
-            recentManuallyOpenedFiles: [],
-            isAppearanceLocked: false,
-            effectiveReaderTheme: .blackOnWhite
-        ),
-        surfaceViewModel: DocumentSurfaceViewModel(),
+        folderWatchState: folderWatchState,
+        surfaceViewModel: surfaceViewModel,
         onAction: { _ in }
     )
 
     return ContentView(
         viewModel: viewModel,
+        toc: toc,
+        document: document,
+        rendering: rendering,
+        sourceEditing: sourceEditing,
+        settingsStore: settingsStore,
+        surfaceViewModel: surfaceViewModel,
+        folderWatchState: folderWatchState,
         isFolderWatchOptionsPresented: .constant(false),
         pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
         pendingFolderWatchScope: .constant(.selectedFolderOnly),
