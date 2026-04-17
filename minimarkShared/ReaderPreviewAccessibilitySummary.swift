@@ -1,8 +1,8 @@
 import Foundation
 
 /// Typed representation of the accessibility value carried by the reader
-/// preview surface. Producer and consumer both round-trip through this type so
-/// a change in one side is a build-time error on the other.
+/// preview surface. Producer and consumer both round-trip through this shared
+/// type, making it the single source of truth for the payload format.
 struct ReaderPreviewAccessibilitySummary: Equatable, CustomStringConvertible {
     enum Surface: String {
         case preview

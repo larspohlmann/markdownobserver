@@ -1,7 +1,8 @@
-import SwiftUI
+import Foundation
 
 /// Every accessibility identifier used by production views and `minimarkUITests`
-/// goes through this enum. UI tests reach the raw values via `@testable import minimark`.
+/// goes through this enum. UI tests access the raw values because `minimarkShared`
+/// is compiled into the UI-test target as well as the app target.
 enum ReaderAccessibilityID: String {
     case readerPreviewSummary = "reader-preview-summary"
     case tocButton = "toc-button"
@@ -23,11 +24,5 @@ enum ReaderAccessibilityID: String {
 
     static func sidebarDocument(title: String) -> String {
         "sidebar-document-\(title)"
-    }
-}
-
-extension View {
-    func accessibilityIdentifier(_ id: ReaderAccessibilityID) -> some View {
-        accessibilityIdentifier(id.rawValue)
     }
 }
