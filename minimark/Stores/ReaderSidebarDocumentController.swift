@@ -167,7 +167,19 @@ final class ReaderSidebarDocumentController {
             return
         }
 
-        let isReselection = (selectedDocumentID == documentID)
+        if selectedDocumentID == documentID {
+            // Re-selecting the same document is a no-op UNLESS the store is still
+            // deferred — in that case we must materialize (see #345). Avoid
+            // reassigning `selectedDocumentID` so Observation doesn't fire for a
+            // ready-state reselect.
+            let store = selectedReaderStore
+            guard store.document.isDeferredDocument else { return }
+            scheduleLoadWithOverlay(on: store) {
+                store.materializeDeferredDocument()
+            }
+            return
+        }
+
         selectedDocumentID = documentID
         let store = selectedReaderStore
 
@@ -175,10 +187,8 @@ final class ReaderSidebarDocumentController {
             scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
             }
-            if !isReselection { bindSelectedStore() }
-        } else if !isReselection {
-            bindSelectedStore()
         }
+        bindSelectedStore()
     }
 
     @discardableResult

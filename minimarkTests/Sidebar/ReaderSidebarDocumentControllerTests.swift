@@ -1347,12 +1347,10 @@ struct ReaderSidebarDocumentControllerTests {
         // Trigger the code path `FavoriteWorkspaceController.discoverNewFilesForFavorite` uses.
         harness.controller.selectDocumentWithNewestModificationDate()
 
-        // `scheduleLoadWithOverlay` defers the materialization one run-loop turn.
-        await Task.yield()
-        await Task.yield()
-
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            !harness.controller.selectedReaderStore.document.isDeferredDocument
+        })
         #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.secondaryFileURL.path)
-        #expect(!harness.controller.selectedReaderStore.document.isDeferredDocument)
     }
 
     /// Guards the ready-state path: re-selecting an already materialized document
