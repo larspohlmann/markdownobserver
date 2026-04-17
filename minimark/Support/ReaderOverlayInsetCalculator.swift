@@ -5,12 +5,20 @@ struct ReaderOverlayInsetValues: Equatable {
     let railTopPadding: CGFloat
     let leadingOverlayTopPadding: CGFloat
     let scrollTargetTopInset: CGFloat
+    let watchPillLeadingWithChangeNav: CGFloat
+    let watchPillLeadingWithoutChangeNav: CGFloat
+    let watchPillTrailing: CGFloat
+    let changeNavigationLeadingPadding: CGFloat
 }
 
 enum ReaderOverlayInsetCalculator {
     static let overlayBaseGap: CGFloat = 8
     static let leadingOverlayAlignmentAdjustment: CGFloat = 8
     static let overlayControlHeight: CGFloat = 30
+
+    static let watchPillLeadingWithChangeNav: CGFloat = 150
+    static let watchPillLeadingWithoutChangeNav: CGFloat = 60
+    static let watchPillTrailing: CGFloat = 70
 
     static let scrollLandingGap: CGFloat = {
         if let raw = Bundle.main.object(forInfoDictionaryKey: "ScrollLandingGap") as? String,
@@ -37,7 +45,11 @@ enum ReaderOverlayInsetCalculator {
         return ReaderOverlayInsetValues(
             railTopPadding: railTopPadding,
             leadingOverlayTopPadding: leadingOverlayTopPadding,
-            scrollTargetTopInset: scrollTargetTopInset
+            scrollTargetTopInset: scrollTargetTopInset,
+            watchPillLeadingWithChangeNav: watchPillLeadingWithChangeNav,
+            watchPillLeadingWithoutChangeNav: watchPillLeadingWithoutChangeNav,
+            watchPillTrailing: watchPillTrailing,
+            changeNavigationLeadingPadding: leadingOverlayAlignmentAdjustment
         )
     }
 }

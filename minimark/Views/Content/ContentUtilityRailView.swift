@@ -1,24 +1,20 @@
 import SwiftUI
 
 struct ContentUtilityRailView: View {
-    let hasFile: Bool
-    let documentViewMode: ReaderDocumentViewMode
-    let showEditButton: Bool
-    let canStartSourceEditing: Bool
-    let hasTOCHeadings: Bool
+    let state: ContentUtilityRailState
     @Binding var isTOCVisible: Bool
     let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
 
     var body: some View {
         ContentUtilityRail(
-            hasFile: hasFile,
-            documentViewMode: documentViewMode,
-            showEditButton: showEditButton,
-            canStartSourceEditing: canStartSourceEditing,
+            hasFile: state.hasFile,
+            documentViewMode: state.documentViewMode,
+            showEditButton: state.showEditButton,
+            canStartSourceEditing: state.canStartSourceEditing,
             onSetDocumentViewMode: onSetDocumentViewMode,
             onStartSourceEditing: onStartSourceEditing,
-            hasTOCHeadings: hasTOCHeadings,
+            hasTOCHeadings: state.hasTOCHeadings,
             isTOCVisible: $isTOCVisible
         )
     }

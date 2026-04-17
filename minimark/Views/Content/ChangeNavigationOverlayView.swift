@@ -1,26 +1,24 @@
 import SwiftUI
 
 struct ChangeNavigationOverlayView: View {
-    let canNavigate: Bool
-    let currentIndex: Int?
-    let totalCount: Int
-    let topPadding: CGFloat
+    let state: ChangeNavigationState
+    let insets: ReaderOverlayInsetValues
     let colorScheme: ColorScheme
     let settingsStore: ReaderSettingsStore
     let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
 
     var body: some View {
-        if canNavigate {
+        if state.canNavigate {
             ChangeNavigationPill(
-                currentIndex: currentIndex,
-                totalCount: totalCount,
+                currentIndex: state.currentIndex,
+                totalCount: state.totalCount,
                 onNavigate: onNavigate
             )
             .firstUseHint(.changeNavigation,
                           message: "Use the arrows to step through changes",
                           settingsStore: settingsStore)
-            .padding(.top, topPadding)
-            .padding(.leading, 8)
+            .padding(.top, insets.leadingOverlayTopPadding)
+            .padding(.leading, insets.changeNavigationLeadingPadding)
             .environment(\.colorScheme, colorScheme)
             .transition(.overlayPill)
         }

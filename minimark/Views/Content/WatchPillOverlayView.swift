@@ -1,28 +1,26 @@
 import SwiftUI
 
 struct WatchPillOverlayView: View {
-    let activeFolderWatch: FolderWatchSession?
-    let isCurrentWatchAFavorite: Bool
-    let canStop: Bool
-    let isAppearanceLocked: Bool
-    let topPadding: CGFloat
-    let leadingPadding: CGFloat
-    let trailingPadding: CGFloat
+    let state: WatchPillState
+    let insets: ReaderOverlayInsetValues
+    let hasChangeNavigation: Bool
     let colorScheme: ColorScheme
     let onAction: (WatchPillAction) -> Void
 
     var body: some View {
-        if let activeWatch = activeFolderWatch {
+        if let activeWatch = state.activeFolderWatch {
             WatchPill(
                 activeFolderWatch: activeWatch,
-                isCurrentWatchAFavorite: isCurrentWatchAFavorite,
-                canStop: canStop,
-                isAppearanceLocked: isAppearanceLocked,
+                isCurrentWatchAFavorite: state.isCurrentWatchAFavorite,
+                canStop: state.canStop,
+                isAppearanceLocked: state.isAppearanceLocked,
                 onAction: onAction
             )
-            .padding(.top, topPadding)
-            .padding(.leading, leadingPadding)
-            .padding(.trailing, trailingPadding)
+            .padding(.top, insets.leadingOverlayTopPadding)
+            .padding(.leading, hasChangeNavigation
+                ? insets.watchPillLeadingWithChangeNav
+                : insets.watchPillLeadingWithoutChangeNav)
+            .padding(.trailing, insets.watchPillTrailing)
             .environment(\.colorScheme, colorScheme)
             .transition(.overlayPill)
         }
