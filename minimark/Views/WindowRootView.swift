@@ -304,9 +304,6 @@ struct WindowRootView: View {
     @ViewBuilder
     private var rootContent: some View {
         SidebarWorkspaceView(
-            controller: sidebarDocumentController,
-            settingsStore: settingsStore,
-            groupState: groupStateController,
             sidebarPlacement: sidebarPlacement,
             sidebarWidth: windowCoordinator.sidebarMetrics.width,
             onSidebarWidthChanged: { newWidth in
@@ -315,30 +312,29 @@ struct WindowRootView: View {
             detail: { store in
                 contentView(for: store)
             },
-            onToggleSidebarPlacement: {
-                windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
-            },
-            onOpenInDefaultApp: { documentIDs in
-                windowCoordinator.sidebarActions.openDocumentsInDefaultApp(documentIDs)
-            },
-            onOpenInApplication: { application, documentIDs in
-                windowCoordinator.sidebarActions.openDocumentsInApplication(application, documentIDs)
-            },
-            onRevealInFinder: { documentIDs in
-                windowCoordinator.sidebarActions.revealDocumentsInFinder(documentIDs)
-            },
-            onStopWatchingFolders: { documentIDs in
-                windowCoordinator.sidebarActions.stopWatchingFolders(documentIDs)
-            },
-            onCloseDocuments: { documentIDs in
-                windowCoordinator.sidebarActions.closeSelectedDocuments(documentIDs)
-            },
-            onCloseOtherDocuments: { documentIDs in
-                windowCoordinator.sidebarActions.closeOtherDocuments(keeping: documentIDs)
-            },
-            onCloseAllDocuments: {
-                windowCoordinator.sidebarActions.closeAllDocuments()
-            }
+            actions: SidebarSelectionActions(
+                openInDefaultApp: { documentIDs in
+                    windowCoordinator.sidebarActions.openDocumentsInDefaultApp(documentIDs)
+                },
+                openInApplication: { application, documentIDs in
+                    windowCoordinator.sidebarActions.openDocumentsInApplication(application, documentIDs)
+                },
+                revealInFinder: { documentIDs in
+                    windowCoordinator.sidebarActions.revealDocumentsInFinder(documentIDs)
+                },
+                stopWatchingFolders: { documentIDs in
+                    windowCoordinator.sidebarActions.stopWatchingFolders(documentIDs)
+                },
+                closeDocuments: { documentIDs in
+                    windowCoordinator.sidebarActions.closeSelectedDocuments(documentIDs)
+                },
+                closeOtherDocuments: { documentIDs in
+                    windowCoordinator.sidebarActions.closeOtherDocuments(keeping: documentIDs)
+                },
+                closeAll: {
+                    windowCoordinator.sidebarActions.closeAllDocuments()
+                }
+            )
         )
         .toolbar {
             ToolbarItem(placement: .navigation) {

@@ -9,21 +9,14 @@ enum SidebarWorkspaceMetrics {
 }
 
 struct SidebarWorkspaceView<Detail: View>: View {
-    var controller: SidebarDocumentController
-    var settingsStore: SettingsStore
-    var groupState: SidebarGroupStateController
+    @Environment(SidebarDocumentController.self) private var controller
+    @Environment(SettingsStore.self) private var settingsStore
+    @Environment(SidebarGroupStateController.self) private var groupState
     let sidebarPlacement: MultiFileDisplayMode.SidebarPlacement
     let sidebarWidth: CGFloat
     let onSidebarWidthChanged: (CGFloat) -> Void
     let detail: (DocumentStore) -> Detail
-    let onToggleSidebarPlacement: () -> Void
-    let onOpenInDefaultApp: (Set<UUID>) -> Void
-    let onOpenInApplication: (ExternalApplication, Set<UUID>) -> Void
-    let onRevealInFinder: (Set<UUID>) -> Void
-    let onStopWatchingFolders: (Set<UUID>) -> Void
-    let onCloseDocuments: (Set<UUID>) -> Void
-    let onCloseOtherDocuments: (Set<UUID>) -> Void
-    let onCloseAllDocuments: () -> Void
+    let actions: SidebarSelectionActions
     @State private var selectedDocumentIDs: Set<UUID> = []
     @State private var isDraggingDivider = false
 
@@ -99,21 +92,10 @@ struct SidebarWorkspaceView<Detail: View>: View {
                 Divider()
 
                 SidebarGroupListContent(
-                    groupState: groupState,
-                    controller: controller,
-                    settingsStore: settingsStore,
                     selectedDocumentIDs: $selectedDocumentIDs,
                     watchedDocumentIDs: watchedDocumentIDs,
                     onUpdateSelection: { updateSelection($0) },
-                    onOpenInDefaultApp: onOpenInDefaultApp,
-                    onOpenInApplication: { application, documentIDs in
-                        onOpenInApplication(application, documentIDs)
-                    },
-                    onRevealInFinder: onRevealInFinder,
-                    onStopWatchingFolders: onStopWatchingFolders,
-                    onCloseDocuments: onCloseDocuments,
-                    onCloseOtherDocuments: onCloseOtherDocuments,
-                    onCloseAllDocuments: onCloseAllDocuments
+                    actions: actions
                 )
             }
             .frame(maxHeight: .infinity)
@@ -715,19 +697,13 @@ private struct SidebarGroupDropIndicator: View {
 }
 
 private struct SidebarGroupListContent: View {
-    var groupState: SidebarGroupStateController
-    var controller: SidebarDocumentController
-    let settingsStore: SettingsStore
+    @Environment(SidebarGroupStateController.self) private var groupState
+    @Environment(SidebarDocumentController.self) private var controller
+    @Environment(SettingsStore.self) private var settingsStore
     @Binding var selectedDocumentIDs: Set<UUID>
     let watchedDocumentIDs: Set<UUID>
     let onUpdateSelection: (Set<UUID>) -> Void
-    let onOpenInDefaultApp: (Set<UUID>) -> Void
-    let onOpenInApplication: (ExternalApplication, Set<UUID>) -> Void
-    let onRevealInFinder: (Set<UUID>) -> Void
-    let onStopWatchingFolders: (Set<UUID>) -> Void
-    let onCloseDocuments: (Set<UUID>) -> Void
-    let onCloseOtherDocuments: (Set<UUID>) -> Void
-    let onCloseAllDocuments: () -> Void
+    let actions: SidebarSelectionActions
     @State private var draggedGroupID: String?
     @State private var dropTargetIndex: Int?
     @State private var dragTranslation: CGSize = .zero
@@ -808,7 +784,7 @@ private struct SidebarGroupListContent: View {
                 groupState.toggleGroupPin(group.id)
             },
             onCloseGroup: {
-                onCloseDocuments(Set(group.documents.map(\.id)))
+                actions.closeDocuments(Set(group.documents.map(\.id)))
             }
         )
 
@@ -996,17 +972,13 @@ private struct SidebarGroupListContent: View {
             selectedDocumentIDs: selectedDocumentIDs,
             showsSelectionBackground: showsSelectionBackground,
             canClose: true,
-            onOpenInDefaultApp: onOpenInDefaultApp,
-            onOpenInApplication: { application, documentIDs in
-                onOpenInApplication(application, documentIDs)
-            },
-            onRevealInFinder: onRevealInFinder,
-            onStopWatchingFolders: onStopWatchingFolders,
-            onClose: onCloseDocuments,
-            onCloseOthers: onCloseOtherDocuments,
-            onCloseAll: {
-                onCloseAllDocuments()
-            }
+            onOpenInDefaultApp: actions.openInDefaultApp,
+            onOpenInApplication: actions.openInApplication,
+            onRevealInFinder: actions.revealInFinder,
+            onStopWatchingFolders: actions.stopWatchingFolders,
+            onClose: actions.closeDocuments,
+            onCloseOthers: actions.closeOtherDocuments,
+            onCloseAll: actions.closeAll
         )
     }
 }
