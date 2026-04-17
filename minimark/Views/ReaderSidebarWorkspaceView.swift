@@ -136,7 +136,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 isDraggingDivider = active
             }
         ))
-        .accessibilityIdentifier("sidebar-column")
     }
 
     private var sidebarToolbar: some View {
@@ -788,6 +787,7 @@ private struct SidebarGroupListContent: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
         }
+        .accessibilityIdentifier("sidebar-column")
     }
 
     private func groupedSection(

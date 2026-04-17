@@ -77,6 +77,13 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             | tee test.log
 
+      # UI tests (minimarkUITests) are intentionally NOT gated on CI:
+      # the self-hosted runner can't reliably initialize XCUITest automation
+      # mode (xcodebuild reports "test runner hung before establishing
+      # connection" / "Timed out while enabling automation mode"). The tests
+      # are expected to be run locally before opening a PR. If a dedicated
+      # UI-capable runner is provisioned later, re-introduce a gated step.
+
       - name: Upload test logs and result bundle
         if: always()
         uses: actions/upload-artifact@v7
