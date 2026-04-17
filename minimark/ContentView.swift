@@ -146,13 +146,8 @@ struct ContentView: View {
 
     private var documentSurfaceLayout: some View {
         DocumentSurfaceLayoutView(
-            documentViewMode: sourceEditing.documentViewMode,
-            hasOpenDocument: document.hasOpenDocument,
-            showsLoadingOverlay: viewModel.shouldShowDocumentLoadingOverlay,
-            loadingOverlayHeadline: viewModel.loadingOverlayHeadline,
-            loadingOverlaySubtitle: viewModel.loadingOverlaySubtitle,
-            emptyStateVariant: viewModel.emptyStateVariant,
-            currentReaderTheme: viewModel.currentReaderTheme,
+            content: makeSurfaceContent(),
+            theme: viewModel.currentReaderTheme,
             onDroppedFileURLs: viewModel.handleDroppedFileURLs,
             previewSurface: DocumentSurfaceHost(
                 configuration: viewModel.makeSurfaceConfiguration(for: .preview),
@@ -163,6 +158,19 @@ struct ContentView: View {
                 fallbackMarkdown: document.sourceMarkdown
             )
         )
+    }
+
+    private func makeSurfaceContent() -> DocumentSurfaceContent {
+        if viewModel.shouldShowDocumentLoadingOverlay {
+            return .loading(LoadingOverlayState(
+                headline: viewModel.loadingOverlayHeadline,
+                subtitle: viewModel.loadingOverlaySubtitle
+            ))
+        } else if !document.hasOpenDocument {
+            return .empty(viewModel.emptyStateVariant)
+        } else {
+            return .document(sourceEditing.documentViewMode)
+        }
     }
 }
 

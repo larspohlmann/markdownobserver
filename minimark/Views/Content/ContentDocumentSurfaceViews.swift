@@ -253,28 +253,24 @@ struct DocumentSurfaceHost: View {
 }
 
 struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
-    let documentViewMode: DocumentViewMode
-    let hasOpenDocument: Bool
-    let showsLoadingOverlay: Bool
-    let loadingOverlayHeadline: String
-    let loadingOverlaySubtitle: String?
-    let emptyStateVariant: ContentEmptyStateView.Variant
-    let currentReaderTheme: Theme
+    let content: DocumentSurfaceContent
+    let theme: Theme
     let onDroppedFileURLs: ([URL]) -> Void
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface
 
     var body: some View {
-        if showsLoadingOverlay {
+        switch content {
+        case .loading(let overlay):
             DocumentLoadingOverlay(
-                theme: currentReaderTheme,
-                headline: loadingOverlayHeadline,
-                subtitle: loadingOverlaySubtitle
+                theme: theme,
+                headline: overlay.headline,
+                subtitle: overlay.subtitle
             )
-        } else if !hasOpenDocument {
+        case .empty(let variant):
             ContentEmptyStateView(
-                variant: emptyStateVariant,
-                theme: currentReaderTheme
+                variant: variant,
+                theme: theme
             )
             .dropDestination(for: URL.self) { urls, _ in
                 let fileURLs = urls.filter { $0.isFileURL }
@@ -282,7 +278,7 @@ struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: Vie
                 onDroppedFileURLs(fileURLs)
                 return true
             }
-        } else {
+        case .document(let documentViewMode):
             switch documentViewMode {
             case .preview:
                 previewSurface
