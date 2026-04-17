@@ -5,7 +5,7 @@ import SwiftUI
 final class HostedWindowController: NSWindowController {
     init(settingsStore: SettingsStore) {
         let hostingController = NSHostingController(
-            rootView: ReaderWindowRootView(
+            rootView: WindowRootView(
                 seed: nil,
                 settingsStore: settingsStore,
                 multiFileDisplayMode: settingsStore.currentSettings.multiFileDisplayMode

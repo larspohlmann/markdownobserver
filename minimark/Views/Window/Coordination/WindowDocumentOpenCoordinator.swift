@@ -90,7 +90,7 @@ final class WindowDocumentOpenCoordinator {
     }
 
     func openIncomingURL(_ url: URL) {
-        guard ReaderWindowOpenAndWatchFlowSupport.isSupportedIncomingMarkdownFile(url) else {
+        guard WindowOpenAndWatchFlowSupport.isSupportedIncomingMarkdownFile(url) else {
             return
         }
 
@@ -177,7 +177,7 @@ final class WindowDocumentOpenCoordinator {
     }
 
     func applyInitialSeedIfNeeded(seed: WindowSeed?) {
-        ReaderWindowOpenAndWatchFlowSupport.applyInitialSeedIfNeeded(
+        WindowOpenAndWatchFlowSupport.applyInitialSeedIfNeeded(
             seed: seed,
             openDocumentInCurrentWindow: { [weak self] fileURL in
                 self?.openDocumentInCurrentWindow(fileURL)

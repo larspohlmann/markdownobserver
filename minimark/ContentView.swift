@@ -62,7 +62,7 @@ struct ContentView: View {
     }
 
     private var topBar: some View {
-        ReaderTopBar(
+        TopBar(
             document: viewModel.document,
             sourceEditing: viewModel.sourceEditing,
             statusBarTimestamp: viewModel.statusBarTimestamp,

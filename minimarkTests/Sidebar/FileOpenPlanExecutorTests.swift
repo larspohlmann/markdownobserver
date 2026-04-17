@@ -8,7 +8,7 @@ struct FileOpenPlanExecutorTests {
 
     final class MockDelegate: FileOpenPlanExecutorDelegate {
         var selectedDocumentID: UUID
-        var selectedReaderStore: DocumentStore
+        var selectedDocumentStore: DocumentStore
         var storeConfigurator: ((DocumentStore) -> Void)?
         var selectDocumentCalls: [UUID?] = []
         var bindSelectedStoreCalled = false
@@ -16,11 +16,11 @@ struct FileOpenPlanExecutorTests {
 
         init(
             selectedDocumentID: UUID,
-            selectedReaderStore: DocumentStore,
+            selectedDocumentStore: DocumentStore,
             makeDocument: @escaping () -> SidebarDocumentController.Document
         ) {
             self.selectedDocumentID = selectedDocumentID
-            self.selectedReaderStore = selectedReaderStore
+            self.selectedDocumentStore = selectedDocumentStore
             self.makeDocumentFactory = makeDocument
         }
 
@@ -82,7 +82,7 @@ struct FileOpenPlanExecutorTests {
         )
         let initialStore = makeStore(settingsStore: settingsStore)
         let initialDocument = SidebarDocumentController.Document(
-            id: UUID(), readerStore: initialStore, normalizedFileURL: nil
+            id: UUID(), documentStore: initialStore, normalizedFileURL: nil
         )
         let documentList = SidebarDocumentList(initialDocument: initialDocument)
         let observationManager = SidebarObservationManager()
@@ -97,11 +97,11 @@ struct FileOpenPlanExecutorTests {
 
         let delegate = MockDelegate(
             selectedDocumentID: initialDocument.id,
-            selectedReaderStore: initialStore,
+            selectedDocumentStore: initialStore,
             makeDocument: {
                 SidebarDocumentController.Document(
                     id: UUID(),
-                    readerStore: makeStore(settingsStore: settingsStore),
+                    documentStore: makeStore(settingsStore: settingsStore),
                     normalizedFileURL: nil
                 )
             }
@@ -174,7 +174,7 @@ struct FileOpenPlanExecutorTests {
         let store = Self.makeStore(settingsStore: settingsStore)
         store.opener.open(at: fileURL, origin: .manual)
         let doc = SidebarDocumentController.Document(
-            id: UUID(), readerStore: store, normalizedFileURL: fileURL
+            id: UUID(), documentStore: store, normalizedFileURL: fileURL
         )
         documentList.append(doc)
 

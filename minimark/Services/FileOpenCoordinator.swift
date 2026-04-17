@@ -173,7 +173,7 @@ final class FileOpenCoordinator {
 
     private var canReuseEmptySlot: Bool {
         guard let selectedDocument = controller.selectedDocument else { return false }
-        return selectedDocument.readerStore.document.fileURL == nil && controller.documents.count == 1
+        return selectedDocument.documentStore.document.fileURL == nil && controller.documents.count == 1
     }
 
     private nonisolated func loadMode(

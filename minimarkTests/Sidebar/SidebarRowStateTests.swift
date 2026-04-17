@@ -92,7 +92,7 @@ struct SidebarRowStateDerivationTests {
         ))
 
         let docID = harness.controller.documents[0].id
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let initialState = harness.controller.rowStates[docID]
 
         // Let the observation tracking tasks start their first withObservationTracking call
@@ -121,7 +121,7 @@ struct SidebarRowStateDerivationTests {
         ))
 
         let docID = harness.controller.documents[0].id
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
 
         await Task.yield()
 

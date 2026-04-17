@@ -50,8 +50,8 @@ struct ReaderSidebarGroupingTests {
         // Set modification dates: "newer" group has a more recent date
         let olderDoc = harness.documentsInSubdirectory("older").first!
         let newerDoc = harness.documentsInSubdirectory("newer").first!
-        olderDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
-        newerDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+        olderDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        newerDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
         let grouping = SidebarGrouping.group(harness.documents)
 
@@ -142,7 +142,7 @@ struct ReaderSidebarGroupingTests {
 
         let sharedDate = Date(timeIntervalSince1970: 1000)
         for document in harness.documents {
-            document.readerStore.testSetFileLastModifiedAt(sharedDate)
+            document.documentStore.testSetFileLastModifiedAt(sharedDate)
         }
 
         let zetaDoc = try #require(harness.documentsInSubdirectory("zeta").first)
@@ -172,8 +172,8 @@ struct ReaderSidebarGroupingTests {
         let betaDoc = harness.documentsInSubdirectory("beta").first!
 
         // Initially beta is newer
-        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
-        betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+        alphaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        betaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
         let grouping1 = SidebarGrouping.group(harness.documents)
         guard case .grouped(let groups1) = grouping1 else {
@@ -183,7 +183,7 @@ struct ReaderSidebarGroupingTests {
         #expect(groups1[0].displayName == "beta")
 
         // Now alpha gets modified more recently
-        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
+        alphaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
 
         let grouping2 = SidebarGrouping.group(harness.documents)
         guard case .grouped(let groups2) = grouping2 else {
@@ -213,8 +213,8 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[0].readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
+        harness.documents[0].documentStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].documentStore.externalChange.unacknowledgedExternalChangeKind = .modified
 
         let states = SidebarGrouping.indicators(for: harness.documents)
         #expect(states == [.externalChange])
@@ -227,9 +227,9 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[0].readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
-        harness.documents[0].readerStore.testSetIsCurrentFileMissing(true)
+        harness.documents[0].documentStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].documentStore.externalChange.unacknowledgedExternalChangeKind = .modified
+        harness.documents[0].documentStore.testSetIsCurrentFileMissing(true)
 
         let states = SidebarGrouping.indicators(for: harness.documents)
         #expect(states == [.deletedExternalChange])
@@ -246,7 +246,7 @@ struct ReaderSidebarGroupingTests {
 
         // Give all groups the same mod date so only pinning affects order
         for doc in harness.documents {
-            doc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+            doc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
         }
 
         let gammaPath = harness.directoryPath(for: "gamma")
@@ -273,9 +273,9 @@ struct ReaderSidebarGroupingTests {
         let gammaDoc = harness.documentsInSubdirectory("gamma").first!
         let betaDoc = harness.documentsInSubdirectory("beta").first!
 
-        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
-        gammaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
-        betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+        alphaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
+        gammaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        betaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
         let alphaPath = harness.directoryPath(for: "alpha")
         let gammaPath = harness.directoryPath(for: "gamma")
@@ -308,8 +308,8 @@ struct ReaderSidebarGroupingTests {
         let alphaDoc = harness.documentsInSubdirectory("alpha").first!
         let betaDoc = harness.documentsInSubdirectory("beta").first!
 
-        alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
-        betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
+        alphaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+        betaDoc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
         let grouping = SidebarGrouping.group(harness.documents, pinnedGroupIDs: [])
 
@@ -329,17 +329,17 @@ struct ReaderSidebarGroupingTests {
         defer { harness.cleanup() }
 
         // One doc has modified change, another has deleted-added change.
-        harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[0].readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
-        harness.documents[1].readerStore.testSetHasUnacknowledgedExternalChange(true)
-        harness.documents[1].readerStore.externalChange.unacknowledgedExternalChangeKind = .added
-        harness.documents[1].readerStore.testSetIsCurrentFileMissing(true)
+        harness.documents[0].documentStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[0].documentStore.externalChange.unacknowledgedExternalChangeKind = .modified
+        harness.documents[1].documentStore.testSetHasUnacknowledgedExternalChange(true)
+        harness.documents[1].documentStore.externalChange.unacknowledgedExternalChangeKind = .added
+        harness.documents[1].documentStore.testSetIsCurrentFileMissing(true)
 
         let documentStates = harness.documents.map { document in
             DocumentIndicatorState(
-                hasUnacknowledgedExternalChange: document.readerStore.externalChange.hasUnacknowledgedExternalChange,
-                isCurrentFileMissing: document.readerStore.document.isCurrentFileMissing,
-                unacknowledgedExternalChangeKind: document.readerStore.externalChange.unacknowledgedExternalChangeKind
+                hasUnacknowledgedExternalChange: document.documentStore.externalChange.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: document.documentStore.document.isCurrentFileMissing,
+                unacknowledgedExternalChangeKind: document.documentStore.externalChange.unacknowledgedExternalChangeKind
             )
         }
         #expect(documentStates.contains(.externalChange))
@@ -436,9 +436,9 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        harness.documentsInSubdirectory("src").first!.readerStore
+        harness.documentsInSubdirectory("src").first!.documentStore
             .testSetHasUnacknowledgedExternalChange(true)
-        harness.documentsInSubdirectory("src").first!.readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
+        harness.documentsInSubdirectory("src").first!.documentStore.externalChange.unacknowledgedExternalChangeKind = .modified
 
         let grouping = SidebarGrouping.group(harness.documents)
 
@@ -460,9 +460,9 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        harness.documentsInSubdirectory("src").first!.readerStore
+        harness.documentsInSubdirectory("src").first!.documentStore
             .testSetHasUnacknowledgedExternalChange(true)
-        harness.documentsInSubdirectory("src").first!.readerStore.externalChange.unacknowledgedExternalChangeKind = .added
+        harness.documentsInSubdirectory("src").first!.documentStore.externalChange.unacknowledgedExternalChangeKind = .added
 
         let grouping = SidebarGrouping.group(harness.documents)
 

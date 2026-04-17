@@ -41,7 +41,7 @@ final class DocumentCloseCoordinator {
             let replacement = delegate.makeDocument()
             documentList.replaceAll(with: [replacement])
             if let storeConfigurator = delegate.storeConfigurator {
-                storeConfigurator(replacement.readerStore)
+                storeConfigurator(replacement.documentStore)
             }
             delegate.selectedDocumentID = replacement.id
             synchronizeAndRebuild()
@@ -110,7 +110,7 @@ final class DocumentCloseCoordinator {
         guard let delegate else { return }
         let replacement = delegate.makeDocument()
         if let storeConfigurator = delegate.storeConfigurator {
-            storeConfigurator(replacement.readerStore)
+            storeConfigurator(replacement.documentStore)
         }
 
         documentList.replaceAll(with: [replacement])

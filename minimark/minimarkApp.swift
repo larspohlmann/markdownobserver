@@ -26,7 +26,7 @@ struct MarkdownObserverApp: App {
         let appAppearance = settingsStore.currentSettings.appAppearance
 
         WindowGroup("MarkdownObserver", for: WindowSeed.self) { seed in
-            ReaderWindowRootView(
+            WindowRootView(
                 seed: seed.wrappedValue,
                 settingsStore: settingsStore,
                 multiFileDisplayMode: activeMultiFileDisplayMode
@@ -38,11 +38,11 @@ struct MarkdownObserverApp: App {
             height: WindowDefaults.defaultHeight
         )
         .commands {
-            ReaderCommands(settingsStore: settingsStore, multiFileDisplayMode: activeMultiFileDisplayMode)
+            AppCommands(settingsStore: settingsStore, multiFileDisplayMode: activeMultiFileDisplayMode)
         }
 
         Window("MarkdownObserver Settings", id: AppWindowID.settings.rawValue) {
-            ReaderSettingsView(settingsStore: settingsStore)
+            SettingsView(settingsStore: settingsStore)
             .appAppearance(appAppearance)
         }
         .defaultSize(width: 1000, height: 720)

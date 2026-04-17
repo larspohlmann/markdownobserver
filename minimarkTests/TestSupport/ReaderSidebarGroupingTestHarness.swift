@@ -52,7 +52,7 @@ struct ReaderSidebarGroupingTestHarness {
                 store.testSetFileDisplayName(fileURL.lastPathComponent)
 
                 allDocuments.append(
-                    SidebarDocumentController.Document(id: UUID(), readerStore: store)
+                    SidebarDocumentController.Document(id: UUID(), documentStore: store)
                 )
             }
         }
@@ -63,7 +63,7 @@ struct ReaderSidebarGroupingTestHarness {
     func documentsInSubdirectory(_ name: String) -> [SidebarDocumentController.Document] {
         let subURL = temporaryDirectoryURL.appendingPathComponent(name, isDirectory: true)
         return documents.filter { doc in
-            doc.readerStore.document.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)
+            doc.documentStore.document.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)
         }
     }
 

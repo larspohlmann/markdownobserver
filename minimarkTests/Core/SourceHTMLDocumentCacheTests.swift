@@ -12,8 +12,8 @@ struct SourceHTMLDocumentCacheTests {
     private static func makeSettings(
         readerTheme: ThemeKind = .blackOnWhite,
         baseFontSize: Double = 15
-    ) -> ReaderSettings {
-        ReaderSettings(
+    ) -> Settings {
+        Settings(
             appAppearance: .system,
             readerTheme: readerTheme,
             syntaxTheme: .monokai,

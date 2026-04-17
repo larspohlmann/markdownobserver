@@ -77,7 +77,7 @@ struct ReaderPreferencesStoreTests {
         #expect(store.currentPreferences.baseFontSize == 12)
 
         store.resetFontSize()
-        #expect(store.currentPreferences.baseFontSize == ReaderSettings.default.baseFontSize)
+        #expect(store.currentPreferences.baseFontSize == Settings.default.baseFontSize)
     }
 
     @Test @MainActor func dismissHintUsesImmediatePersistence() {

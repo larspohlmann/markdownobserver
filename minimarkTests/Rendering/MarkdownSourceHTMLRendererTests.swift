@@ -9,7 +9,7 @@ import Testing
 
 @Suite
 struct MarkdownSourceHTMLRendererTests {
-    private var defaultSettings: ReaderSettings { .default }
+    private var defaultSettings: Settings { .default }
 
     @Test func makeHTMLDocumentContainsDoctype() {
         let html = MarkdownSourceHTMLRenderer.makeHTMLDocument(

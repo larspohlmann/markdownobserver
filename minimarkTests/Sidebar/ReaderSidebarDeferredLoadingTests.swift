@@ -8,7 +8,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
@@ -29,7 +29,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
@@ -53,7 +53,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let missingURL = harness.temporaryDirectoryURL.appendingPathComponent("gone.md")
         let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
@@ -91,11 +91,11 @@ struct ReaderSidebarDeferredLoadingTests {
             $0.id != harness.controller.selectedDocumentID
         }
         for document in nonSelectedDocuments {
-            #expect(document.readerStore.document.isDeferredDocument)
-            #expect(document.readerStore.document.sourceMarkdown.isEmpty)
+            #expect(document.documentStore.document.isDeferredDocument)
+            #expect(document.documentStore.document.sourceMarkdown.isEmpty)
         }
         // The selected document should have been materialized
-        #expect(!harness.controller.selectedReaderStore.document.isDeferredDocument)
+        #expect(!harness.controller.selectedDocumentStore.document.isDeferredDocument)
     }
 
     @Test @MainActor func burstOpenWithManualOriginLoadsAllDocumentsFully() throws {
@@ -110,9 +110,9 @@ struct ReaderSidebarDeferredLoadingTests {
 
         #expect(harness.controller.documents.count == 2)
         for document in harness.controller.documents {
-            #expect(!document.readerStore.document.isDeferredDocument)
-            #expect(document.readerStore.document.fileURL != nil)
-            #expect(!document.readerStore.document.sourceMarkdown.isEmpty)
+            #expect(!document.documentStore.document.isDeferredDocument)
+            #expect(document.documentStore.document.fileURL != nil)
+            #expect(!document.documentStore.document.sourceMarkdown.isEmpty)
         }
     }
 
@@ -138,7 +138,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let deferredDocument = harness.controller.documents.first {
             $0.id != harness.controller.selectedDocumentID
         }!
-        #expect(deferredDocument.readerStore.document.isDeferredDocument)
+        #expect(deferredDocument.documentStore.document.isDeferredDocument)
 
         // Select it
         harness.controller.selectDocument(deferredDocument.id)
@@ -147,9 +147,9 @@ struct ReaderSidebarDeferredLoadingTests {
         for _ in 0..<5 { await Task.yield() }
 
         // Now it should be fully loaded
-        #expect(!deferredDocument.readerStore.document.isDeferredDocument)
-        #expect(!deferredDocument.readerStore.document.sourceMarkdown.isEmpty)
-        #expect(!deferredDocument.readerStore.renderingController.renderedHTMLDocument.isEmpty)
+        #expect(!deferredDocument.documentStore.document.isDeferredDocument)
+        #expect(!deferredDocument.documentStore.document.sourceMarkdown.isEmpty)
+        #expect(!deferredDocument.documentStore.renderingController.renderedHTMLDocument.isEmpty)
     }
 
     @Test @MainActor func openingAlreadyDeferredDocumentDoesNotDuplicate() throws {
@@ -207,9 +207,9 @@ struct ReaderSidebarDeferredLoadingTests {
             slotStrategy: .replaceSelectedSlot
         ))
 
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "gamma.md")
-        #expect(!harness.controller.selectedReaderStore.document.isDeferredDocument)
-        #expect(!harness.controller.selectedReaderStore.document.sourceMarkdown.isEmpty)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "gamma.md")
+        #expect(!harness.controller.selectedDocumentStore.document.isDeferredDocument)
+        #expect(!harness.controller.selectedDocumentStore.document.sourceMarkdown.isEmpty)
     }
 
     @Test @MainActor func liveFolderWatchEventForDeferredDocumentDoesNotDuplicate() throws {
@@ -264,15 +264,15 @@ struct ReaderSidebarDeferredLoadingTests {
 
         // Find the deferred (non-selected) document
         let deferredDocument = harness.controller.documents.first {
-            $0.readerStore.document.isDeferredDocument
+            $0.documentStore.document.isDeferredDocument
         }!
-        #expect(deferredDocument.readerStore.document.sourceMarkdown.isEmpty)
+        #expect(deferredDocument.documentStore.document.sourceMarkdown.isEmpty)
 
         // Simulate a live folder-watch change event for the deferred file.
         // Use executePlan directly so this test can provide a one-off plan
         // that reuses the existing deferred document, forces .loadFully,
         // and supplies a specific diff baseline for the change event.
-        let deferredFileURL = deferredDocument.readerStore.document.fileURL!
+        let deferredFileURL = deferredDocument.documentStore.document.fileURL!
         harness.controller.executePlan(FileOpenPlan(
             assignments: [FileOpenPlan.SlotAssignment(
                 fileURL: deferredFileURL,
@@ -287,9 +287,9 @@ struct ReaderSidebarDeferredLoadingTests {
         for _ in 0..<5 { await Task.yield() }
 
         // The deferred document should now be fully loaded
-        #expect(!deferredDocument.readerStore.document.isDeferredDocument)
-        #expect(!deferredDocument.readerStore.document.sourceMarkdown.isEmpty)
-        #expect(!deferredDocument.readerStore.renderingController.renderedHTMLDocument.isEmpty)
+        #expect(!deferredDocument.documentStore.document.isDeferredDocument)
+        #expect(!deferredDocument.documentStore.document.sourceMarkdown.isEmpty)
+        #expect(!deferredDocument.documentStore.renderingController.renderedHTMLDocument.isEmpty)
     }
 
     @Test @MainActor func liveChangeEventShowsIndicatorForDeferredDocument() async throws {
@@ -312,11 +312,11 @@ struct ReaderSidebarDeferredLoadingTests {
         await Task.yield()
 
         let deferredDocument = harness.controller.documents.first {
-            $0.readerStore.document.isDeferredDocument
+            $0.documentStore.document.isDeferredDocument
         }!
 
         // Simulate a live change with a diff baseline (file was modified).
-        let deferredFileURL = deferredDocument.readerStore.document.fileURL!
+        let deferredFileURL = deferredDocument.documentStore.document.fileURL!
         harness.controller.executePlan(FileOpenPlan(
             assignments: [FileOpenPlan.SlotAssignment(
                 fileURL: deferredFileURL,
@@ -331,7 +331,7 @@ struct ReaderSidebarDeferredLoadingTests {
         for _ in 0..<5 { await Task.yield() }
 
         // The yellow change indicator should be visible
-        #expect(deferredDocument.readerStore.externalChange.hasUnacknowledgedExternalChange)
+        #expect(deferredDocument.documentStore.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func liveAddEventDoesNotShowIndicatorForDeferredDocument() async throws {
@@ -354,11 +354,11 @@ struct ReaderSidebarDeferredLoadingTests {
         await Task.yield()
 
         let deferredDocument = harness.controller.documents.first {
-            $0.readerStore.document.isDeferredDocument
+            $0.documentStore.document.isDeferredDocument
         }!
 
         // Simulate a live event without a diff baseline (new file, not a modification).
-        let deferredFileURL = deferredDocument.readerStore.document.fileURL!
+        let deferredFileURL = deferredDocument.documentStore.document.fileURL!
         harness.controller.executePlan(FileOpenPlan(
             assignments: [FileOpenPlan.SlotAssignment(
                 fileURL: deferredFileURL,
@@ -373,14 +373,14 @@ struct ReaderSidebarDeferredLoadingTests {
         for _ in 0..<5 { await Task.yield() }
 
         // No yellow indicator — this wasn't a modification
-        #expect(!deferredDocument.readerStore.externalChange.hasUnacknowledgedExternalChange)
+        #expect(!deferredDocument.documentStore.externalChange.hasUnacknowledgedExternalChange)
     }
 
     @Test @MainActor func materializeDeferredDocumentWorksFromLoadingState() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
@@ -419,27 +419,27 @@ struct ReaderSidebarDeferredLoadingTests {
         let deferredDocument = harness.controller.documents.first {
             $0.id != harness.controller.selectedDocumentID
         }!
-        #expect(deferredDocument.readerStore.document.documentLoadState == .deferred)
+        #expect(deferredDocument.documentStore.document.documentLoadState == .deferred)
 
         harness.controller.selectDocument(deferredDocument.id)
 
         // Immediately after selectDocument: state should be .loading, not yet fully loaded
-        #expect(deferredDocument.readerStore.document.documentLoadState == .loading)
-        #expect(deferredDocument.readerStore.document.sourceMarkdown.isEmpty)
+        #expect(deferredDocument.documentStore.document.documentLoadState == .loading)
+        #expect(deferredDocument.documentStore.document.sourceMarkdown.isEmpty)
 
         // After yielding: the Task completes and the document content is loaded.
         // State may still be .loading due to holdLoadingOverlayBriefly() keeping the
         // overlay visible for the WKWebView to render.
         for _ in 0..<5 { await Task.yield() }
-        #expect(!deferredDocument.readerStore.document.sourceMarkdown.isEmpty)
-        #expect(!deferredDocument.readerStore.renderingController.renderedHTMLDocument.isEmpty)
+        #expect(!deferredDocument.documentStore.document.sourceMarkdown.isEmpty)
+        #expect(!deferredDocument.documentStore.renderingController.renderedHTMLDocument.isEmpty)
     }
 
     @Test @MainActor func transitionToLoadingSetsLoadingState() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let session = FolderWatchSession(
             folderURL: harness.temporaryDirectoryURL,
             options: .default,
@@ -458,7 +458,7 @@ struct ReaderSidebarDeferredLoadingTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let store = harness.controller.selectedReaderStore
+        let store = harness.controller.selectedDocumentStore
 
         let coordinator = FileOpenCoordinator(controller: harness.controller)
         coordinator.open(FileOpenRequest(

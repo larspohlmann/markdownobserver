@@ -58,8 +58,8 @@ final class UITestLaunchCoordinator {
 
     // MARK: - Private
 
-    private func resolvedLaunchAction() -> ReaderWindowUITestLaunchAction {
-        ReaderWindowUITestFlowSupport.resolveLaunchAction(
+    private func resolvedLaunchAction() -> WindowUITestLaunchAction {
+        WindowUITestFlowSupport.resolveLaunchAction(
             configuration: UITestLaunchConfiguration.current,
             hostWindowAvailable: actions?.hostWindow() != nil
         )
@@ -85,7 +85,7 @@ final class UITestLaunchCoordinator {
     }
 
     private func startGroupedSidebarFlow() {
-        ReaderWindowUITestFlowSupport.startGroupedSidebarFlow { [actions] fileURLs in
+        WindowUITestFlowSupport.startGroupedSidebarFlow { [actions] fileURLs in
             actions?.openFileRequest(FileOpenRequest(
                 fileURLs: fileURLs,
                 origin: .manual
@@ -94,7 +94,7 @@ final class UITestLaunchCoordinator {
     }
 
     private func startAutoOpenWatchFlow() {
-        ReaderWindowUITestFlowSupport.startAutoOpenWatchFlow(
+        WindowUITestFlowSupport.startAutoOpenWatchFlow(
             startWatchingFolder: { [actions] watchFolderURL in
                 actions?.startWatchingFolder(watchFolderURL, .default)
             },
@@ -102,7 +102,7 @@ final class UITestLaunchCoordinator {
                 self?.watchFlowTask?.cancel()
             },
             waitForFolderWatchStartup: { [actions] in
-                await ReaderWindowUITestFlowSupport.waitForFolderWatchStartup {
+                await WindowUITestFlowSupport.waitForFolderWatchStartup {
                     actions?.isSessionActive() ?? false
                 }
             },

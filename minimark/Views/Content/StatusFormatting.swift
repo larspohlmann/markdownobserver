@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderStatusFormatting {
+enum StatusFormatting {
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short

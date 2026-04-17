@@ -487,7 +487,7 @@ struct ReaderFavoriteWatchedFolderTests {
         }
         """
 
-        let settings = try JSONDecoder().decode(ReaderSettings.self, from: Data(json.utf8))
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
         #expect(settings.favoriteWatchedFolders.isEmpty)
     }
 

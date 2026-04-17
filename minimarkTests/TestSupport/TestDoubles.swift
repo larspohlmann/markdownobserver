@@ -96,11 +96,11 @@ final class TestFileWatcher: FileChangeWatching {
 
 @MainActor
 final class TestReaderSettingsStore: SettingsStoring {
-    var settingsPublisher: AnyPublisher<ReaderSettings, Never> {
+    var settingsPublisher: AnyPublisher<Settings, Never> {
         subject.eraseToAnyPublisher()
     }
 
-    var currentSettings: ReaderSettings {
+    var currentSettings: Settings {
         subject.value
     }
 
@@ -108,7 +108,7 @@ final class TestReaderSettingsStore: SettingsStoring {
     private(set) var recordedRecentWatchedFolders: [RecentWatchedFolder] = []
     private(set) var recordedRecentManuallyOpenedFiles: [RecentOpenedFile] = []
 
-    private let subject: CurrentValueSubject<ReaderSettings, Never>
+    private let subject: CurrentValueSubject<Settings, Never>
 
     init(
         autoRefreshOnExternalChange: Bool,
@@ -116,7 +116,7 @@ final class TestReaderSettingsStore: SettingsStoring {
         diffBaselineLookback: DiffBaselineLookback = .twoMinutes
     ) {
         subject = CurrentValueSubject(
-            ReaderSettings(
+            Settings(
                 appAppearance: .system,
                 readerTheme: .blackOnWhite,
                 syntaxTheme: .monokai,
@@ -166,7 +166,7 @@ final class TestReaderSettingsStore: SettingsStoring {
     }
 
     func resetFontSize() {
-        updateBaseFontSize(ReaderSettings.default.baseFontSize)
+        updateBaseFontSize(Settings.default.baseFontSize)
     }
 
     func updateNotificationsEnabled(_ isEnabled: Bool) {
@@ -942,7 +942,7 @@ struct ReaderSidebarControllerTestHarness {
         var createdFileWatchers: [TestFileWatcher] = []
         controller = SidebarDocumentController(
             settingsStore: settingsStore,
-            makeReaderStore: {
+            makeDocumentStore: {
                 let fileWatcher = TestFileWatcher()
                 createdFileWatchers.append(fileWatcher)
                 let settler = AutoOpenSettler(settlingInterval: 1.0)

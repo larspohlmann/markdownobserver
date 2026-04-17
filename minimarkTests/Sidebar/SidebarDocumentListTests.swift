@@ -38,7 +38,7 @@ struct SidebarDocumentListTests {
             )
         )
         return SidebarDocumentController.Document(
-            id: id, readerStore: store, normalizedFileURL: normalizedURL
+            id: id, documentStore: store, normalizedFileURL: normalizedURL
         )
     }
 

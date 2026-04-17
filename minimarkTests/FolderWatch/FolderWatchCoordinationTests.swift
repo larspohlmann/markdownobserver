@@ -772,7 +772,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.window-local-open.\(UUID().uuidString)"
         )
-        let view = ReaderWindowRootView(
+        let view = WindowRootView(
             seed: nil,
             settingsStore: settingsStore,
             multiFileDisplayMode: .sidebarLeft
@@ -781,7 +781,7 @@ struct FolderWatchCoordinationTests {
         view.windowCoordinator.documentOpen.openAdditionalDocumentInCurrentWindow(markdownURL)
 
         #expect(focusedURLs.isEmpty)
-        #expect(view.sidebarDocumentController.selectedReaderStore.document.fileURL?.path == markdownURL.path)
+        #expect(view.sidebarDocumentController.selectedDocumentStore.document.fileURL?.path == markdownURL.path)
     }
 
     @Test @MainActor func openAdditionalDocumentsInCurrentWindowKeepsBatchLocal() throws {
@@ -818,7 +818,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.window-local-batch-open.\(UUID().uuidString)"
         )
-        let view = ReaderWindowRootView(
+        let view = WindowRootView(
             seed: nil,
             settingsStore: settingsStore,
             multiFileDisplayMode: .sidebarLeft
@@ -831,18 +831,18 @@ struct FolderWatchCoordinationTests {
         ))
 
         #expect(focusedURLs.isEmpty)
-        #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.readerStore.document.fileURL?.path }) == Set([
+        #expect(Set(view.sidebarDocumentController.documents.compactMap { $0.documentStore.document.fileURL?.path }) == Set([
             alphaURL.path,
             zetaURL.path
         ]))
-        #expect(view.sidebarDocumentController.selectedReaderStore.document.fileURL?.path == zetaURL.path)
+        #expect(view.sidebarDocumentController.selectedDocumentStore.document.fileURL?.path == zetaURL.path)
     }
 
     @Test @MainActor func readerWindowCoordinatorResolvesTitleFromSelectedDocumentState() throws {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let coordinator = ReaderWindowCoordinator(
+        let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )
@@ -861,7 +861,7 @@ struct FolderWatchCoordinationTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let coordinator = ReaderWindowCoordinator(
+        let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )

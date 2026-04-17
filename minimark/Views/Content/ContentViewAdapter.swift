@@ -4,7 +4,7 @@ import SwiftUI
 /// controller, settings store, and appearance controller are tracked only for this view's
 /// body, not for the root or sidebar workspace view.
 struct ContentViewAdapter: View {
-    let readerStore: DocumentStore
+    let documentStore: DocumentStore
     let sidebarDocumentController: SidebarDocumentController
     let settingsStore: SettingsStore
     let appearanceController: WindowAppearanceController
@@ -43,7 +43,7 @@ struct ContentViewAdapter: View {
         )
 
         ContentAreaHost(
-            readerStore: readerStore,
+            documentStore: documentStore,
             settingsStore: settingsStore,
             folderWatchState: folderWatchState,
             onAction: onAction,
@@ -55,7 +55,7 @@ struct ContentViewAdapter: View {
         // Remount the host (and its @State viewModel) when the selected
         // DocumentStore changes; otherwise SwiftUI preserves @State across
         // document swaps and the VM keeps the prior store's controllers.
-        .id(ObjectIdentifier(readerStore))
+        .id(ObjectIdentifier(documentStore))
     }
 }
 
@@ -63,7 +63,7 @@ struct ContentViewAdapter: View {
 /// across host-body re-evaluations. Inputs that change per parent eval (`folderWatchState`,
 /// `onAction`) are pushed into the VM via `applyHostInputs` on each body.
 private struct ContentAreaHost: View {
-    let readerStore: DocumentStore
+    let documentStore: DocumentStore
     let settingsStore: SettingsStore
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
@@ -76,7 +76,7 @@ private struct ContentAreaHost: View {
     @State private var viewModel: ContentAreaViewModel
 
     init(
-        readerStore: DocumentStore,
+        documentStore: DocumentStore,
         settingsStore: SettingsStore,
         folderWatchState: ContentViewFolderWatchState,
         onAction: @escaping (ContentViewAction) -> Void,
@@ -85,7 +85,7 @@ private struct ContentAreaHost: View {
         pendingFolderWatchScope: Binding<FolderWatchScope>,
         pendingFolderWatchExcludedSubdirectoryPaths: Binding<[String]>
     ) {
-        self.readerStore = readerStore
+        self.documentStore = documentStore
         self.settingsStore = settingsStore
         self.folderWatchState = folderWatchState
         self.onAction = onAction
@@ -94,11 +94,11 @@ private struct ContentAreaHost: View {
         self._pendingFolderWatchScope = pendingFolderWatchScope
         self._pendingFolderWatchExcludedSubdirectoryPaths = pendingFolderWatchExcludedSubdirectoryPaths
         _viewModel = State(wrappedValue: ContentAreaViewModel(
-            document: readerStore.document,
-            rendering: readerStore.renderingController,
-            sourceEditing: readerStore.sourceEditingController,
-            externalChange: readerStore.externalChange,
-            toc: readerStore.toc,
+            document: documentStore.document,
+            rendering: documentStore.renderingController,
+            sourceEditing: documentStore.sourceEditingController,
+            externalChange: documentStore.externalChange,
+            toc: documentStore.toc,
             settingsStore: settingsStore,
             folderWatchState: folderWatchState,
             surfaceViewModel: DocumentSurfaceViewModel(),

@@ -67,7 +67,7 @@ struct ThemeSelectorView: View {
             ScrollView {
                 VStack(spacing: 4) {
                     ForEach(filteredReaderThemes, id: \.self) { kind in
-                        ReaderThemeCard(
+                        ThemeCard(
                             kind: kind,
                             isSelected: kind == stagedReaderTheme
                         ) {
@@ -210,7 +210,7 @@ struct ThemeSelectorView: View {
         settingsStore.currentSettings.syntaxTheme
     }
 
-    private var previewSettings: ReaderSettings {
+    private var previewSettings: Settings {
         var settings = settingsStore.currentSettings
         settings.readerTheme = stagedReaderTheme
         settings.syntaxTheme = stagedSyntaxTheme

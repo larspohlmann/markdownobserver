@@ -24,12 +24,12 @@ struct PointingHandCursor: ViewModifier {
     }
 }
 
-enum ReaderTopBarMetrics {
+enum TopBarMetrics {
     static let mainBarHeight: CGFloat = 44
     static let sourceEditingBarHeight: CGFloat = 22
 }
 
-enum ReaderTopBarAction {
+enum TopBarAction {
     case openFiles([URL])
     case openInApp(ExternalApplication)
     case revealInFinder
@@ -65,7 +65,7 @@ enum ReaderTopBarAction {
     }
 }
 
-struct ReaderTopBar: View {
+struct TopBar: View {
     let document: DocumentController
     let sourceEditing: SourceEditingController
     let statusBarTimestamp: StatusBarTimestamp?
@@ -75,11 +75,11 @@ struct ReaderTopBar: View {
     let recentWatchedFolders: [RecentWatchedFolder]
     let recentManuallyOpenedFiles: [RecentOpenedFile]
     let iconProvider: (ExternalApplication) -> NSImage?
-    let onAction: (ReaderTopBarAction) -> Void
+    let onAction: (TopBarAction) -> Void
 
     private enum Metrics {
         static let barHorizontalPadding: CGFloat = 12
-        static let mainBarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
+        static let mainBarHeight: CGFloat = TopBarMetrics.mainBarHeight
     }
 
     @State private var isEditingFavorites = false
@@ -108,7 +108,7 @@ struct ReaderTopBar: View {
                     recentManuallyOpenedFiles: recentManuallyOpenedFiles,
                     iconProvider: iconProvider,
                     onAction: { menuAction in
-                        if let topBarAction = ReaderTopBarAction(menuAction) {
+                        if let topBarAction = TopBarAction(menuAction) {
                             onAction(topBarAction)
                         } else {
                             isEditingFavorites = true

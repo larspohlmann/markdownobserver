@@ -46,7 +46,7 @@ struct ReaderFavoriteWorkspaceStateTests {
     }
 
     @Test func defaultFactoryUsesGlobalSettingsAndEmptySets() {
-        let settings = ReaderSettings.default
+        let settings = Settings.default
 
         let state = FavoriteWorkspaceState.from(
             settings: settings,
@@ -65,7 +65,7 @@ struct ReaderFavoriteWorkspaceStateTests {
 
     @Test func snapshotCapturesCurrentValues() {
         let state = FavoriteWorkspaceState.from(
-            settings: ReaderSettings.default,
+            settings: Settings.default,
             pinnedGroupIDs: ["pinned1"],
             collapsedGroupIDs: ["collapsed1", "collapsed2"],
             sidebarWidth: 350
@@ -101,11 +101,11 @@ struct ReaderFavoriteWorkspaceStateTests {
             createdAt: .now
         )
 
-        var settings = ReaderSettings.default
+        var settings = Settings.default
         settings.favoriteWatchedFolders = [favorite]
 
         let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
 
         let restoredFavorite = decoded.favoriteWatchedFolders.first!
         #expect(restoredFavorite.workspaceState == workspaceState)
@@ -160,7 +160,7 @@ struct ReaderFavoriteWorkspaceStateTests {
 
     @Test func legacyMigrationUsesDecodedGlobalSettings() throws {
         // Simulate settings with customized globals and a legacy favorite (no workspaceState key)
-        var settings = ReaderSettings.default
+        var settings = Settings.default
         settings.sidebarSortMode = .nameAscending
         settings.sidebarGroupSortMode = .nameDescending
         settings.multiFileDisplayMode = .sidebarRight
@@ -180,7 +180,7 @@ struct ReaderFavoriteWorkspaceStateTests {
 
         // Encode, then decode — simulates upgrade path where favorite has default workspace state
         let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
 
         let migrated = decoded.favoriteWatchedFolders.first!
         #expect(migrated.workspaceState.fileSortMode == .nameAscending)
