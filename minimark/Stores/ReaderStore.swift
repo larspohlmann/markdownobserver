@@ -40,6 +40,7 @@ final class ReaderStore {
     let securityScopeResolver: SecurityScopeResolver
     let fileLoader: MarkdownFileLoader
     let saveLogFormatter: SaveLogFormatter
+    let presenter: DocumentPresenter
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -94,6 +95,16 @@ final class ReaderStore {
             document: self.document,
             sourceEditingController: self.sourceEditingController,
             folderWatchDispatcher: folderWatchDispatcher
+        )
+        self.presenter = DocumentPresenter(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            toc: self.toc,
+            renderingController: self.renderingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            settler: folderWatch.settler,
+            fileLoader: self.fileLoader
         )
     }
 

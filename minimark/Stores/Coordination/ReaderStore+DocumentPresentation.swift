@@ -11,19 +11,13 @@ extension ReaderStore {
         resetDocumentViewMode: Bool,
         acknowledgeExternalChange: Bool
     ) throws {
-        cancelPendingDraftPreviewRender()
-        applyLoadedDocumentState(
+        try presenter.presentLoaded(
             loaded,
-            presentedAs: fileURL,
+            at: fileURL,
             diffBaselineMarkdown: diffBaselineMarkdown,
-            resetDocumentViewMode: resetDocumentViewMode
+            resetDocumentViewMode: resetDocumentViewMode,
+            acknowledgeExternalChange: acknowledgeExternalChange
         )
-        try renderCurrentMarkdownImmediately()
-        if acknowledgeExternalChange {
-            externalChange.clear()
-        }
-        document.isCurrentFileMissing = false
-        document.lastError = nil
     }
 
     func applyLoadedDocumentState(
@@ -32,37 +26,16 @@ extension ReaderStore {
         diffBaselineMarkdown: String?,
         resetDocumentViewMode: Bool
     ) {
-        document.fileURL = fileURL
-        document.fileDisplayName = fileURL.lastPathComponent
-        document.savedMarkdown = loaded.markdown
-        sourceEditingController.draftMarkdown = nil
-        sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
-        document.sourceMarkdown = loaded.markdown
-        sourceEditingController.sourceEditorSeedMarkdown = loaded.markdown
-        document.fileLastModifiedAt = loaded.modificationDate
-
-        if resetDocumentViewMode {
-            sourceEditingController.documentViewMode = .preview
-        }
-
-        document.changedRegions = changedRegions(
+        presenter.applyLoadedState(
+            loaded,
+            presentedAs: fileURL,
             diffBaselineMarkdown: diffBaselineMarkdown,
-            newMarkdown: loaded.markdown
+            resetDocumentViewMode: resetDocumentViewMode
         )
-        sourceEditingController.unsavedChangedRegions = []
-        sourceEditingController.isSourceEditing = false
-        sourceEditingController.hasUnsavedDraftChanges = false
-        toc.clear()
     }
 
     func presentMissingDocument(at fileURL: URL, error: Error) {
-        document.fileURL = fileURL
-        document.fileDisplayName = fileURL.lastPathComponent
-        document.fileLastModifiedAt = nil
-        document.openInApplications = []
-        document.isCurrentFileMissing = true
-        document.lastError = ReaderPresentableError(from: error)
-        folderWatch.settler.clearSettling()
+        presenter.presentMissing(at: fileURL, error: error)
     }
 
     func loadAndPresentDocument(
@@ -72,15 +45,13 @@ extension ReaderStore {
         resetDocumentViewMode: Bool,
         acknowledgeExternalChange: Bool
     ) throws -> (markdown: String, modificationDate: Date) {
-        let loaded = try loadMarkdownFile(at: readURL)
-        try presentLoadedDocument(
-            loaded,
-            at: fileURL,
+        try presenter.loadAndPresent(
+            readURL: readURL,
+            presentedAs: fileURL,
             diffBaselineMarkdown: diffBaselineMarkdown,
             resetDocumentViewMode: resetDocumentViewMode,
             acknowledgeExternalChange: acknowledgeExternalChange
         )
-        return loaded
     }
 
     // MARK: - URL Routing
