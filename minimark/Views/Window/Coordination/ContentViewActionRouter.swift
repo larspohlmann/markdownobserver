@@ -116,7 +116,7 @@ final class ContentViewActionRouter {
         case .revealInFinder:
             sidebarDocumentController.selectedReaderStore.document.revealInFinder()
         case .presentError(let error):
-            sidebarDocumentController.selectedReaderStore.handle(error)
+            sidebarDocumentController.selectedReaderStore.document.handle(error)
         case .updateTOCHeadings(let headings):
             sidebarDocumentController.selectedReaderStore.toc.updateHeadings(headings)
         }
