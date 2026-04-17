@@ -58,7 +58,6 @@ struct ContentView: View {
             isBlockedFolderDropTargeted: viewModel.surfaceViewModel.dropTargeting.isBlockedFolderDropTargeted,
             isDragTargeted: viewModel.surfaceViewModel.dropTargeting.isDragTargeted
         ))
-        .modifier(ContentViewObservers(viewModel: viewModel))
         .onAppear { viewModel.handleAppear() }
     }
 

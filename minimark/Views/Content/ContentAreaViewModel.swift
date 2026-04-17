@@ -19,9 +19,11 @@ final class ContentAreaViewModel {
     let externalChange: ReaderExternalChangeController
     let toc: ReaderTOCController
     let settingsStore: ReaderSettingsStore
-    let folderWatchState: ContentViewFolderWatchState
+    var folderWatchState: ContentViewFolderWatchState
     let surfaceViewModel: DocumentSurfaceViewModel
-    let onAction: (ContentViewAction) -> Void
+    @ObservationIgnored var onAction: (ContentViewAction) -> Void
+
+    @ObservationIgnored private let observationCoordinator = ContentAreaObservationCoordinator()
 
     init(
         document: ReaderDocumentController,
@@ -43,6 +45,17 @@ final class ContentAreaViewModel {
         self.folderWatchState = folderWatchState
         self.surfaceViewModel = surfaceViewModel
         self.onAction = onAction
+        observationCoordinator.ensureSetup(for: self)
+    }
+
+    func applyHostInputs(
+        folderWatchState newFolderWatchState: ContentViewFolderWatchState,
+        onAction newOnAction: @escaping (ContentViewAction) -> Void
+    ) {
+        if folderWatchState != newFolderWatchState {
+            folderWatchState = newFolderWatchState
+        }
+        onAction = newOnAction
     }
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {

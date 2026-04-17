@@ -105,6 +105,128 @@ struct ContentAreaViewModelTests {
     }
 }
 
+@MainActor
+private func settle(iterations: Int = 30) async {
+    for _ in 0..<iterations {
+        await Task.yield()
+    }
+}
+
+/// Awaits the first MainActor tick after VM construction so that the observation
+/// coordinator's per-property Tasks have registered their `withObservationTracking`
+/// interest — only then will subsequent mutations fire the reactions under test.
+@MainActor
+private func waitForObservationSetup() async {
+    await settle()
+}
+
+@Suite(.serialized)
+struct ContentAreaViewModelObservationTests {
+
+    @Test @MainActor
+    func changingChangedRegionsResetsNavigationIndex() async {
+        let (viewModel, document, _, _) = makeTestViewModel()
+        await waitForObservationSetup()
+        viewModel.surfaceViewModel.changeNavigation.handleNavigationResult(index: 2)
+        #expect(viewModel.surfaceViewModel.changeNavigation.currentIndex == 2)
+
+        document.changedRegions = [
+            ChangedRegion(blockIndex: 0, lineRange: 0...0, kind: .added)
+        ]
+        await settle()
+
+        #expect(viewModel.surfaceViewModel.changeNavigation.currentIndex == nil)
+    }
+
+    @Test @MainActor
+    func changingFileURLResetsNavigationAndClearsDrop() async {
+        let (viewModel, document, _, _) = makeTestViewModel()
+        await waitForObservationSetup()
+        viewModel.surfaceViewModel.changeNavigation.requestNavigation(.next)
+        viewModel.surfaceViewModel.changeNavigation.handleNavigationResult(index: 5)
+        viewModel.surfaceViewModel.dropTargeting.update(
+            for: .preview,
+            update: DropTargetingUpdate(
+                isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true
+            )
+        )
+        #expect(viewModel.surfaceViewModel.dropTargeting.isDragTargeted == true)
+
+        document.fileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("a.md")
+        await settle()
+
+        #expect(viewModel.surfaceViewModel.changeNavigation.currentIndex == nil)
+        #expect(viewModel.surfaceViewModel.changeNavigation.currentRequest == nil)
+        #expect(viewModel.surfaceViewModel.dropTargeting.isDragTargeted == false)
+    }
+
+    @Test @MainActor
+    func flippingIsSourceEditingRefreshesSourceHTMLCache() async {
+        let (viewModel, _, _, sourceEditing) = makeTestViewModel()
+        await waitForObservationSetup()
+        #expect(viewModel.surfaceViewModel.sourceHTMLCache.document.isEmpty)
+
+        sourceEditing.isSourceEditing = true
+        await settle()
+
+        #expect(!viewModel.surfaceViewModel.sourceHTMLCache.document.isEmpty)
+    }
+
+    @Test @MainActor
+    func previewFallbackClearsPreviewDropTargeting() async {
+        let (viewModel, _, _, _) = makeTestViewModel()
+        await waitForObservationSetup()
+        viewModel.surfaceViewModel.dropTargeting.update(
+            for: .preview,
+            update: DropTargetingUpdate(
+                isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true
+            )
+        )
+        #expect(viewModel.surfaceViewModel.dropTargeting.isDragTargeted == true)
+
+        viewModel.surfaceViewModel.previewMode = .nativeFallback
+        await settle()
+
+        #expect(viewModel.surfaceViewModel.dropTargeting.isDragTargeted == false)
+    }
+
+    @Test @MainActor
+    func applyingNewFolderWatchStateClearsDropTargeting() async {
+        let (viewModel, _, _, _) = makeTestViewModel()
+        await waitForObservationSetup()
+        viewModel.surfaceViewModel.dropTargeting.update(
+            for: .preview,
+            update: DropTargetingUpdate(
+                isTargeted: true, droppedFileURLs: [], containsDirectoryHint: false, canDrop: true
+            )
+        )
+        #expect(viewModel.surfaceViewModel.dropTargeting.isDragTargeted == true)
+
+        let folderURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("watched")
+        let nextState = ContentViewFolderWatchState(
+            activeFolderWatch: FolderWatchSession(
+                folderURL: folderURL,
+                options: .default,
+                startedAt: Date()
+            ),
+            isFolderWatchInitialScanInProgress: false,
+            isFolderWatchInitialScanFailed: false,
+            canStopFolderWatch: true,
+            pendingFolderWatchURL: nil,
+            isCurrentWatchAFavorite: false,
+            favoriteWatchedFolders: [],
+            recentWatchedFolders: [],
+            recentManuallyOpenedFiles: [],
+            isAppearanceLocked: false,
+            effectiveReaderTheme: .blackOnWhite
+        )
+        viewModel.applyHostInputs(folderWatchState: nextState, onAction: { _ in })
+        await settle()
+
+        #expect(viewModel.surfaceViewModel.dropTargeting.isDragTargeted == false)
+    }
+}
+
 @Suite
 struct ContentAreaViewModelDropRoutingTests {
 

@@ -20,8 +20,6 @@ struct ContentViewAdapter: View {
     @Binding var pendingFolderWatchScope: FolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
-    @State private var surfaceViewModel = DocumentSurfaceViewModel()
-
     var body: some View {
         let favorites = settingsStore.currentSettings.favoriteWatchedFolders
         let isCurrentWatchAFavorite: Bool = {
@@ -44,7 +42,58 @@ struct ContentViewAdapter: View {
             effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
         )
 
-        let viewModel = ContentAreaViewModel(
+        ContentAreaHost(
+            readerStore: readerStore,
+            settingsStore: settingsStore,
+            folderWatchState: folderWatchState,
+            onAction: onAction,
+            isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
+            pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
+            pendingFolderWatchScope: $pendingFolderWatchScope,
+            pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
+        )
+        // Remount the host (and its @State viewModel) when the selected
+        // ReaderStore changes; otherwise SwiftUI preserves @State across
+        // document swaps and the VM keeps the prior store's controllers.
+        .id(ObjectIdentifier(readerStore))
+    }
+}
+
+/// Owns the `ContentAreaViewModel` as `@State` so its observation-tracking wiring survives
+/// across host-body re-evaluations. Inputs that change per parent eval (`folderWatchState`,
+/// `onAction`) are pushed into the VM via `applyHostInputs` on each body.
+private struct ContentAreaHost: View {
+    let readerStore: ReaderStore
+    let settingsStore: ReaderSettingsStore
+    let folderWatchState: ContentViewFolderWatchState
+    let onAction: (ContentViewAction) -> Void
+
+    @Binding var isFolderWatchOptionsPresented: Bool
+    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
+    @Binding var pendingFolderWatchScope: FolderWatchScope
+    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
+
+    @State private var viewModel: ContentAreaViewModel
+
+    init(
+        readerStore: ReaderStore,
+        settingsStore: ReaderSettingsStore,
+        folderWatchState: ContentViewFolderWatchState,
+        onAction: @escaping (ContentViewAction) -> Void,
+        isFolderWatchOptionsPresented: Binding<Bool>,
+        pendingFolderWatchOpenMode: Binding<FolderWatchOpenMode>,
+        pendingFolderWatchScope: Binding<FolderWatchScope>,
+        pendingFolderWatchExcludedSubdirectoryPaths: Binding<[String]>
+    ) {
+        self.readerStore = readerStore
+        self.settingsStore = settingsStore
+        self.folderWatchState = folderWatchState
+        self.onAction = onAction
+        self._isFolderWatchOptionsPresented = isFolderWatchOptionsPresented
+        self._pendingFolderWatchOpenMode = pendingFolderWatchOpenMode
+        self._pendingFolderWatchScope = pendingFolderWatchScope
+        self._pendingFolderWatchExcludedSubdirectoryPaths = pendingFolderWatchExcludedSubdirectoryPaths
+        _viewModel = State(wrappedValue: ContentAreaViewModel(
             document: readerStore.document,
             rendering: readerStore.renderingController,
             sourceEditing: readerStore.sourceEditingController,
@@ -52,11 +101,14 @@ struct ContentViewAdapter: View {
             toc: readerStore.toc,
             settingsStore: settingsStore,
             folderWatchState: folderWatchState,
-            surfaceViewModel: surfaceViewModel,
+            surfaceViewModel: DocumentSurfaceViewModel(),
             onAction: onAction
-        )
+        ))
+    }
 
-        ContentView(
+    var body: some View {
+        viewModel.applyHostInputs(folderWatchState: folderWatchState, onAction: onAction)
+        return ContentView(
             viewModel: viewModel,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
