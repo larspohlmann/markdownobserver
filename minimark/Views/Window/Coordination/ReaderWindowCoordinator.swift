@@ -3,32 +3,13 @@ import Foundation
 import Observation
 
 @MainActor
-private struct ReaderWindowStoreCallbackConfigurator {
-    let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
-    let onOpenAdditionalDocument: (URL, FolderWatchSession?, ReaderOpenOrigin, String?) -> Void
-
-    func configure(_ store: ReaderStore) {
-        if let lockedAppearance = lockedAppearanceProvider() {
-            store.renderingController.setAppearanceOverride(lockedAppearance)
-        }
-        store.folderWatchDispatcher.setAdditionalOpenHandler { event, folderWatchSession, origin in
-            onOpenAdditionalDocument(
-                event.fileURL,
-                folderWatchSession,
-                origin,
-                event.kind == .modified ? event.previousMarkdown : nil
-            )
-        }
-    }
-}
-
-@MainActor
 @Observable
 final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private var folderWatchOpenController: WindowFolderWatchOpenController!
     private var shellController: WindowShellController!
+    private var documentOpenCoordinator: WindowDocumentOpenCoordinator!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -69,16 +50,9 @@ final class ReaderWindowCoordinator {
         self.folderWatchFlowController = folderWatchFlowController
         self.uiTestLaunchCoordinator = uiTestLaunchCoordinator
         self.recentHistoryCoordinator = recentHistoryCoordinator
-        configureStoreCallbacks(
+        documentOpenCoordinator.configureStoreCallbacks(
             lockedAppearanceProvider: { [weak appearanceController] in appearanceController?.lockedAppearance }
-        ) { [weak self] fileURL, folderWatchSession, origin, initialDiffBaselineMarkdown in
-            self?.openAdditionalDocumentInCurrentWindow(
-                fileURL,
-                folderWatchSession: folderWatchSession,
-                origin: origin,
-                initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-            )
-        }
+        )
     }
 
     init(
@@ -98,6 +72,20 @@ final class ReaderWindowCoordinator {
             isHostWindowAttached: { [weak self] in self?.hostWindow != nil },
             onAfterFlush: { [weak self] in self?.refreshWindowPresentation() }
         )
+        self.documentOpenCoordinator = WindowDocumentOpenCoordinator(
+            fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
+            folderWatchOpenController: folderWatchOpenController,
+            sidebarDocumentController: sidebarDocumentController,
+            settingsStore: settingsStore,
+            folderWatchSessionProvider: { [weak self] in
+                self?.folderWatchFlowController?.sharedFolderWatchSession
+            },
+            applyTitlePresentation: { [weak self] in self?.applyWindowTitlePresentation() },
+            refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() },
+            prepareRecentFolderWatch: { [weak self] folderURL, options in
+                self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
+            }
+        )
     }
 
     var hasPendingFolderWatchOpenEvents: Bool {
@@ -105,15 +93,9 @@ final class ReaderWindowCoordinator {
     }
 
     func configureStoreCallbacks(
-        lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil },
-        onOpenAdditionalDocument: @escaping (URL, FolderWatchSession?, ReaderOpenOrigin, String?) -> Void
+        lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil }
     ) {
-        sidebarDocumentController.setStoreConfigurator { store in
-            ReaderWindowStoreCallbackConfigurator(
-                lockedAppearanceProvider: lockedAppearanceProvider,
-                onOpenAdditionalDocument: onOpenAdditionalDocument
-            ).configure(store)
-        }
+        documentOpenCoordinator.configureStoreCallbacks(lockedAppearanceProvider: lockedAppearanceProvider)
     }
 
     // MARK: - Window Shell Flow
@@ -135,8 +117,7 @@ final class ReaderWindowCoordinator {
     }
 
     func openFileRequest(_ request: FileOpenRequest) {
-        fileOpenCoordinator.open(request)
-        refreshWindowPresentation()
+        documentOpenCoordinator.openFileRequest(request)
     }
 
     func refreshSharedFolderWatchState() {
@@ -315,52 +296,15 @@ final class ReaderWindowCoordinator {
     // MARK: - Open and Watch Flow
 
     func openIncomingURL(_ url: URL) {
-        guard ReaderWindowOpenAndWatchFlowSupport.isSupportedIncomingMarkdownFile(url) else {
-            return
-        }
-
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: [url],
-            origin: .manual,
-            slotStrategy: .replaceSelectedSlot
-        ))
-        applyWindowTitlePresentation()
+        documentOpenCoordinator.openIncomingURL(url)
     }
 
     func openDocumentInCurrentWindow(_ fileURL: URL) {
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: [fileURL],
-            origin: .manual,
-            folderWatchSession: folderWatchFlowController?.sharedFolderWatchSession,
-            slotStrategy: .replaceSelectedSlot
-        ))
-        applyWindowTitlePresentation()
+        documentOpenCoordinator.openDocumentInCurrentWindow(fileURL)
     }
 
     func applyInitialSeedIfNeeded(seed: ReaderWindowSeed?) {
-        ReaderWindowOpenAndWatchFlowSupport.applyInitialSeedIfNeeded(
-            seed: seed,
-            openDocumentInCurrentWindow: { fileURL in
-                openDocumentInCurrentWindow(fileURL)
-            },
-            openDocumentInSelectedSlot: { fileURL, origin, folderWatchSession, initialDiffBaselineMarkdown in
-                openDocumentInSelectedSlot(
-                    at: fileURL,
-                    origin: origin,
-                    folderWatchSession: folderWatchSession,
-                    initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-                )
-            },
-            resolveRecentOpenedFileURL: { entry in
-                settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
-            },
-            resolveRecentWatchedFolderURL: { entry in
-                settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
-            },
-            prepareRecentFolderWatch: { [weak self] folderURL, options in
-                self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
-            }
-        )
+        documentOpenCoordinator.applyInitialSeedIfNeeded(seed: seed)
     }
 
     func openDocumentInSelectedSlot(
@@ -369,20 +313,13 @@ final class ReaderWindowCoordinator {
         folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: [normalizedURL],
+        documentOpenCoordinator.openDocumentInSelectedSlot(
+            at: fileURL,
             origin: origin,
             folderWatchSession: folderWatchSession,
-            initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedURL: $0] } ?? [:],
-            slotStrategy: .replaceSelectedSlot
-        ))
-        applyWindowTitlePresentation()
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+        )
     }
-
-    // Folder watch presentation and options are managed directly by FolderWatchFlowController.
-
-    // MARK: - Sidebar Command Flow
 
     func openAdditionalDocument(
         _ fileURL: URL,
@@ -390,13 +327,7 @@ final class ReaderWindowCoordinator {
         origin: ReaderOpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-
-        if ReaderWindowRegistry.shared.focusDocumentIfAlreadyOpen(at: normalizedFileURL) {
-            return
-        }
-
-        openAdditionalDocumentInCurrentWindow(
+        documentOpenCoordinator.openAdditionalDocument(
             fileURL,
             folderWatchSession: folderWatchSession,
             origin: origin,
@@ -410,25 +341,12 @@ final class ReaderWindowCoordinator {
         origin: ReaderOpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-
-        if folderWatchSession != nil {
-            let event = FolderWatchChangeEvent(
-                fileURL: normalizedFileURL,
-                kind: initialDiffBaselineMarkdown == nil ? .added : .modified,
-                previousMarkdown: initialDiffBaselineMarkdown
-            )
-            enqueueFolderWatchOpen(event, folderWatchSession: folderWatchSession, origin: origin)
-            return
-        }
-
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: [normalizedFileURL],
+        documentOpenCoordinator.openAdditionalDocumentInCurrentWindow(
+            fileURL,
+            folderWatchSession: folderWatchSession,
             origin: origin,
-            initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedFileURL: $0] } ?? [:],
-            slotStrategy: .reuseEmptySlotForFirst
-        ))
-        applyWindowTitlePresentation()
+            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
+        )
     }
 
     var isSharedFolderWatchAFavorite: Bool {

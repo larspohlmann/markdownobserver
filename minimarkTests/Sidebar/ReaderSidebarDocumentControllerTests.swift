@@ -858,8 +858,7 @@ struct ReaderSidebarDocumentControllerTests {
             sidebarDocumentController: harness.controller
         )
         coordinator.configureStoreCallbacks(
-            lockedAppearanceProvider: { lockedAppearance },
-            onOpenAdditionalDocument: { _, _, _, _ in }
+            lockedAppearanceProvider: { lockedAppearance }
         )
 
         // Defer a new file (deferred documents don't render, so needsAppearanceRender stays true)
@@ -886,10 +885,7 @@ struct ReaderSidebarDocumentControllerTests {
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )
-        coordinator.configureStoreCallbacks(
-            lockedAppearanceProvider: { nil },
-            onOpenAdditionalDocument: { _, _, _, _ in }
-        )
+        coordinator.configureStoreCallbacks(lockedAppearanceProvider: { nil })
 
         let fileCoordinator = FileOpenCoordinator(controller: harness.controller)
         fileCoordinator.open(FileOpenRequest(
