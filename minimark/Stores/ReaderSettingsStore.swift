@@ -187,14 +187,19 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String])
 }
 
-@MainActor protocol ReaderRecentWriting: AnyObject {
+@MainActor protocol ReaderRecentWatchedFolderWriting: AnyObject {
     func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions)
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
+}
+
+@MainActor protocol ReaderRecentOpenedFileWriting: AnyObject {
     func addRecentManuallyOpenedFile(_ fileURL: URL)
     func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
 }
+
+typealias ReaderRecentWriting = ReaderRecentWatchedFolderWriting & ReaderRecentOpenedFileWriting
 
 @MainActor protocol ReaderTrustedFolderWriting: AnyObject {
     func addTrustedImageFolder(_ folderURL: URL)
@@ -214,7 +219,7 @@ typealias ReaderSettingsWriting = ReaderThemeWriting
 
 typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
-@MainActor @Observable final class ReaderSettingsStore: ReaderSettingsStoring {
+@MainActor @Observable final class ReaderSettingsStore: ReaderSettingsStoring, ChildStoreCoordinating {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "ReaderSettingsStore"
@@ -230,16 +235,20 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
     private(set) var currentSettings: ReaderSettings
 
-    private let storage: ReaderSettingsKeyValueStoring
-    private let storageKey: String
-    private let subject: CurrentValueSubject<ReaderSettings, Never>
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-    let bookmarkResolver: BookmarkResolver
-    let bookmarkCreator: BookmarkCreator
-    private let minimumPersistInterval: TimeInterval
-    private var pendingPersistWorkItem: DispatchWorkItem?
-    private var lastPersistAt: Date = .distantPast
+    let preferences: ReaderPreferencesStore
+    let favorites: FavoriteWatchedFoldersStore
+    let recentWatchedFolders: RecentWatchedFoldersStore
+    let recentOpenedFiles: RecentOpenedFilesStore
+    let trustedImageFolders: TrustedImageFoldersStore
+
+    @ObservationIgnored private let storage: ReaderSettingsKeyValueStoring
+    @ObservationIgnored private let storageKey: String
+    @ObservationIgnored private let subject: CurrentValueSubject<ReaderSettings, Never>
+    @ObservationIgnored private let encoder = JSONEncoder()
+    @ObservationIgnored private let decoder = JSONDecoder()
+    @ObservationIgnored private let minimumPersistInterval: TimeInterval
+    @ObservationIgnored private var pendingPersistWorkItem: DispatchWorkItem?
+    @ObservationIgnored private var lastPersistAt: Date = .distantPast
 
     init(
         storage: ReaderSettingsKeyValueStoring = UserDefaults.standard,
@@ -265,11 +274,9 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     ) {
         self.storage = storage
         self.storageKey = storageKey
-        self.bookmarkResolver = bookmarkResolver
-        self.bookmarkCreator = bookmarkCreator
         self.minimumPersistInterval = max(0, minimumPersistInterval)
-        let initialSettings: ReaderSettings
 
+        let initialSettings: ReaderSettings
         if let data = storage.data(forKey: storageKey),
            let decoded = try? decoder.decode(ReaderSettings.self, from: data) {
             initialSettings = decoded
@@ -277,100 +284,58 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
             initialSettings = .default
         }
 
+        let bookmarkRefreshing = BookmarkRefreshing(resolve: bookmarkResolver, create: bookmarkCreator)
+
+        self.preferences = ReaderPreferencesStore(
+            initial: ReaderPreferencesSlice(
+                appAppearance: initialSettings.appAppearance,
+                readerTheme: initialSettings.readerTheme,
+                syntaxTheme: initialSettings.syntaxTheme,
+                baseFontSize: initialSettings.baseFontSize,
+                autoRefreshOnExternalChange: initialSettings.autoRefreshOnExternalChange,
+                notificationsEnabled: initialSettings.notificationsEnabled,
+                multiFileDisplayMode: initialSettings.multiFileDisplayMode,
+                sidebarSortMode: initialSettings.sidebarSortMode,
+                sidebarGroupSortMode: initialSettings.sidebarGroupSortMode,
+                diffBaselineLookback: initialSettings.diffBaselineLookback,
+                dismissedHints: initialSettings.dismissedHints
+            )
+        )
+        self.favorites = FavoriteWatchedFoldersStore(
+            initial: initialSettings.favoriteWatchedFolders,
+            bookmarkRefreshing: bookmarkRefreshing
+        )
+        self.recentWatchedFolders = RecentWatchedFoldersStore(
+            initial: initialSettings.recentWatchedFolders,
+            bookmarkRefreshing: bookmarkRefreshing
+        )
+        self.recentOpenedFiles = RecentOpenedFilesStore(
+            initial: initialSettings.recentManuallyOpenedFiles,
+            bookmarkRefreshing: bookmarkRefreshing
+        )
+        self.trustedImageFolders = TrustedImageFoldersStore(
+            initial: initialSettings.trustedImageFolders,
+            bookmarkRefreshing: bookmarkRefreshing
+        )
+
         self.subject = CurrentValueSubject(initialSettings)
         self.currentSettings = initialSettings
+
+        self.preferences.coordinator = self
+        self.favorites.coordinator = self
+        self.recentWatchedFolders.coordinator = self
+        self.recentOpenedFiles.coordinator = self
+        self.trustedImageFolders.coordinator = self
     }
 
-    func updateAppAppearance(_ appearance: AppAppearance) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.appAppearance = appearance
+    // MARK: - ChildStoreCoordinating
+
+    func childStoreDidMutate(coalescePersistence: Bool) {
+        let updated = reassembleSettings()
+        if updated != currentSettings {
+            currentSettings = updated
+            subject.send(updated)
         }
-    }
-
-    func updateTheme(_ kind: ReaderThemeKind) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.readerTheme = kind
-        }
-    }
-
-    func updateSyntaxTheme(_ kind: SyntaxThemeKind) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.syntaxTheme = kind
-        }
-    }
-
-    func updateBaseFontSize(_ value: Double) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.baseFontSize = min(max(value, 10), 48)
-        }
-    }
-
-    func increaseFontSize(step: Double = 1.0) {
-        let next = currentSettings.baseFontSize + step
-        updateBaseFontSize(next)
-    }
-
-    func decreaseFontSize(step: Double = 1.0) {
-        let next = currentSettings.baseFontSize - step
-        updateBaseFontSize(next)
-    }
-
-    func resetFontSize() {
-        updateBaseFontSize(ReaderSettings.default.baseFontSize)
-    }
-
-    func updateNotificationsEnabled(_ isEnabled: Bool) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.notificationsEnabled = isEnabled
-        }
-    }
-
-    func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.multiFileDisplayMode = mode
-        }
-    }
-
-    func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.sidebarSortMode = mode
-        }
-    }
-
-    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.sidebarGroupSortMode = mode
-        }
-    }
-
-    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) {
-        updateSettings(coalescePersistence: true) { settings in
-            settings.diffBaselineLookback = lookback
-        }
-    }
-
-    func isHintDismissed(_ hint: FirstUseHint) -> Bool {
-        currentSettings.dismissedHints.contains(hint)
-    }
-
-    func dismissHint(_ hint: FirstUseHint) {
-        updateSettings { settings in
-            settings.dismissedHints.insert(hint)
-        }
-    }
-
-    func updateSettings(
-        coalescePersistence: Bool = false,
-        _ mutate: (inout ReaderSettings) -> Void
-    ) {
-        let current = subject.value
-        var updated = current
-        mutate(&updated)
-        guard updated != current else {
-            return
-        }
-        currentSettings = updated
-        subject.send(updated)
         if coalescePersistence {
             schedulePersist()
         } else {
@@ -379,6 +344,133 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
             persist()
         }
     }
+
+    private func reassembleSettings() -> ReaderSettings {
+        let prefs = preferences.currentPreferences
+        return ReaderSettings(
+            appAppearance: prefs.appAppearance,
+            readerTheme: prefs.readerTheme,
+            syntaxTheme: prefs.syntaxTheme,
+            baseFontSize: prefs.baseFontSize,
+            autoRefreshOnExternalChange: prefs.autoRefreshOnExternalChange,
+            notificationsEnabled: prefs.notificationsEnabled,
+            multiFileDisplayMode: prefs.multiFileDisplayMode,
+            sidebarSortMode: prefs.sidebarSortMode,
+            sidebarGroupSortMode: prefs.sidebarGroupSortMode,
+            favoriteWatchedFolders: favorites.currentFavorites,
+            recentWatchedFolders: recentWatchedFolders.currentRecentWatchedFolders,
+            recentManuallyOpenedFiles: recentOpenedFiles.currentRecentOpenedFiles,
+            trustedImageFolders: trustedImageFolders.currentTrustedFolders,
+            diffBaselineLookback: prefs.diffBaselineLookback,
+            dismissedHints: prefs.dismissedHints
+        )
+    }
+
+    // MARK: - ReaderThemeWriting
+
+    func updateAppAppearance(_ appearance: AppAppearance) { preferences.updateAppAppearance(appearance) }
+    func updateTheme(_ kind: ReaderThemeKind) { preferences.updateTheme(kind) }
+    func updateSyntaxTheme(_ kind: SyntaxThemeKind) { preferences.updateSyntaxTheme(kind) }
+    func updateBaseFontSize(_ value: Double) { preferences.updateBaseFontSize(value) }
+    func increaseFontSize(step: Double = 1.0) { preferences.increaseFontSize(step: step) }
+    func decreaseFontSize(step: Double = 1.0) { preferences.decreaseFontSize(step: step) }
+    func resetFontSize() { preferences.resetFontSize() }
+
+    // MARK: - ReaderPreferencesWriting
+
+    func updateNotificationsEnabled(_ isEnabled: Bool) { preferences.updateNotificationsEnabled(isEnabled) }
+    func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) { preferences.updateMultiFileDisplayMode(mode) }
+    func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) { preferences.updateSidebarSortMode(mode) }
+    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) { preferences.updateSidebarGroupSortMode(mode) }
+    func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) { preferences.updateDiffBaselineLookback(lookback) }
+
+    // MARK: - ReaderHintWriting
+
+    func isHintDismissed(_ hint: FirstUseHint) -> Bool { preferences.isHintDismissed(hint) }
+    func dismissHint(_ hint: FirstUseHint) { preferences.dismissHint(hint) }
+
+    // MARK: - ReaderFavoriteWriting
+
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: ReaderFolderWatchOptions,
+        openDocumentFileURLs: [URL] = [],
+        workspaceState: ReaderFavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+        )
+    ) {
+        favorites.addFavoriteWatchedFolder(
+            name: name,
+            folderURL: folderURL,
+            options: options,
+            openDocumentFileURLs: openDocumentFileURLs,
+            workspaceState: workspaceState
+        )
+    }
+    func removeFavoriteWatchedFolder(id: UUID) { favorites.removeFavoriteWatchedFolder(id: id) }
+    func renameFavoriteWatchedFolder(id: UUID, newName: String) {
+        favorites.renameFavoriteWatchedFolder(id: id, newName: newName)
+    }
+    func updateFavoriteWatchedFolderOpenDocuments(id: UUID, folderURL: URL, openDocumentFileURLs: [URL]) {
+        favorites.updateFavoriteWatchedFolderOpenDocuments(
+            id: id,
+            folderURL: folderURL,
+            openDocumentFileURLs: openDocumentFileURLs
+        )
+    }
+    func updateFavoriteWatchedFolderKnownDocuments(id: UUID, folderURL: URL, knownDocumentFileURLs: [URL]) {
+        favorites.updateFavoriteWatchedFolderKnownDocuments(
+            id: id,
+            folderURL: folderURL,
+            knownDocumentFileURLs: knownDocumentFileURLs
+        )
+    }
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+        favorites.updateFavoriteWorkspaceState(id: id, workspaceState: workspaceState)
+    }
+    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
+        favorites.resolvedFavoriteWatchedFolderURL(for: entry)
+    }
+    func clearFavoriteWatchedFolders() { favorites.clearFavoriteWatchedFolders() }
+    func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
+        favorites.reorderFavoriteWatchedFolders(orderedIDs: orderedIDs)
+    }
+    func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String]) {
+        favorites.updateFavoriteWatchedFolderExclusions(id: id, excludedSubdirectoryPaths: excludedSubdirectoryPaths)
+    }
+
+    // MARK: - ReaderRecentWatchedFolderWriting
+
+    func addRecentWatchedFolder(_ folderURL: URL, options: ReaderFolderWatchOptions) {
+        recentWatchedFolders.addRecentWatchedFolder(folderURL, options: options)
+    }
+    func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {
+        recentWatchedFolders.resolvedRecentWatchedFolderURL(matching: folderURL)
+    }
+    func clearRecentWatchedFolders() { recentWatchedFolders.clearRecentWatchedFolders() }
+
+    // MARK: - ReaderRecentOpenedFileWriting
+
+    func addRecentManuallyOpenedFile(_ fileURL: URL) {
+        recentOpenedFiles.addRecentManuallyOpenedFile(fileURL)
+    }
+    func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL? {
+        recentOpenedFiles.resolvedRecentManuallyOpenedFileURL(matching: fileURL)
+    }
+    func clearRecentManuallyOpenedFiles() { recentOpenedFiles.clearRecentManuallyOpenedFiles() }
+
+    // MARK: - ReaderTrustedFolderWriting
+
+    func addTrustedImageFolder(_ folderURL: URL) { trustedImageFolders.addTrustedImageFolder(folderURL) }
+    func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
+        trustedImageFolders.resolvedTrustedImageFolderURL(containing: fileURL)
+    }
+
+    // MARK: - Persistence
 
     private func schedulePersist() {
         if minimumPersistInterval <= 0 {
@@ -401,9 +493,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
         let delay = earliestPersistDate.timeIntervalSince(now)
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self else {
-                return
-            }
+            guard let self else { return }
             self.pendingPersistWorkItem = nil
             self.persist()
         }
@@ -425,5 +515,4 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         lastPersistAt = Date()
         storage.set(data, forKey: storageKey)
     }
-
 }
