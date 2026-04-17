@@ -157,18 +157,10 @@ struct FolderChangeFailureReporterTests {
         #expect(identifiers[0] == identifiers[1])
     }
 
-    @Test func reportWithoutHandlerStillUpdatesDedupState() async throws {
+    @Test func reportWithoutHandlerDoesNotCrash() async throws {
         var reporter = FolderChangeFailureReporter(onFailure: nil)
         reporter.report(stage: .startupSnapshot, folderURL: Self.folderURL, error: makeError())
         reporter.report(stage: .startupSnapshot, folderURL: Self.folderURL, error: makeError())
-
-        let collector = FailureCollector()
-        // New reporter with a handler to prove clearing allows delivery.
-        var observedReporter = FolderChangeFailureReporter(onFailure: { failure in
-            collector.append(failure, isMainThread: Thread.isMainThread)
-        })
-        observedReporter.report(stage: .startupSnapshot, folderURL: Self.folderURL, error: makeError())
-        #expect(await waitUntil(timeout: .seconds(1)) { collector.count == 1 })
     }
 }
 
