@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
+@MainActor
 enum ObservationAsyncChange {
-    @MainActor
     static func next(
         tracking: @escaping @MainActor () -> Void
     ) async -> Bool {
@@ -31,15 +31,18 @@ enum ObservationAsyncChange {
 
         nonisolated func store(_ continuation: UnsafeContinuation<Bool, Never>) {
             lock.lock()
+            defer { lock.unlock() }
             self.continuation = continuation
-            lock.unlock()
         }
 
         nonisolated func resume(returning value: Bool) {
-            lock.lock()
-            let c = continuation
-            continuation = nil
-            lock.unlock()
+            let c: UnsafeContinuation<Bool, Never>?
+            do {
+                lock.lock()
+                defer { lock.unlock() }
+                c = continuation
+                continuation = nil
+            }
             c?.resume(returning: value)
         }
     }
