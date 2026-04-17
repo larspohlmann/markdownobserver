@@ -33,7 +33,7 @@ final class ReaderRenderingController {
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
         fileURL: URL?,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) throws {
         cancelPendingDraftPreviewRender()
         try renderMarkdown(
@@ -52,7 +52,7 @@ final class ReaderRenderingController {
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
         fileURL: URL?,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) throws {
         appearanceOverride = appearance
         cancelPendingDraftPreviewRender()
@@ -72,7 +72,7 @@ final class ReaderRenderingController {
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
         fileURL: URL?,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) {
         pendingDraftPreviewRenderTask?.cancel()
         pendingDraftPreviewRenderTask = Task { @MainActor [weak self] in
@@ -132,7 +132,7 @@ final class ReaderRenderingController {
         changedRegions: [ChangedRegion],
         unsavedChangedRegions: [ChangedRegion],
         fileURL: URL?,
-        folderWatchSession: ReaderFolderWatchSession?
+        folderWatchSession: FolderWatchSession?
     ) throws {
         let settings = settingsStore.currentSettings
         let effectiveThemeKind = appearanceOverride?.readerTheme ?? settings.readerTheme

@@ -14,9 +14,9 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func readerWindowSeedCodableRoundTripPreservesIdentityFilePathAndWatchSession() throws {
         let id = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let fileURL = URL(fileURLWithPath: "/tmp/watch.md")
-        let watchSession = ReaderFolderWatchSession(
+        let watchSession = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
             startedAt: Date(timeIntervalSince1970: 12345)
         )
         let seed = ReaderWindowSeed(
@@ -41,7 +41,7 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func readerWindowSeedCodableRoundTripPreservesRecentWatchedFolderRequest() throws {
         let entry = ReaderRecentWatchedFolder(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
         )
         let seed = ReaderWindowSeed(recentWatchedFolder: entry)
 
@@ -399,7 +399,7 @@ struct ReaderSettingsAndModelsTests {
         let entries = [
             ReaderRecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
-                options: ReaderFolderWatchOptions(
+                options: FolderWatchOptions(
                     openMode: .watchChangesOnly,
                     scope: .includeSubfolders,
                     excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
@@ -423,7 +423,7 @@ struct ReaderSettingsAndModelsTests {
         let entries = [
             ReaderRecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
-                options: ReaderFolderWatchOptions(
+                options: FolderWatchOptions(
                     openMode: .watchChangesOnly,
                     scope: .selectedFolderOnly,
                     excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
@@ -462,7 +462,7 @@ struct ReaderSettingsAndModelsTests {
         let recentFolders = [
             ReaderRecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
-                options: ReaderFolderWatchOptions(
+                options: FolderWatchOptions(
                     openMode: .watchChangesOnly,
                     scope: .includeSubfolders,
                     excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
@@ -638,7 +638,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerFolderWatchOptionsDecodesLegacyPayloadWithoutExclusions() throws {
         let legacyJSON = "{\"openMode\":\"watchChangesOnly\",\"scope\":\"includeSubfolders\"}".data(using: .utf8)!
-        let decoded = try JSONDecoder().decode(ReaderFolderWatchOptions.self, from: legacyJSON)
+        let decoded = try JSONDecoder().decode(FolderWatchOptions.self, from: legacyJSON)
 
         #expect(decoded.openMode == .watchChangesOnly)
         #expect(decoded.scope == .includeSubfolders)

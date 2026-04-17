@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FolderWatchDetailsPopover: View {
-    let activeFolderWatch: ReaderFolderWatchSession
+    let activeFolderWatch: FolderWatchSession
     var isCurrentWatchAFavorite: Bool = false
     var onSaveFolderWatchAsFavorite: ((String) -> Void)?
 

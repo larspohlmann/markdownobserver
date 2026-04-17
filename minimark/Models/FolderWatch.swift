@@ -1,19 +1,19 @@
 import Foundation
 
-nonisolated enum ReaderFolderWatchAutoOpenPolicy {
+nonisolated enum FolderWatchAutoOpenPolicy {
     static let maximumInitialAutoOpenFileCount = 12
     static let maximumLiveAutoOpenFileCount = 12
     static let performanceWarningFileCount = 50
 }
 
-nonisolated enum ReaderFolderWatchPerformancePolicy {
+nonisolated enum FolderWatchPerformancePolicy {
     static let exclusionPromptSubdirectoryThreshold = 256
     static let maximumSupportedSubdirectoryCount = 9_000
     static let maximumIncludedSubfolderDepth = 5
     static let recursiveEventSourceSafetyPollingIntervalSeconds = 5
 }
 
-nonisolated enum ReaderFolderWatchOpenMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
+nonisolated enum FolderWatchOpenMode: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case openAllMarkdownFiles
     case watchChangesOnly
 
@@ -29,7 +29,7 @@ nonisolated enum ReaderFolderWatchOpenMode: String, CaseIterable, Identifiable, 
     }
 }
 
-nonisolated enum ReaderFolderWatchScope: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
+nonisolated enum FolderWatchScope: String, CaseIterable, Identifiable, Hashable, Codable, Sendable {
     case selectedFolderOnly
     case includeSubfolders
 
@@ -45,20 +45,20 @@ nonisolated enum ReaderFolderWatchScope: String, CaseIterable, Identifiable, Has
     }
 }
 
-nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Sendable {
-    var openMode: ReaderFolderWatchOpenMode
-    var scope: ReaderFolderWatchScope
+nonisolated struct FolderWatchOptions: Equatable, Hashable, Codable, Sendable {
+    var openMode: FolderWatchOpenMode
+    var scope: FolderWatchScope
     var excludedSubdirectoryPaths: [String]
 
-    static let `default` = ReaderFolderWatchOptions(
+    static let `default` = FolderWatchOptions(
         openMode: .watchChangesOnly,
         scope: .selectedFolderOnly,
         excludedSubdirectoryPaths: []
     )
 
     init(
-        openMode: ReaderFolderWatchOpenMode,
-        scope: ReaderFolderWatchScope,
+        openMode: FolderWatchOpenMode,
+        scope: FolderWatchScope,
         excludedSubdirectoryPaths: [String] = []
     ) {
         self.openMode = openMode
@@ -74,19 +74,19 @@ nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Senda
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        openMode = try container.decode(ReaderFolderWatchOpenMode.self, forKey: .openMode)
-        scope = try container.decode(ReaderFolderWatchScope.self, forKey: .scope)
+        openMode = try container.decode(FolderWatchOpenMode.self, forKey: .openMode)
+        scope = try container.decode(FolderWatchScope.self, forKey: .scope)
         excludedSubdirectoryPaths = try container.decodeIfPresent([String].self, forKey: .excludedSubdirectoryPaths) ?? []
     }
 
-    func encodedForFolder(_ folderURL: URL) -> ReaderFolderWatchOptions {
+    func encodedForFolder(_ folderURL: URL) -> FolderWatchOptions {
         let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
         let normalizedExclusions = Self.normalizedExcludedSubdirectoryPaths(
             excludedSubdirectoryPaths,
             relativeTo: normalizedFolderURL
         )
 
-        return ReaderFolderWatchOptions(
+        return FolderWatchOptions(
             openMode: openMode,
             scope: scope,
             excludedSubdirectoryPaths: normalizedExclusions
@@ -131,9 +131,9 @@ nonisolated struct ReaderFolderWatchOptions: Equatable, Hashable, Codable, Senda
     }
 }
 
-nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Sendable {
+nonisolated struct FolderWatchSession: Equatable, Hashable, Codable, Sendable {
     let folderURL: URL
-    let options: ReaderFolderWatchOptions
+    let options: FolderWatchOptions
     let startedAt: Date
 
     private nonisolated var folderDisplayName: String {
@@ -211,7 +211,7 @@ nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Senda
     }
 }
 
-nonisolated struct ReaderFolderWatchAutoOpenWarning: Equatable, Identifiable, Sendable {
+nonisolated struct FolderWatchAutoOpenWarning: Equatable, Identifiable, Sendable {
     let folderURL: URL
     let autoOpenedFileCount: Int
     let omittedFileURLs: [URL]
@@ -230,13 +230,13 @@ nonisolated struct ReaderFolderWatchAutoOpenWarning: Equatable, Identifiable, Se
 }
 
 @MainActor
-final class ReaderFolderWatchFileSelectionRequest: Identifiable {
+final class FolderWatchFileSelectionRequest: Identifiable {
     let id = UUID()
     let folderURL: URL
-    let session: ReaderFolderWatchSession
+    let session: FolderWatchSession
     let allFileURLs: [URL]
 
-    init(folderURL: URL, session: ReaderFolderWatchSession, allFileURLs: [URL]) {
+    init(folderURL: URL, session: FolderWatchSession, allFileURLs: [URL]) {
         self.folderURL = folderURL
         self.session = session
         self.allFileURLs = allFileURLs

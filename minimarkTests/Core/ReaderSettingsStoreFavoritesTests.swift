@@ -7,7 +7,7 @@ struct ReaderSettingsStoreFavoritesTests {
     @Test @MainActor func updateFavoriteWorkspaceStatePersistsChanges() {
         let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
         let folderURL = URL(fileURLWithPath: "/tmp/test")
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .selectedFolderOnly,
             excludedSubdirectoryPaths: []
@@ -38,7 +38,7 @@ struct ReaderSettingsStoreFavoritesTests {
     @Test @MainActor func updateFavoriteWorkspaceStateNoOpForUnknownID() {
         let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
         let folderURL = URL(fileURLWithPath: "/tmp/test")
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .selectedFolderOnly,
             excludedSubdirectoryPaths: []

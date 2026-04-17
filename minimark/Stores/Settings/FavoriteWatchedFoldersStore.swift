@@ -26,7 +26,7 @@ import Observation
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
         workspaceState: ReaderFavoriteWorkspaceState = .from(
             settings: .default,
@@ -154,7 +154,7 @@ import Observation
 
             let existing = favorites[index]
             let folderURL = URL(fileURLWithPath: existing.folderPath, isDirectory: true)
-            let normalizedOptions = ReaderFolderWatchOptions(
+            let normalizedOptions = FolderWatchOptions(
                 openMode: existing.options.openMode,
                 scope: existing.options.scope,
                 excludedSubdirectoryPaths: excludedSubdirectoryPaths
@@ -198,7 +198,7 @@ import Observation
     private static func copy(
         _ entry: ReaderFavoriteWatchedFolder,
         folderPath: String? = nil,
-        options: ReaderFolderWatchOptions? = nil,
+        options: FolderWatchOptions? = nil,
         bookmarkData: Data?? = nil,
         openDocumentRelativePaths: [String]? = nil,
         allKnownRelativePaths: [String]? = nil,

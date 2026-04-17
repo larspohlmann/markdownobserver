@@ -51,10 +51,10 @@ struct ReaderWindowRootView: View {
         return effectiveMode.sidebarPlacement
     }
 
-    private var pendingFolderWatchOpenModeBinding: Binding<ReaderFolderWatchOpenMode> {
+    private var pendingFolderWatchOpenModeBinding: Binding<FolderWatchOpenMode> {
         Binding(
             get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.openMode ?? ReaderFolderWatchOptions.default.openMode
+                folderWatchFlowController.pendingFolderWatchRequest?.options.openMode ?? FolderWatchOptions.default.openMode
             },
             set: { [folderWatchFlowController] newValue in
                 folderWatchFlowController.updatePendingRequest { request in
@@ -64,10 +64,10 @@ struct ReaderWindowRootView: View {
         )
     }
 
-    private var pendingFolderWatchScopeBinding: Binding<ReaderFolderWatchScope> {
+    private var pendingFolderWatchScopeBinding: Binding<FolderWatchScope> {
         Binding(
             get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.scope ?? ReaderFolderWatchOptions.default.scope
+                folderWatchFlowController.pendingFolderWatchRequest?.options.scope ?? FolderWatchOptions.default.scope
             },
             set: { [folderWatchFlowController] newValue in
                 folderWatchFlowController.updatePendingRequest { request in
@@ -146,7 +146,7 @@ struct ReaderWindowRootView: View {
                         folderWatchFlowController.dismissAutoOpenWarning()
                     },
                     onOpenSelectedFiles: {
-                        windowCoordinator.openSelectedFolderWatchAutoOpenFiles()
+                        windowCoordinator.folderWatchSession.openSelectedAutoOpenFiles()
                     }
                 )
             }
@@ -160,7 +160,7 @@ struct ReaderWindowRootView: View {
                     },
                     onConfirm: { selectedFileURLs in
                         sidebarDocumentController.folderWatchCoordinator.dismissPendingFileSelectionRequest()
-                        windowCoordinator.openFileRequest(FileOpenRequest(
+                        windowCoordinator.documentOpen.openFileRequest(FileOpenRequest(
                             fileURLs: selectedFileURLs,
                             origin: .folderWatchInitialBatchAutoOpen,
                             folderWatchSession: request.session,
@@ -174,7 +174,7 @@ struct ReaderWindowRootView: View {
                 EditFavoritesSheet(
                     favorites: settingsStore.currentSettings.favoriteWatchedFolders,
                     onAction: { action in
-                        windowCoordinator.handleEditFavoritesAction(action)
+                        windowCoordinator.contentActions.handle(action)
                     }
                 )
             }
@@ -184,7 +184,7 @@ struct ReaderWindowRootView: View {
                         folderURL: session.folderURL,
                         currentExcludedSubdirectoryPaths: session.options.excludedSubdirectoryPaths,
                         onConfirm: { newExclusions in
-                            if windowCoordinator.updateFolderWatchExclusions(newExclusions) {
+                            if windowCoordinator.folderWatchSession.updateExclusions(newExclusions) {
                                 windowCoordinator.isEditingSubfolders = false
                             }
                         },
@@ -196,34 +196,34 @@ struct ReaderWindowRootView: View {
             }
             .background(
                 WindowAccessor { window in
-                    windowCoordinator.handleWindowAccessorUpdate(window)
+                    windowCoordinator.events.handleWindowAccessorUpdate(window)
                 }
             )
-            .navigationTitle(windowCoordinator.effectiveWindowTitle)
+            .navigationTitle(windowCoordinator.shell.effectiveWindowTitle)
             .task {
                 performInitialSetupIfNeeded()
             }
             .onOpenURL { url in
-                windowCoordinator.openIncomingURL(url)
+                windowCoordinator.documentOpen.openIncomingURL(url)
             }
             .onChange(of: sidebarDocumentController.selectedDocumentID) { _, _ in
-                windowCoordinator.applyWindowTitlePresentation()
-                windowCoordinator.renderSelectedDocumentIfNeeded()
+                windowCoordinator.shell.applyTitlePresentation()
+                windowCoordinator.appearanceLock.renderSelectedDocumentIfNeeded()
             }
             .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
-                windowCoordinator.handleSidebarVisibilityChange(oldCount: oldCount, newCount: newCount)
+                windowCoordinator.sidebarMetrics.handleVisibilityChange(oldCount: oldCount, newCount: newCount)
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
-                windowCoordinator.applyWindowTitlePresentation()
+                windowCoordinator.shell.applyTitlePresentation()
             }
             .onChange(of: sidebarDocumentController.selectedHasUnacknowledgedExternalChange) { _, _ in
-                windowCoordinator.applyWindowTitlePresentation()
+                windowCoordinator.shell.applyTitlePresentation()
             }
             .onChange(of: folderWatchFlowController.sharedFolderWatchSession) { _, _ in
-                windowCoordinator.refreshWindowShellRegistrationAndTitle()
+                windowCoordinator.shell.refreshRegistrationAndTitle()
                 favoriteWorkspaceController.syncOpenDocumentsIfNeeded()
             }
-            .onChange(of: windowCoordinator.openDocumentPathTracker.openDocumentPaths) { _, _ in
+            .onChange(of: windowCoordinator.events.openDocumentPathTracker.openDocumentPaths) { _, _ in
                 favoriteWorkspaceController.syncOpenDocumentsIfNeeded()
             }
     }
@@ -231,41 +231,41 @@ struct ReaderWindowRootView: View {
     private func windowLifecycleChangeObservers<Content: View>(_ view: Content) -> some View {
         view
             .onChange(of: sidebarDocumentController.folderWatchCoordinator.selectedFolderWatchAutoOpenWarning) { _, warning in
-                windowCoordinator.handleFolderWatchAutoOpenWarningChange(warning)
+                windowCoordinator.folderWatchSession.handleAutoOpenWarningChange(warning)
             }
             .onChange(of: sidebarDocumentController.folderWatchCoordinator.activeFolderWatchSession) { _, _ in
                 windowCoordinator.refreshWindowShellState()
             }
             .onChange(of: folderWatchFlowController.isFolderWatchOptionsPresented) { _, isPresented in
                 if !isPresented {
-                    windowCoordinator.refreshFolderWatchAutoOpenWarningPresentation()
+                    windowCoordinator.folderWatchSession.refreshAutoOpenWarningPresentation()
                 }
             }
             .onChange(of: groupStateController.persistenceSnapshot) { oldSnapshot, newSnapshot in
-                windowCoordinator.handleGroupStateChange(oldSnapshot: oldSnapshot, newSnapshot: newSnapshot)
+                windowCoordinator.events.handleGroupStateChange(oldSnapshot: oldSnapshot, newSnapshot: newSnapshot)
             }
             .onChange(of: sidebarDocumentController.documents.map(\.id)) { _, _ in
-                windowCoordinator.handleDocumentListChange()
+                windowCoordinator.events.handleDocumentListChange()
             }
             .onAppear {
-                windowCoordinator.handleWindowAppear()
+                windowCoordinator.events.handleWindowAppear()
             }
             .onDisappear {
-                windowCoordinator.handleWindowDisappear()
+                windowCoordinator.events.handleWindowDisappear()
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
-                windowCoordinator.reapplyAppearance()
+                windowCoordinator.appearanceLock.reapplyAcrossOpenDocuments()
             }
             .onChange(of: favoriteWorkspaceController.activeFavoriteWorkspaceState) { _, newState in
-                windowCoordinator.handleFavoriteWorkspaceStateChange(newState)
+                windowCoordinator.events.handleFavoriteWorkspaceStateChange(newState)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
                 guard let window = notification.object as? NSWindow,
-                      window === windowCoordinator.hostWindow else {
+                      window === windowCoordinator.shell.hostWindow else {
                     return
                 }
                 windowCoordinator.refreshWindowPresentation()
-                windowCoordinator.refreshFolderWatchAutoOpenWarningPresentation()
+                windowCoordinator.folderWatchSession.refreshAutoOpenWarningPresentation()
             }
     }
 
@@ -273,15 +273,15 @@ struct ReaderWindowRootView: View {
         guard !windowCoordinator.hasOpenedInitialFile else { return }
         windowCoordinator.hasOpenedInitialFile = true
         uiTestLaunchCoordinator.configure(actions: UITestLaunchCoordinator.Actions(
-            hostWindow: { [weak windowCoordinator] in windowCoordinator?.hostWindow },
+            hostWindow: { [weak windowCoordinator] in windowCoordinator?.shell.hostWindow },
             startWatchingFolder: { [weak windowCoordinator] folderURL, options in
-                windowCoordinator?.startWatchingFolder(folderURL: folderURL, options: options)
+                windowCoordinator?.folderWatchSession.startWatchingFolder(folderURL: folderURL, options: options)
             },
             presentFolderWatchOptions: { [weak folderWatchFlowController] folderURL, options in
                 folderWatchFlowController?.presentOptions(for: folderURL, options: options)
             },
             openFileRequest: { [weak windowCoordinator] request in
-                windowCoordinator?.openFileRequest(request)
+                windowCoordinator?.documentOpen.openFileRequest(request)
             },
             isSessionActive: { [weak folderWatchFlowController] in
                 folderWatchFlowController?.sharedFolderWatchSession != nil
@@ -307,8 +307,8 @@ struct ReaderWindowRootView: View {
             uiTestLaunchCoordinator: uiTestLaunchCoordinator,
             recentHistoryCoordinator: recentHistoryCoordinator
         )
-        windowCoordinator.applyInitialSeedIfNeeded(seed: seed)
-        windowCoordinator.refreshSharedFolderWatchState()
+        windowCoordinator.documentOpen.applyInitialSeedIfNeeded(seed: seed)
+        folderWatchFlowController.refreshSharedState()
         // Now that all controllers are wired, try to apply the UI-test launch
         // configuration. If the host window isn't attached yet, the window-
         // accessor callback in handleHostWindowChange() will retry.
@@ -320,15 +320,15 @@ struct ReaderWindowRootView: View {
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.openRecentFile)) { notification in
                 recentHistoryCoordinator.handleOpenRecentFileNotification(
                     notification,
-                    hostWindowNumber: windowCoordinator.hostWindow?.windowNumber
+                    hostWindowNumber: windowCoordinator.shell.hostWindow?.windowNumber
                 ) { fileURL in
-                    windowCoordinator.openDocumentInCurrentWindow(fileURL)
+                    windowCoordinator.documentOpen.openDocumentInCurrentWindow(fileURL)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
                 recentHistoryCoordinator.handlePrepareRecentWatchedFolderNotification(
                     notification,
-                    hostWindowNumber: windowCoordinator.hostWindow?.windowNumber
+                    hostWindowNumber: windowCoordinator.shell.hostWindow?.windowNumber
                 )
             }
     }
@@ -340,36 +340,36 @@ struct ReaderWindowRootView: View {
             settingsStore: settingsStore,
             groupState: groupStateController,
             sidebarPlacement: sidebarPlacement,
-            sidebarWidth: windowCoordinator.sidebarWidth,
+            sidebarWidth: windowCoordinator.sidebarMetrics.width,
             onSidebarWidthChanged: { newWidth in
-                windowCoordinator.handleSidebarWidthChange(newWidth)
+                windowCoordinator.sidebarMetrics.handleWidthChange(newWidth)
             },
             detail: { store in
                 contentView(for: store)
             },
             onToggleSidebarPlacement: {
-                windowCoordinator.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
+                windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
             },
             onOpenInDefaultApp: { documentIDs in
-                windowCoordinator.openSidebarDocumentsInDefaultApp(documentIDs)
+                windowCoordinator.sidebarActions.openDocumentsInDefaultApp(documentIDs)
             },
             onOpenInApplication: { application, documentIDs in
-                windowCoordinator.openSidebarDocumentsInApplication(application, documentIDs)
+                windowCoordinator.sidebarActions.openDocumentsInApplication(application, documentIDs)
             },
             onRevealInFinder: { documentIDs in
-                windowCoordinator.revealSidebarDocumentsInFinder(documentIDs)
+                windowCoordinator.sidebarActions.revealDocumentsInFinder(documentIDs)
             },
             onStopWatchingFolders: { documentIDs in
-                windowCoordinator.stopWatchingSidebarFolders(documentIDs)
+                windowCoordinator.sidebarActions.stopWatchingFolders(documentIDs)
             },
             onCloseDocuments: { documentIDs in
-                windowCoordinator.closeSelectedSidebarDocuments(documentIDs)
+                windowCoordinator.sidebarActions.closeSelectedDocuments(documentIDs)
             },
             onCloseOtherDocuments: { documentIDs in
-                windowCoordinator.closeOtherSidebarDocuments(keeping: documentIDs)
+                windowCoordinator.sidebarActions.closeOtherDocuments(keeping: documentIDs)
             },
             onCloseAllDocuments: {
-                windowCoordinator.closeAllSidebarDocuments()
+                windowCoordinator.sidebarActions.closeAllDocuments()
             }
         )
         .toolbar {
@@ -384,7 +384,7 @@ struct ReaderWindowRootView: View {
                         if case .activate = action {
                             promptForFolderWatch()
                         } else {
-                            windowCoordinator.handleFolderWatchToolbarAction(action)
+                            windowCoordinator.contentActions.handle(action)
                         }
                     },
                     compact: true
@@ -395,7 +395,7 @@ struct ReaderWindowRootView: View {
             ToolbarItem(placement: .primaryAction) {
                 if sidebarDocumentController.documents.count > 1 {
                     Button(action: {
-                        windowCoordinator.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
+                        windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
                     }) {
                         Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
                             .font(.system(size: 12))
@@ -420,7 +420,7 @@ struct ReaderWindowRootView: View {
             canStopSharedFolderWatch: folderWatchFlowController.canStopSharedFolderWatch,
             pendingFolderWatchURL: folderWatchFlowController.pendingFolderWatchURL,
             onAction: { action in
-                windowCoordinator.handleContentViewAction(action)
+                windowCoordinator.contentActions.handle(action)
             },
             isFolderWatchOptionsPresented: $folderWatchFlow.isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,

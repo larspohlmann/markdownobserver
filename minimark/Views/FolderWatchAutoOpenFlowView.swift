@@ -42,11 +42,11 @@ final class FolderWatchAutoOpenWarningFlow: Identifiable {
     }
 
     let id = UUID()
-    let warning: ReaderFolderWatchAutoOpenWarning
+    let warning: FolderWatchAutoOpenWarning
     let selectionModel: FolderWatchAutoOpenSelectionModel
     var step: Step
 
-    init(warning: ReaderFolderWatchAutoOpenWarning) {
+    init(warning: FolderWatchAutoOpenWarning) {
         self.warning = warning
         self.selectionModel = FolderWatchAutoOpenSelectionModel(omittedFileURLs: warning.omittedFileURLs)
         self.step = .warning
@@ -264,7 +264,7 @@ private struct FolderWatchAutoOpenSelectionView: View {
 }
 
 private struct FolderWatchAutoOpenWarningSheet: View {
-    let warning: ReaderFolderWatchAutoOpenWarning
+    let warning: FolderWatchAutoOpenWarning
     let onKeepCurrentFiles: () -> Void
     let onSelectMoreFiles: () -> Void
 

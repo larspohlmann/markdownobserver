@@ -31,11 +31,11 @@ final class ReaderStore {
 
     let externalChange = ReaderExternalChangeController()
     let sourceEditingController = ReaderSourceEditingController()
-    let folderWatchDispatcher: ReaderFolderWatchDispatcher
+    let folderWatchDispatcher: FolderWatchDispatcher
     let rendering: ReaderRenderingDependencies
     let renderingController: ReaderRenderingController
     let file: ReaderFileDependencies
-    let folderWatch: ReaderFolderWatchDependencies
+    let folderWatch: FolderWatchDependencies
     let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     let securityScopeResolver: SecurityScopeResolver
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
@@ -50,7 +50,7 @@ final class ReaderStore {
     //   set exclusively through folderWatchDispatcher.setStateCallbacks(onStarted:onStopped:)
     let diffBaselineTracker: DiffBaselineTracking
 
-    var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
+    var onFolderWatchStarted: ((FolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
     var onFolderWatchStopped: (() -> Void)? { folderWatchDispatcher.onFolderWatchStopped }
 
     @ObservationIgnored private var hasActivatedDeferredSetup = false
@@ -58,7 +58,7 @@ final class ReaderStore {
     init(
         rendering: ReaderRenderingDependencies,
         file: ReaderFileDependencies,
-        folderWatch: ReaderFolderWatchDependencies,
+        folderWatch: FolderWatchDependencies,
         settingsStore: ReaderSettingsReading & ReaderRecentWriting,
         securityScopeResolver: SecurityScopeResolver,
         diffBaselineTracker: DiffBaselineTracking? = nil
@@ -68,7 +68,7 @@ final class ReaderStore {
             settingsStore: settingsStore,
             settler: folderWatch.settler
         )
-        self.folderWatchDispatcher = ReaderFolderWatchDispatcher(folderWatchDependencies: folderWatch)
+        self.folderWatchDispatcher = FolderWatchDispatcher(folderWatchDependencies: folderWatch)
         self.rendering = rendering
         self.renderingController = ReaderRenderingController(
             renderingDependencies: rendering,
@@ -133,7 +133,7 @@ final class ReaderStore {
         folderWatch.settler.clearSettling()
     }
 
-    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: ReaderFolderWatchSession?) {
+    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: FolderWatchSession?) {
         document.deferFile(at: url, origin: origin)
         if let folderWatchSession {
             folderWatchDispatcher.setSession(folderWatchSession)

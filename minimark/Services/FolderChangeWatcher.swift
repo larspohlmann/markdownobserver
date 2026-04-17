@@ -8,7 +8,7 @@ protocol FolderChangeWatching: AnyObject, Sendable {
         folderURL: URL,
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL],
-        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([ReaderFolderWatchChangeEvent]) -> Void
+        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([FolderWatchChangeEvent]) -> Void
     ) throws
 
     func stopWatching()
@@ -26,7 +26,7 @@ extension FolderChangeWatching {
     func startWatching(
         folderURL: URL,
         includeSubfolders: Bool,
-        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([ReaderFolderWatchChangeEvent]) -> Void
+        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([FolderWatchChangeEvent]) -> Void
     ) throws {
         try startWatching(
             folderURL: folderURL,
@@ -87,7 +87,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     private var includesSubfolders = false
     private var excludedSubdirectoryURLs: [URL] = []
     private var exclusionMatcher: FolderWatchExclusionMatcher?
-    private var onMarkdownFilesAddedOrChanged: (([ReaderFolderWatchChangeEvent]) -> Void)?
+    private var onMarkdownFilesAddedOrChanged: (([FolderWatchChangeEvent]) -> Void)?
     private var lastSnapshot: [URL: FolderFileSnapshot] = [:]
     private var lastReportedFailureByStage: [FolderChangeWatcherFailure.Stage: String] = [:]
     private var startupSequence: UInt64 = 0
@@ -129,7 +129,7 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
         folderURL: URL,
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL] = [],
-        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([ReaderFolderWatchChangeEvent]) -> Void
+        onMarkdownFilesAddedOrChanged: @escaping @Sendable ([FolderWatchChangeEvent]) -> Void
     ) throws {
         stopWatching()
 

@@ -22,7 +22,7 @@ enum ReaderOpenOrigin: String, Hashable, Codable, Sendable {
 struct ReaderWindowSeed: Hashable, Codable, Sendable {
     let id: UUID
     let filePath: String?
-    let folderWatchSession: ReaderFolderWatchSession?
+    let folderWatchSession: FolderWatchSession?
     let recentOpenedFile: ReaderRecentOpenedFile?
     let recentWatchedFolder: ReaderRecentWatchedFolder?
     let openOrigin: ReaderOpenOrigin
@@ -31,7 +31,7 @@ struct ReaderWindowSeed: Hashable, Codable, Sendable {
     init(
         id: UUID = UUID(),
         fileURL: URL? = nil,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         recentOpenedFile: ReaderRecentOpenedFile? = nil,
         recentWatchedFolder: ReaderRecentWatchedFolder? = nil,
         openOrigin: ReaderOpenOrigin = .manual,
@@ -49,7 +49,7 @@ struct ReaderWindowSeed: Hashable, Codable, Sendable {
     init(
         id: UUID = UUID(),
         fileURL: URL? = nil,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         openOrigin: ReaderOpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -78,7 +78,7 @@ struct ReaderWindowSeed: Hashable, Codable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         filePath = try container.decodeIfPresent(String.self, forKey: .filePath)
-        folderWatchSession = try container.decodeIfPresent(ReaderFolderWatchSession.self, forKey: .folderWatchSession)
+        folderWatchSession = try container.decodeIfPresent(FolderWatchSession.self, forKey: .folderWatchSession)
         recentOpenedFile = try container.decodeIfPresent(ReaderRecentOpenedFile.self, forKey: .recentOpenedFile)
         recentWatchedFolder = try container.decodeIfPresent(ReaderRecentWatchedFolder.self, forKey: .recentWatchedFolder)
         openOrigin = try container.decodeIfPresent(ReaderOpenOrigin.self, forKey: .openOrigin) ?? .manual

@@ -1,17 +1,17 @@
 import Combine
 import Foundation
 
-struct ReaderFolderWatchOpenBatch: Equatable, Sendable {
+struct FolderWatchOpenBatch: Equatable, Sendable {
     let fileURLs: [URL]
     let initialDiffBaselineMarkdownByURL: [URL: String]
-    let folderWatchSession: ReaderFolderWatchSession?
+    let folderWatchSession: FolderWatchSession?
     let openOrigin: ReaderOpenOrigin
 }
 
 @MainActor
-final class ReaderFolderWatchOpenCoordinator: ObservableObject {
-    private var queuedEvents: [ReaderFolderWatchChangeEvent] = []
-    private var queuedFolderWatchSession: ReaderFolderWatchSession?
+final class FolderWatchOpenBatcher: ObservableObject {
+    private var queuedEvents: [FolderWatchChangeEvent] = []
+    private var queuedFolderWatchSession: FolderWatchSession?
     private var queuedOpenOrigin: ReaderOpenOrigin = .manual
     private var flushTask: Task<Void, Never>?
     private var flushRetryCount = 0
@@ -25,8 +25,8 @@ final class ReaderFolderWatchOpenCoordinator: ObservableObject {
     }
 
     func enqueue(
-        _ event: ReaderFolderWatchChangeEvent,
-        folderWatchSession: ReaderFolderWatchSession?,
+        _ event: FolderWatchChangeEvent,
+        folderWatchSession: FolderWatchSession?,
         origin: ReaderOpenOrigin,
         onFlushRequested: @escaping @MainActor () -> Void
     ) {
@@ -48,7 +48,7 @@ final class ReaderFolderWatchOpenCoordinator: ObservableObject {
     func consumeBatchIfPossible(
         canFlushImmediately: Bool,
         onFlushRequested: @escaping @MainActor () -> Void
-    ) -> ReaderFolderWatchOpenBatch? {
+    ) -> FolderWatchOpenBatch? {
         guard !queuedEvents.isEmpty else {
             flushTask = nil
             return nil
@@ -65,7 +65,7 @@ final class ReaderFolderWatchOpenCoordinator: ObservableObject {
         }
 
         let queuedEvents = queuedEvents
-        let batch = ReaderFolderWatchOpenBatch(
+        let batch = FolderWatchOpenBatch(
             fileURLs: queuedEvents.map(\.fileURL),
             initialDiffBaselineMarkdownByURL: queuedEvents.reduce(into: [:]) { result, event in
                 guard let previousMarkdown = event.previousMarkdown else {
@@ -97,14 +97,14 @@ final class ReaderFolderWatchOpenCoordinator: ObservableObject {
     }
 
     private func mergedEvent(
-        existing: ReaderFolderWatchChangeEvent,
-        incoming: ReaderFolderWatchChangeEvent
-    ) -> ReaderFolderWatchChangeEvent {
+        existing: FolderWatchChangeEvent,
+        incoming: FolderWatchChangeEvent
+    ) -> FolderWatchChangeEvent {
         guard existing.kind == .added else {
             return incoming
         }
 
-        return ReaderFolderWatchChangeEvent(
+        return FolderWatchChangeEvent(
             fileURL: existing.fileURL,
             kind: .added,
             previousMarkdown: nil

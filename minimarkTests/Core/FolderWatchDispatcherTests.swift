@@ -3,12 +3,12 @@ import Foundation
 @testable import minimark
 
 @MainActor
-@Suite("ReaderFolderWatchDispatcher")
-struct ReaderFolderWatchDispatcherTests {
-    private func makeSUT() -> ReaderFolderWatchDispatcher {
-        ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+@Suite("FolderWatchDispatcher")
+struct FolderWatchDispatcherTests {
+    private func makeSUT() -> FolderWatchDispatcher {
+        FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -18,7 +18,7 @@ struct ReaderFolderWatchDispatcherTests {
     @Test("setSession updates activeFolderWatchSession")
     func setSessionUpdatesSession() {
         let sut = makeSUT()
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/test"),
             options: .default,
             startedAt: Date()
@@ -38,7 +38,7 @@ struct ReaderFolderWatchDispatcherTests {
     func isWatchingFolderReflectsSession() {
         let sut = makeSUT()
         #expect(!sut.isWatchingFolder)
-        sut.setSession(ReaderFolderWatchSession(
+        sut.setSession(FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/test"),
             options: .default,
             startedAt: Date()

@@ -6,8 +6,8 @@ struct ContentView: View {
     let viewModel: ContentAreaViewModel
 
     @Binding var isFolderWatchOptionsPresented: Bool
-    @Binding var pendingFolderWatchOpenMode: ReaderFolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: ReaderFolderWatchScope
+    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
+    @Binding var pendingFolderWatchScope: FolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
     var body: some View {

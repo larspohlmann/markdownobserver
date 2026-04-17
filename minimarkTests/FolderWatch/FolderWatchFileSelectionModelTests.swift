@@ -76,7 +76,7 @@ struct FolderWatchFileSelectionModelTests {
         let folderURL = try makeTemporaryDirectory()
         defer { cleanup(folderURL) }
 
-        let threshold = ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
+        let threshold = FolderWatchAutoOpenPolicy.performanceWarningFileCount
         let files = (0...threshold).map { folderURL.appendingPathComponent("file\($0).md") }
         let model = FolderWatchFileSelectionModel(folderURL: folderURL, fileURLs: files)
 

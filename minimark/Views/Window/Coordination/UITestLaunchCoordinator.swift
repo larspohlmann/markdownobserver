@@ -10,8 +10,8 @@ final class UITestLaunchCoordinator {
 
     struct Actions {
         let hostWindow: () -> NSWindow?
-        let startWatchingFolder: (URL, ReaderFolderWatchOptions) -> Void
-        let presentFolderWatchOptions: (URL, ReaderFolderWatchOptions) -> Void
+        let startWatchingFolder: (URL, FolderWatchOptions) -> Void
+        let presentFolderWatchOptions: (URL, FolderWatchOptions) -> Void
         let openFileRequest: (FileOpenRequest) -> Void
         let isSessionActive: () -> Bool
     }
@@ -43,7 +43,7 @@ final class UITestLaunchCoordinator {
             startAutoOpenWatchFlow()
         case .presentWatchFolderSheet(let watchFolderURL):
             applyScreenshotWindowSize()
-            var options = ReaderFolderWatchOptions.default
+            var options = FolderWatchOptions.default
             if ProcessInfo.processInfo.environment[
                 ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
             ] == "includeSubfolders" {

@@ -75,7 +75,7 @@ final class FavoriteWorkspaceController {
 
     func matchingFavorite(
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         in favorites: [ReaderFavoriteWatchedFolder]
     ) -> ReaderFavoriteWatchedFolder? {
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
@@ -182,7 +182,7 @@ final class FavoriteWorkspaceController {
                 folderWatchSession: session,
                 slotStrategy: .reuseEmptySlotForFirst,
                 materializationStrategy: .deferThenMaterializeNewest(
-                    count: ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+                    count: FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
                 )
             ))
         }

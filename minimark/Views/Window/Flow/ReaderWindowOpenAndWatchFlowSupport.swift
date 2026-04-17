@@ -8,10 +8,10 @@ enum ReaderWindowOpenAndWatchFlowSupport {
     static func applyInitialSeedIfNeeded(
         seed: ReaderWindowSeed?,
         openDocumentInCurrentWindow: (URL) -> Void,
-        openDocumentInSelectedSlot: (URL, ReaderOpenOrigin, ReaderFolderWatchSession?, String?) -> Void,
+        openDocumentInSelectedSlot: (URL, ReaderOpenOrigin, FolderWatchSession?, String?) -> Void,
         resolveRecentOpenedFileURL: (ReaderRecentOpenedFile) -> URL,
         resolveRecentWatchedFolderURL: (ReaderRecentWatchedFolder) -> URL,
-        prepareRecentFolderWatch: (URL, ReaderFolderWatchOptions) -> Void
+        prepareRecentFolderWatch: (URL, FolderWatchOptions) -> Void
     ) {
         if let recentOpenedFile = seed?.recentOpenedFile {
             openDocumentInCurrentWindow(resolveRecentOpenedFileURL(recentOpenedFile))
@@ -31,9 +31,9 @@ enum ReaderWindowOpenAndWatchFlowSupport {
     }
 
     static func updatedPendingFolderWatchRequest(
-        current: (folderURL: URL, options: ReaderFolderWatchOptions)?,
-        update: (inout ReaderFolderWatchOptions) -> Void
-    ) -> (folderURL: URL, options: ReaderFolderWatchOptions)? {
+        current: (folderURL: URL, options: FolderWatchOptions)?,
+        update: (inout FolderWatchOptions) -> Void
+    ) -> (folderURL: URL, options: FolderWatchOptions)? {
         guard var current else {
             return nil
         }

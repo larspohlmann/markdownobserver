@@ -3,7 +3,7 @@ import Foundation
 enum ContentViewAction {
     case requestFileOpen(FileOpenRequest)
     case requestFolderWatch(URL)
-    case confirmFolderWatch(ReaderFolderWatchOptions)
+    case confirmFolderWatch(FolderWatchOptions)
     case cancelFolderWatch
     case stopFolderWatch
     case saveFolderWatchAsFavorite(String)

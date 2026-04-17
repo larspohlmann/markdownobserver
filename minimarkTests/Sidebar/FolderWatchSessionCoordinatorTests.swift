@@ -50,12 +50,12 @@ struct FolderWatchSessionCoordinatorTests {
         )
         let owner = FolderWatchSessionCoordinator(makeFolderWatchController: {
             controllerCreated = true
-            return ReaderFolderWatchController(
+            return FolderWatchController(
                 folderWatcher: TestFolderWatcher(),
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
                 systemNotifier: TestReaderSystemNotifier(),
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
             )
         })
         owner.delegate = MockDelegate()
@@ -74,7 +74,7 @@ struct FolderWatchSessionCoordinatorTests {
         let owner = FolderWatchSessionCoordinator(makeFolderWatchController: {
             fatalError("Should not be called")
         })
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/test"),
             options: .default,
             startedAt: .now
@@ -127,12 +127,12 @@ struct FolderWatchSessionCoordinatorTests {
             storageKey: "test.\(UUID().uuidString)"
         )
         let owner = FolderWatchSessionCoordinator(makeFolderWatchController: {
-            ReaderFolderWatchController(
+            FolderWatchController(
                 folderWatcher: TestFolderWatcher(),
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
                 systemNotifier: TestReaderSystemNotifier(),
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
             )
         })
         owner.delegate = MockDelegate()

@@ -64,7 +64,7 @@ final class ReaderSidebarDocumentController {
     init(
         settingsStore: ReaderSettingsStore,
         makeReaderStore: (() -> ReaderStore)? = nil,
-        makeFolderWatchController: (() -> ReaderFolderWatchController)? = nil
+        makeFolderWatchController: (() -> FolderWatchController)? = nil
     ) {
         let resolvedMakeReaderStore = makeReaderStore ?? {
             let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
@@ -90,8 +90,8 @@ final class ReaderSidebarDocumentController {
                     io: ReaderDocumentIOService(),
                     actions: ReaderFileActionService()
                 ),
-                folderWatch: ReaderFolderWatchDependencies(
-                    autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                folderWatch: FolderWatchDependencies(
+                    autoOpenPlanner: FolderWatchAutoOpenPlanner(
                         minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                     ),
                     settler: settler,
@@ -104,12 +104,12 @@ final class ReaderSidebarDocumentController {
         }
         self.makeReaderStore = resolvedMakeReaderStore
         let resolvedMakeFolderWatchController = makeFolderWatchController ?? {
-            ReaderFolderWatchController(
+            FolderWatchController(
                 folderWatcher: FolderChangeWatcher(),
                 settingsStore: settingsStore,
                 securityScope: SecurityScopedResourceAccess(),
                 systemNotifier: ReaderSystemNotifier.shared,
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner(
                     minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                 )
             )
@@ -205,7 +205,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func materializeNewestDeferredDocuments(
-        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        count: Int = FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
     ) {
         fileOpenPlanExecutor.materializeNewestDeferredDocuments(count: count)
     }
@@ -294,8 +294,8 @@ extension ReaderSidebarDocumentController: FolderWatchSessionCoordinatorDelegate
 extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {
     func resolvedFolderWatchSession(
         for fileURL: URL,
-        requestedSession: ReaderFolderWatchSession?
-    ) -> ReaderFolderWatchSession? {
+        requestedSession: FolderWatchSession?
+    ) -> FolderWatchSession? {
         folderWatchCoordinator.resolvedFolderWatchSession(
             for: fileURL,
             requestedSession: requestedSession

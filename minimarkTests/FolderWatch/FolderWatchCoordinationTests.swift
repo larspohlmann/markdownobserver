@@ -12,19 +12,19 @@ import Testing
 @Suite(.serialized)
 struct FolderWatchCoordinationTests {
     @Test func folderWatchAutoOpenPlannerCapsInitialBatchAndSkipsCurrentDocument() {
-        let planner = ReaderFolderWatchAutoOpenPlanner()
+        let planner = FolderWatchAutoOpenPlanner()
         let folderURL = URL(fileURLWithPath: "/tmp/watched")
         let currentDocumentURL = folderURL.appendingPathComponent("keep-open.md")
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             startedAt: Date(timeIntervalSince1970: 321)
         )
         let events = [
-            ReaderFolderWatchChangeEvent(fileURL: currentDocumentURL, kind: .added),
-            ReaderFolderWatchChangeEvent(fileURL: folderURL.appendingPathComponent("ignored.txt"), kind: .added)
-        ] + (0...ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount).map { index in
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(fileURL: currentDocumentURL, kind: .added),
+            FolderWatchChangeEvent(fileURL: folderURL.appendingPathComponent("ignored.txt"), kind: .added)
+        ] + (0...FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount).map { index in
+            FolderWatchChangeEvent(
                 fileURL: folderURL.appendingPathComponent(String(format: "note-%02d.md", index)),
                 kind: .added
             )
@@ -36,7 +36,7 @@ struct FolderWatchCoordinationTests {
             currentDocumentFileURL: currentDocumentURL
         )
 
-        #expect(plan.autoOpenEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(plan.autoOpenEvents.count == FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         #expect(!plan.autoOpenEvents.map(\.fileURL).contains(currentDocumentURL))
         #expect(!plan.autoOpenEvents.map(\.fileURL).contains(folderURL.appendingPathComponent("ignored.txt")))
         #expect(plan.warning?.folderURL == folderURL)
@@ -78,12 +78,12 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.async-start.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
@@ -91,7 +91,7 @@ struct FolderWatchCoordinationTests {
         let startedAt = Date()
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -116,19 +116,19 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.stale-initial.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -136,7 +136,7 @@ struct FolderWatchCoordinationTests {
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders
             )
@@ -157,17 +157,17 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -189,17 +189,17 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress-stop.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -219,19 +219,19 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.scan-failure.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -255,17 +255,17 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress-restart.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(
             folderURL: firstFolderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -276,7 +276,7 @@ struct FolderWatchCoordinationTests {
 
         try controller.startWatching(
             folderURL: secondFolderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             )
@@ -291,16 +291,16 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchOpenCoordinatorDeduplicatesAndBuildsLatestBatch() {
-        let coordinator = ReaderFolderWatchOpenCoordinator()
-        let watchSession = ReaderFolderWatchSession(
+        let coordinator = FolderWatchOpenBatcher()
+        let watchSession = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: Date(timeIntervalSince1970: 456)
         )
         let fileURL = URL(fileURLWithPath: "/tmp/queued.md")
 
         coordinator.enqueue(
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .modified,
                 previousMarkdown: "# Before"
@@ -310,7 +310,7 @@ struct FolderWatchCoordinationTests {
             onFlushRequested: {}
         )
         coordinator.enqueue(
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .modified,
                 previousMarkdown: "# Latest Before"
@@ -330,16 +330,16 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchOpenCoordinatorPreservesAddedSemanticsWhenModifiedArrivesBeforeFlush() {
-        let coordinator = ReaderFolderWatchOpenCoordinator()
-        let watchSession = ReaderFolderWatchSession(
+        let coordinator = FolderWatchOpenBatcher()
+        let watchSession = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: Date(timeIntervalSince1970: 456)
         )
         let fileURL = URL(fileURLWithPath: "/tmp/newly-created.md")
 
         coordinator.enqueue(
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .added
             ),
@@ -348,7 +348,7 @@ struct FolderWatchCoordinationTests {
             onFlushRequested: {}
         )
         coordinator.enqueue(
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .modified,
                 previousMarkdown: ""
@@ -367,20 +367,20 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchEventDispatchCoordinatorFallsBackToPrimaryOpenWhenAdditionalHandlerIsMissing() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             options: .default,
             startedAt: Date(timeIntervalSince1970: 99)
         )
         let events = [
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added)
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added)
         ]
-        var openedPrimaryEvents: [ReaderFolderWatchChangeEvent] = []
+        var openedPrimaryEvents: [FolderWatchChangeEvent] = []
 
-        let dispatcher = ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+        let dispatcher = FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -399,21 +399,21 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchEventDispatchCoordinatorUsesAdditionalHandlerForLiveEventsWhenConfigured() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             options: .default,
             startedAt: Date(timeIntervalSince1970: 99)
         )
         let events = [
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .modified, previousMarkdown: "# before")
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .modified, previousMarkdown: "# before")
         ]
-        var additionalOpenEvents: [ReaderFolderWatchChangeEvent] = []
-        var openedPrimaryEvents: [ReaderFolderWatchChangeEvent] = []
+        var additionalOpenEvents: [FolderWatchChangeEvent] = []
+        var openedPrimaryEvents: [FolderWatchChangeEvent] = []
 
-        let dispatcher = ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+        let dispatcher = FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -436,22 +436,22 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func folderWatchEventDispatchCoordinatorDispatchesInitialBatchAsPrimaryThenAdditional() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             options: .default,
             startedAt: Date(timeIntervalSince1970: 99)
         )
         let events = [
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added),
-            ReaderFolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/third.md"), kind: .added)
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/first.md"), kind: .added),
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added),
+            FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/third.md"), kind: .added)
         ]
-        var primaryOpenCalls: [(ReaderFolderWatchChangeEvent, ReaderOpenOrigin)] = []
-        var additionalOpenCalls: [(ReaderFolderWatchChangeEvent, ReaderOpenOrigin)] = []
+        var primaryOpenCalls: [(FolderWatchChangeEvent, ReaderOpenOrigin)] = []
+        var additionalOpenCalls: [(FolderWatchChangeEvent, ReaderOpenOrigin)] = []
 
-        let dispatcher = ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+        let dispatcher = FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -476,27 +476,27 @@ struct FolderWatchCoordinationTests {
 
     @Test @MainActor func folderWatchAutoOpenPlannerUsesAgedBaselineForRapidSuccessiveModifications() async {
         var now = Date(timeIntervalSince1970: 1_700_000_000)
-        let planner = ReaderFolderWatchAutoOpenPlanner(
+        let planner = FolderWatchAutoOpenPlanner(
             minimumDiffBaselineAge: 0.2,
             nowProvider: { now }
         )
         let fileURL = URL(fileURLWithPath: "/tmp/rapid.md")
 
         let firstEvents = planner.liveOpenEvents(
-            for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v0")],
+            for: [FolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v0")],
             currentDocumentFileURL: nil
         )
         #expect(firstEvents.first?.previousMarkdown == "# v0")
 
         now.addTimeInterval(0.05)
         _ = planner.liveOpenEvents(
-            for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v1")],
+            for: [FolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v1")],
             currentDocumentFileURL: nil
         )
 
         now.addTimeInterval(0.05)
         let thirdEvents = planner.liveOpenEvents(
-            for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v2")],
+            for: [FolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v2")],
             currentDocumentFileURL: nil
         )
 
@@ -504,7 +504,7 @@ struct FolderWatchCoordinationTests {
 
         now.addTimeInterval(0.25)
         let fourthEvents = planner.liveOpenEvents(
-            for: [ReaderFolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v3")],
+            for: [FolderWatchChangeEvent(fileURL: fileURL, kind: .modified, previousMarkdown: "# v3")],
             currentDocumentFileURL: nil
         )
 
@@ -512,15 +512,15 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func folderWatchAutoOpenPlannerCapsLiveBurstSize() {
-        let planner = ReaderFolderWatchAutoOpenPlanner()
+        let planner = FolderWatchAutoOpenPlanner()
         let folderURL = URL(fileURLWithPath: "/tmp/watched")
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
             startedAt: .now
         )
-        let events = (0..<(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
-            ReaderFolderWatchChangeEvent(
+        let events = (0..<(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
+            FolderWatchChangeEvent(
                 fileURL: folderURL.appendingPathComponent(String(format: "changed-%02d.md", index)),
                 kind: .added
             )
@@ -532,17 +532,17 @@ struct FolderWatchCoordinationTests {
             currentDocumentFileURL: nil
         )
 
-        #expect(plan.autoOpenEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
-        #expect(plan.autoOpenEvents.map(\ .fileURL) == Array(events.prefix(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
+        #expect(plan.autoOpenEvents.count == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(plan.autoOpenEvents.map(\.fileURL) == Array(events.prefix(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\.fileURL))
         #expect(plan.warning?.folderURL == folderURL)
-        #expect(plan.warning?.autoOpenedFileCount == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
-        #expect(plan.warning?.omittedFileURLs == Array(events.dropFirst(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
+        #expect(plan.warning?.autoOpenedFileCount == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(plan.warning?.omittedFileURLs == Array(events.dropFirst(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\.fileURL))
     }
 
     @Test @MainActor func folderWatchWarningCoordinatorWaitsUntilPresentationIsAllowed() async {
-        let coordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+        let coordinator = FolderWatchAutoOpenWarningCoordinator()
         let omittedFileURL = URL(fileURLWithPath: "/tmp/watched/extra.md")
-        let warning = ReaderFolderWatchAutoOpenWarning(
+        let warning = FolderWatchAutoOpenWarning(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             autoOpenedFileCount: 12,
             omittedFileURLs: [omittedFileURL]
@@ -575,9 +575,9 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func folderWatchStatusLabelStaysCompactAndTooltipCarriesFullDetails() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/Users/example/Documents/Projects/MarkdownObserver/docs/reference", isDirectory: true),
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders
             ),
@@ -606,9 +606,9 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func folderWatchTooltipOmitsFilteredSubdirectoryLineForSelectedFolderScope() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/Users/example/Documents/Projects/MarkdownObserver/docs/reference", isDirectory: true),
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly,
                 excludedSubdirectoryPaths: ["/Users/example/Documents/Projects/MarkdownObserver/docs/reference/build"]
@@ -631,7 +631,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func windowTitleFormatterShowsWatchStateAndPreservesPendingMarker() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/guides", isDirectory: true),
             options: .default,
             startedAt: Date(timeIntervalSince1970: 11)
@@ -778,7 +778,7 @@ struct FolderWatchCoordinationTests {
             multiFileDisplayMode: .sidebarLeft
         )
 
-        view.windowCoordinator.openAdditionalDocumentInCurrentWindow(markdownURL)
+        view.windowCoordinator.documentOpen.openAdditionalDocumentInCurrentWindow(markdownURL)
 
         #expect(focusedURLs.isEmpty)
         #expect(view.sidebarDocumentController.selectedReaderStore.document.fileURL?.path == markdownURL.path)
@@ -824,7 +824,7 @@ struct FolderWatchCoordinationTests {
             multiFileDisplayMode: .sidebarLeft
         )
 
-        view.windowCoordinator.openFileRequest(FileOpenRequest(
+        view.windowCoordinator.documentOpen.openFileRequest(FileOpenRequest(
             fileURLs: [zetaURL, alphaURL],
             origin: .manual,
             slotStrategy: .reuseEmptySlotForFirst
@@ -847,14 +847,14 @@ struct FolderWatchCoordinationTests {
             sidebarDocumentController: harness.controller
         )
 
-        coordinator.applyWindowTitlePresentation()
+        coordinator.shell.applyTitlePresentation()
 
         let expectedTitle = ReaderWindowTitleFormatter.resolveWindowTitle(
             documentTitle: harness.controller.selectedWindowTitle,
             activeFolderWatch: nil,
             hasUnacknowledgedExternalChange: harness.controller.selectedHasUnacknowledgedExternalChange
         )
-        #expect(coordinator.effectiveWindowTitle == expectedTitle)
+        #expect(coordinator.shell.effectiveWindowTitle == expectedTitle)
     }
 
     @Test @MainActor func readerWindowCoordinatorQueuesFolderWatchOpenEventsUntilFlushIsPossible() throws {
@@ -866,23 +866,23 @@ struct FolderWatchCoordinationTests {
             sidebarDocumentController: harness.controller
         )
         let queuedURL = URL(fileURLWithPath: "/tmp/queued-from-window-coordinator.md")
-        let queuedEvent = ReaderFolderWatchChangeEvent(
+        let queuedEvent = FolderWatchChangeEvent(
             fileURL: queuedURL,
             kind: .modified,
             previousMarkdown: "# Before"
         )
 
-        coordinator.enqueueFolderWatchOpen(
+        coordinator.folderWatchOpen.enqueue(
             queuedEvent,
             folderWatchSession: nil,
             origin: .folderWatchAutoOpen
         )
 
-        #expect(coordinator.hasPendingFolderWatchOpenEvents)
+        #expect(coordinator.folderWatchOpen.hasPendingEvents)
 
         // Without a host window, flush should not consume the queued events
-        coordinator.flushQueuedFolderWatchOpens()
-        #expect(coordinator.hasPendingFolderWatchOpenEvents)
+        coordinator.folderWatchOpen.flush()
+        #expect(coordinator.folderWatchOpen.hasPendingEvents)
     }
 
     @Test @MainActor func folderWatchControllerDoesNotSetWarningForLiveEventsExceedingLimit() async throws {
@@ -892,26 +892,26 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.live-no-warning.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly
             )
         )
 
-        let liveEvents = (0..<(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
-            ReaderFolderWatchChangeEvent(
+        let liveEvents = (0..<(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
+            FolderWatchChangeEvent(
                 fileURL: folderURL.appendingPathComponent(String(format: "live-%02d.md", index)),
                 kind: .added
             )
@@ -921,7 +921,7 @@ struct FolderWatchCoordinationTests {
         try await Task.sleep(for: .milliseconds(50))
 
         #expect(controller.folderWatchAutoOpenWarning == nil)
-        #expect(delegate.handledEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(delegate.handledEvents.count == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
     }
 
     @Test @MainActor func liveAutoOpenNotifiesDelegateWithAutoOpenedFileURLs() async throws {
@@ -931,19 +931,19 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.live-indicator.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly
             )
@@ -951,7 +951,7 @@ struct FolderWatchCoordinationTests {
 
         let newFileURL = folderURL.appendingPathComponent("new-file.md")
         watcher.emitChangedMarkdownEvents([
-            ReaderFolderWatchChangeEvent(fileURL: newFileURL, kind: .added)
+            FolderWatchChangeEvent(fileURL: newFileURL, kind: .added)
         ])
 
         try await Task.sleep(for: .milliseconds(50))

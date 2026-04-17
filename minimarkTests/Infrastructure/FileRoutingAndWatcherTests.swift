@@ -149,7 +149,7 @@ struct FileRoutingAndWatcherTests {
         try "# Before".write(to: existingFileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { events in
             receivedEvents.append(contentsOf: events)
@@ -312,7 +312,7 @@ struct FileRoutingAndWatcherTests {
         try "# Before".write(to: includedFileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(
             folderURL: directoryURL,
@@ -356,7 +356,7 @@ struct FileRoutingAndWatcherTests {
         try "# Nested".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -376,7 +376,7 @@ struct FileRoutingAndWatcherTests {
         try "# Stable".write(to: fileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { events in
             receivedEvents.append(contentsOf: events)
@@ -399,7 +399,7 @@ struct FileRoutingAndWatcherTests {
 
         let lock = NSLock()
         var failures: [FolderChangeWatcherFailure] = []
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         let watcher = makeFolderChangeWatcher(onFailure: { failure in
             lock.lock()
@@ -505,7 +505,7 @@ struct FileRoutingAndWatcherTests {
 
         let lock = NSLock()
         var failures: [FolderChangeWatcherFailure] = []
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         let watcher = makeFolderChangeWatcher(onFailure: { failure in
             lock.lock()
@@ -557,7 +557,7 @@ struct FileRoutingAndWatcherTests {
         let fileWatcher = makeFileChangeWatcher()
         let folderWatcher = makeFolderChangeWatcher()
         var fileChangeCount = 0
-        var folderEvents: [ReaderFolderWatchChangeEvent] = []
+        var folderEvents: [FolderWatchChangeEvent] = []
 
         try fileWatcher.startWatching(fileURL: nestedFileURL) {
             fileChangeCount += 1
@@ -601,7 +601,7 @@ struct FileRoutingAndWatcherTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -642,7 +642,7 @@ struct FileRoutingAndWatcherTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -1326,7 +1326,7 @@ private extension FileRoutingAndWatcherTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)

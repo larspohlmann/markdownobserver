@@ -34,7 +34,7 @@ final class RecentHistoryCoordinator {
     func openRecentFile(
         _ entry: ReaderRecentOpenedFile,
         using fileOpenCoordinator: FileOpenCoordinator,
-        session: ReaderFolderWatchSession?
+        session: FolderWatchSession?
     ) {
         let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
         fileOpenCoordinator.open(FileOpenRequest(

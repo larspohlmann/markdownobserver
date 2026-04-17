@@ -26,7 +26,7 @@ protocol FolderSnapshotDiffing: Sendable {
     func diff(
         current: [URL: FolderFileSnapshot],
         previous: [URL: FolderFileSnapshot]
-    ) -> [ReaderFolderWatchChangeEvent]
+    ) -> [FolderWatchChangeEvent]
 
     func markdownFiles(
         in folderURL: URL,
@@ -126,7 +126,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 relativeToPathWithSlash: rootPathWithSlash,
                 isDirectory: true
             )
-            guard depth <= ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
+            guard depth <= FolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
                 continue
             }
 
@@ -163,13 +163,13 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
     func diff(
         current: [URL: FolderFileSnapshot],
         previous: [URL: FolderFileSnapshot]
-    ) -> [ReaderFolderWatchChangeEvent] {
-        var changedEvents: [ReaderFolderWatchChangeEvent] = []
+    ) -> [FolderWatchChangeEvent] {
+        var changedEvents: [FolderWatchChangeEvent] = []
         for (url, currentFingerprint) in current {
             if let previousEntry = previous[url] {
                 if previousEntry.hasMeaningfulModification(comparedTo: currentFingerprint) {
                     changedEvents.append(
-                        ReaderFolderWatchChangeEvent(
+                        FolderWatchChangeEvent(
                             fileURL: url,
                             kind: .modified,
                             previousMarkdown: previousEntry.markdown
@@ -178,7 +178,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 }
             } else {
                 changedEvents.append(
-                    ReaderFolderWatchChangeEvent(fileURL: url, kind: .added)
+                    FolderWatchChangeEvent(fileURL: url, kind: .added)
                 )
             }
         }
@@ -320,7 +320,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
             isDirectory: isDirectory
         )
 
-        guard depth > ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
+        guard depth > FolderWatchPerformancePolicy.maximumIncludedSubfolderDepth else {
             return false
         }
 

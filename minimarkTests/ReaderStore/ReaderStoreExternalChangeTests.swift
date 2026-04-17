@@ -76,8 +76,8 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
         fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
@@ -96,8 +96,8 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
         fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(
@@ -120,8 +120,8 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         let folderURL = fixture.temporaryDirectoryURL
-        let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
-        let session = ReaderFolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
+        let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+        let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
         fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.openFile(at: fixture.primaryFileURL)
@@ -530,8 +530,8 @@ struct ReaderStoreExternalChangeTests {
             defer { fixture.cleanup() }
             let normalizedPrimaryFilePath = ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL).path
 
-            let options = ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
-            let session = ReaderFolderWatchSession(
+            let options = FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
+            let session = FolderWatchSession(
                 folderURL: fixture.temporaryDirectoryURL,
                 options: options,
                 startedAt: .now
@@ -627,7 +627,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
             options: .default,
             startedAt: .now
@@ -648,7 +648,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
             options: .default,
             startedAt: .now
@@ -661,7 +661,7 @@ struct ReaderStoreExternalChangeTests {
         )
 
         fixture.store.handleObservedWatchedFolderChanges([
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(
                 fileURL: fixture.primaryFileURL,
                 kind: .modified,
                 previousMarkdown: "# Initial"
@@ -677,7 +677,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
             options: .default,
             startedAt: .now
@@ -701,9 +701,9 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
         fixture.store.folderWatchDispatcher.setSession(session)
@@ -714,16 +714,16 @@ struct ReaderStoreExternalChangeTests {
         fixture.write(content: "ignore", to: unsupportedURL)
 
         var openedAdditionalDocuments: [URL] = []
-        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        var openedEvents: [FolderWatchChangeEvent] = []
         fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
             openedEvents.append(event)
         }
 
         fixture.store.handleObservedWatchedFolderChanges([
-            ReaderFolderWatchChangeEvent(fileURL: fixture.primaryFileURL, kind: .modified, previousMarkdown: "# Initial"),
-            ReaderFolderWatchChangeEvent(fileURL: fourthFileURL, kind: .added),
-            ReaderFolderWatchChangeEvent(fileURL: unsupportedURL, kind: .added)
+            FolderWatchChangeEvent(fileURL: fixture.primaryFileURL, kind: .modified, previousMarkdown: "# Initial"),
+            FolderWatchChangeEvent(fileURL: fourthFileURL, kind: .added),
+            FolderWatchChangeEvent(fileURL: unsupportedURL, kind: .added)
         ])
 
         #expect(openedAdditionalDocuments == [ReaderFileRouting.normalizedFileURL(fourthFileURL)])
@@ -736,9 +736,9 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
         fixture.store.folderWatchDispatcher.setSession(session)
@@ -746,13 +746,13 @@ struct ReaderStoreExternalChangeTests {
         let createdFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("created.md")
         fixture.write(content: "", to: createdFileURL)
 
-        var openedEvents: [ReaderFolderWatchChangeEvent] = []
+        var openedEvents: [FolderWatchChangeEvent] = []
         fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             openedEvents.append(event)
         }
 
         fixture.store.handleObservedWatchedFolderChanges([
-            ReaderFolderWatchChangeEvent(fileURL: createdFileURL, kind: .added)
+            FolderWatchChangeEvent(fileURL: createdFileURL, kind: .added)
         ])
 
         #expect(fixture.store.document.fileURL == nil)
@@ -766,21 +766,21 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
         fixture.store.folderWatchDispatcher.setSession(session)
 
         let changedFileURL = fixture.secondaryFileURL
-        var capturedEvent: ReaderFolderWatchChangeEvent?
+        var capturedEvent: FolderWatchChangeEvent?
         fixture.store.folderWatchDispatcher.setAdditionalOpenHandler { event, _, _ in
             capturedEvent = event
         }
 
         fixture.store.handleObservedWatchedFolderChanges([
-            ReaderFolderWatchChangeEvent(
+            FolderWatchChangeEvent(
                 fileURL: changedFileURL,
                 kind: .modified,
                 previousMarkdown: "# Second"
@@ -797,14 +797,14 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.openFile(at: fixture.primaryFileURL)
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             startedAt: .now
         )
         fixture.store.folderWatchDispatcher.setSession(session)
 
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
+        let autoOpenLimit = FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
         let fileURLs = (0..<(autoOpenLimit + 2)).map { index in
             let fileURL = fixture.temporaryDirectoryURL.appendingPathComponent(String(format: "live-%02d.md", index))
             fixture.write(content: "# File \(index)", to: fileURL)
@@ -817,7 +817,7 @@ struct ReaderStoreExternalChangeTests {
         }
 
         fixture.store.handleObservedWatchedFolderChanges(
-            fileURLs.map { ReaderFolderWatchChangeEvent(fileURL: $0, kind: .added) }
+            fileURLs.map { FolderWatchChangeEvent(fileURL: $0, kind: .added) }
         )
 
         #expect(openedAdditionalDocuments == Array(fileURLs.prefix(autoOpenLimit)).map(ReaderFileRouting.normalizedFileURL))

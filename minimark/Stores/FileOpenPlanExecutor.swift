@@ -12,8 +12,8 @@ protocol FileOpenPlanExecutorDelegate: AnyObject {
     func bindSelectedStore()
     func resolvedFolderWatchSession(
         for fileURL: URL,
-        requestedSession: ReaderFolderWatchSession?
-    ) -> ReaderFolderWatchSession?
+        requestedSession: FolderWatchSession?
+    ) -> FolderWatchSession?
 }
 
 @MainActor
@@ -159,7 +159,7 @@ final class FileOpenPlanExecutor {
     }
 
     func materializeNewestDeferredDocuments(
-        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        count: Int = FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
     ) {
         let deferredDocs = documentList.documents
             .filter { $0.readerStore.document.isDeferredDocument }

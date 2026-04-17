@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WatchPillOverlayView: View {
-    let activeFolderWatch: ReaderFolderWatchSession?
+    let activeFolderWatch: FolderWatchSession?
     let isCurrentWatchAFavorite: Bool
     let canStop: Bool
     let isAppearanceLocked: Bool

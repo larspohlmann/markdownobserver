@@ -3,33 +3,33 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderFolderWatchDispatcher {
-    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
+final class FolderWatchDispatcher {
+    private(set) var activeFolderWatchSession: FolderWatchSession?
     var lastWatchedFolderEventAt: Date?
-    var autoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    var autoOpenWarning: FolderWatchAutoOpenWarning?
+    var pendingFileSelectionRequest: FolderWatchFileSelectionRequest?
 
-    @ObservationIgnored private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?
+    @ObservationIgnored private(set) var onFolderWatchStarted: ((FolderWatchSession) -> Void)?
     @ObservationIgnored private(set) var onFolderWatchStopped: (() -> Void)?
     @ObservationIgnored private var eventDispatchCoordinator: FolderWatchEventDispatchCoordinator
 
-    let folderWatchDependencies: ReaderFolderWatchDependencies
+    let folderWatchDependencies: FolderWatchDependencies
 
     var isWatchingFolder: Bool {
         activeFolderWatchSession != nil
     }
 
-    init(folderWatchDependencies: ReaderFolderWatchDependencies) {
+    init(folderWatchDependencies: FolderWatchDependencies) {
         self.folderWatchDependencies = folderWatchDependencies
         self.eventDispatchCoordinator = FolderWatchEventDispatchCoordinator()
     }
 
-    func setSession(_ session: ReaderFolderWatchSession?) {
+    func setSession(_ session: FolderWatchSession?) {
         activeFolderWatchSession = session
     }
 
     func setStateCallbacks(
-        onStarted: ((ReaderFolderWatchSession) -> Void)?,
+        onStarted: ((FolderWatchSession) -> Void)?,
         onStopped: (() -> Void)?
     ) {
         onFolderWatchStarted = onStarted
@@ -37,7 +37,7 @@ final class ReaderFolderWatchDispatcher {
     }
 
     func setAdditionalOpenHandler(
-        _ handler: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
+        _ handler: @escaping (FolderWatchChangeEvent, FolderWatchSession?, ReaderOpenOrigin) -> Void
     ) {
         eventDispatchCoordinator.setAdditionalOpenHandler(handler)
     }
@@ -47,9 +47,9 @@ final class ReaderFolderWatchDispatcher {
     }
 
     func handleObservedWatchedFolderChanges(
-        _ markdownFileEvents: [ReaderFolderWatchChangeEvent],
+        _ markdownFileEvents: [FolderWatchChangeEvent],
         currentDocumentFileURL: URL?,
-        openPrimary: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession, ReaderOpenOrigin) -> Void
+        openPrimary: @escaping (FolderWatchChangeEvent, FolderWatchSession, ReaderOpenOrigin) -> Void
     ) {
         guard let session = activeFolderWatchSession else { return }
         lastWatchedFolderEventAt = .now
@@ -73,9 +73,9 @@ final class ReaderFolderWatchDispatcher {
     }
 
     func openInitialMarkdownFilesFromWatchedFolder(
-        _ markdownFileEvents: [ReaderFolderWatchChangeEvent],
-        session: ReaderFolderWatchSession,
-        openPrimary: @escaping (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession, ReaderOpenOrigin) -> Void
+        _ markdownFileEvents: [FolderWatchChangeEvent],
+        session: FolderWatchSession,
+        openPrimary: @escaping (FolderWatchChangeEvent, FolderWatchSession, ReaderOpenOrigin) -> Void
     ) {
         eventDispatchCoordinator.dispatchInitialEvents(
             markdownFileEvents,
@@ -84,11 +84,11 @@ final class ReaderFolderWatchDispatcher {
         )
     }
 
-    // MARK: - Internal dispatch coordinator (absorbed from ReaderFolderWatchEventDispatchCoordinator)
+    // MARK: - Internal dispatch coordinator
 
     private struct FolderWatchEventDispatchCoordinator {
-        typealias AdditionalOpenHandler = (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession?, ReaderOpenOrigin) -> Void
-        typealias PrimaryOpenHandler = (ReaderFolderWatchChangeEvent, ReaderFolderWatchSession, ReaderOpenOrigin) -> Void
+        typealias AdditionalOpenHandler = (FolderWatchChangeEvent, FolderWatchSession?, ReaderOpenOrigin) -> Void
+        typealias PrimaryOpenHandler = (FolderWatchChangeEvent, FolderWatchSession, ReaderOpenOrigin) -> Void
 
         private(set) var additionalOpenHandler: AdditionalOpenHandler?
 
@@ -97,8 +97,8 @@ final class ReaderFolderWatchDispatcher {
         }
 
         func dispatchLiveEvents(
-            _ plannedEvents: [ReaderFolderWatchChangeEvent],
-            session: ReaderFolderWatchSession,
+            _ plannedEvents: [FolderWatchChangeEvent],
+            session: FolderWatchSession,
             origin: ReaderOpenOrigin,
             openPrimary: PrimaryOpenHandler
         ) {
@@ -113,8 +113,8 @@ final class ReaderFolderWatchDispatcher {
         }
 
         func dispatchInitialEvents(
-            _ events: [ReaderFolderWatchChangeEvent],
-            session: ReaderFolderWatchSession,
+            _ events: [FolderWatchChangeEvent],
+            session: FolderWatchSession,
             openPrimary: PrimaryOpenHandler
         ) {
             guard let firstEvent = events.first else { return }

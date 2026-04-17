@@ -31,7 +31,7 @@ nonisolated enum ReaderRecentHistory {
 
     static func insertingUniqueWatchedFolder(
         _ folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         into existingEntries: [ReaderRecentWatchedFolder]
     ) -> [ReaderRecentWatchedFolder] {
         let newEntry = ReaderRecentWatchedFolder(folderURL: folderURL, options: options)

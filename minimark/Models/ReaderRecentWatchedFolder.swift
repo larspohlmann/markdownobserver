@@ -4,7 +4,7 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
     static let maximumCount = 15
 
     let folderPath: String
-    let options: ReaderFolderWatchOptions
+    let options: FolderWatchOptions
     let bookmarkData: Data?
 
     nonisolated var id: String {
@@ -28,7 +28,7 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
         SecurityScopedBookmarkResolver.resolveSecurityScopedBookmark(bookmarkData, fallbackURL: folderURL)
     }
 
-    init(folderURL: URL, options: ReaderFolderWatchOptions) {
+    init(folderURL: URL, options: FolderWatchOptions) {
         let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
         folderPath = normalizedURL.path
         self.options = options
@@ -39,7 +39,7 @@ nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Send
         )
     }
 
-    init(folderPath: String, options: ReaderFolderWatchOptions, bookmarkData: Data?) {
+    init(folderPath: String, options: FolderWatchOptions, bookmarkData: Data?) {
         self.folderPath = folderPath
         self.options = options
         self.bookmarkData = bookmarkData

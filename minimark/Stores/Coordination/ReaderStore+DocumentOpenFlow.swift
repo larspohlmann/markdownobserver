@@ -8,7 +8,7 @@ extension ReaderStore {
     func openFile(
         at url: URL,
         origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         activateDeferredSetupIfNeeded()
@@ -52,7 +52,7 @@ extension ReaderStore {
 
     func materializeDeferredDocument(
         origin: ReaderOpenOrigin? = nil,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         guard document.documentLoadState == .deferred || document.documentLoadState == .loading,

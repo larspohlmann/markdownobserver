@@ -8,15 +8,15 @@ import Observation
 final class FolderWatchFlowController {
     struct PendingFolderWatchRequest {
         let folderURL: URL
-        var options: ReaderFolderWatchOptions
+        var options: FolderWatchOptions
     }
 
     // Presentation state
     var isFolderWatchOptionsPresented = false
     var pendingFolderWatchRequest: PendingFolderWatchRequest?
-    var sharedFolderWatchSession: ReaderFolderWatchSession?
+    var sharedFolderWatchSession: FolderWatchSession?
     var canStopSharedFolderWatch = false
-    var warningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+    var warningCoordinator = FolderWatchAutoOpenWarningCoordinator()
 
     var pendingFolderWatchURL: URL? {
         pendingFolderWatchRequest?.folderURL
@@ -47,7 +47,7 @@ final class FolderWatchFlowController {
 
     // MARK: - Presentation State
 
-    func presentOptions(for folderURL: URL, options: ReaderFolderWatchOptions) {
+    func presentOptions(for folderURL: URL, options: FolderWatchOptions) {
         pendingFolderWatchRequest = PendingFolderWatchRequest(
             folderURL: folderURL,
             options: options
@@ -85,7 +85,7 @@ final class FolderWatchFlowController {
     // MARK: - Warning Flow
 
     func handleAutoOpenWarningChange(
-        _ warning: ReaderFolderWatchAutoOpenWarning?,
+        _ warning: FolderWatchAutoOpenWarning?,
         canPresent: @escaping @MainActor () -> Bool
     ) {
         warningCoordinator.handleWarningChange(warning, canPresent: canPresent)
@@ -117,7 +117,7 @@ final class FolderWatchFlowController {
     }
 
     func handleAutoOpenWarningChangeForWindow(
-        _ warning: ReaderFolderWatchAutoOpenWarning?,
+        _ warning: FolderWatchAutoOpenWarning?,
         hostWindow: NSWindow?
     ) {
         handleAutoOpenWarningChange(warning) { self.isWarningPresentationAllowed(hostWindow: hostWindow) }
@@ -134,7 +134,7 @@ final class FolderWatchFlowController {
     @discardableResult
     func startWatchingFolder(
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         performInitialAutoOpen: Bool = true
     ) -> Bool {
         var didDeactivateFavorite = false
@@ -186,7 +186,7 @@ final class FolderWatchFlowController {
     /// Confirms a pending folder watch request and starts watching.
     /// Returns `true` if a favorite was deactivated.
     @discardableResult
-    func confirmFolderWatch(_ options: ReaderFolderWatchOptions) -> Bool {
+    func confirmFolderWatch(_ options: FolderWatchOptions) -> Bool {
         guard let folderURL = pendingFolderWatchRequest?.folderURL else {
             return false
         }
@@ -206,7 +206,7 @@ final class FolderWatchFlowController {
             session.options.encodedForFolder(session.folderURL).excludedSubdirectoryPaths
         )
         let normalizedNew = Set(
-            ReaderFolderWatchOptions(
+            FolderWatchOptions(
                 openMode: session.options.openMode,
                 scope: session.options.scope,
                 excludedSubdirectoryPaths: newExcludedPaths

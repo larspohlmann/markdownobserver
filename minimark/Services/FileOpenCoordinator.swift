@@ -3,7 +3,7 @@ import Foundation
 struct FileOpenRequest {
     let fileURLs: [URL]
     let origin: ReaderOpenOrigin
-    let folderWatchSession: ReaderFolderWatchSession?
+    let folderWatchSession: FolderWatchSession?
     let initialDiffBaselineMarkdownByURL: [URL: String]
     let slotStrategy: SlotStrategy
     let materializationStrategy: MaterializationStrategy
@@ -11,7 +11,7 @@ struct FileOpenRequest {
     init(
         fileURLs: [URL],
         origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdownByURL: [URL: String] = [:],
         slotStrategy: SlotStrategy = .reuseEmptySlotForFirst,
         materializationStrategy: MaterializationStrategy = .loadAll
@@ -67,7 +67,7 @@ struct FileOpenPlan {
 
     let assignments: [SlotAssignment]
     let origin: ReaderOpenOrigin
-    let folderWatchSession: ReaderFolderWatchSession?
+    let folderWatchSession: FolderWatchSession?
     let materializationStrategy: FileOpenRequest.MaterializationStrategy
 }
 

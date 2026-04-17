@@ -39,7 +39,7 @@ struct ReaderFavoriteWatchedFolderTests {
             createdAt: .now
         )
 
-        let differentOptions = ReaderFolderWatchOptions(
+        let differentOptions = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders
         )
@@ -65,7 +65,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test func scopedOpenDocumentRelativePathsFiltersToScopeAndExclusions() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: ["/tmp/docs/excluded"]
@@ -91,7 +91,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Docs",
             folderPath: folderURL.path,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
             bookmarkData: nil,
             openDocumentRelativePaths: [
                 "a.md",
@@ -135,7 +135,7 @@ struct ReaderFavoriteWatchedFolderTests {
             options: .default
         )]
 
-        let differentOptions = ReaderFolderWatchOptions(
+        let differentOptions = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders
         )
@@ -231,7 +231,7 @@ struct ReaderFavoriteWatchedFolderTests {
         store.addFavoriteWatchedFolder(
             name: "Docs",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             openDocumentFileURLs: []
         )
 
@@ -347,9 +347,9 @@ struct ReaderFavoriteWatchedFolderTests {
         let storage = TestSettingsKeyValueStorage()
         let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
             startedAt: .now
         )
 
@@ -368,7 +368,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let storage = TestSettingsKeyValueStorage()
         let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
             options: .default,
             startedAt: .now
@@ -395,9 +395,9 @@ struct ReaderFavoriteWatchedFolderTests {
         let storage = TestSettingsKeyValueStorage()
         let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
             startedAt: .now
         )
 
@@ -429,9 +429,9 @@ struct ReaderFavoriteWatchedFolderTests {
             options: .default
         )
 
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
             startedAt: .now
         )
 
@@ -451,7 +451,7 @@ struct ReaderFavoriteWatchedFolderTests {
         store.addFavoriteWatchedFolder(
             name: "My Project",
             folderURL: URL(fileURLWithPath: "/tmp/project"),
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .openAllMarkdownFiles,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: ["/tmp/project/node_modules"]
@@ -530,9 +530,9 @@ struct ReaderFavoriteWatchedFolderTests {
     // MARK: - Session excluded paths
 
     @Test func excludedSubdirectoryRelativePathsComputesCorrectly() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: [
@@ -547,9 +547,9 @@ struct ReaderFavoriteWatchedFolderTests {
     }
 
     @Test func excludedSubdirectoryRelativePathsEmptyForSelectedFolderScope() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly,
                 excludedSubdirectoryPaths: ["/tmp/docs/node_modules"]
@@ -561,9 +561,9 @@ struct ReaderFavoriteWatchedFolderTests {
     }
 
     @Test func excludedSubdirectoryRelativePathsIgnoresPathsOutsideRoot() {
-        let session = ReaderFolderWatchSession(
+        let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: [
@@ -662,7 +662,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Test",
             folderPath: "/tmp/project",
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: ["/tmp/project/node_modules", "/tmp/project/.git"]
@@ -678,7 +678,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Test",
             folderPath: "/tmp/project",
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly,
                 excludedSubdirectoryPaths: ["/tmp/project/node_modules"]
@@ -700,7 +700,7 @@ struct ReaderFavoriteWatchedFolderTests {
         store.addFavoriteWatchedFolder(
             name: "Project",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             openDocumentFileURLs: [folderURL.appendingPathComponent("README.md")]
         )
 
@@ -728,7 +728,7 @@ struct ReaderFavoriteWatchedFolderTests {
         store.addFavoriteWatchedFolder(
             name: "Docs",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             openDocumentFileURLs: []
         )
 
@@ -765,7 +765,7 @@ struct ReaderFavoriteWatchedFolderTests {
         store.addFavoriteWatchedFolder(
             name: "Docs",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             openDocumentFileURLs: []
         )
 
@@ -802,7 +802,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Docs",
             folderPath: folderURL.path,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             bookmarkData: nil,
             openDocumentRelativePaths: ["a.md", "b.md"],
             allKnownRelativePaths: ["a.md", "b.md", "c.md"],
@@ -826,7 +826,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Docs",
             folderPath: folderURL.path,
-            options: ReaderFolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
             bookmarkData: nil,
             openDocumentRelativePaths: [],
             allKnownRelativePaths: [],
@@ -846,7 +846,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Docs",
             folderPath: "/tmp/docs",
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             bookmarkData: nil,
             openDocumentRelativePaths: [],
             allKnownRelativePaths: [],
@@ -937,7 +937,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let entry = ReaderFavoriteWatchedFolder(
             name: "Test",
             folderPath: tempDir.path,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             bookmarkData: nil,
             openDocumentRelativePaths: ["exists.md", "deleted.md"],
             createdAt: .now

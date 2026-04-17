@@ -19,9 +19,9 @@ final class FolderWatchSessionCoordinator {
 
     // MARK: - State
 
-    private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
-    var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
+    private(set) var activeFolderWatchSession: FolderWatchSession?
+    private(set) var selectedFolderWatchAutoOpenWarning: FolderWatchAutoOpenWarning?
+    var pendingFileSelectionRequest: FolderWatchFileSelectionRequest?
     private(set) var isFolderWatchInitialScanInProgress: Bool
     private(set) var didFolderWatchInitialScanFail: Bool
     private(set) var contentScanProgress: FolderChangeWatcher.ScanProgress?
@@ -33,13 +33,13 @@ final class FolderWatchSessionCoordinator {
 
     // MARK: - Dependencies
 
-    @ObservationIgnored private var _folderWatchController: ReaderFolderWatchController?
-    @ObservationIgnored private let _makeFolderWatchController: () -> ReaderFolderWatchController
+    @ObservationIgnored private var _folderWatchController: FolderWatchController?
+    @ObservationIgnored private let _makeFolderWatchController: () -> FolderWatchController
     @ObservationIgnored weak var delegate: FolderWatchSessionCoordinatorDelegate?
 
     // MARK: - Lazy controller access
 
-    private var folderWatchController: ReaderFolderWatchController {
+    private var folderWatchController: FolderWatchController {
         if let existing = _folderWatchController {
             return existing
         }
@@ -50,13 +50,13 @@ final class FolderWatchSessionCoordinator {
         return controller
     }
 
-    var folderWatchControllerIfCreated: ReaderFolderWatchController? {
+    var folderWatchControllerIfCreated: FolderWatchController? {
         _folderWatchController
     }
 
     // MARK: - Init
 
-    init(makeFolderWatchController: @escaping () -> ReaderFolderWatchController) {
+    init(makeFolderWatchController: @escaping () -> FolderWatchController) {
         self._makeFolderWatchController = makeFolderWatchController
         self.activeFolderWatchSession = nil
         self.selectedFolderWatchAutoOpenWarning = nil
@@ -71,7 +71,7 @@ final class FolderWatchSessionCoordinator {
 
     func startWatchingFolder(
         folderURL: URL,
-        options: ReaderFolderWatchOptions,
+        options: FolderWatchOptions,
         performInitialAutoOpen: Bool = true
     ) throws {
         try folderWatchController.startWatching(
@@ -150,8 +150,8 @@ final class FolderWatchSessionCoordinator {
 
     func resolvedFolderWatchSession(
         for fileURL: URL,
-        requestedSession: ReaderFolderWatchSession?
-    ) -> ReaderFolderWatchSession? {
+        requestedSession: FolderWatchSession?
+    ) -> FolderWatchSession? {
         if let requestedSession {
             return requestedSession
         }
@@ -187,14 +187,14 @@ final class FolderWatchSessionCoordinator {
     }
 }
 
-// MARK: - ReaderFolderWatchControllerDelegate
+// MARK: - FolderWatchControllerDelegate
 
-extension FolderWatchSessionCoordinator: ReaderFolderWatchControllerDelegate {
-    func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
+extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
+    func folderWatchControllerCurrentDocumentFileURL(_ controller: FolderWatchController) -> URL? {
         delegate?.selectedReaderStore.document.fileURL
     }
 
-    func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
+    func folderWatchControllerOpenDocumentFileURLs(_ controller: FolderWatchController) -> [URL] {
         guard let delegate else { return [] }
         return delegate.documents.compactMap { document in
             document.readerStore.document.isDeferredDocument ? nil : document.readerStore.document.fileURL
@@ -202,9 +202,9 @@ extension FolderWatchSessionCoordinator: ReaderFolderWatchControllerDelegate {
     }
 
     func folderWatchController(
-        _ controller: ReaderFolderWatchController,
-        handleEvents events: [ReaderFolderWatchChangeEvent],
-        in session: ReaderFolderWatchSession,
+        _ controller: FolderWatchController,
+        handleEvents events: [FolderWatchChangeEvent],
+        in session: FolderWatchSession,
         origin: ReaderOpenOrigin
     ) {
         let diffBaselineByURL: [URL: String] = Dictionary(
@@ -229,7 +229,7 @@ extension FolderWatchSessionCoordinator: ReaderFolderWatchControllerDelegate {
         ))
     }
 
-    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
+    func folderWatchController(_ controller: FolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
         guard let delegate else { return }
         for url in urls {
             if let doc = delegate.document(for: url) {
@@ -238,11 +238,11 @@ extension FolderWatchSessionCoordinator: ReaderFolderWatchControllerDelegate {
         }
     }
 
-    func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
+    func folderWatchControllerShouldSelectNewestDocument(_ controller: FolderWatchController) {
         delegate?.selectDocumentWithNewestModificationDate()
     }
 
-    func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController) {
+    func folderWatchControllerStateDidChange(_ controller: FolderWatchController) {
         synchronizeFolderWatchState()
     }
 }

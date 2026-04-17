@@ -100,7 +100,7 @@ struct FavoriteWorkspaceControllerTests {
         let controller = makeController()
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder")
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly, scope: .selectedFolderOnly, excludedSubdirectoryPaths: []
         )
         let favorite = ReaderFavoriteWatchedFolder(
