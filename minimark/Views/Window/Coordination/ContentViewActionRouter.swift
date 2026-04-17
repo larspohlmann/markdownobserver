@@ -102,21 +102,21 @@ final class ContentViewActionRouter {
         case .editSubfolders:
             setEditingSubfolders(true)
         case .saveSourceDraft:
-            sidebarDocumentController.selectedReaderStore.saveSourceDraft()
+            sidebarDocumentController.selectedReaderStore.editingFlow.save()
         case .discardSourceDraft:
-            sidebarDocumentController.selectedReaderStore.discardSourceDraft()
+            sidebarDocumentController.selectedReaderStore.editingFlow.discard()
         case .startSourceEditing:
-            sidebarDocumentController.selectedReaderStore.startEditingSource()
+            sidebarDocumentController.selectedReaderStore.editingFlow.startEditing()
         case .updateSourceDraft(let markdown):
-            sidebarDocumentController.selectedReaderStore.updateSourceDraft(markdown)
+            sidebarDocumentController.selectedReaderStore.editingFlow.updateDraft(markdown)
         case .grantImageDirectoryAccess(let url):
-            sidebarDocumentController.selectedReaderStore.grantImageDirectoryAccess(folderURL: url)
+            sidebarDocumentController.selectedReaderStore.persister.grantImageDirectoryAccess(folderURL: url)
         case .openInApplication(let app):
             sidebarDocumentController.selectedReaderStore.document.openInApplication(app)
         case .revealInFinder:
             sidebarDocumentController.selectedReaderStore.document.revealInFinder()
         case .presentError(let error):
-            sidebarDocumentController.selectedReaderStore.handle(error)
+            sidebarDocumentController.selectedReaderStore.document.handle(error)
         case .updateTOCHeadings(let headings):
             sidebarDocumentController.selectedReaderStore.toc.updateHeadings(headings)
         }

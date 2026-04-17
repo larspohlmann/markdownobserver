@@ -13,11 +13,11 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.store.externalChange.lastExternalChangeAt != nil)
@@ -29,11 +29,11 @@ struct ReaderStoreExternalChangeTests {
 
         #expect(fixture.store.statusBarTimestamp == nil)
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(fixture.store.statusBarTimestamp == .lastModified(fixture.store.document.fileLastModifiedAt!))
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.statusBarTimestamp == .updated(fixture.store.externalChange.lastExternalChangeAt!))
     }
@@ -42,8 +42,8 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -58,9 +58,9 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.delete(fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -80,7 +80,7 @@ struct ReaderStoreExternalChangeTests {
         let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
         fixture.store.folderWatchDispatcher.setSession(session)
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -100,7 +100,7 @@ struct ReaderStoreExternalChangeTests {
         let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
         fixture.store.folderWatchDispatcher.setSession(session)
 
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .folderWatchAutoOpen,
             initialDiffBaselineMarkdown: "# Old content"
@@ -124,8 +124,8 @@ struct ReaderStoreExternalChangeTests {
         let session = FolderWatchSession(folderURL: folderURL, options: options, startedAt: Date())
         fixture.store.folderWatchDispatcher.setSession(session)
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -143,8 +143,8 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
@@ -156,7 +156,7 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
@@ -165,12 +165,12 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(fixture.store.decoratedWindowTitle == "\(fixture.store.document.windowTitle)")
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.decoratedWindowTitle == "* \(fixture.store.document.windowTitle)")
     }
@@ -190,12 +190,12 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.sourceEditingController.setViewMode(.source, hasOpenDocument: fixture.store.document.hasOpenDocument)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .source)
 
-        fixture.store.openFile(at: fixture.secondaryFileURL)
+        fixture.store.opener.open(at: fixture.secondaryFileURL)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
@@ -204,12 +204,12 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.sourceEditingController.setViewMode(.split, hasOpenDocument: fixture.store.document.hasOpenDocument)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .split)
 
-        fixture.store.openFile(at: fixture.secondaryFileURL)
+        fixture.store.opener.open(at: fixture.secondaryFileURL)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
     }
@@ -218,7 +218,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(fixture.store.sourceEditingController.documentViewMode == .preview)
 
@@ -236,13 +236,13 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.write(content: "# Updated", to: fixture.primaryFileURL)
-        fixture.store.reloadCurrentFile(forceHighlight: true, acknowledgeExternalChange: true)
+        fixture.store.reloader.reloadCurrentFile(forceHighlight: true, acknowledgeExternalChange: true)
 
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }
@@ -254,11 +254,11 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.sourceMarkdown == "# Modified")
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
@@ -269,12 +269,12 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let originalMarkdown = fixture.store.document.sourceMarkdown
         let originalHTML = fixture.store.renderingController.renderedHTMLDocument
         fixture.delete(fixture.primaryFileURL)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.isCurrentFileMissing)
         #expect(fixture.store.document.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
@@ -288,14 +288,14 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.delete(fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.isCurrentFileMissing)
 
         fixture.write(content: "# Restored", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(!fixture.store.document.isCurrentFileMissing)
         #expect(fixture.store.document.sourceMarkdown == "# Restored")
@@ -308,10 +308,10 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
         #expect(fixture.store.document.changedRegions.isEmpty)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
         #expect(fixture.store.document.changedRegions.isEmpty)
@@ -326,10 +326,10 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         fixture.write(content: "# Updated Once", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions.isEmpty)
         #expect(fixture.store.document.sourceMarkdown == "# Updated Once")
@@ -345,7 +345,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.write(content: "# Updated Once", to: fixture.primaryFileURL)
 
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .folderWatchAutoOpen,
             initialDiffBaselineMarkdown: "# Initial"
@@ -360,7 +360,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
@@ -372,14 +372,14 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
         #expect(fixture.store.document.changedRegions.isEmpty)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Updated Again", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Updated Again")
@@ -393,17 +393,17 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.write(content: "# Updated Once", to: fixture.primaryFileURL)
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .folderWatchAutoOpen,
             initialDiffBaselineMarkdown: "# Initial"
         )
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
 
         fixture.write(content: "# Updated Twice", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Updated Twice")
@@ -417,17 +417,17 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         fixture.write(content: "# Settled Initial Content", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions.isEmpty)
         #expect(fixture.store.document.sourceMarkdown == "# Settled Initial Content")
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.write(content: "# Real Follow Up Change", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Real Follow Up Change")
@@ -444,7 +444,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.write(content: "", to: fixture.primaryFileURL)
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
         #expect(fixture.store.document.sourceMarkdown.isEmpty)
         #expect(fixture.store.document.documentLoadState == .settlingAutoOpen)
 
@@ -469,7 +469,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.write(content: "", to: fixture.primaryFileURL)
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         #expect(fixture.store.document.documentLoadState == .settlingAutoOpen)
 
@@ -496,12 +496,12 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         try? await Task.sleep(for: .milliseconds(30))
 
         fixture.write(content: "# Later External Change", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Later External Change")
@@ -515,12 +515,12 @@ struct ReaderStoreExternalChangeTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL, origin: .manual)
+        fixture.store.opener.open(at: fixture.primaryFileURL, origin: .manual)
 
         #expect(fixture.store.document.documentLoadState == .ready)
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
     }
@@ -540,7 +540,7 @@ struct ReaderStoreExternalChangeTests {
             fixture.securityScope.didStartAccessResponsesByPath[fixture.primaryFileURL.path] = [false]
             fixture.securityScope.didStartAccessResponsesByPath[normalizedPrimaryFilePath] = [false]
 
-            fixture.store.openFile(
+            fixture.store.opener.open(
                 at: fixture.primaryFileURL,
                 origin: .manual,
                 folderWatchSession: session
@@ -559,12 +559,12 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
-        fixture.store.openFile(at: fixture.secondaryFileURL)
+        fixture.store.opener.open(at: fixture.secondaryFileURL)
 
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
@@ -574,8 +574,8 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.openFile(at: fixture.secondaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.secondaryFileURL)
 
         #expect(fixture.watcher.operations == [
             .stop,
@@ -589,13 +589,13 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let initialStartCallCount = fixture.watcher.startCallCount
         let initialStopCallCount = fixture.watcher.stopCallCount
 
         let missingFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("missing.md")
-        fixture.store.openFile(at: missingFileURL)
-        fixture.store.openFile(at: missingFileURL)
+        fixture.store.opener.open(at: missingFileURL)
+        fixture.store.opener.open(at: missingFileURL)
 
         #expect(fixture.store.document.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
         #expect(fixture.watcher.startCallCount == initialStartCallCount)
@@ -613,11 +613,11 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
@@ -634,7 +634,7 @@ struct ReaderStoreExternalChangeTests {
         )
         fixture.store.folderWatchDispatcher.setSession(session)
 
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .manual,
             folderWatchSession: session
@@ -654,13 +654,13 @@ struct ReaderStoreExternalChangeTests {
             startedAt: .now
         )
         fixture.store.folderWatchDispatcher.setSession(session)
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .manual,
             folderWatchSession: session
         )
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(
                 fileURL: fixture.primaryFileURL,
                 kind: .modified,
@@ -683,7 +683,7 @@ struct ReaderStoreExternalChangeTests {
             startedAt: .now
         )
         fixture.store.folderWatchDispatcher.setSession(session)
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .manual,
             folderWatchSession: session
@@ -700,7 +700,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -720,7 +720,7 @@ struct ReaderStoreExternalChangeTests {
             openedEvents.append(event)
         }
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(fileURL: fixture.primaryFileURL, kind: .modified, previousMarkdown: "# Initial"),
             FolderWatchChangeEvent(fileURL: fourthFileURL, kind: .added),
             FolderWatchChangeEvent(fileURL: unsupportedURL, kind: .added)
@@ -751,7 +751,7 @@ struct ReaderStoreExternalChangeTests {
             openedEvents.append(event)
         }
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(fileURL: createdFileURL, kind: .added)
         ])
 
@@ -765,7 +765,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -779,7 +779,7 @@ struct ReaderStoreExternalChangeTests {
             capturedEvent = event
         }
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(
                 fileURL: changedFileURL,
                 kind: .modified,
@@ -796,7 +796,7 @@ struct ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let session = FolderWatchSession(
             folderURL: ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL),
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -816,7 +816,7 @@ struct ReaderStoreExternalChangeTests {
             openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
         }
 
-        fixture.store.handleObservedWatchedFolderChanges(
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges(
             fileURLs.map { FolderWatchChangeEvent(fileURL: $0, kind: .added) }
         )
 
@@ -835,12 +835,12 @@ extension ReaderStoreExternalChangeTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let initialWatchCallCount = fixture.watcher.startCallCount
 
         // Opening the same URL via handleIncomingOpenURL must not restart the file watcher
         // or trigger a new document load cycle.
-        fixture.store.handleIncomingOpenURL(fixture.primaryFileURL, origin: .manual)
+        fixture.store.opener.handleIncomingURL(fixture.primaryFileURL, origin: .manual)
 
         #expect(fixture.watcher.startCallCount == initialWatchCallCount)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
@@ -853,7 +853,7 @@ extension ReaderStoreExternalChangeTests {
         let txtURL = fixture.temporaryDirectoryURL.appendingPathComponent("file.txt")
         try "hello".write(to: txtURL, atomically: true, encoding: .utf8)
 
-        fixture.store.handleIncomingOpenURL(txtURL, origin: .manual)
+        fixture.store.opener.handleIncomingURL(txtURL, origin: .manual)
 
         #expect(!fixture.store.document.hasOpenDocument)
     }

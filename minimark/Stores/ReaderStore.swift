@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 import Observation
 import OSLog
 
@@ -11,9 +10,42 @@ final class ReaderStore {
         category: "ReaderStore"
     )
 
-    let document: ReaderDocumentController
+    // MARK: - State controllers
 
-    // MARK: - Cross-group computed properties
+    let document: ReaderDocumentController
+    let toc = ReaderTOCController()
+    let externalChange = ReaderExternalChangeController()
+    let sourceEditingController = ReaderSourceEditingController()
+    let folderWatchDispatcher: FolderWatchDispatcher
+    let renderingController: ReaderRenderingController
+    let diffBaselineTracker: DiffBaselineTracking
+
+    // MARK: - Dependencies (exposed for wiring + logging + tests)
+
+    let rendering: ReaderRenderingDependencies
+    let file: ReaderFileDependencies
+    let folderWatch: FolderWatchDependencies
+    let settingsStore: ReaderSettingsReading & ReaderRecentWriting
+    let securityScopeResolver: SecurityScopeResolver
+
+    // MARK: - Services
+
+    let fileLoader: MarkdownFileLoader
+    let saveLogFormatter: SaveLogFormatter
+
+    // MARK: - Orchestrators
+
+    let presenter: DocumentPresenter
+    let postOpenEffects: PostOpenEffects
+    let opener: DocumentOpener
+    let reloader: DocumentReloader
+    let persister: SourceDraftPersister
+    let editingFlow: SourceEditingFlow
+    let externalChangeHandler: ExternalChangeHandler
+    let folderWatchInput: FolderWatchInputHandler
+    let setupActivator: DeferredSetupActivator
+
+    // MARK: - Cross-group view-model projections
 
     var statusBarTimestamp: ReaderStatusBarTimestamp? {
         if let date = externalChange.lastExternalChangeAt { return .updated(date) }
@@ -27,33 +59,8 @@ final class ReaderStore {
             ? "* \(document.windowTitle)" : document.windowTitle
     }
 
-    let toc = ReaderTOCController()
-
-    let externalChange = ReaderExternalChangeController()
-    let sourceEditingController = ReaderSourceEditingController()
-    let folderWatchDispatcher: FolderWatchDispatcher
-    let rendering: ReaderRenderingDependencies
-    let renderingController: ReaderRenderingController
-    let file: ReaderFileDependencies
-    let folderWatch: FolderWatchDependencies
-    let settingsStore: ReaderSettingsReading & ReaderRecentWriting
-    let securityScopeResolver: SecurityScopeResolver
-    @ObservationIgnored private var settingsCancellable: AnyCancellable?
-
-    // MARK: - Internal: accessible to Coordination extensions
-    // These properties exist for coordination extensions in Stores/Coordination/.
-    // They must be at least `internal` because Swift extensions in separate files
-    // cannot see `private` members.  Do not access them from views or other stores.
-    //
-    // - diffBaselineTracker: read-only (`let`) — used by ExternalChangeFlow
-    // - onFolderWatchStarted/Stopped: read-only from extensions (called, never reassigned);
-    //   set exclusively through folderWatchDispatcher.setStateCallbacks(onStarted:onStopped:)
-    let diffBaselineTracker: DiffBaselineTracking
-
     var onFolderWatchStarted: ((FolderWatchSession) -> Void)? { folderWatchDispatcher.onFolderWatchStarted }
     var onFolderWatchStopped: (() -> Void)? { folderWatchDispatcher.onFolderWatchStopped }
-
-    @ObservationIgnored private var hasActivatedDeferredSetup = false
 
     init(
         rendering: ReaderRenderingDependencies,
@@ -68,7 +75,8 @@ final class ReaderStore {
             settingsStore: settingsStore,
             settler: folderWatch.settler
         )
-        self.folderWatchDispatcher = FolderWatchDispatcher(folderWatchDependencies: folderWatch)
+        let folderWatchDispatcher = FolderWatchDispatcher(folderWatchDependencies: folderWatch)
+        self.folderWatchDispatcher = folderWatchDispatcher
         self.rendering = rendering
         self.renderingController = ReaderRenderingController(
             renderingDependencies: rendering,
@@ -82,61 +90,114 @@ final class ReaderStore {
         self.diffBaselineTracker = diffBaselineTracker ?? DiffBaselineTracker(
             minimumAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
         )
-    }
-
-    func activateDeferredSetupIfNeeded() {
-        guard !hasActivatedDeferredSetup else { return }
-        hasActivatedDeferredSetup = true
-
-        settingsCancellable = settingsStore.settingsPublisher
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] settings in
-                guard let self else { return }
-                let lookbackInterval = settings.diffBaselineLookback.timeInterval
-                if lookbackInterval != self.diffBaselineTracker.currentMinimumAge {
-                    self.diffBaselineTracker.updateMinimumAge(lookbackInterval)
-                    self.folderWatch.autoOpenPlanner.updateMinimumDiffBaselineAge(lookbackInterval)
-                }
-            }
-
-        folderWatch.settler.configure(
-            currentFileURL: { [weak self] in self?.document.fileURL },
-            loadFile: { [weak self] url in
-                guard let self else { throw ReaderError.noOpenFileInReader }
-                return try self.loadMarkdownFile(at: url)
-            },
-            onDocumentSettled: { [weak self] loaded, fileURL, diffBaselineMarkdown in
-                guard let self else { return }
-                do {
-                    try self.presentLoadedDocument(
-                        loaded,
-                        at: fileURL,
-                        diffBaselineMarkdown: diffBaselineMarkdown,
-                        resetDocumentViewMode: false,
-                        acknowledgeExternalChange: true
-                    )
-                } catch {
-                    self.handle(error)
-                }
-            },
-            onLoadStateChanged: { [weak self] state in
-                self?.document.documentLoadState = state
+        self.fileLoader = MarkdownFileLoader(
+            securityScopeResolver: securityScopeResolver,
+            fileIO: file.io
+        )
+        self.saveLogFormatter = SaveLogFormatter(
+            securityScopeResolver: securityScopeResolver,
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            folderWatchDispatcher: folderWatchDispatcher
+        )
+        self.presenter = DocumentPresenter(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            toc: self.toc,
+            renderingController: self.renderingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            settler: folderWatch.settler,
+            fileLoader: self.fileLoader
+        )
+        self.postOpenEffects = PostOpenEffects(
+            document: self.document,
+            settingsStore: settingsStore,
+            folderWatchDispatcher: folderWatchDispatcher,
+            folderWatch: folderWatch,
+            diffBaselineTracker: self.diffBaselineTracker,
+            fileWatcher: file.watcher
+        )
+        self.opener = DocumentOpener(
+            document: self.document,
+            externalChange: self.externalChange,
+            sourceEditingController: self.sourceEditingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            securityScopeResolver: securityScopeResolver,
+            folderWatch: folderWatch,
+            fileWatcher: file.watcher,
+            fileLoader: self.fileLoader,
+            presenter: self.presenter,
+            postOpenEffects: self.postOpenEffects,
+            onError: { [document = self.document] error in
+                document.handle(error)
             }
         )
-    }
-
-    /// Marks this document as live-auto-opened: sets the external change
-    /// indicator and clears the settler so subsequent edits are not absorbed.
-    func markAsLiveAutoOpened() {
-        externalChange.noteObservedExternalChange(kind: .added)
-        folderWatch.settler.clearSettling()
-    }
-
-    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: FolderWatchSession?) {
-        document.deferFile(at: url, origin: origin)
-        if let folderWatchSession {
-            folderWatchDispatcher.setSession(folderWatchSession)
+        self.reloader = DocumentReloader(
+            document: self.document,
+            folderWatch: folderWatch,
+            presenter: self.presenter,
+            onError: { [document = self.document] error in
+                document.handle(error)
+            }
+        )
+        self.persister = SourceDraftPersister(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            renderingController: self.renderingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            securityScopeResolver: securityScopeResolver,
+            fileIO: file.io,
+            saveLogFormatter: self.saveLogFormatter
+        )
+        self.editingFlow = SourceEditingFlow(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            renderingController: self.renderingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            persister: self.persister,
+            reloader: self.reloader,
+            saveLogFormatter: self.saveLogFormatter,
+            onError: { [document = self.document] error in
+                document.handle(error)
+            }
+        )
+        self.externalChangeHandler = ExternalChangeHandler(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            folderWatchDispatcher: folderWatchDispatcher,
+            folderWatch: folderWatch,
+            settingsStore: settingsStore,
+            diffBaselineTracker: self.diffBaselineTracker,
+            fileLoader: self.fileLoader,
+            persister: self.persister,
+            reloader: self.reloader
+        )
+        self.folderWatchInput = FolderWatchInputHandler(
+            document: self.document,
+            folderWatchDispatcher: folderWatchDispatcher,
+            opener: self.opener
+        )
+        self.setupActivator = DeferredSetupActivator(
+            document: self.document,
+            folderWatchDispatcher: folderWatchDispatcher,
+            folderWatch: folderWatch,
+            settingsStore: settingsStore,
+            diffBaselineTracker: self.diffBaselineTracker,
+            fileLoader: self.fileLoader,
+            presenter: self.presenter
+        )
+        self.postOpenEffects.onError = { [document = self.document] error in
+            document.handle(error)
+        }
+        self.postOpenEffects.onObservedFileChange = { [externalChangeHandler = self.externalChangeHandler] in
+            externalChangeHandler.handleObservedFileChange()
+        }
+        self.opener.onActivateDeferredSetupIfNeeded = { [setupActivator = self.setupActivator] in
+            setupActivator.activateIfNeeded()
         }
     }
 
@@ -151,32 +212,6 @@ final class ReaderStore {
         sourceEditingController.reset()
         externalChange.clear()
         toc.clear()
-    }
-
-    func presentError(_ error: Error) {
-        handle(error)
-    }
-
-    func startWatchingCurrentFile() {
-        guard let fileURL = document.fileURL else {
-            return
-        }
-
-        do {
-            try file.watcher.startWatching(fileURL: fileURL) { [weak self] in
-                guard let self else { return }
-                Task { @MainActor [self] in
-                    self.handleObservedFileChange()
-                }
-            }
-        } catch {
-            handle(error)
-        }
-    }
-
-
-    func handle(_ error: Error) {
-        document.handle(error)
     }
 
     static func normalizedFileURL(_ url: URL) -> URL {

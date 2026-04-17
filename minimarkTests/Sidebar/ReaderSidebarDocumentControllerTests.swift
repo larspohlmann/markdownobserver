@@ -408,7 +408,7 @@ struct ReaderSidebarDocumentControllerTests {
             changeDetected = true
         }
 
-        unselectedDocument.readerStore.handleObservedFileChange()
+        unselectedDocument.readerStore.externalChangeHandler.handleObservedFileChange()
         try await Task.sleep(for: .milliseconds(50))
 
         #expect(unselectedDocument.readerStore.externalChange.lastExternalChangeAt != nil)
@@ -1149,7 +1149,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try "# Zeta Edited".write(to: harness.secondaryFileURL, atomically: true, encoding: .utf8)
 
-        autoOpenedDoc.readerStore.handleObservedFileChange()
+        autoOpenedDoc.readerStore.externalChangeHandler.handleObservedFileChange()
 
         _ = await waitUntil(timeout: .seconds(2)) {
             harness.controller.rowStates[autoOpenedDoc.id]?.indicatorState.showsIndicator == true

@@ -29,7 +29,7 @@ struct ReaderStoreDeferredInitTests {
         defer { fixture.cleanup() }
 
         // Open a file — this should activate the subscription.
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         // Now change the lookback — the store should observe it.
         fixture.settings.updateDiffBaselineLookback(.fiveMinutes)

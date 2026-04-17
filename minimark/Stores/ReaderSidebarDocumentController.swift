@@ -175,7 +175,7 @@ final class ReaderSidebarDocumentController {
             let store = selectedReaderStore
             guard store.document.isDeferredDocument else { return }
             scheduleLoadWithOverlay(on: store) {
-                store.materializeDeferredDocument()
+                store.opener.materializeDeferred()
             }
             return
         }
@@ -185,7 +185,7 @@ final class ReaderSidebarDocumentController {
 
         if store.document.isDeferredDocument {
             scheduleLoadWithOverlay(on: store) {
-                store.materializeDeferredDocument()
+                store.opener.materializeDeferred()
             }
         }
         bindSelectedStore()

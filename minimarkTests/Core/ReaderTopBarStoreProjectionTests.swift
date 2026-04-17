@@ -8,7 +8,7 @@ struct ReaderTopBarStoreProjectionTests {
     @Test func projectionReflectsStoreState() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let projection = ReaderTopBarStoreProjection(store: fixture.store)
         #expect(projection.fileURL != nil)
         #expect(projection.fileDisplayName == "first.md")

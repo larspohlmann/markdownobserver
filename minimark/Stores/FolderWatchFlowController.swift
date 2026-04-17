@@ -165,7 +165,7 @@ final class FolderWatchFlowController {
                 performInitialAutoOpen: performInitialAutoOpen
             )
         } catch {
-            sidebarDocumentController.selectedReaderStore.presentError(error)
+            sidebarDocumentController.selectedReaderStore.document.handle(error)
         }
 
         return didDeactivateFavorite
@@ -220,7 +220,7 @@ final class FolderWatchFlowController {
         do {
             try sidebarDocumentController.folderWatchCoordinator.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
         } catch {
-            sidebarDocumentController.selectedReaderStore.presentError(error)
+            sidebarDocumentController.selectedReaderStore.document.handle(error)
             return false
         }
 

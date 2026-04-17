@@ -15,7 +15,7 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
+        store.opener.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
 
         #expect(store.document.fileURL?.path == harness.primaryFileURL.path)
         #expect(store.document.fileDisplayName == "alpha.md")
@@ -36,10 +36,10 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
+        store.opener.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
         #expect(store.document.isDeferredDocument)
 
-        store.materializeDeferredDocument()
+        store.opener.materializeDeferred()
 
         #expect(!store.document.isDeferredDocument)
         #expect(store.document.documentLoadState == .ready || store.document.documentLoadState == .settlingAutoOpen)
@@ -61,8 +61,8 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        store.deferFile(at: missingURL, folderWatchSession: session)
-        store.materializeDeferredDocument()
+        store.opener.deferFile(at: missingURL, folderWatchSession: session)
+        store.opener.materializeDeferred()
 
         #expect(store.document.lastError != nil || store.document.fileURL?.path == missingURL.path)
     }
@@ -387,11 +387,11 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
+        store.opener.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
         store.document.transitionToLoading()
         #expect(store.document.documentLoadState == .loading)
 
-        store.materializeDeferredDocument()
+        store.opener.materializeDeferred()
 
         #expect(store.document.documentLoadState == .ready || store.document.documentLoadState == .settlingAutoOpen)
         #expect(!store.document.sourceMarkdown.isEmpty)
@@ -446,7 +446,7 @@ struct ReaderSidebarDeferredLoadingTests {
             startedAt: .now
         )
 
-        store.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
+        store.opener.deferFile(at: harness.primaryFileURL, folderWatchSession: session)
         #expect(store.document.documentLoadState == .deferred)
 
         store.document.transitionToLoading()
