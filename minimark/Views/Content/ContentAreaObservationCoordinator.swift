@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 
 @MainActor
 final class ContentAreaObservationCoordinator {
@@ -78,7 +77,7 @@ final class ContentAreaObservationCoordinator {
         let task = Task { [weak viewModel] in
             while !Task.isCancelled {
                 guard let currentVM = viewModel else { return }
-                let cancelled = await Self.awaitObservationChange {
+                let cancelled = await ObservationAsyncChange.next {
                     _ = read(currentVM)
                 }
                 if cancelled { return }
@@ -91,46 +90,5 @@ final class ContentAreaObservationCoordinator {
             }
         }
         tasks.append(task)
-    }
-
-    private static func awaitObservationChange(
-        tracking: @escaping @MainActor () -> Void
-    ) async -> Bool {
-        let box = ObservationContinuationBox()
-        return await withTaskCancellationHandler {
-            await withUnsafeContinuation { continuation in
-                box.store(continuation)
-                if Task.isCancelled {
-                    box.resume(returning: true)
-                    return
-                }
-                withObservationTracking {
-                    tracking()
-                } onChange: {
-                    box.resume(returning: false)
-                }
-            }
-        } onCancel: {
-            box.resume(returning: true)
-        }
-    }
-
-    private final class ObservationContinuationBox: @unchecked Sendable {
-        private nonisolated(unsafe) var continuation: UnsafeContinuation<Bool, Never>?
-        private nonisolated let lock = NSLock()
-
-        nonisolated func store(_ continuation: UnsafeContinuation<Bool, Never>) {
-            lock.lock()
-            self.continuation = continuation
-            lock.unlock()
-        }
-
-        nonisolated func resume(returning value: Bool) {
-            lock.lock()
-            let c = continuation
-            continuation = nil
-            lock.unlock()
-            c?.resume(returning: value)
-        }
     }
 }
