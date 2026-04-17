@@ -162,7 +162,7 @@ struct ContentUtilityRail: View {
         .buttonStyle(.plain)
         .foregroundStyle(isActive ? .primary : .secondary)
         .help("Table of Contents (⇧⌘T)")
-        .accessibilityIdentifier("toc-button")
+        .accessibilityIdentifier(.tocButton)
         .accessibilityLabel("Table of Contents")
         .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
         .anchorPreference(key: TOCButtonAnchorKey.self, value: .bounds) { $0 }

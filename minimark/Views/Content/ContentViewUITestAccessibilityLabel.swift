@@ -15,7 +15,7 @@ struct ContentViewUITestAccessibilityLabel: View {
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .padding(6)
                 .allowsHitTesting(false)
-                .accessibilityIdentifier("reader-preview-summary")
+                .accessibilityIdentifier(.readerPreviewSummary)
                 .accessibilityLabel("Reader preview summary")
                 .accessibilityValue(value)
         }

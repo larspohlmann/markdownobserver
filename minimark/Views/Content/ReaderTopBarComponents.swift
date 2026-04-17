@@ -56,7 +56,7 @@ struct FolderWatchToolbarButton: View {
             }
             .buttonStyle(.plain)
             .help(isActive ? "Watch a different folder (⌥⌘W)" : "Watch Folder… (⌥⌘W)")
-            .accessibilityIdentifier("folder-watch-toolbar-button")
+            .accessibilityIdentifier(.folderWatchToolbarButton)
             .accessibilityLabel("Watch folder")
             .accessibilityValue(isActive ? "Active" : "Inactive")
             .accessibilityHint("Opens the folder picker for starting folder watch")
@@ -156,7 +156,7 @@ struct FolderWatchToolbarButton: View {
                     isMenuPresented = false
                     onAction(.editFavoriteWatchedFolders)
                 }
-                .accessibilityIdentifier("edit-favorites-button")
+                .accessibilityIdentifier(.editFavoritesButton)
                 .buttonStyle(.plain)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
