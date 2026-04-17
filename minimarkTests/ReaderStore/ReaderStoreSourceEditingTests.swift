@@ -10,7 +10,7 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
 
-        fixture.store.startEditingSource()
+        fixture.store.editingFlow.startEditing()
 
         #expect(fixture.store.sourceEditingController.isSourceEditing)
         #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
@@ -27,9 +27,9 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
+        fixture.store.editingFlow.startEditing()
 
-        fixture.store.updateSourceDraft("# Draft")
+        fixture.store.editingFlow.updateDraft("# Draft")
 
         #expect(fixture.store.sourceEditingController.isSourceEditing)
         #expect(fixture.store.sourceEditingController.hasUnsavedDraftChanges)
@@ -52,10 +52,10 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Saved Draft")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Saved Draft")
 
-        fixture.store.saveSourceDraft()
+        fixture.store.editingFlow.save()
 
         let persistedMarkdown = try String(contentsOf: fixture.primaryFileURL, encoding: .utf8)
         #expect(persistedMarkdown == "# Saved Draft")
@@ -89,10 +89,10 @@ struct ReaderStoreSourceEditingTests {
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session
         )
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Autoloaded Save")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Autoloaded Save")
 
-        fixture.store.saveSourceDraft()
+        fixture.store.editingFlow.save()
 
         let persistedMarkdown = try String(contentsOf: fixture.primaryFileURL, encoding: .utf8)
         #expect(persistedMarkdown == "# Autoloaded Save")
@@ -155,10 +155,10 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Saved Draft")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Saved Draft")
 
-        fixture.store.saveSourceDraft()
+        fixture.store.editingFlow.save()
         fixture.store.handleObservedFileChange()
 
         #expect(fixture.store.document.sourceMarkdown == "# Saved Draft")
@@ -173,10 +173,10 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Draft")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Draft")
 
-        fixture.store.discardSourceDraft()
+        fixture.store.editingFlow.discard()
 
         #expect(!fixture.store.sourceEditingController.isSourceEditing)
         #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
@@ -193,8 +193,8 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Draft")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Draft")
         fixture.write(content: "# External", to: fixture.primaryFileURL)
 
         fixture.store.handleObservedFileChange()
@@ -212,12 +212,12 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Draft")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Draft")
         fixture.write(content: "# External", to: fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
-        fixture.store.discardSourceDraft()
+        fixture.store.editingFlow.discard()
 
         #expect(!fixture.store.sourceEditingController.isSourceEditing)
         #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
@@ -232,7 +232,7 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         // No openFile call — store has no open document.
-        fixture.store.startEditingSource()
+        fixture.store.editingFlow.startEditing()
 
         #expect(!fixture.store.sourceEditingController.isSourceEditing)
         #expect(!fixture.store.sourceEditingController.hasUnsavedDraftChanges)
@@ -248,7 +248,7 @@ struct ReaderStoreSourceEditingTests {
 
         #expect(fixture.store.document.isCurrentFileMissing)
 
-        fixture.store.startEditingSource()
+        fixture.store.editingFlow.startEditing()
 
         #expect(!fixture.store.sourceEditingController.isSourceEditing)
     }
@@ -258,11 +258,11 @@ struct ReaderStoreSourceEditingTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.startEditingSource()
-        fixture.store.updateSourceDraft("# Draft")
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Draft")
 
         // Second call while already editing must not reset the draft.
-        fixture.store.startEditingSource()
+        fixture.store.editingFlow.startEditing()
 
         #expect(fixture.store.sourceEditingController.isSourceEditing)
         #expect(fixture.store.document.sourceMarkdown == "# Draft")
@@ -274,7 +274,7 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
         // updateSourceDraft without startEditingSource — must be a no-op.
-        fixture.store.updateSourceDraft("# Should Not Apply")
+        fixture.store.editingFlow.updateDraft("# Should Not Apply")
 
         #expect(!fixture.store.sourceEditingController.isSourceEditing)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
@@ -287,7 +287,7 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
         // discardSourceDraft without an active editing session must be a no-op.
-        fixture.store.discardSourceDraft()
+        fixture.store.editingFlow.discard()
 
         #expect(!fixture.store.sourceEditingController.isSourceEditing)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")

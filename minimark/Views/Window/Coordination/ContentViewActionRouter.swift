@@ -102,13 +102,13 @@ final class ContentViewActionRouter {
         case .editSubfolders:
             setEditingSubfolders(true)
         case .saveSourceDraft:
-            sidebarDocumentController.selectedReaderStore.saveSourceDraft()
+            sidebarDocumentController.selectedReaderStore.editingFlow.save()
         case .discardSourceDraft:
-            sidebarDocumentController.selectedReaderStore.discardSourceDraft()
+            sidebarDocumentController.selectedReaderStore.editingFlow.discard()
         case .startSourceEditing:
-            sidebarDocumentController.selectedReaderStore.startEditingSource()
+            sidebarDocumentController.selectedReaderStore.editingFlow.startEditing()
         case .updateSourceDraft(let markdown):
-            sidebarDocumentController.selectedReaderStore.updateSourceDraft(markdown)
+            sidebarDocumentController.selectedReaderStore.editingFlow.updateDraft(markdown)
         case .grantImageDirectoryAccess(let url):
             sidebarDocumentController.selectedReaderStore.persister.grantImageDirectoryAccess(folderURL: url)
         case .openInApplication(let app):
