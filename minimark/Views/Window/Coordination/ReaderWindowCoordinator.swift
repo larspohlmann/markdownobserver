@@ -11,6 +11,7 @@ final class ReaderWindowCoordinator {
     private var shellController: WindowShellController!
     private var documentOpenCoordinator: WindowDocumentOpenCoordinator!
     private var sidebarActionRouter: SidebarDocumentActionRouter!
+    private var appearanceLockCoordinator: AppearanceLockCoordinator!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -93,6 +94,11 @@ final class ReaderWindowCoordinator {
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
             sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
+        )
+        self.appearanceLockCoordinator = AppearanceLockCoordinator(
+            appearanceControllerProvider: { [weak self] in self?.appearanceController },
+            sidebarDocumentController: sidebarDocumentController,
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController }
         )
     }
 
@@ -522,55 +528,14 @@ final class ReaderWindowCoordinator {
     // MARK: - Appearance Lock
 
     func toggleAppearanceLock() {
-        guard let appearanceController else { return }
-        if appearanceController.isLocked {
-            appearanceController.unlock()
-            for document in sidebarDocumentController.documents {
-                document.readerStore.renderingController.clearAppearanceOverride()
-            }
-            if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
-                favoriteWorkspaceController?.updateLockedAppearance(nil)
-            }
-        } else {
-            appearanceController.lock()
-            let appearance = appearanceController.effectiveAppearance
-            for document in sidebarDocumentController.documents {
-                document.readerStore.renderingController.setAppearanceOverride(appearance)
-            }
-            if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil {
-                favoriteWorkspaceController?.updateLockedAppearance(appearanceController.lockedAppearance)
-            }
-        }
+        appearanceLockCoordinator.toggleLock()
     }
 
-    // MARK: - Appearance Reapplication
-
     func reapplyAppearance() {
-        guard let appearanceController else { return }
-        // Defer rendering to the next main actor hop to avoid setting @Published
-        // properties on ReaderStore during a SwiftUI view update cycle.
-        Task { @MainActor [sidebarDocumentController] in
-            let appearance = appearanceController.effectiveAppearance
-            for document in sidebarDocumentController.documents {
-                let store = document.readerStore
-                guard store.document.hasOpenDocument, !store.document.isDeferredDocument else { continue }
-
-                if document.id == sidebarDocumentController.selectedDocumentID {
-                    try? store.renderWithAppearance(appearance)
-                } else {
-                    store.setAppearanceOverride(appearance)
-                }
-            }
-        }
+        appearanceLockCoordinator.reapplyAcrossOpenDocuments()
     }
 
     func renderSelectedDocumentIfNeeded() {
-        guard let appearanceController else { return }
-        guard let document = sidebarDocumentController.selectedDocument else { return }
-        let store = document.readerStore
-        guard store.renderingController.needsAppearanceRender, store.document.hasOpenDocument, !store.document.isDeferredDocument else { return }
-        Task { @MainActor in
-            try? store.renderWithAppearance(appearanceController.effectiveAppearance)
-        }
+        appearanceLockCoordinator.renderSelectedDocumentIfNeeded()
     }
 }
