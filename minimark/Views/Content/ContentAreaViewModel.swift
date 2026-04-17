@@ -130,8 +130,8 @@ final class ContentAreaViewModel {
             && (sourceEditing.documentViewMode != .preview || sourceEditing.isSourceEditing)
     }
 
-    var previewAccessibilitySummary: ReaderPreviewAccessibilitySummary {
-        ReaderPreviewAccessibilitySummary(
+    var previewAccessibilitySummary: PreviewAccessibilitySummary {
+        PreviewAccessibilitySummary(
             fileName: document.fileURL?.lastPathComponent ?? "none",
             regionCount: document.changedRegions.count,
             mode: sourceEditing.documentViewMode

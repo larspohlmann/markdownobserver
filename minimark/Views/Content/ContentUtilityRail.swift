@@ -3,10 +3,10 @@ import SwiftUI
 
 struct ContentUtilityRail: View {
     let hasFile: Bool
-    let documentViewMode: ReaderDocumentViewMode
+    let documentViewMode: DocumentViewMode
     let showEditButton: Bool
     let canStartSourceEditing: Bool
-    let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
+    let onSetDocumentViewMode: (DocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
     let hasTOCHeadings: Bool
     let isTOCVisible: Binding<Bool>
@@ -63,7 +63,7 @@ struct ContentUtilityRail: View {
 
     private var viewModeGroup: some View {
         VStack(spacing: 6) {
-            ForEach(ReaderDocumentViewMode.allCases, id: \.self) { mode in
+            ForEach(DocumentViewMode.allCases, id: \.self) { mode in
                 viewModeButton(mode: mode)
             }
         }
@@ -73,7 +73,7 @@ struct ContentUtilityRail: View {
         .accessibilityHint("Switch between preview, split, and source views of the document.")
     }
 
-    private func viewModeButton(mode: ReaderDocumentViewMode) -> some View {
+    private func viewModeButton(mode: DocumentViewMode) -> some View {
         let isSelected = documentViewMode == mode
 
         return Button {

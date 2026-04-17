@@ -7,10 +7,10 @@
 import XCTest
 
 final class minimarkUITests: XCTestCase {
-    private let watchFolderSheetIdentifier = ReaderAccessibilityID.folderWatchSheet.rawValue
-    private let cancelButtonIdentifier = ReaderAccessibilityID.folderWatchCancelButton.rawValue
-    private let startButtonIdentifier = ReaderAccessibilityID.folderWatchStartButton.rawValue
-    private let previewSummaryIdentifier = ReaderAccessibilityID.readerPreviewSummary.rawValue
+    private let watchFolderSheetIdentifier = AccessibilityID.folderWatchSheet.rawValue
+    private let cancelButtonIdentifier = AccessibilityID.folderWatchCancelButton.rawValue
+    private let startButtonIdentifier = AccessibilityID.folderWatchStartButton.rawValue
+    private let previewSummaryIdentifier = AccessibilityID.previewSummary.rawValue
     private let uiTestModeArgument = "-minimark-ui-test"
     private let presentWatchFolderSheetArgument = "-minimark-present-watch-folder-sheet"
     private let autoStartWatchFolderArgument = "-minimark-auto-start-watch-folder"
@@ -20,9 +20,9 @@ final class minimarkUITests: XCTestCase {
     private let reviewExclusionsButtonTitle = "Choose subdirectories to deactivate"
     private let deactivateAllButtonTitle = "Deactivate All"
     private let startWatchingAnywayButtonTitle = "Start Watching Anyway"
-    private let dialogStartButtonIdentifier = ReaderAccessibilityID.folderWatchDialogStartButton.rawValue
-    private let sidebarGroupToggleIdentifier = ReaderAccessibilityID.sidebarGroupToggle.rawValue
-    private let sidebarColumnIdentifier = ReaderAccessibilityID.sidebarColumn.rawValue
+    private let dialogStartButtonIdentifier = AccessibilityID.folderWatchDialogStartButton.rawValue
+    private let sidebarGroupToggleIdentifier = AccessibilityID.sidebarGroupToggle.rawValue
+    private let sidebarColumnIdentifier = AccessibilityID.sidebarColumn.rawValue
     private let simulateGroupedSidebarArgument = "-minimark-simulate-grouped-sidebar"
 
     override func setUpWithError() throws {
@@ -331,14 +331,14 @@ final class minimarkUITests: XCTestCase {
         return directoryURL
     }
 
-    private func currentPreviewSummary(_ element: XCUIElement) -> ReaderPreviewAccessibilitySummary? {
+    private func currentPreviewSummary(_ element: XCUIElement) -> PreviewAccessibilitySummary? {
         guard let raw = element.value as? String else { return nil }
-        return ReaderPreviewAccessibilitySummary(rawValue: raw)
+        return PreviewAccessibilitySummary(rawValue: raw)
     }
 
     private func waitForPreviewSummary(
         _ element: XCUIElement,
-        matching predicate: @escaping (ReaderPreviewAccessibilitySummary) -> Bool,
+        matching predicate: @escaping (PreviewAccessibilitySummary) -> Bool,
         timeout: TimeInterval
     ) {
         let deadline = Date().addingTimeInterval(timeout)

@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension View {
-    func accessibilityIdentifier(_ id: ReaderAccessibilityID) -> some View {
+    func accessibilityIdentifier(_ id: AccessibilityID) -> some View {
         accessibilityIdentifier(id.rawValue)
     }
 }

@@ -56,7 +56,7 @@ struct SidebarRowStateTests {
 @Suite(.serialized)
 struct SidebarRowStateDerivationTests {
     @Test @MainActor func controllerDerivesSidebarRowStateFromDocument() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let docID = harness.controller.documents[0].id
@@ -67,7 +67,7 @@ struct SidebarRowStateDerivationTests {
     }
 
     @Test @MainActor func controllerUpdatesRowStatesWhenDocumentsChange() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let coordinator = FileOpenCoordinator(controller: harness.controller)
@@ -81,7 +81,7 @@ struct SidebarRowStateDerivationTests {
     }
 
     @Test @MainActor func controllerUpdatesRowStateWhenStorePropertyChanges() async throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         // Open a real file so the store has meaningful state
@@ -111,7 +111,7 @@ struct SidebarRowStateDerivationTests {
     }
 
     @Test @MainActor func controllerUpdatesRowStateWhenChangeKindTransitions() async throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let coordinator = FileOpenCoordinator(controller: harness.controller)

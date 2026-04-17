@@ -206,7 +206,7 @@ final class TestReaderSettingsStore: SettingsStoring {
         )
     ) {
         var next = subject.value
-        next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
+        next.favoriteWatchedFolders = FavoriteHistory.insertingUniqueFavorite(
             name: name,
             folderURL: folderURL,
             options: options,
@@ -220,7 +220,7 @@ final class TestReaderSettingsStore: SettingsStoring {
 
     func removeFavoriteWatchedFolder(id: UUID) {
         var next = subject.value
-        next.favoriteWatchedFolders = ReaderFavoriteHistory.removingFavorite(
+        next.favoriteWatchedFolders = FavoriteHistory.removingFavorite(
             id: id,
             from: next.favoriteWatchedFolders
         )
@@ -230,7 +230,7 @@ final class TestReaderSettingsStore: SettingsStoring {
 
     func renameFavoriteWatchedFolder(id: UUID, newName: String) {
         var next = subject.value
-        next.favoriteWatchedFolders = ReaderFavoriteHistory.renamingFavorite(
+        next.favoriteWatchedFolders = FavoriteHistory.renamingFavorite(
             id: id,
             newName: newName,
             in: next.favoriteWatchedFolders
@@ -394,7 +394,7 @@ final class TestReaderSettingsStore: SettingsStoring {
 
     func addTrustedImageFolder(_ folderURL: URL) {
         var next = subject.value
-        next.trustedImageFolders = ReaderTrustedImageFolderHistory.insertingUnique(
+        next.trustedImageFolders = TrustedImageFolderHistory.insertingUnique(
             folderURL,
             into: next.trustedImageFolders
         )
@@ -832,7 +832,7 @@ struct SidebarSortTestItem {
 }
 
 @MainActor
-struct ReaderStoreTestFixture {
+struct DocumentStoreTestFixture {
     let temporaryDirectoryURL: URL
     let primaryFileURL: URL
     let secondaryFileURL: URL
@@ -911,7 +911,7 @@ struct ReaderStoreTestFixture {
 }
 
 @MainActor
-struct ReaderSidebarControllerTestHarness {
+struct SidebarControllerTestHarness {
     let temporaryDirectoryURL: URL
     let primaryFileURL: URL
     let secondaryFileURL: URL

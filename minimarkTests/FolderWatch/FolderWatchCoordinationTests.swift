@@ -44,7 +44,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func burstOpenPlanningNormalizesDeduplicatesAndSorts() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let urls: [URL] = [
@@ -839,7 +839,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func readerWindowCoordinatorResolvesTitleFromSelectedDocumentState() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let coordinator = WindowCoordinator(
@@ -858,7 +858,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func readerWindowCoordinatorQueuesFolderWatchOpenEventsUntilFlushIsPossible() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let coordinator = WindowCoordinator(

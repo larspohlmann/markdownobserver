@@ -8,7 +8,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: reuseEmptySlotForFirst
 
     @Test @MainActor func planForThreeFilesOnEmptyWindowReusesFirstSlot() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -28,7 +28,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func planForFilesOnNonEmptyWindowAlwaysCreatesNew() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -51,7 +51,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: deduplication
 
     @Test @MainActor func planDeduplicatesDuplicateURLs() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -64,7 +64,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func planFocusesAlreadyOpenURLAndAppendsNew() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -94,7 +94,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: alwaysAppend
 
     @Test @MainActor func planWithAlwaysAppendNeverReusesEmptySlot() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -111,7 +111,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: replaceSelectedSlot
 
     @Test @MainActor func planWithReplaceSelectedSlotTargetsSelectedDocument() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -130,7 +130,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: materialization strategies
 
     @Test @MainActor func planWithLoadAllSetsLoadFully() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -144,7 +144,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func planWithDeferThenMaterializeSetsDeferOnly() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -161,7 +161,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: diff baseline passthrough
 
     @Test @MainActor func planPassesThroughDiffBaseline() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -179,7 +179,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - End-to-end: regression test for #85
 
     @Test @MainActor func openThreeFilesOnEmptyWindowOpensAllThree() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -198,7 +198,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openDeduplicatesAndSortsAlphabetically() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -213,7 +213,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openWithReplaceSelectedSlotReplacesContent() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -228,7 +228,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openWithDeferThenMaterializeDefersAllFiles() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -246,7 +246,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openWithAlwaysAppendDoesNotReuseEmptySlot() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -260,7 +260,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openSkipsAlreadyOpenFiles() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -284,7 +284,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openEmptyURLListIsNoOp() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 

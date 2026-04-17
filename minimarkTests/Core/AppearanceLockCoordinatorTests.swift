@@ -9,9 +9,9 @@ struct AppearanceLockCoordinatorTests {
     private func makeCoordinator() throws -> (
         AppearanceLockCoordinator,
         WindowAppearanceController,
-        ReaderSidebarControllerTestHarness
+        SidebarControllerTestHarness
     ) {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         let appearanceController = WindowAppearanceController(settingsStore: harness.settingsStore)
         let coordinator = AppearanceLockCoordinator(
             appearanceControllerProvider: { appearanceController },

@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentUtilityRailView: View {
     let state: ContentUtilityRailState
     @Binding var isTOCVisible: Bool
-    let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
+    let onSetDocumentViewMode: (DocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
 
     var body: some View {

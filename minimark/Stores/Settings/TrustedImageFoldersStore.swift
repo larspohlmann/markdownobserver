@@ -25,7 +25,7 @@ import Observation
 
     func addTrustedImageFolder(_ folderURL: URL) {
         mutate(coalescePersistence: false) { entries in
-            entries = ReaderTrustedImageFolderHistory.insertingUnique(folderURL, into: entries)
+            entries = TrustedImageFolderHistory.insertingUnique(folderURL, into: entries)
         }
     }
 
