@@ -5,7 +5,7 @@ import OSLog
 struct SaveLogFormatter {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
-        category: "SourceDraftPersister"
+        category: "SaveLogFormatter"
     )
 
     let securityScopeResolver: SecurityScopeResolver
