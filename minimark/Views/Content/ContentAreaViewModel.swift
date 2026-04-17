@@ -273,7 +273,7 @@ final class ContentAreaViewModel {
         )
     }
 
-    func dispatchTopBarAction(_ action: ReaderTopBarAction) {
+    func dispatchTopBarAction(_ action: TopBarAction) {
         switch action {
         case .openFiles(let urls):
             handlePickedFileURLs(urls)

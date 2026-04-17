@@ -179,10 +179,10 @@ final class SidebarGroupStateController {
     ) {
         let sortedDocuments = fileSortMode.sorted(documents) { document in
             ReaderSidebarSortDescriptor(
-                displayName: document.readerStore.document.fileDisplayName,
-                lastChangedAt: document.readerStore.document.fileLastModifiedAt
-                    ?? document.readerStore.externalChange.lastExternalChangeAt
-                    ?? document.readerStore.renderingController.lastRefreshAt
+                displayName: document.documentStore.document.fileDisplayName,
+                lastChangedAt: document.documentStore.document.fileLastModifiedAt
+                    ?? document.documentStore.externalChange.lastExternalChangeAt
+                    ?? document.documentStore.renderingController.lastRefreshAt
             )
         }
 
@@ -214,7 +214,7 @@ final class SidebarGroupStateController {
 
     private func rebuildGroupIndicatorStates() {
         let grouped = Dictionary(grouping: documents) { document in
-            document.readerStore.document.fileURL?.deletingLastPathComponent()
+            document.documentStore.document.fileURL?.deletingLastPathComponent()
                 .path(percentEncoded: false) ?? ""
         }
         var result: [String: [DocumentIndicatorState]] = [:]
@@ -236,7 +236,7 @@ final class SidebarGroupStateController {
 
     private func pruneStaleGroupIDs() {
         let activeGroupIDs = Set(documents.compactMap { document in
-            document.readerStore.document.fileURL?.deletingLastPathComponent()
+            document.documentStore.document.fileURL?.deletingLastPathComponent()
                 .path(percentEncoded: false)
         })
         collapsedGroupIDs.formIntersection(activeGroupIDs)

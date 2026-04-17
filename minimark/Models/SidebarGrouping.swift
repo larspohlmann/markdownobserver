@@ -96,9 +96,9 @@ enum SidebarGrouping: Equatable {
     ) -> [DocumentIndicatorState] {
         let states = documents.map { document in
             DocumentIndicatorState(
-                hasUnacknowledgedExternalChange: document.readerStore.externalChange.hasUnacknowledgedExternalChange,
-                isCurrentFileMissing: document.readerStore.document.isCurrentFileMissing,
-                unacknowledgedExternalChangeKind: document.readerStore.externalChange.unacknowledgedExternalChangeKind
+                hasUnacknowledgedExternalChange: document.documentStore.externalChange.hasUnacknowledgedExternalChange,
+                isCurrentFileMissing: document.documentStore.document.isCurrentFileMissing,
+                unacknowledgedExternalChangeKind: document.documentStore.externalChange.unacknowledgedExternalChangeKind
             )
         }
 
@@ -143,16 +143,16 @@ enum SidebarGrouping: Equatable {
     private static func directoryURL(
         for document: SidebarDocumentController.Document
     ) -> URL? {
-        document.readerStore.document.fileURL?.deletingLastPathComponent()
+        document.documentStore.document.fileURL?.deletingLastPathComponent()
     }
 
     private static func newestModificationDate(
         for documents: [SidebarDocumentController.Document]
     ) -> Date? {
         documents.compactMap { document in
-            document.readerStore.document.fileLastModifiedAt
-                ?? document.readerStore.externalChange.lastExternalChangeAt
-                ?? document.readerStore.renderingController.lastRefreshAt
+            document.documentStore.document.fileLastModifiedAt
+                ?? document.documentStore.externalChange.lastExternalChangeAt
+                ?? document.documentStore.renderingController.lastRefreshAt
         }.max()
     }
 

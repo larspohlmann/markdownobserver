@@ -13,7 +13,7 @@ import Observation
 @MainActor
 @Observable
 final class WindowSidebarMetricsController {
-    var width: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+    var width: CGFloat = SidebarWorkspaceMetrics.sidebarIdealWidth
     @ObservationIgnored private var lastAppliedDelta: CGFloat = 0
 
     private let sidebarDocumentController: SidebarDocumentController
@@ -31,7 +31,7 @@ final class WindowSidebarMetricsController {
     }
 
     func resetToIdealWidth() {
-        width = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+        width = SidebarWorkspaceMetrics.sidebarIdealWidth
     }
 
     func handleWidthChange(_ newWidth: CGFloat) {
@@ -76,7 +76,7 @@ final class WindowSidebarMetricsController {
             lastAppliedDelta = newFrame.width - oldWidth
         } else {
             lastAppliedDelta = 0
-            width = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+            width = SidebarWorkspaceMetrics.sidebarIdealWidth
         }
     }
 }

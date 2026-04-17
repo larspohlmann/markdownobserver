@@ -102,23 +102,23 @@ final class ContentViewActionRouter {
         case .editSubfolders:
             setEditingSubfolders(true)
         case .saveSourceDraft:
-            sidebarDocumentController.selectedReaderStore.editingFlow.save()
+            sidebarDocumentController.selectedDocumentStore.editingFlow.save()
         case .discardSourceDraft:
-            sidebarDocumentController.selectedReaderStore.editingFlow.discard()
+            sidebarDocumentController.selectedDocumentStore.editingFlow.discard()
         case .startSourceEditing:
-            sidebarDocumentController.selectedReaderStore.editingFlow.startEditing()
+            sidebarDocumentController.selectedDocumentStore.editingFlow.startEditing()
         case .updateSourceDraft(let markdown):
-            sidebarDocumentController.selectedReaderStore.editingFlow.updateDraft(markdown)
+            sidebarDocumentController.selectedDocumentStore.editingFlow.updateDraft(markdown)
         case .grantImageDirectoryAccess(let url):
-            sidebarDocumentController.selectedReaderStore.persister.grantImageDirectoryAccess(folderURL: url)
+            sidebarDocumentController.selectedDocumentStore.persister.grantImageDirectoryAccess(folderURL: url)
         case .openInApplication(let app):
-            sidebarDocumentController.selectedReaderStore.document.openInApplication(app)
+            sidebarDocumentController.selectedDocumentStore.document.openInApplication(app)
         case .revealInFinder:
-            sidebarDocumentController.selectedReaderStore.document.revealInFinder()
+            sidebarDocumentController.selectedDocumentStore.document.revealInFinder()
         case .presentError(let error):
-            sidebarDocumentController.selectedReaderStore.document.handle(error)
+            sidebarDocumentController.selectedDocumentStore.document.handle(error)
         case .updateTOCHeadings(let headings):
-            sidebarDocumentController.selectedReaderStore.toc.updateHeadings(headings)
+            sidebarDocumentController.selectedDocumentStore.toc.updateHeadings(headings)
         }
     }
 

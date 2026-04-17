@@ -37,7 +37,7 @@ struct SidebarRowStateComputerTests {
             )
         )
         return SidebarDocumentController.Document(
-            id: id, readerStore: store, normalizedFileURL: nil
+            id: id, documentStore: store, normalizedFileURL: nil
         )
     }
 
@@ -91,7 +91,7 @@ struct SidebarRowStateComputerTests {
         try "# Test".write(to: fileURL, atomically: true, encoding: .utf8)
 
         let doc = makeDocument(settingsStore: settings)
-        doc.readerStore.opener.open(at: fileURL, origin: .manual)
+        doc.documentStore.opener.open(at: fileURL, origin: .manual)
         let computer = SidebarRowStateComputer()
 
         // First rebuild — no previous state, so no pulse
@@ -99,7 +99,7 @@ struct SidebarRowStateComputerTests {
         #expect(computer.rowStates[doc.id]?.indicatorPulseToken == 0)
 
         // Simulate external change -> indicator becomes active
-        doc.readerStore.externalChange.noteObservedExternalChange()
+        doc.documentStore.externalChange.noteObservedExternalChange()
 
         // Second rebuild — indicator transitioned to active, pulse increments
         computer.rebuildAllRowStates(from: [doc])
@@ -179,7 +179,7 @@ struct SidebarRowStateComputerTests {
         try "# Test".write(to: fileURL, atomically: true, encoding: .utf8)
 
         let doc = makeDocument(settingsStore: settings)
-        doc.readerStore.opener.open(at: fileURL, origin: .manual)
+        doc.documentStore.opener.open(at: fileURL, origin: .manual)
         let computer = SidebarRowStateComputer()
         computer.rebuildAllRowStates(from: [doc])
 
@@ -188,7 +188,7 @@ struct SidebarRowStateComputerTests {
         computer.onRowStatesChanged = { _ in callbackFired = true }
         computer.onDockTileRowStatesChanged = { _ in dockTileCallbackFired = true }
 
-        doc.readerStore.externalChange.noteObservedExternalChange()
+        doc.documentStore.externalChange.noteObservedExternalChange()
         computer.updateRowStateIfNeeded(for: doc.id, in: [doc])
 
         #expect(callbackFired)

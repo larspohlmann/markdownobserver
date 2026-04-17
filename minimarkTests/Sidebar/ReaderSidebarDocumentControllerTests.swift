@@ -31,8 +31,8 @@ struct ReaderSidebarDocumentControllerTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.primaryFileURL.path)
-        #expect(harness.controller.selectedReaderStore.folderWatchDispatcher.activeFolderWatchSession?.folderURL.path == harness.temporaryDirectoryURL.path)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.path == harness.primaryFileURL.path)
+        #expect(harness.controller.selectedDocumentStore.folderWatchDispatcher.activeFolderWatchSession?.folderURL.path == harness.temporaryDirectoryURL.path)
     }
 
     @Test @MainActor func sidebarControllerBurstOpenDeduplicatesSortsAndReusesInitialDocument() throws {
@@ -50,11 +50,11 @@ struct ReaderSidebarDocumentControllerTests {
         ))
 
         #expect(harness.controller.documents.count == 2)
-        #expect(harness.controller.documents.compactMap { $0.readerStore.document.fileURL?.path } == [
+        #expect(harness.controller.documents.compactMap { $0.documentStore.document.fileURL?.path } == [
             harness.primaryFileURL.path,
             harness.secondaryFileURL.path
         ])
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.secondaryFileURL.path)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.path == harness.secondaryFileURL.path)
     }
 
     @Test @MainActor func sidebarControllerFocusingExistingDocumentDoesNotDuplicateEntry() throws {
@@ -70,7 +70,7 @@ struct ReaderSidebarDocumentControllerTests {
         harness.controller.focusDocument(at: harness.primaryFileURL)
 
         #expect(harness.controller.documents.count == 2)
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.primaryFileURL.path)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.path == harness.primaryFileURL.path)
     }
 
     @Test @MainActor func sidebarControllerDoesNotKeepBlankDocumentWhenWatchedOpenFails() throws {
@@ -94,7 +94,7 @@ struct ReaderSidebarDocumentControllerTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.document.fileURL == nil)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL == nil)
     }
 
     @Test @MainActor func sidebarControllerFailedWatchedOpenKeepsActiveFolderWatchSession() throws {
@@ -120,7 +120,7 @@ struct ReaderSidebarDocumentControllerTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.document.fileURL == nil)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL == nil)
         #expect(harness.controller.folderWatchCoordinator.canStopFolderWatch)
         #expect(harness.controller.folderWatchCoordinator.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
         #expect(harness.folderWatchControllerWatcher.stopCallCount == stopCallCountBeforeFailedOpen)
@@ -183,8 +183,8 @@ struct ReaderSidebarDocumentControllerTests {
             slotStrategy: .replaceSelectedSlot
         ))
 
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.primaryFileURL.path)
-        #expect(harness.controller.selectedReaderStore.folderWatchDispatcher.activeFolderWatchSession?.folderURL.path == harness.temporaryDirectoryURL.path)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.path == harness.primaryFileURL.path)
+        #expect(harness.controller.selectedDocumentStore.folderWatchDispatcher.activeFolderWatchSession?.folderURL.path == harness.temporaryDirectoryURL.path)
     }
 
     @Test @MainActor func sidebarControllerWatchedOpenDocumentsRetainDedicatedFileWatchers() throws {
@@ -228,7 +228,7 @@ struct ReaderSidebarDocumentControllerTests {
         )
 
         let topLevelDocumentIDs: Set<UUID> = Set(harness.controller.documents.compactMap { document in
-            guard let fileURL = document.readerStore.document.fileURL,
+            guard let fileURL = document.documentStore.document.fileURL,
                   fileURL.deletingLastPathComponent().path == harness.temporaryDirectoryURL.path else {
                 return nil
             }
@@ -260,7 +260,7 @@ struct ReaderSidebarDocumentControllerTests {
         )
         let controller = SidebarDocumentController(
             settingsStore: settingsStore,
-            makeReaderStore: {
+            makeDocumentStore: {
                 {
                     let settler = AutoOpenSettler(settlingInterval: 1.0)
                     let securityScopeResolver = SecurityScopeResolver(
@@ -317,7 +317,7 @@ struct ReaderSidebarDocumentControllerTests {
         try? await Task.sleep(for: .milliseconds(300))
 
         #expect(controller.documents.count == 1)
-        #expect(controller.selectedReaderStore.document.fileURL == nil)
+        #expect(controller.selectedDocumentStore.document.fileURL == nil)
     }
 
     @Test @MainActor func sidebarControllerRestoresFavoriteSavedOpenDocuments() throws {
@@ -354,7 +354,7 @@ struct ReaderSidebarDocumentControllerTests {
         ))
 
         #expect(harness.controller.documents.count == 2)
-        #expect(harness.controller.documents.compactMap { $0.readerStore.document.fileURL?.path } == [
+        #expect(harness.controller.documents.compactMap { $0.documentStore.document.fileURL?.path } == [
             harness.primaryFileURL.path,
             harness.secondaryFileURL.path
         ])
@@ -376,12 +376,12 @@ struct ReaderSidebarDocumentControllerTests {
         harness.controller.selectDocument(primaryDocument.id)
         await Task.yield()
         #expect(harness.controller.selectedFileURL?.path == harness.primaryFileURL.path)
-        #expect(harness.controller.selectedWindowTitle == primaryDocument.readerStore.document.windowTitle)
+        #expect(harness.controller.selectedWindowTitle == primaryDocument.documentStore.document.windowTitle)
 
         harness.controller.selectDocument(secondaryDocument.id)
         await Task.yield()
         #expect(harness.controller.selectedFileURL?.path == harness.secondaryFileURL.path)
-        #expect(harness.controller.selectedWindowTitle == secondaryDocument.readerStore.document.windowTitle)
+        #expect(harness.controller.selectedWindowTitle == secondaryDocument.documentStore.document.windowTitle)
     }
 
     @Test @MainActor func sidebarControllerPublishesWhenUnselectedDocumentChanges() async throws {
@@ -408,10 +408,10 @@ struct ReaderSidebarDocumentControllerTests {
             changeDetected = true
         }
 
-        unselectedDocument.readerStore.externalChangeHandler.handleObservedFileChange()
+        unselectedDocument.documentStore.externalChangeHandler.handleObservedFileChange()
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(unselectedDocument.readerStore.externalChange.lastExternalChangeAt != nil)
+        #expect(unselectedDocument.documentStore.externalChange.lastExternalChangeAt != nil)
         #expect(changeDetected)
     }
 
@@ -455,7 +455,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.document.fileURL == nil)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL == nil)
     }
 
     @Test @MainActor func sidebarControllerLiveBurstDoesNotPublishWarningForOmittedFiles() async throws {
@@ -543,8 +543,8 @@ struct ReaderSidebarDocumentControllerTests {
         harness.controller.closeAllDocuments()
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.documents[0].readerStore.document.fileURL == nil)
-        #expect(harness.controller.selectedReaderStore.document.fileURL == nil)
+        #expect(harness.controller.documents[0].documentStore.document.fileURL == nil)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL == nil)
     }
 
     @Test @MainActor func sidebarControllerCloseAllDocumentsKeepsActiveFolderWatch() throws {
@@ -569,7 +569,7 @@ struct ReaderSidebarDocumentControllerTests {
         harness.controller.closeAllDocuments()
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.document.fileURL == nil)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL == nil)
         #expect(harness.controller.folderWatchCoordinator.canStopFolderWatch)
         #expect(harness.controller.folderWatchCoordinator.activeFolderWatchSession?.folderURL == harness.temporaryDirectoryURL)
         #expect(watcher.stopCallCount == stopCallCountBeforeCloseAll)
@@ -630,7 +630,7 @@ struct ReaderSidebarDocumentControllerTests {
         })
 
         #expect(harness.controller.documents.count == 3)
-        let openFileURLPaths = Set(harness.controller.documents.compactMap { $0.readerStore.document.fileURL?.path })
+        let openFileURLPaths = Set(harness.controller.documents.compactMap { $0.documentStore.document.fileURL?.path })
         #expect(openFileURLPaths.contains(harness.primaryFileURL.path))
         #expect(openFileURLPaths.contains(harness.secondaryFileURL.path))
         #expect(openFileURLPaths.contains(subfolderFileURL.path))
@@ -658,7 +658,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         // The initial empty document should be reused for the first file.
         #expect(harness.controller.documents.count == 2)
-        #expect(harness.controller.documents.allSatisfy { $0.readerStore.document.fileURL != nil })
+        #expect(harness.controller.documents.allSatisfy { $0.documentStore.document.fileURL != nil })
     }
 
     @Test @MainActor func selectDocumentWithNewestModificationDateSelectsCorrectDocument() throws {
@@ -683,7 +683,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         harness.controller.selectDocumentWithNewestModificationDate()
 
-        let selectedStore = harness.controller.selectedReaderStore
+        let selectedStore = harness.controller.selectedDocumentStore
         #expect(selectedStore.document.fileURL?.lastPathComponent == "newer.md")
     }
 
@@ -733,19 +733,19 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.folderWatchCoordinator.pendingFileSelectionRequest == nil)
         #expect(harness.controller.documents.count == fileCount)
 
-        let loadedDocs = harness.controller.documents.filter { !$0.readerStore.document.isDeferredDocument }
-        let deferredDocs = harness.controller.documents.filter { $0.readerStore.document.isDeferredDocument }
+        let loadedDocs = harness.controller.documents.filter { !$0.documentStore.document.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.documentStore.document.isDeferredDocument }
 
         #expect(loadedDocs.count == FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         #expect(deferredDocs.count == fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
 
-        let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.document.fileURL?.lastPathComponent })
+        let loadedFileNames = Set(loadedDocs.compactMap { $0.documentStore.document.fileURL?.lastPathComponent })
         for index in (fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
             #expect(loadedFileNames.contains(String(format: "note-%02d.md", index)))
         }
 
         // Newest file (note-19) should be selected
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "note-19.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "note-19.md")
     }
 
     @Test @MainActor func materializeNewestDeferredDocumentsLoads12NewestAndSelectsNewest() throws {
@@ -788,25 +788,25 @@ struct ReaderSidebarDocumentControllerTests {
 
         // All should be deferred
         #expect(harness.controller.documents.count == fileCount)
-        #expect(harness.controller.documents.allSatisfy { $0.readerStore.document.isDeferredDocument })
+        #expect(harness.controller.documents.allSatisfy { $0.documentStore.document.isDeferredDocument })
 
         // Now materialize the 12 newest
         harness.controller.materializeNewestDeferredDocuments()
 
-        let loadedDocs = harness.controller.documents.filter { !$0.readerStore.document.isDeferredDocument }
-        let deferredDocs = harness.controller.documents.filter { $0.readerStore.document.isDeferredDocument }
+        let loadedDocs = harness.controller.documents.filter { !$0.documentStore.document.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.documentStore.document.isDeferredDocument }
 
         #expect(loadedDocs.count == FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         #expect(deferredDocs.count == fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
 
-        let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.document.fileURL?.lastPathComponent })
+        let loadedFileNames = Set(loadedDocs.compactMap { $0.documentStore.document.fileURL?.lastPathComponent })
         for index in (fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
             #expect(loadedFileNames.contains(String(format: "fav-%02d.md", index)))
         }
 
         // Newest file should be selected
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "fav-19.md")
-        #expect(!harness.controller.selectedReaderStore.document.isDeferredDocument)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "fav-19.md")
+        #expect(!harness.controller.selectedDocumentStore.document.isDeferredDocument)
     }
 
     @Test @MainActor func sidebarControllerLoadsAllFilesAndSelectsNewestForSmallFolder() throws {
@@ -833,15 +833,15 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents.count == fileCount)
 
         // All files should be fully loaded (none deferred)
-        let deferredDocs = harness.controller.documents.filter { $0.readerStore.document.isDeferredDocument }
+        let deferredDocs = harness.controller.documents.filter { $0.documentStore.document.isDeferredDocument }
         #expect(deferredDocs.isEmpty)
 
         for document in harness.controller.documents {
-            #expect(!document.readerStore.document.sourceMarkdown.isEmpty)
+            #expect(!document.documentStore.document.sourceMarkdown.isEmpty)
         }
 
         // Newest file (doc-04) should be selected
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "doc-04.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "doc-04.md")
     }
 
     // MARK: - Locked appearance propagation (#152)
@@ -853,7 +853,7 @@ struct ReaderSidebarDocumentControllerTests {
         let lockedAppearance = LockedAppearance(readerTheme: .newspaper, baseFontSize: 22, syntaxTheme: .nord)
 
         // Wire up the coordinator the same way the real app does
-        let coordinator = ReaderWindowCoordinator(
+        let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )
@@ -873,7 +873,7 @@ struct ReaderSidebarDocumentControllerTests {
         // The newly created document should have the locked appearance applied
         let newDocument = harness.controller.document(for: harness.secondaryFileURL)
         #expect(newDocument != nil)
-        #expect(newDocument?.readerStore.renderingController.needsAppearanceRender == true)
+        #expect(newDocument?.documentStore.renderingController.needsAppearanceRender == true)
     }
 
     @Test @MainActor func coordinatorDoesNotApplyAppearanceWhenUnlocked() throws {
@@ -881,7 +881,7 @@ struct ReaderSidebarDocumentControllerTests {
         defer { harness.cleanup() }
 
         // No locked appearance
-        let coordinator = ReaderWindowCoordinator(
+        let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )
@@ -897,7 +897,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         let newDocument = harness.controller.document(for: harness.secondaryFileURL)
         #expect(newDocument != nil)
-        #expect(newDocument?.readerStore.renderingController.needsAppearanceRender == false)
+        #expect(newDocument?.documentStore.renderingController.needsAppearanceRender == false)
     }
 
     // MARK: - Favorite restore newest-file selection (#144)
@@ -945,7 +945,7 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(harness.controller.documents.count == 5)
 
         // The selected document must be charlie.md (newest by mod date), not echo.md (last alphabetically).
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "charlie.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "charlie.md")
     }
 
     @Test @MainActor func discoveryOfAlreadyOpenFilesDoesNotOverrideNewestSelection() throws {
@@ -990,7 +990,7 @@ struct ReaderSidebarDocumentControllerTests {
             folderWatchSession: session,
             materializationStrategy: .deferThenMaterializeNewest(count: 12)
         ))
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "beta.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "beta.md")
 
         // Simulate discoverNewFilesForFavorite re-processing the same files.
         coordinator.open(FileOpenRequest(
@@ -1005,7 +1005,7 @@ struct ReaderSidebarDocumentControllerTests {
         harness.controller.selectDocumentWithNewestModificationDate()
 
         // beta.md should still be selected (newest by mod date).
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "beta.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "beta.md")
     }
 
     @Test @MainActor func discoveryOfNewFilesSelectsNewestOverall() throws {
@@ -1042,7 +1042,7 @@ struct ReaderSidebarDocumentControllerTests {
             folderWatchSession: session,
             materializationStrategy: .deferThenMaterializeNewest(count: 12)
         ))
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "beta.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "beta.md")
 
         // A newer file appears (discovered by folder watch).
         let gammaURL = harness.temporaryDirectoryURL.appendingPathComponent("gamma.md")
@@ -1064,7 +1064,7 @@ struct ReaderSidebarDocumentControllerTests {
         harness.controller.selectDocumentWithNewestModificationDate()
 
         // gamma.md should now be selected (newest overall).
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.lastPathComponent == "gamma.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "gamma.md")
     }
 
     @Test @MainActor func liveAutoOpenedFileShowsExternalChangeIndicator() async throws {
@@ -1089,13 +1089,13 @@ struct ReaderSidebarDocumentControllerTests {
         await Task.yield()
 
         let autoOpenedDoc = harness.controller.documents.first {
-            $0.readerStore.document.fileURL?.lastPathComponent == "zeta.md"
+            $0.documentStore.document.fileURL?.lastPathComponent == "zeta.md"
         }
         #expect(autoOpenedDoc != nil)
 
         let hasIndicator = await waitUntil(timeout: .seconds(2)) {
             guard let autoOpenedDoc else { return false }
-            return autoOpenedDoc.readerStore.externalChange.hasUnacknowledgedExternalChange
+            return autoOpenedDoc.documentStore.externalChange.hasUnacknowledgedExternalChange
         }
         #expect(hasIndicator)
 
@@ -1126,8 +1126,8 @@ struct ReaderSidebarDocumentControllerTests {
         ])
 
         let autoOpenedDoc = try #require(await waitUntil(timeout: .seconds(2)) {
-            harness.controller.documents.contains { $0.readerStore.document.fileURL?.path == harness.secondaryFileURL.path }
-        } ? harness.controller.documents.first { $0.readerStore.document.fileURL?.path == harness.secondaryFileURL.path } : nil)
+            harness.controller.documents.contains { $0.documentStore.document.fileURL?.path == harness.secondaryFileURL.path }
+        } ? harness.controller.documents.first { $0.documentStore.document.fileURL?.path == harness.secondaryFileURL.path } : nil)
 
         _ = await waitUntil(timeout: .seconds(2)) {
             (harness.controller.rowStates[autoOpenedDoc.id]?.indicatorPulseToken ?? 0) >= 1
@@ -1149,7 +1149,7 @@ struct ReaderSidebarDocumentControllerTests {
 
         try "# Zeta Edited".write(to: harness.secondaryFileURL, atomically: true, encoding: .utf8)
 
-        autoOpenedDoc.readerStore.externalChangeHandler.handleObservedFileChange()
+        autoOpenedDoc.documentStore.externalChangeHandler.handleObservedFileChange()
 
         _ = await waitUntil(timeout: .seconds(2)) {
             harness.controller.rowStates[autoOpenedDoc.id]?.indicatorState.showsIndicator == true
@@ -1189,7 +1189,7 @@ struct ReaderSidebarDocumentControllerTests {
         )
 
         for document in harness.controller.documents {
-            #expect(!document.readerStore.externalChange.hasUnacknowledgedExternalChange)
+            #expect(!document.documentStore.externalChange.hasUnacknowledgedExternalChange)
         }
     }
 
@@ -1204,7 +1204,7 @@ struct ReaderSidebarDocumentControllerTests {
         ))
 
         let document = harness.controller.documents.first {
-            $0.readerStore.document.fileURL != nil
+            $0.documentStore.document.fileURL != nil
         }
         #expect(document != nil)
         #expect(document?.normalizedFileURL == FileRouting.normalizedFileURL(harness.primaryFileURL))
@@ -1257,7 +1257,7 @@ struct ReaderSidebarDocumentControllerTests {
         )
         let controller = SidebarDocumentController(
             settingsStore: settingsStore,
-            makeReaderStore: {
+            makeDocumentStore: {
                 let settler = AutoOpenSettler(settlingInterval: 1.0)
                 let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
@@ -1331,22 +1331,22 @@ struct ReaderSidebarDocumentControllerTests {
 
         // Both appended docs deferred; selection is on the last appended doc (zeta.md by sort order).
         let newestDoc = try #require(
-            harness.controller.documents.first { $0.readerStore.document.fileURL?.path == harness.secondaryFileURL.path }
+            harness.controller.documents.first { $0.documentStore.document.fileURL?.path == harness.secondaryFileURL.path }
         )
         let primaryDoc = try #require(
-            harness.controller.documents.first { $0.readerStore.document.fileURL?.path == harness.primaryFileURL.path }
+            harness.controller.documents.first { $0.documentStore.document.fileURL?.path == harness.primaryFileURL.path }
         )
-        #expect(newestDoc.readerStore.document.isDeferredDocument)
-        #expect(primaryDoc.readerStore.document.isDeferredDocument)
+        #expect(newestDoc.documentStore.document.isDeferredDocument)
+        #expect(primaryDoc.documentStore.document.isDeferredDocument)
         #expect(harness.controller.selectedDocumentID == newestDoc.id)
 
         // Trigger the code path `FavoriteWorkspaceController.discoverNewFilesForFavorite` uses.
         harness.controller.selectDocumentWithNewestModificationDate()
 
         #expect(await waitUntil(timeout: .seconds(2)) {
-            !harness.controller.selectedReaderStore.document.isDeferredDocument
+            !harness.controller.selectedDocumentStore.document.isDeferredDocument
         })
-        #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.secondaryFileURL.path)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.path == harness.secondaryFileURL.path)
     }
 
     /// Guards the ready-state path: re-selecting an already materialized document
@@ -1366,13 +1366,13 @@ struct ReaderSidebarDocumentControllerTests {
 
         let documentID = try #require(harness.controller.documents.first?.id)
         #expect(harness.controller.selectedDocumentID == documentID)
-        #expect(harness.controller.selectedReaderStore.document.documentLoadState == .ready)
+        #expect(harness.controller.selectedDocumentStore.document.documentLoadState == .ready)
 
         // Re-selecting the already-ready document should not regress it into loading.
         harness.controller.selectDocument(documentID)
         await Task.yield()
 
-        #expect(harness.controller.selectedReaderStore.document.documentLoadState == .ready)
+        #expect(harness.controller.selectedDocumentStore.document.documentLoadState == .ready)
         #expect(harness.controller.selectedFileURL?.path == harness.primaryFileURL.path)
     }
 }

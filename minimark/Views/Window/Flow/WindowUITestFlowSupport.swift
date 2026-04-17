@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderWindowUITestLaunchAction {
+enum WindowUITestLaunchAction {
     case none
     case simulateAutoOpenWatchFlow
     case simulateGroupedSidebar
@@ -8,11 +8,11 @@ enum ReaderWindowUITestLaunchAction {
     case startWatchingFolder(URL)
 }
 
-struct ReaderWindowUITestFlowSupport {
+struct WindowUITestFlowSupport {
     static func resolveLaunchAction(
         configuration: UITestLaunchConfiguration,
         hostWindowAvailable: Bool
-    ) -> ReaderWindowUITestLaunchAction {
+    ) -> WindowUITestLaunchAction {
         guard configuration.isUITestModeEnabled else {
             return .none
         }

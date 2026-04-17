@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-struct ReaderSettingsView: View {
+struct SettingsView: View {
     private var settingsStore: SettingsStore
     @ObservedObject private var notificationNotifier: SystemNotifier
 
@@ -291,7 +291,7 @@ extension Color {
 }
 
 struct ThemePreviewCard: View {
-    let settings: ReaderSettings
+    let settings: Settings
 
     private var theme: Theme {
         Theme.theme(for: settings.readerTheme)

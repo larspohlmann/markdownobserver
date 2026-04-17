@@ -25,7 +25,7 @@ struct MarkdownRenderingService: MarkdownRendering {
     init(
         cssFactory: CSSFactory = CSSFactory(),
         payloadEncoder: MarkdownRuntimePayloadEncoding = JSONBase64MarkdownRuntimePayloadEncoder(),
-        runtimeAssetResolver: RuntimeAssetResolving = BundledReaderRuntimeAssetResolver()
+        runtimeAssetResolver: RuntimeAssetResolving = BundledRuntimeAssetResolver()
     ) {
         self.cssFactory = cssFactory
         self.payloadEncoder = payloadEncoder

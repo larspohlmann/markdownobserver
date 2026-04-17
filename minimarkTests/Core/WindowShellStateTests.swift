@@ -11,10 +11,10 @@ import Testing
 struct WindowShellStateTests {
 
     @MainActor
-    private func makeCoordinator() throws -> (ReaderWindowCoordinator, ReaderSidebarControllerTestHarness) {
+    private func makeCoordinator() throws -> (WindowCoordinator, ReaderSidebarControllerTestHarness) {
         WindowRegistry.shared.resetForTesting()
         let harness = try ReaderSidebarControllerTestHarness()
-        let coordinator = ReaderWindowCoordinator(
+        let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )

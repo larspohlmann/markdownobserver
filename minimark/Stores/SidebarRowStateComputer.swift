@@ -15,7 +15,7 @@ final class SidebarRowStateComputer {
         var states: [UUID: SidebarRowState] = [:]
         for document in documents {
             let previousIndicatorState = rowStates[document.id]?.indicatorState
-            let currentIndicatorState = deriveIndicatorState(from: document.readerStore)
+            let currentIndicatorState = deriveIndicatorState(from: document.documentStore)
             if let previousIndicatorState,
                previousIndicatorState != currentIndicatorState,
                currentIndicatorState.showsIndicator {
@@ -33,7 +33,7 @@ final class SidebarRowStateComputer {
     func updateRowStateIfNeeded(for documentID: UUID, in documents: [Document]) {
         guard let document = documents.first(where: { $0.id == documentID }) else { return }
         let previousIndicatorState = rowStates[documentID]?.indicatorState
-        let currentIndicatorState = deriveIndicatorState(from: document.readerStore)
+        let currentIndicatorState = deriveIndicatorState(from: document.documentStore)
         if let previousIndicatorState,
            previousIndicatorState != currentIndicatorState,
            currentIndicatorState.showsIndicator {
@@ -48,7 +48,7 @@ final class SidebarRowStateComputer {
     }
 
     func deriveRowState(from document: Document) -> SidebarRowState {
-        let store = document.readerStore
+        let store = document.documentStore
         let indicatorState = deriveIndicatorState(from: store)
         return SidebarRowState(
             id: document.id,

@@ -233,7 +233,7 @@ struct ReaderSettingsAndModelsTests {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.recent-file.invalid-bookmark.tests"
         let fileURL = URL(fileURLWithPath: "/tmp/invalid-bookmark.md")
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -260,7 +260,7 @@ struct ReaderSettingsAndModelsTests {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.recent-folder.invalid-bookmark.tests"
         let folderURL = URL(fileURLWithPath: "/tmp/invalid-watch-folder", isDirectory: true)
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -293,7 +293,7 @@ struct ReaderSettingsAndModelsTests {
         let folderURL = URL(fileURLWithPath: "/tmp/stale-watch-folder", isDirectory: true)
         let originalBookmarkData = Data([0x01, 0x02, 0x03])
         let refreshedBookmarkData = Data([0x10, 0x20, 0x30])
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -347,7 +347,7 @@ struct ReaderSettingsAndModelsTests {
         }
 
         let entry = RecentOpenedFile(fileURL: fileURL)
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -540,7 +540,7 @@ struct ReaderSettingsAndModelsTests {
         let resolvedURL = URL(fileURLWithPath: "/tmp/resolved-notes", isDirectory: true)
         let bookmarkData = Data([0x01, 0x02, 0x03])
 
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -574,7 +574,7 @@ struct ReaderSettingsAndModelsTests {
         let folderURL = URL(fileURLWithPath: "/tmp/my-notes", isDirectory: true)
         let bookmarkData = Data([0x01, 0x02, 0x03])
 
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -607,7 +607,7 @@ struct ReaderSettingsAndModelsTests {
         let storageKey = "reader.settings.trusted-image-invalid.tests"
         let folderURL = URL(fileURLWithPath: "/tmp/invalid-trust", isDirectory: true)
 
-        let seededSettings = ReaderSettings(
+        let seededSettings = Settings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
             syntaxTheme: .monokai,
@@ -906,21 +906,21 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSettingsDecodesDefaultLookbackWhenKeyMissing() throws {
         var settingsDict = try JSONSerialization.jsonObject(
-            with: JSONEncoder().encode(ReaderSettings.default)
+            with: JSONEncoder().encode(Settings.default)
         ) as! [String: Any]
         settingsDict.removeValue(forKey: "diffBaselineLookback")
         let data = try JSONSerialization.data(withJSONObject: settingsDict)
 
-        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
         #expect(decoded.diffBaselineLookback == .twoMinutes)
     }
 
     @Test func readerSettingsCodableRoundTripPreservesDiffBaselineLookback() throws {
-        var settings = ReaderSettings.default
+        var settings = Settings.default
         settings.diffBaselineLookback = .fiveMinutes
 
         let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(ReaderSettings.self, from: data)
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
         #expect(decoded.diffBaselineLookback == .fiveMinutes)
     }
 

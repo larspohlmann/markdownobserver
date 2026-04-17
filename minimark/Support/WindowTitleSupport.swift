@@ -34,7 +34,7 @@ enum DocumentIndicatorState: Equatable, Sendable {
         self != .none
     }
 
-    func color(for settings: ReaderSettings, colorScheme: ColorScheme) -> Color {
+    func color(for settings: Settings, colorScheme: ColorScheme) -> Color {
         switch self {
         case .deletedExternalChange:
             return Color(nsColor: .systemRed)

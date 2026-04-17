@@ -74,7 +74,7 @@ final class DocumentSurfaceViewModel {
 
     func refreshSourceHTML(
         markdown: String,
-        settings: ReaderSettings,
+        settings: Settings,
         isEditable: Bool
     ) {
         sourceHTMLCache.refreshIfNeeded(

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-struct ReaderCommands: Commands {
+struct AppCommands: Commands {
     var settingsStore: SettingsStore
     let multiFileDisplayMode: MultiFileDisplayMode
 
