@@ -100,13 +100,15 @@ struct ContentView: View {
 
     private var utilityRail: some View {
         ContentUtilityRailView(
-            hasFile: viewModel.document.fileURL != nil,
-            documentViewMode: viewModel.sourceEditing.documentViewMode,
-            showEditButton: viewModel.showSourceEditingControls && !viewModel.sourceEditing.isSourceEditing,
-            canStartSourceEditing: viewModel.document.hasOpenDocument
-                && !viewModel.document.isCurrentFileMissing
-                && !viewModel.sourceEditing.isSourceEditing,
-            hasTOCHeadings: !viewModel.toc.headings.isEmpty,
+            state: ContentUtilityRailState(
+                hasFile: viewModel.document.fileURL != nil,
+                documentViewMode: viewModel.sourceEditing.documentViewMode,
+                showEditButton: viewModel.showSourceEditingControls && !viewModel.sourceEditing.isSourceEditing,
+                canStartSourceEditing: viewModel.document.hasOpenDocument
+                    && !viewModel.document.isCurrentFileMissing
+                    && !viewModel.sourceEditing.isSourceEditing,
+                hasTOCHeadings: !viewModel.toc.headings.isEmpty
+            ),
             isTOCVisible: Binding(
                 get: { viewModel.toc.isVisible },
                 set: { viewModel.toc.isVisible = $0 }
@@ -122,10 +124,12 @@ struct ContentView: View {
 
     private var changeNavigationOverlay: some View {
         ChangeNavigationOverlayView(
-            canNavigate: viewModel.canNavigateChangedRegions,
-            currentIndex: viewModel.surfaceViewModel.changeNavigation.currentIndex,
-            totalCount: viewModel.document.changedRegions.count,
-            topPadding: viewModel.overlayLayout.insets.leadingOverlayTopPadding,
+            state: ChangeNavigationState(
+                canNavigate: viewModel.canNavigateChangedRegions,
+                currentIndex: viewModel.surfaceViewModel.changeNavigation.currentIndex,
+                totalCount: viewModel.document.changedRegions.count
+            ),
+            insets: viewModel.overlayLayout.insets,
             colorScheme: viewModel.overlayColorScheme,
             settingsStore: viewModel.settingsStore,
             onNavigate: viewModel.requestChangeNavigation
@@ -134,13 +138,14 @@ struct ContentView: View {
 
     private var watchPillOverlay: some View {
         WatchPillOverlayView(
-            activeFolderWatch: viewModel.folderWatchState.activeFolderWatch,
-            isCurrentWatchAFavorite: viewModel.folderWatchState.isCurrentWatchAFavorite,
-            canStop: viewModel.folderWatchState.canStopFolderWatch,
-            isAppearanceLocked: viewModel.folderWatchState.isAppearanceLocked,
-            topPadding: viewModel.overlayLayout.insets.leadingOverlayTopPadding,
-            leadingPadding: viewModel.canNavigateChangedRegions ? 150 : 60,
-            trailingPadding: 70,
+            state: WatchPillState(
+                activeFolderWatch: viewModel.folderWatchState.activeFolderWatch,
+                isCurrentWatchAFavorite: viewModel.folderWatchState.isCurrentWatchAFavorite,
+                canStop: viewModel.folderWatchState.canStopFolderWatch,
+                isAppearanceLocked: viewModel.folderWatchState.isAppearanceLocked
+            ),
+            insets: viewModel.overlayLayout.insets,
+            hasChangeNavigation: viewModel.canNavigateChangedRegions,
             colorScheme: viewModel.overlayColorScheme,
             onAction: viewModel.dispatchWatchPillAction
         )
