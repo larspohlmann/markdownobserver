@@ -54,7 +54,7 @@ nonisolated enum SidebarSortMode: String, Codable, Sendable {
         }
     }
 
-    func sorted<T>(_ values: [T], metadata: (T) -> ReaderSidebarSortDescriptor) -> [T] {
+    func sorted<T>(_ values: [T], metadata: (T) -> SidebarSortDescriptor) -> [T] {
         values.enumerated()
             .sorted { lhs, rhs in
                 let leftMetadata = metadata(lhs.element)
@@ -70,9 +70,9 @@ nonisolated enum SidebarSortMode: String, Codable, Sendable {
     }
 
     private func isOrderedBefore(
-        _ lhs: ReaderSidebarSortDescriptor,
+        _ lhs: SidebarSortDescriptor,
         leftIndex: Int,
-        _ rhs: ReaderSidebarSortDescriptor,
+        _ rhs: SidebarSortDescriptor,
         rightIndex: Int
     ) -> Bool {
         switch self {
@@ -135,7 +135,7 @@ nonisolated enum SidebarSortMode: String, Codable, Sendable {
     }
 }
 
-nonisolated struct ReaderSidebarSortDescriptor: Sendable {
+nonisolated struct SidebarSortDescriptor: Sendable {
     let displayName: String?
     let lastChangedAt: Date?
 

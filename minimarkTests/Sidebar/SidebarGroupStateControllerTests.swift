@@ -7,7 +7,7 @@ import Testing
 struct SidebarGroupStateControllerTests {
 
     @Test @MainActor func recomputesGroupingWhenDocumentsChange() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["src", "tests"],
             filesPerSubdirectory: 1
         )
@@ -24,7 +24,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func recomputesGroupingWhenSortModeChanges() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["zeta", "alpha"],
             filesPerSubdirectory: 1
         )
@@ -43,7 +43,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func recomputesGroupingWhenPinnedIDsChange() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta"],
             filesPerSubdirectory: 1
         )
@@ -68,7 +68,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func collapsedIDsChangeDoesNotRecomputeGrouping() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["src", "tests"],
             filesPerSubdirectory: 1
         )
@@ -90,7 +90,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func groupIndicatorStatesReflectDocumentState() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["src", "tests"],
             filesPerSubdirectory: 1
         )
@@ -129,7 +129,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func groupIndicatorStatesIncludeAllPresentKinds() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["src"],
             filesPerSubdirectory: 2
         )
@@ -169,7 +169,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func groupIndicatorPulseTokenIncrementsWhenIndicatorsChange() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["src"],
             filesPerSubdirectory: 1
         )
@@ -249,7 +249,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func moveGroupSetsManualOrderAndSwitchesSortMode() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma"],
             filesPerSubdirectory: 1
         )
@@ -271,7 +271,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func manualOrderReordersGroupsAndAppendsNewOnes() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma"],
             filesPerSubdirectory: 1
         )
@@ -294,7 +294,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func selectingAlgorithmicSortPreservesManualOrder() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta"],
             filesPerSubdirectory: 1
         )
@@ -317,7 +317,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func switchingBackToManualOrderRestoresCustomOrder() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma"],
             filesPerSubdirectory: 1
         )
@@ -345,7 +345,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func manualOrderPreservesPinnedGroupFloat() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma"],
             filesPerSubdirectory: 1
         )
@@ -377,7 +377,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func prunesStaleGroupIDsWhenDocumentsChange() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["src"],
             filesPerSubdirectory: 1
         )
@@ -397,7 +397,7 @@ struct SidebarGroupStateControllerTests {
     // MARK: - Expand/Collapse All + Restore
 
     @Test @MainActor func expandAllThenRestoreRevertsState() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma"],
             filesPerSubdirectory: 1
         )
@@ -420,7 +420,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func collapseAllThenRestoreRevertsState() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma"],
             filesPerSubdirectory: 1
         )
@@ -444,7 +444,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func collapseAllThenReorderThenRestorePreservesCorrectGroups() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta", "gamma", "delta"],
             filesPerSubdirectory: 1
         )
@@ -499,7 +499,7 @@ struct SidebarGroupStateControllerTests {
     }
 
     @Test @MainActor func manualToggleClearsBulkExpandState() throws {
-        let harness = try ReaderSidebarGroupingTestHarness(
+        let harness = try SidebarGroupingTestHarness(
             subdirectories: ["alpha", "beta"],
             filesPerSubdirectory: 1
         )

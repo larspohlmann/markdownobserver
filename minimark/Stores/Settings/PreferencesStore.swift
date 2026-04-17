@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import Observation
 
-nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
+nonisolated struct PreferencesSlice: Equatable, Sendable {
     var appAppearance: AppAppearance
     var readerTheme: ThemeKind
     var syntaxTheme: SyntaxThemeKind
@@ -20,18 +20,18 @@ nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
     static let minimumFontSize: Double = 10
     static let maximumFontSize: Double = 48
 
-    private(set) var currentPreferences: ReaderPreferencesSlice
+    private(set) var currentPreferences: PreferencesSlice
 
     weak var coordinator: ChildStoreCoordinating?
 
     @ObservationIgnored
-    private let subject: CurrentValueSubject<ReaderPreferencesSlice, Never>
+    private let subject: CurrentValueSubject<PreferencesSlice, Never>
 
-    var preferencesPublisher: AnyPublisher<ReaderPreferencesSlice, Never> {
+    var preferencesPublisher: AnyPublisher<PreferencesSlice, Never> {
         subject.eraseToAnyPublisher()
     }
 
-    init(initial: ReaderPreferencesSlice) {
+    init(initial: PreferencesSlice) {
         self.currentPreferences = initial
         self.subject = CurrentValueSubject(initial)
     }
@@ -115,7 +115,7 @@ nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
 
     private func mutate(
         coalescePersistence: Bool,
-        _ transform: (inout ReaderPreferencesSlice) -> Void
+        _ transform: (inout PreferencesSlice) -> Void
     ) {
         var updated = currentPreferences
         transform(&updated)

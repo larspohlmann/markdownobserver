@@ -7,7 +7,7 @@ struct ContentViewActionRouterTests {
 
     @MainActor
     private final class TestRouterEnvironment {
-        let harness: ReaderSidebarControllerTestHarness
+        let harness: SidebarControllerTestHarness
         let appearanceController: WindowAppearanceController
         let documentOpen: WindowDocumentOpenCoordinator
         let appearanceLock: AppearanceLockCoordinator
@@ -21,7 +21,7 @@ struct ContentViewActionRouterTests {
         let router: ContentViewActionRouter
 
         init() throws {
-            let harness = try ReaderSidebarControllerTestHarness()
+            let harness = try SidebarControllerTestHarness()
             self.harness = harness
             self.appearanceController = WindowAppearanceController(settingsStore: harness.settingsStore)
             self.folderWatchOpen = WindowFolderWatchOpenController(

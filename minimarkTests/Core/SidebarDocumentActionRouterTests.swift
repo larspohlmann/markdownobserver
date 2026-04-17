@@ -11,8 +11,8 @@ struct SidebarDocumentActionRouterTests {
         favoriteWorkspaceController: FavoriteWorkspaceController? = nil,
         sidebarWidth: CGFloat = SidebarWorkspaceMetrics.sidebarIdealWidth,
         onAfterRefresh: @escaping () -> Void = {}
-    ) throws -> (SidebarDocumentActionRouter, ReaderSidebarControllerTestHarness) {
-        let harness = try ReaderSidebarControllerTestHarness()
+    ) throws -> (SidebarDocumentActionRouter, SidebarControllerTestHarness) {
+        let harness = try SidebarControllerTestHarness()
         let router = SidebarDocumentActionRouter(
             sidebarDocumentController: harness.controller,
             settingsStore: harness.settingsStore,

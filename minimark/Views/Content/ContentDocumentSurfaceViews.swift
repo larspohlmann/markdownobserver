@@ -253,7 +253,7 @@ struct DocumentSurfaceHost: View {
 }
 
 struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
-    let documentViewMode: ReaderDocumentViewMode
+    let documentViewMode: DocumentViewMode
     let hasOpenDocument: Bool
     let showsLoadingOverlay: Bool
     let loadingOverlayHeadline: String

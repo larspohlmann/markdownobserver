@@ -67,7 +67,7 @@ final class DocumentSurfaceViewModel {
         splitScrollCoordinator.reset()
     }
 
-    func handleDocumentViewModeChange(_ mode: ReaderDocumentViewMode) {
+    func handleDocumentViewModeChange(_ mode: DocumentViewMode) {
         guard mode != .split else { return }
         splitScrollCoordinator.reset()
     }
@@ -92,7 +92,7 @@ final class DocumentSurfaceViewModel {
     func handleSharedAction(
         _ action: DocumentSurfaceAction,
         for surface: DocumentSurfaceRole,
-        documentViewMode: ReaderDocumentViewMode,
+        documentViewMode: DocumentViewMode,
         onDroppedFileURLs: @escaping ([URL]) -> Void,
         onAction: @escaping (ContentViewAction) -> Void
     ) -> Bool {
@@ -121,7 +121,7 @@ final class DocumentSurfaceViewModel {
     func handleScrollSyncObservation(
         _ observation: ScrollSyncObservation,
         from surface: DocumentSurfaceRole,
-        documentViewMode: ReaderDocumentViewMode
+        documentViewMode: DocumentViewMode
     ) {
         let shouldSync = canSynchronizeSplitScroll(documentViewMode: documentViewMode)
         splitScrollCoordinator.handleObservation(
@@ -132,7 +132,7 @@ final class DocumentSurfaceViewModel {
     }
 
     func canNavigateChangedRegions(
-        documentViewMode: ReaderDocumentViewMode,
+        documentViewMode: DocumentViewMode,
         changedRegions: [ChangedRegion]
     ) -> Bool {
         documentViewMode != .source
@@ -141,7 +141,7 @@ final class DocumentSurfaceViewModel {
     }
 
     func canSynchronizeSplitScroll(
-        documentViewMode: ReaderDocumentViewMode
+        documentViewMode: DocumentViewMode
     ) -> Bool {
         documentViewMode == .split
             && previewMode == .web
@@ -152,7 +152,7 @@ final class DocumentSurfaceViewModel {
         for surface: DocumentSurfaceRole,
         fileURL: URL?,
         renderedHTMLDocument: String,
-        documentViewMode: ReaderDocumentViewMode,
+        documentViewMode: DocumentViewMode,
         changedRegions: [ChangedRegion],
         isSourceEditing: Bool,
         overlayTopInset: CGFloat,

@@ -287,7 +287,7 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
         let bookmarkRefreshing = BookmarkRefreshing(resolve: bookmarkResolver, create: bookmarkCreator)
 
         self.preferences = PreferencesStore(
-            initial: ReaderPreferencesSlice(
+            initial: PreferencesSlice(
                 appAppearance: initialSettings.appAppearance,
                 readerTheme: initialSettings.readerTheme,
                 syntaxTheme: initialSettings.syntaxTheme,

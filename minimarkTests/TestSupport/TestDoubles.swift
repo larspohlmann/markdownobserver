@@ -95,7 +95,7 @@ final class TestFileWatcher: FileChangeWatching {
 }
 
 @MainActor
-final class TestReaderSettingsStore: SettingsStoring {
+final class TestSettingsStore: SettingsStoring {
     var settingsPublisher: AnyPublisher<Settings, Never> {
         subject.eraseToAnyPublisher()
     }
@@ -206,7 +206,7 @@ final class TestReaderSettingsStore: SettingsStoring {
         )
     ) {
         var next = subject.value
-        next.favoriteWatchedFolders = ReaderFavoriteHistory.insertingUniqueFavorite(
+        next.favoriteWatchedFolders = FavoriteHistory.insertingUniqueFavorite(
             name: name,
             folderURL: folderURL,
             options: options,
@@ -220,7 +220,7 @@ final class TestReaderSettingsStore: SettingsStoring {
 
     func removeFavoriteWatchedFolder(id: UUID) {
         var next = subject.value
-        next.favoriteWatchedFolders = ReaderFavoriteHistory.removingFavorite(
+        next.favoriteWatchedFolders = FavoriteHistory.removingFavorite(
             id: id,
             from: next.favoriteWatchedFolders
         )
@@ -230,7 +230,7 @@ final class TestReaderSettingsStore: SettingsStoring {
 
     func renameFavoriteWatchedFolder(id: UUID, newName: String) {
         var next = subject.value
-        next.favoriteWatchedFolders = ReaderFavoriteHistory.renamingFavorite(
+        next.favoriteWatchedFolders = FavoriteHistory.renamingFavorite(
             id: id,
             newName: newName,
             in: next.favoriteWatchedFolders
@@ -394,7 +394,7 @@ final class TestReaderSettingsStore: SettingsStoring {
 
     func addTrustedImageFolder(_ folderURL: URL) {
         var next = subject.value
-        next.trustedImageFolders = ReaderTrustedImageFolderHistory.insertingUnique(
+        next.trustedImageFolders = TrustedImageFolderHistory.insertingUnique(
             folderURL,
             into: next.trustedImageFolders
         )
@@ -585,7 +585,7 @@ final class TestSecurityToken: SecurityScopedAccessToken {
 }
 
 @MainActor
-final class TestReaderAutoOpenSettler: AutoOpenSettling {
+final class TestAutoOpenSettler: AutoOpenSettling {
     var pendingContext: PendingAutoOpenSettlingContext?
 
     private(set) var beginSettlingCalls: [PendingAutoOpenSettlingContext?] = []
@@ -623,7 +623,7 @@ final class TestReaderAutoOpenSettler: AutoOpenSettling {
     }
 }
 
-final class TestReaderDocumentIO: DocumentIO {
+final class TestDocumentIO: DocumentIO {
     private let realIO = DocumentIOService()
 
     func load(at accessibleURL: URL) throws -> (markdown: String, modificationDate: Date) {
@@ -639,7 +639,7 @@ final class TestReaderDocumentIO: DocumentIO {
     }
 }
 
-final class TestReaderFileActions: FileActionHandling {
+final class TestFileActions: FileActionHandling {
     func registeredApplications(for fileURL: URL) throws -> [ExternalApplication] {
         []
     }
@@ -668,7 +668,7 @@ final class TestWorkspace: WorkspaceControlling {
     func activateFileViewerSelecting(_ fileURLs: [URL]) {}
 }
 
-final class TestReaderSystemNotifier: SystemNotifying {
+final class TestSystemNotifier: SystemNotifying {
     struct FileChangeNotification: Equatable {
         let fileURL: URL
         let changeKind: FolderWatchChangeKind
@@ -832,19 +832,19 @@ struct SidebarSortTestItem {
 }
 
 @MainActor
-struct ReaderStoreTestFixture {
+struct DocumentStoreTestFixture {
     let temporaryDirectoryURL: URL
     let primaryFileURL: URL
     let secondaryFileURL: URL
     let store: DocumentStore
-    let notifier = TestReaderSystemNotifier()
+    let notifier = TestSystemNotifier()
 
     private let renderer = TestMarkdownRenderer()
     let differ: TestChangedRegionDiffer
     let watcher = TestFileWatcher()
-    let settings: TestReaderSettingsStore
+    let settings: TestSettingsStore
     let securityScope = TestSecurityScopeAccess()
-    private let fileActions = TestReaderFileActions()
+    private let fileActions = TestFileActions()
 
     init(
         autoRefreshOnExternalChange: Bool,
@@ -866,7 +866,7 @@ struct ReaderStoreTestFixture {
         try "# Second".write(to: secondaryFileURL, atomically: true, encoding: .utf8)
 
         differ = TestChangedRegionDiffer(changedRegionsForModifiedContent: changedRegionsForModifiedContent)
-        settings = TestReaderSettingsStore(
+        settings = TestSettingsStore(
             autoRefreshOnExternalChange: autoRefreshOnExternalChange,
             notificationsEnabled: notificationsEnabled,
             diffBaselineLookback: diffBaselineLookback
@@ -911,7 +911,7 @@ struct ReaderStoreTestFixture {
 }
 
 @MainActor
-struct ReaderSidebarControllerTestHarness {
+struct SidebarControllerTestHarness {
     let temporaryDirectoryURL: URL
     let primaryFileURL: URL
     let secondaryFileURL: URL
@@ -956,12 +956,12 @@ struct ReaderSidebarControllerTestHarness {
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
                     file: FileDependencies(
-                        watcher: fileWatcher, io: DocumentIOService(), actions: TestReaderFileActions()
+                        watcher: fileWatcher, io: DocumentIOService(), actions: TestFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
-                        systemNotifier: TestReaderSystemNotifier()
+                        systemNotifier: TestSystemNotifier()
                     ),
                     settingsStore: settingsStore,
                     securityScopeResolver: securityScopeResolver
@@ -973,7 +973,7 @@ struct ReaderSidebarControllerTestHarness {
                     folderWatcher: controllerWatcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    systemNotifier: TestReaderSystemNotifier(),
+                    systemNotifier: TestSystemNotifier(),
                     folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }

@@ -36,7 +36,7 @@ import Observation
         )
     ) {
         mutate(coalescePersistence: false) { favorites in
-            favorites = ReaderFavoriteHistory.insertingUniqueFavorite(
+            favorites = FavoriteHistory.insertingUniqueFavorite(
                 name: name,
                 folderURL: folderURL,
                 options: options,
@@ -49,13 +49,13 @@ import Observation
 
     func removeFavoriteWatchedFolder(id: UUID) {
         mutate(coalescePersistence: false) { favorites in
-            favorites = ReaderFavoriteHistory.removingFavorite(id: id, from: favorites)
+            favorites = FavoriteHistory.removingFavorite(id: id, from: favorites)
         }
     }
 
     func renameFavoriteWatchedFolder(id: UUID, newName: String) {
         mutate(coalescePersistence: false) { favorites in
-            favorites = ReaderFavoriteHistory.renamingFavorite(id: id, newName: newName, in: favorites)
+            favorites = FavoriteHistory.renamingFavorite(id: id, newName: newName, in: favorites)
         }
     }
 
@@ -144,7 +144,7 @@ import Observation
 
     func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
         mutate(coalescePersistence: false) { favorites in
-            favorites = ReaderFavoriteHistory.reordering(ids: orderedIDs, in: favorites)
+            favorites = FavoriteHistory.reordering(ids: orderedIDs, in: favorites)
         }
     }
 

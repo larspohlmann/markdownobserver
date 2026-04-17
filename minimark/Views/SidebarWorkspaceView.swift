@@ -478,7 +478,7 @@ private struct SidebarDocumentRow: View {
         )
         .animation(.easeInOut(duration: 0.15), value: isSelected)
         .padding(.vertical, 2)
-        .accessibilityIdentifier(ReaderAccessibilityID.sidebarDocument(title: title))
+        .accessibilityIdentifier(AccessibilityID.sidebarDocument(title: title))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering

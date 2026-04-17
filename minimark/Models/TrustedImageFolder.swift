@@ -30,7 +30,7 @@ nonisolated struct TrustedImageFolder: Equatable, Hashable, Codable, Sendable, I
     }
 }
 
-nonisolated enum ReaderTrustedImageFolderHistory {
+nonisolated enum TrustedImageFolderHistory {
     static func insertingUnique(
         _ folderURL: URL,
         into existingEntries: [TrustedImageFolder]

@@ -118,9 +118,9 @@ struct OpenAdditionalDocumentAction {
 }
 
 struct DocumentViewModeContext {
-    let currentMode: ReaderDocumentViewMode
+    let currentMode: DocumentViewMode
     let canSetMode: Bool
-    let setMode: (ReaderDocumentViewMode) -> Void
+    let setMode: (DocumentViewMode) -> Void
     let toggleMode: () -> Void
 }
 
