@@ -52,7 +52,7 @@ final class RecentHistoryCoordinator {
         hostWindowNumber: Int?,
         openDocumentInCurrentWindow: (URL) -> Void
     ) {
-        guard let payload = ReaderCommandNotification.Payload(notification: notification),
+        guard let payload = CommandNotification.Payload(notification: notification),
               payload.targetWindowNumber == hostWindowNumber else { return }
         guard let entry = payload.recentFileEntry else { return }
         let resolvedURL = settingsStore.resolvedRecentManuallyOpenedFileURL(matching: entry.fileURL) ?? entry.fileURL
@@ -63,7 +63,7 @@ final class RecentHistoryCoordinator {
         _ notification: Notification,
         hostWindowNumber: Int?
     ) {
-        guard let payload = ReaderCommandNotification.Payload(notification: notification),
+        guard let payload = CommandNotification.Payload(notification: notification),
               payload.targetWindowNumber == hostWindowNumber else { return }
         guard let entry = payload.recentWatchedFolderEntry else { return }
         startRecentFolderWatch(entry)

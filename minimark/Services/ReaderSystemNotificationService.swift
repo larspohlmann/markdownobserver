@@ -202,8 +202,8 @@ private struct ReaderSystemNotificationDescriptor {
     }
 
     init(fileURL: URL, watchedFolderURL: URL?, event: ReaderSystemNotificationEvent) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        let normalizedWatchedFolderURL = watchedFolderURL.map(ReaderFileRouting.normalizedFileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
+        let normalizedWatchedFolderURL = watchedFolderURL.map(FileRouting.normalizedFileURL)
         let fileName = normalizedFileURL.lastPathComponent
 
         title = event.titleText
@@ -230,7 +230,7 @@ struct ReaderNotificationTargetFocusCoordinator: ReaderNotificationTargetFocusin
     func focusNotificationTarget(fileURL: URL?, watchedFolderURL: URL?) -> Bool {
         if Thread.isMainThread {
             return MainActor.assumeIsolated {
-                ReaderWindowRegistry.shared.focusNotificationTarget(
+                WindowRegistry.shared.focusNotificationTarget(
                     fileURL: fileURL,
                     watchedFolderURL: watchedFolderURL
                 )
@@ -239,7 +239,7 @@ struct ReaderNotificationTargetFocusCoordinator: ReaderNotificationTargetFocusin
 
         return DispatchQueue.main.sync {
             MainActor.assumeIsolated {
-                ReaderWindowRegistry.shared.focusNotificationTarget(
+                WindowRegistry.shared.focusNotificationTarget(
                     fileURL: fileURL,
                     watchedFolderURL: watchedFolderURL
                 )

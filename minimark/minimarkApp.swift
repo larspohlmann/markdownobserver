@@ -34,8 +34,8 @@ struct MarkdownObserverApp: App {
             .appAppearance(appAppearance)
         }
         .defaultSize(
-            width: ReaderWindowDefaults.defaultWidth,
-            height: ReaderWindowDefaults.defaultHeight
+            width: WindowDefaults.defaultWidth,
+            height: WindowDefaults.defaultHeight
         )
         .commands {
             ReaderCommands(settingsStore: settingsStore, multiFileDisplayMode: activeMultiFileDisplayMode)
@@ -75,14 +75,14 @@ private final class ReaderUITestWindowBootstrapper {
     static let shared = ReaderUITestWindowBootstrapper()
 
     private var settingsStore: ReaderSettingsStore?
-    private var windowController: ReaderHostedWindowController?
+    private var windowController: HostedWindowController?
 
     func configure(settingsStore: ReaderSettingsStore) {
         self.settingsStore = settingsStore
     }
 
     func openInitialWindowIfNeeded() {
-        guard ReaderUITestLaunchConfiguration.current.isUITestModeEnabled else {
+        guard UITestLaunchConfiguration.current.isUITestModeEnabled else {
             return
         }
 
@@ -93,7 +93,7 @@ private final class ReaderUITestWindowBootstrapper {
                 return
             }
 
-            let controller = ReaderHostedWindowController(settingsStore: settingsStore)
+            let controller = HostedWindowController(settingsStore: settingsStore)
             windowController = controller
             controller.showWindow(nil)
             controller.window?.makeKeyAndOrderFront(nil)

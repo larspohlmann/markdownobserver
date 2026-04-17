@@ -1,6 +1,6 @@
 struct ChangedRegionNavigationCoordinator {
     private var requestID = 0
-    private var lastDirection: ReaderChangedRegionNavigationDirection?
+    private var lastDirection: ChangedRegionNavigationDirection?
     private(set) var currentIndex: Int?
 
     var currentRequest: ChangedRegionNavigationRequest? {
@@ -8,7 +8,7 @@ struct ChangedRegionNavigationCoordinator {
         return ChangedRegionNavigationRequest(id: requestID, direction: lastDirection)
     }
 
-    mutating func requestNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
+    mutating func requestNavigation(_ direction: ChangedRegionNavigationDirection) {
         lastDirection = direction
         requestID += 1
     }

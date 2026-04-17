@@ -18,14 +18,14 @@ protocol MarkdownRendering {
 }
 
 struct MarkdownRenderingService: MarkdownRendering {
-    private let cssFactory: ReaderCSSFactory
+    private let cssFactory: CSSFactory
     private let payloadEncoder: MarkdownRuntimePayloadEncoding
-    private let runtimeAssetResolver: ReaderRuntimeAssetResolving
+    private let runtimeAssetResolver: RuntimeAssetResolving
 
     init(
-        cssFactory: ReaderCSSFactory = ReaderCSSFactory(),
+        cssFactory: CSSFactory = CSSFactory(),
         payloadEncoder: MarkdownRuntimePayloadEncoding = JSONBase64MarkdownRuntimePayloadEncoder(),
-        runtimeAssetResolver: ReaderRuntimeAssetResolving = BundledReaderRuntimeAssetResolver()
+        runtimeAssetResolver: RuntimeAssetResolving = BundledReaderRuntimeAssetResolver()
     ) {
         self.cssFactory = cssFactory
         self.payloadEncoder = payloadEncoder

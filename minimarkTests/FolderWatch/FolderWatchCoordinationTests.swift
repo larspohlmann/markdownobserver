@@ -102,7 +102,7 @@ struct FolderWatchCoordinationTests {
         #expect(delegate.handledEvents.isEmpty)
 
         #expect(await waitUntil(timeout: .seconds(2)) {
-            delegate.handledEvents.map(\.fileURL) == [ReaderFileRouting.normalizedFileURL(initialFileURL)]
+            delegate.handledEvents.map(\.fileURL) == [FileRouting.normalizedFileURL(initialFileURL)]
         })
     }
 
@@ -322,8 +322,8 @@ struct FolderWatchCoordinationTests {
 
         let batch = coordinator.consumeBatchIfPossible(canFlushImmediately: true, onFlushRequested: {})
 
-        #expect(batch?.fileURLs == [ReaderFileRouting.normalizedFileURL(fileURL)])
-        #expect(batch?.initialDiffBaselineMarkdownByURL[ReaderFileRouting.normalizedFileURL(fileURL)] == "# Latest Before")
+        #expect(batch?.fileURLs == [FileRouting.normalizedFileURL(fileURL)])
+        #expect(batch?.initialDiffBaselineMarkdownByURL[FileRouting.normalizedFileURL(fileURL)] == "# Latest Before")
         #expect(batch?.folderWatchSession == watchSession)
         #expect(batch?.openOrigin == .folderWatchInitialBatchAutoOpen)
         #expect(!coordinator.hasPendingEvents)
@@ -360,8 +360,8 @@ struct FolderWatchCoordinationTests {
 
         let batch = coordinator.consumeBatchIfPossible(canFlushImmediately: true, onFlushRequested: {})
 
-        #expect(batch?.fileURLs == [ReaderFileRouting.normalizedFileURL(fileURL)])
-        #expect(batch?.initialDiffBaselineMarkdownByURL[ReaderFileRouting.normalizedFileURL(fileURL)] == nil)
+        #expect(batch?.fileURLs == [FileRouting.normalizedFileURL(fileURL)])
+        #expect(batch?.initialDiffBaselineMarkdownByURL[FileRouting.normalizedFileURL(fileURL)] == nil)
         #expect(batch?.openOrigin == .folderWatchAutoOpen)
         #expect(!coordinator.hasPendingEvents)
     }
@@ -621,7 +621,7 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func windowTitleFormatterUsesDocumentTitleWithoutWatch() {
-        let title = ReaderWindowTitleFormatter.resolveWindowTitle(
+        let title = WindowTitleFormatter.resolveWindowTitle(
             documentTitle: "guide.md - MarkdownObserver",
             activeFolderWatch: nil,
             hasUnacknowledgedExternalChange: false
@@ -637,7 +637,7 @@ struct FolderWatchCoordinationTests {
             startedAt: Date(timeIntervalSince1970: 11)
         )
 
-        let title = ReaderWindowTitleFormatter.resolveWindowTitle(
+        let title = WindowTitleFormatter.resolveWindowTitle(
             documentTitle: "guide.md - MarkdownObserver",
             activeFolderWatch: session,
             hasUnacknowledgedExternalChange: true
@@ -648,27 +648,27 @@ struct FolderWatchCoordinationTests {
 
     @Test func documentIndicatorStateDistinguishesDeletedDocumentsFromOtherExternalChanges() {
         #expect(
-            ReaderDocumentIndicatorState(
+            DocumentIndicatorState(
                 hasUnacknowledgedExternalChange: false,
                 isCurrentFileMissing: false
             ) == .none
         )
         #expect(
-            ReaderDocumentIndicatorState(
+            DocumentIndicatorState(
                 hasUnacknowledgedExternalChange: true,
                 isCurrentFileMissing: false,
                 unacknowledgedExternalChangeKind: .modified
             ) == .externalChange
         )
         #expect(
-            ReaderDocumentIndicatorState(
+            DocumentIndicatorState(
                 hasUnacknowledgedExternalChange: true,
                 isCurrentFileMissing: false,
                 unacknowledgedExternalChangeKind: .added
             ) == .addedExternalChange
         )
         #expect(
-            ReaderDocumentIndicatorState(
+            DocumentIndicatorState(
                 hasUnacknowledgedExternalChange: true,
                 isCurrentFileMissing: true
             ) == .deletedExternalChange
@@ -676,15 +676,15 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func documentIndicatorColorsUseNativeSystemPalette() throws {
-        let addedColor = ReaderDocumentIndicatorState.addedExternalChange.color(
+        let addedColor = DocumentIndicatorState.addedExternalChange.color(
             for: .default,
             colorScheme: .light
         )
-        let externalColor = ReaderDocumentIndicatorState.externalChange.color(
+        let externalColor = DocumentIndicatorState.externalChange.color(
             for: .default,
             colorScheme: .light
         )
-        let deletedColor = ReaderDocumentIndicatorState.deletedExternalChange.color(
+        let deletedColor = DocumentIndicatorState.deletedExternalChange.color(
             for: .default,
             colorScheme: .dark
         )
@@ -713,8 +713,8 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func focusDocumentIfAlreadyOpenUsesRegisteredWindowFocusHandler() {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
+        WindowRegistry.shared.resetForTesting()
+        defer { WindowRegistry.shared.resetForTesting() }
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
@@ -725,24 +725,24 @@ struct FolderWatchCoordinationTests {
         let requestedURL = URL(fileURLWithPath: "/tmp/sidebar/open.md")
         var focusedURLs: [URL] = []
 
-        ReaderWindowRegistry.shared.registerWindow(
+        WindowRegistry.shared.registerWindow(
             window,
             focusDocument: { fileURL in
                 focusedURLs.append(fileURL)
-                return fileURL == ReaderFileRouting.normalizedFileURL(requestedURL)
+                return fileURL == FileRouting.normalizedFileURL(requestedURL)
             },
             watchedFolderURLProvider: { nil }
         )
 
-        let didFocus = ReaderWindowRegistry.shared.focusDocumentIfAlreadyOpen(at: requestedURL)
+        let didFocus = WindowRegistry.shared.focusDocumentIfAlreadyOpen(at: requestedURL)
 
         #expect(didFocus)
-        #expect(focusedURLs == [ReaderFileRouting.normalizedFileURL(requestedURL)])
+        #expect(focusedURLs == [FileRouting.normalizedFileURL(requestedURL)])
     }
 
     @Test @MainActor func openAdditionalDocumentInCurrentWindowBypassesGlobalRegistryFocus() throws {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
+        WindowRegistry.shared.resetForTesting()
+        defer { WindowRegistry.shared.resetForTesting() }
 
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("minimark-window-local-open-\(UUID().uuidString)", isDirectory: true)
@@ -759,7 +759,7 @@ struct FolderWatchCoordinationTests {
             defer: false
         )
         var focusedURLs: [URL] = []
-        ReaderWindowRegistry.shared.registerWindow(
+        WindowRegistry.shared.registerWindow(
             foreignWindow,
             focusDocument: { fileURL in
                 focusedURLs.append(fileURL)
@@ -785,8 +785,8 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func openAdditionalDocumentsInCurrentWindowKeepsBatchLocal() throws {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
+        WindowRegistry.shared.resetForTesting()
+        defer { WindowRegistry.shared.resetForTesting() }
 
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("minimark-window-local-batch-open-\(UUID().uuidString)", isDirectory: true)
@@ -805,7 +805,7 @@ struct FolderWatchCoordinationTests {
             defer: false
         )
         var focusedURLs: [URL] = []
-        ReaderWindowRegistry.shared.registerWindow(
+        WindowRegistry.shared.registerWindow(
             foreignWindow,
             focusDocument: { fileURL in
                 focusedURLs.append(fileURL)
@@ -849,7 +849,7 @@ struct FolderWatchCoordinationTests {
 
         coordinator.shell.applyTitlePresentation()
 
-        let expectedTitle = ReaderWindowTitleFormatter.resolveWindowTitle(
+        let expectedTitle = WindowTitleFormatter.resolveWindowTitle(
             documentTitle: harness.controller.selectedWindowTitle,
             activeFolderWatch: nil,
             hasUnacknowledgedExternalChange: harness.controller.selectedHasUnacknowledgedExternalChange
@@ -961,8 +961,8 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test @MainActor func focusNotificationTargetFallsBackToWatchedFolderWindow() {
-        ReaderWindowRegistry.shared.resetForTesting()
-        defer { ReaderWindowRegistry.shared.resetForTesting() }
+        WindowRegistry.shared.resetForTesting()
+        defer { WindowRegistry.shared.resetForTesting() }
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
@@ -972,14 +972,14 @@ struct FolderWatchCoordinationTests {
         )
         let watchedFolderURL = URL(fileURLWithPath: "/tmp/watched-folder", isDirectory: true)
 
-        ReaderWindowRegistry.shared.registerWindow(
+        WindowRegistry.shared.registerWindow(
             window,
             focusDocument: { _ in false },
             watchedFolderURLProvider: { watchedFolderURL }
         )
 
         #expect(
-            ReaderWindowRegistry.shared.focusNotificationTarget(
+            WindowRegistry.shared.focusNotificationTarget(
                 fileURL: nil,
                 watchedFolderURL: watchedFolderURL
             )

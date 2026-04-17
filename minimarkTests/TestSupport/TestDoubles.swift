@@ -78,8 +78,8 @@ final class TestFileWatcher: FileChangeWatching {
 
     func startWatching(fileURL: URL, onChange: @escaping @Sendable () -> Void) throws {
         startCallCount += 1
-        lastStartedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        operations.append(.start(ReaderFileRouting.normalizedFileURL(fileURL)))
+        lastStartedFileURL = FileRouting.normalizedFileURL(fileURL)
+        operations.append(.start(FileRouting.normalizedFileURL(fileURL)))
         self.onChange = onChange
     }
 
@@ -343,7 +343,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
     func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions) {
         var next = subject.value
-        next.recentWatchedFolders = ReaderRecentHistory.insertingUniqueWatchedFolder(
+        next.recentWatchedFolders = RecentHistory.insertingUniqueWatchedFolder(
             folderURL,
             options: options,
             into: next.recentWatchedFolders
@@ -353,9 +353,9 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     }
 
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         return subject.value.recentWatchedFolders.first(where: { entry in
-            ReaderFileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
+            FileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
         })?.resolvedFolderURL
     }
 
@@ -368,7 +368,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
 
     func addRecentManuallyOpenedFile(_ fileURL: URL) {
         var next = subject.value
-        next.recentManuallyOpenedFiles = ReaderRecentHistory.insertingUniqueFile(
+        next.recentManuallyOpenedFiles = RecentHistory.insertingUniqueFile(
             fileURL,
             into: next.recentManuallyOpenedFiles
         )
@@ -377,9 +377,9 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     }
 
     func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL? {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         return subject.value.recentManuallyOpenedFiles.first(where: { entry in
-            ReaderFileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
+            FileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
         })?.resolvedFileURL
     }
 
@@ -419,7 +419,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     }
 
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         let filePath = normalizedFileURL.path
 
         for entry in subject.value.trustedImageFolders {
@@ -477,7 +477,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
     }
 }
 
-final class TestSettingsKeyValueStorage: ReaderSettingsKeyValueStoring {
+final class TestSettingsKeyValueStorage: SettingsKeyValueStoring {
     private var storedValues: [String: Data] = [:]
     private(set) var setCallCount = 0
 
@@ -684,9 +684,9 @@ final class TestReaderSystemNotifier: ReaderSystemNotifying {
     ) {
         fileChangeNotifications.append(
             FileChangeNotification(
-                fileURL: ReaderFileRouting.normalizedFileURL(fileURL),
+                fileURL: FileRouting.normalizedFileURL(fileURL),
                 changeKind: changeKind,
-                watchedFolderURL: watchedFolderURL.map(ReaderFileRouting.normalizedFileURL)
+                watchedFolderURL: watchedFolderURL.map(FileRouting.normalizedFileURL)
             )
         )
     }
@@ -698,8 +698,8 @@ final class TestNotificationTargetFocuser: ReaderNotificationTargetFocusing {
 
     func focusNotificationTarget(fileURL: URL?, watchedFolderURL: URL?) -> Bool {
         focusedTargets.append((
-            fileURL.map(ReaderFileRouting.normalizedFileURL),
-            watchedFolderURL.map(ReaderFileRouting.normalizedFileURL)
+            fileURL.map(FileRouting.normalizedFileURL),
+            watchedFolderURL.map(FileRouting.normalizedFileURL)
         ))
         return focusResult
     }

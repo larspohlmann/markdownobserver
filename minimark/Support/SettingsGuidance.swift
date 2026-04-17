@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderSettingsGuidance {
+enum SettingsGuidance {
     static func layoutHelpText(selectedMode: MultiFileDisplayMode) -> String {
         switch selectedMode {
         case .sidebarLeft, .sidebarRight:

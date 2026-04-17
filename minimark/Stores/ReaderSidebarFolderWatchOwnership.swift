@@ -92,7 +92,7 @@ final class FolderWatchController {
         didInitialMarkdownScanFail = false
 
         let accessibleFolderURL = folderURL
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(accessibleFolderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(accessibleFolderURL)
         let excludedSubdirectoryURLs = options.resolvedExcludedSubdirectoryURLs(relativeTo: normalizedFolderURL)
         folderSecurityScopeToken = securityScope.beginAccess(to: accessibleFolderURL)
 
@@ -232,7 +232,7 @@ final class FolderWatchController {
         }
 
         return watchApplies(
-            normalizedFileURL: ReaderFileRouting.normalizedFileURL(fileURL),
+            normalizedFileURL: FileRouting.normalizedFileURL(fileURL),
             toNormalizedFolderAt: session.folderURL,
             scope: session.options.scope
         )
@@ -311,7 +311,7 @@ final class FolderWatchController {
         _ events: [FolderWatchChangeEvent]
     ) -> [FolderWatchChangeEvent] {
         let openDocumentURLs = Set((delegate?.folderWatchControllerOpenDocumentFileURLs(self) ?? []).map {
-            ReaderFileRouting.normalizedFileURL($0)
+            FileRouting.normalizedFileURL($0)
         })
 
         guard !openDocumentURLs.isEmpty else {
@@ -319,7 +319,7 @@ final class FolderWatchController {
         }
 
         return events.filter { event in
-            !openDocumentURLs.contains(ReaderFileRouting.normalizedFileURL(event.fileURL))
+            !openDocumentURLs.contains(FileRouting.normalizedFileURL(event.fileURL))
         }
     }
 
@@ -417,9 +417,9 @@ final class FolderWatchController {
 
         let currentDocumentFileURL = delegate?.folderWatchControllerCurrentDocumentFileURL(self)
         let eligibleURLs = markdownURLs.filter { url in
-            let normalized = ReaderFileRouting.normalizedFileURL(url)
+            let normalized = FileRouting.normalizedFileURL(url)
             if let currentDocumentFileURL,
-               normalized == ReaderFileRouting.normalizedFileURL(currentDocumentFileURL) {
+               normalized == FileRouting.normalizedFileURL(currentDocumentFileURL) {
                 return false
             }
             return true

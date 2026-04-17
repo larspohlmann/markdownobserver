@@ -1,6 +1,6 @@
 import Foundation
 
-struct ReaderRuntimeAssets: Equatable, Sendable {
+struct RuntimeAssets: Equatable, Sendable {
     let markdownItScriptPath: String
     let highlightScriptPath: String?
     let taskListsScriptPath: String?
@@ -11,17 +11,17 @@ struct ReaderRuntimeAssets: Equatable, Sendable {
     let calloutsCSSPath: String?
 }
 
-protocol ReaderRuntimeAssetResolving {
-    func requiredRuntimeAssets() throws -> ReaderRuntimeAssets
+protocol RuntimeAssetResolving {
+    func requiredRuntimeAssets() throws -> RuntimeAssets
 }
 
-struct BundledReaderRuntimeAssetResolver: ReaderRuntimeAssetResolving {
-    func requiredRuntimeAssets() throws -> ReaderRuntimeAssets {
-        try ReaderBundledAssets.requiredRuntimeAssets()
+struct BundledReaderRuntimeAssetResolver: RuntimeAssetResolving {
+    func requiredRuntimeAssets() throws -> RuntimeAssets {
+        try BundledAssets.requiredRuntimeAssets()
     }
 }
 
-enum ReaderBundledAssets {
+enum BundledAssets {
     // Resolved relative to Bundle.main.bundleURL used by WKWebView loadHTMLString.
     static let markdownItScriptPath = "Contents/Resources/markdown-it.min.js"
     static let highlightJSScriptPath = "Contents/Resources/highlight.min.js"
@@ -35,13 +35,13 @@ enum ReaderBundledAssets {
     static let mermaidScriptPath = "Contents/Resources/mermaid.min.js"
     static let mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css"
 
-    static func requiredRuntimeAssets() throws -> ReaderRuntimeAssets {
+    static func requiredRuntimeAssets() throws -> RuntimeAssets {
         let markdownURL = Bundle.main.bundleURL.appendingPathComponent(markdownItScriptPath)
         guard FileManager.default.fileExists(atPath: markdownURL.path) else {
-            throw ReaderError.markdownRuntimeUnavailable(markdownItScriptPath)
+            throw AppError.markdownRuntimeUnavailable(markdownItScriptPath)
         }
 
-        return ReaderRuntimeAssets(
+        return RuntimeAssets(
             markdownItScriptPath: markdownItScriptPath,
             highlightScriptPath: availableHighlightJSScriptPath(),
             taskListsScriptPath: availableTaskListsScriptPath(),

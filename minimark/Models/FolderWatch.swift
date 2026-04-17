@@ -80,7 +80,7 @@ nonisolated struct FolderWatchOptions: Equatable, Hashable, Codable, Sendable {
     }
 
     func encodedForFolder(_ folderURL: URL) -> FolderWatchOptions {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let normalizedExclusions = Self.normalizedExcludedSubdirectoryPaths(
             excludedSubdirectoryPaths,
             relativeTo: normalizedFolderURL
@@ -94,7 +94,7 @@ nonisolated struct FolderWatchOptions: Equatable, Hashable, Codable, Sendable {
     }
 
     func resolvedExcludedSubdirectoryURLs(relativeTo folderURL: URL) -> [URL] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         return Self.normalizedExcludedSubdirectoryPaths(
             excludedSubdirectoryPaths,
             relativeTo: normalizedFolderURL
@@ -107,14 +107,14 @@ nonisolated struct FolderWatchOptions: Equatable, Hashable, Codable, Sendable {
         _ paths: [String],
         relativeTo folderURL: URL
     ) -> [String] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
 
         let normalized = paths.compactMap { path -> String? in
             guard !path.isEmpty else {
                 return nil
             }
 
-            let candidateURL = ReaderFileRouting.normalizedFileURL(URL(fileURLWithPath: path, isDirectory: true))
+            let candidateURL = FileRouting.normalizedFileURL(URL(fileURLWithPath: path, isDirectory: true))
             guard candidateURL.path != normalizedFolderURL.path else {
                 return nil
             }

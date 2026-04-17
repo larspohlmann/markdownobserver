@@ -17,7 +17,7 @@ struct OverlayLayoutModelTests {
 
     @Test func insetsDelegateToCalculator() {
         let model = OverlayLayoutModel(isSourceEditing: false, isStatusBannerVisible: true)
-        let expected = ReaderOverlayInsetCalculator.compute(
+        let expected = OverlayInsetCalculator.compute(
             topBarInset: ReaderTopBarMetrics.mainBarHeight,
             hasStatusBanner: true
         )
@@ -26,7 +26,7 @@ struct OverlayLayoutModelTests {
 
     @Test func statusBannerPaddingDelegatesToCalculator() {
         let model = OverlayLayoutModel(isSourceEditing: true, isStatusBannerVisible: false)
-        let expected = ReaderOverlayInsetCalculator.statusBannerTopPadding(
+        let expected = OverlayInsetCalculator.statusBannerTopPadding(
             topBarInset: ReaderTopBarMetrics.mainBarHeight + ReaderTopBarMetrics.sourceEditingBarHeight
         )
         #expect(model.statusBannerTopPadding == expected)

@@ -40,12 +40,12 @@ final class SecurityScopeResolver {
         reason: String,
         folderWatchSession: FolderWatchSession?
     ) -> URL {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedURL = FileRouting.normalizedFileURL(url)
         ensureFolderWatchAccessIfNeeded(for: normalizedURL, reason: reason, folderWatchSession: folderWatchSession)
 
         if let fileToken = context.fileToken,
            fileToken.didStartAccess,
-           ReaderFileRouting.normalizedFileURL(fileToken.url) == normalizedURL {
+           FileRouting.normalizedFileURL(fileToken.url) == normalizedURL {
             context.accessibleFileURL = fileToken.url
             context.accessibleFileURLSource = .fileScope
             return fileToken.url
@@ -53,7 +53,7 @@ final class SecurityScopeResolver {
 
         if let accessibleFileURL = context.accessibleFileURL,
            context.accessibleFileURLSource == .fileScope,
-           ReaderFileRouting.normalizedFileURL(accessibleFileURL) == normalizedURL {
+           FileRouting.normalizedFileURL(accessibleFileURL) == normalizedURL {
             return accessibleFileURL
         }
 
@@ -74,7 +74,7 @@ final class SecurityScopeResolver {
 
         if let fileToken = context.fileToken,
            fileToken.didStartAccess,
-           ReaderFileRouting.normalizedFileURL(fileToken.url) == normalizedURL {
+           FileRouting.normalizedFileURL(fileToken.url) == normalizedURL {
             context.accessibleFileURL = fileToken.url
             context.accessibleFileURLSource = .fileScope
             return fileToken.url
@@ -119,8 +119,8 @@ final class SecurityScopeResolver {
             return nil
         }
 
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        let normalizedWatchedFolderURL = ReaderFileRouting.normalizedFileURL(folderWatchSession.folderURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
+        let normalizedWatchedFolderURL = FileRouting.normalizedFileURL(folderWatchSession.folderURL)
         let watchedFolderPath = normalizedWatchedFolderURL.path
         let filePath = normalizedFileURL.path
 
@@ -144,8 +144,8 @@ final class SecurityScopeResolver {
     // MARK: - Folder Session Helpers
 
     func watchedFolderSession(_ session: FolderWatchSession, appliesTo fileURL: URL) -> Bool {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
-        let normalizedWatchedFolderURL = ReaderFileRouting.normalizedFileURL(session.folderURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
+        let normalizedWatchedFolderURL = FileRouting.normalizedFileURL(session.folderURL)
 
         switch session.options.scope {
         case .selectedFolderOnly:
@@ -160,7 +160,7 @@ final class SecurityScopeResolver {
 
     func normalizedFolderWatchSession(_ session: FolderWatchSession) -> FolderWatchSession {
         FolderWatchSession(
-            folderURL: ReaderFileRouting.normalizedFileURL(session.folderURL),
+            folderURL: FileRouting.normalizedFileURL(session.folderURL),
             options: session.options,
             startedAt: session.startedAt
         )
@@ -184,7 +184,7 @@ final class SecurityScopeResolver {
             return ReauthorizationResult(succeeded: false, updatedSession: nil)
         }
 
-        let watchedFolderURL = ReaderFileRouting.normalizedFileURL(folderWatchSession.folderURL)
+        let watchedFolderURL = FileRouting.normalizedFileURL(folderWatchSession.folderURL)
         logInfo(
             "watched-folder reauthorization requested: file=\(redactedPathText(for: fileURL)) watchedFolder=\(redactedPathText(for: watchedFolderURL))"
         )
@@ -196,7 +196,7 @@ final class SecurityScopeResolver {
             return ReauthorizationResult(succeeded: false, updatedSession: nil)
         }
 
-        let normalizedSelectedFolderURL = ReaderFileRouting.normalizedFileURL(selectedFolderURL)
+        let normalizedSelectedFolderURL = FileRouting.normalizedFileURL(selectedFolderURL)
         guard normalizedSelectedFolderURL == watchedFolderURL else {
             logError(
                 "watched-folder reauthorization mismatched selection: requested=\(redactedPathText(for: watchedFolderURL)) selected=\(redactedPathText(for: normalizedSelectedFolderURL))"
@@ -229,7 +229,7 @@ final class SecurityScopeResolver {
 
     func isPermissionDeniedWriteError(_ error: Error) -> Bool {
         let resolvedError: NSError
-        if case let ReaderError.fileWriteFailed(_, underlying) = error {
+        if case let AppError.fileWriteFailed(_, underlying) = error {
             resolvedError = underlying as NSError
         } else {
             resolvedError = error as NSError
@@ -264,8 +264,8 @@ final class SecurityScopeResolver {
 
         if let directoryToken = context.directoryToken,
            directoryToken.didStartAccess,
-           ReaderFileRouting.normalizedFileURL(directoryURL)
-               .path.hasPrefix(ReaderFileRouting.normalizedFileURL(URL(fileURLWithPath: directoryToken.url.path)).path) {
+           FileRouting.normalizedFileURL(directoryURL)
+               .path.hasPrefix(FileRouting.normalizedFileURL(URL(fileURLWithPath: directoryToken.url.path)).path) {
             return
         }
 
@@ -343,7 +343,7 @@ final class SecurityScopeResolver {
             return "none"
         }
 
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedURL = FileRouting.normalizedFileURL(url)
         let name = normalizedURL.lastPathComponent.isEmpty ? "root" : normalizedURL.lastPathComponent
         let pathHash = String(normalizedURL.path.hashValue.magnitude, radix: 16)
         return "\(name)#\(pathHash)"

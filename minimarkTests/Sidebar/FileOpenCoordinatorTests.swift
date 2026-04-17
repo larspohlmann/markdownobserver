@@ -165,7 +165,7 @@ struct FileOpenCoordinatorTests {
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(harness.primaryFileURL)
+        let normalizedURL = FileRouting.normalizedFileURL(harness.primaryFileURL)
 
         let plan = coordinator.buildPlan(for: FileOpenRequest(
             fileURLs: [harness.primaryFileURL],

@@ -1207,7 +1207,7 @@ struct ReaderSidebarDocumentControllerTests {
             $0.readerStore.document.fileURL != nil
         }
         #expect(document != nil)
-        #expect(document?.normalizedFileURL == ReaderFileRouting.normalizedFileURL(harness.primaryFileURL))
+        #expect(document?.normalizedFileURL == FileRouting.normalizedFileURL(harness.primaryFileURL))
     }
 
     @Test @MainActor func documentForURLReturnsNilAfterClosingDocument() throws {

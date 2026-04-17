@@ -4,7 +4,7 @@ import Testing
 
 struct ReaderPresentableErrorTests {
     @Test func fileReadErrorClassifiesCorrectly() {
-        let error = PresentableError(from: ReaderError.fileReadFailed(
+        let error = PresentableError(from: AppError.fileReadFailed(
             URL(fileURLWithPath: "/test.md"),
             underlying: NSError(domain: "test", code: 1)
         ))
@@ -13,7 +13,7 @@ struct ReaderPresentableErrorTests {
     }
 
     @Test func fileWriteErrorClassifiesCorrectly() {
-        let error = PresentableError(from: ReaderError.fileWriteFailed(
+        let error = PresentableError(from: AppError.fileWriteFailed(
             URL(fileURLWithPath: "/test.md"),
             underlying: NSError(domain: "test", code: 1)
         ))
@@ -21,14 +21,14 @@ struct ReaderPresentableErrorTests {
     }
 
     @Test func renderingErrorClassifiesCorrectly() {
-        let error = PresentableError(from: ReaderError.renderingFailed(
+        let error = PresentableError(from: AppError.renderingFailed(
             underlying: NSError(domain: "test", code: 1)
         ))
         #expect(error.kind == .rendering)
     }
 
     @Test func applicationErrorClassifiesCorrectly() {
-        let error = PresentableError(from: ReaderError.noRegisteredApplications(
+        let error = PresentableError(from: AppError.noRegisteredApplications(
             URL(fileURLWithPath: "/test.md")
         ))
         #expect(error.kind == .application)
@@ -43,15 +43,15 @@ struct ReaderPresentableErrorTests {
     }
 
     @Test func equalityBasedOnKindAndMessage() {
-        let a = PresentableError(from: ReaderError.fileNotReachable(URL(fileURLWithPath: "/a.md")))
-        let b = PresentableError(from: ReaderError.fileNotReachable(URL(fileURLWithPath: "/a.md")))
-        let c = PresentableError(from: ReaderError.fileNotReachable(URL(fileURLWithPath: "/b.md")))
+        let a = PresentableError(from: AppError.fileNotReachable(URL(fileURLWithPath: "/a.md")))
+        let b = PresentableError(from: AppError.fileNotReachable(URL(fileURLWithPath: "/a.md")))
+        let c = PresentableError(from: AppError.fileNotReachable(URL(fileURLWithPath: "/b.md")))
         #expect(a == b)
         #expect(a != c)
     }
 
     @Test func fileMissingKindFromFileNotReachable() {
-        let error = PresentableError(from: ReaderError.fileNotReachable(
+        let error = PresentableError(from: AppError.fileNotReachable(
             URL(fileURLWithPath: "/missing.md")
         ))
         #expect(error.kind == .fileMissing)

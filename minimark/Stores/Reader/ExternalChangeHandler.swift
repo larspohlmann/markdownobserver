@@ -103,7 +103,7 @@ final class ExternalChangeHandler {
         guard let fileURL = document.fileURL else {
             return nil
         }
-        return ReaderFileRouting.normalizedFileURL(fileURL)
+        return FileRouting.normalizedFileURL(fileURL)
     }
 
     private var watchedFolderURLForCurrentFile: URL? {
@@ -112,7 +112,7 @@ final class ExternalChangeHandler {
             return nil
         }
 
-        let normalizedWatchedFolderURL = ReaderFileRouting.normalizedFileURL(activeFolderWatchSession.folderURL)
+        let normalizedWatchedFolderURL = FileRouting.normalizedFileURL(activeFolderWatchSession.folderURL)
         switch activeFolderWatchSession.options.scope {
         case .selectedFolderOnly:
             return fileURL.deletingLastPathComponent().path == normalizedWatchedFolderURL.path

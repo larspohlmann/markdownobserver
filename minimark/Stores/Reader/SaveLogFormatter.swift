@@ -27,7 +27,7 @@ struct SaveLogFormatter {
         guard let url else {
             return "none"
         }
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedURL = FileRouting.normalizedFileURL(url)
         let name = normalizedURL.lastPathComponent.isEmpty ? "root" : normalizedURL.lastPathComponent
         let pathHash = String(normalizedURL.path.hashValue.magnitude, radix: 16)
         return "\(name)#\(pathHash)"

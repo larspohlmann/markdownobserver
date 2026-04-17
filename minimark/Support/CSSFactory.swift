@@ -1,9 +1,9 @@
 import Foundation
 
-struct ReaderCSSFactory {
+struct CSSFactory {
     static var screenshotAutoExpandMetaTag: String {
         let shouldExpand = ProcessInfo.processInfo.environment[
-            ReaderUITestLaunchConfiguration.screenshotExpandFirstEditEnvironmentKey
+            UITestLaunchConfiguration.screenshotExpandFirstEditEnvironmentKey
         ] == "true"
         return shouldExpand
             ? "<meta name=\"minimark-auto-expand-first-edit\" content=\"true\" />"
@@ -11,13 +11,13 @@ struct ReaderCSSFactory {
     }
 
     func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
-        ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
+        CSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
     }
 
     func makeHTMLDocument(
         css: String,
         payloadBase64: String,
-        runtimeAssets: ReaderRuntimeAssets,
+        runtimeAssets: RuntimeAssets,
         themeJavaScript: String? = nil
     ) -> String {
         let cssBase64 = Data(css.utf8).base64EncodedString()
@@ -53,13 +53,13 @@ struct ReaderCSSFactory {
               <div id="reader-change-gutter" class="reader-change-gutter" role="navigation" aria-label="Changed regions"></div>
             </div>
           \(bootstrapRuntime)
-          \(themeJSBase64 != nil ? ReaderBundledAssetLoader.themeJSBootstrapScript : "")
+          \(themeJSBase64 != nil ? BundledAssetLoader.themeJSBootstrapScript : "")
         </body>
         </html>
         """
     }
 
-    private func makeRuntimeScripts(runtimeAssets: ReaderRuntimeAssets) -> String {
+    private func makeRuntimeScripts(runtimeAssets: RuntimeAssets) -> String {
       var orderedScriptPaths: [String] = [runtimeAssets.markdownItScriptPath]
       orderedScriptPaths.append(contentsOf: [
         runtimeAssets.taskListsScriptPath,
@@ -88,7 +88,7 @@ struct ReaderCSSFactory {
       return "<link rel=\"stylesheet\" href=\"\(escapedPath)\" />"
     }
 
-    private func makeRuntimeCSSLinks(runtimeAssets: ReaderRuntimeAssets) -> String {
+    private func makeRuntimeCSSLinks(runtimeAssets: RuntimeAssets) -> String {
       [runtimeAssets.calloutsCSSPath].compactMap { $0 }.map(makeCSSLinkTag).joined(separator: "\n")
     }
 
@@ -117,9 +117,9 @@ struct ReaderCSSFactory {
         let escapedPayload = payloadBase64.replacingOccurrences(of: "\"", with: "\\\"")
         let escapedCSS = cssBase64.replacingOccurrences(of: "\"", with: "\\\"")
 
-        let inlineDiffJS = ReaderBundledAssetLoader.loadBundledJS(named: "markdownobserver-inline-diff")
-        let defaultInset = "\(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))"
-        let runtimeJS = ReaderBundledAssetLoader.loadBundledJS(named: "markdownobserver-runtime")
+        let inlineDiffJS = BundledAssetLoader.loadBundledJS(named: "markdownobserver-inline-diff")
+        let defaultInset = "\(Int(OverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))"
+        let runtimeJS = BundledAssetLoader.loadBundledJS(named: "markdownobserver-runtime")
             .replacingOccurrences(of: "__MINIMARK_PAYLOAD_BASE64__", with: escapedPayload)
             .replacingOccurrences(of: "__MINIMARK_CSS_BASE64__", with: escapedCSS)
             .replacingOccurrences(of: "__MINIMARK_OVERLAY_TOP_INSET__", with: defaultInset)

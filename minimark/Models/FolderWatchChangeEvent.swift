@@ -12,7 +12,7 @@ struct FolderWatchChangeEvent: Equatable, Hashable, Codable, Sendable {
     let previousMarkdown: String?
 
     init(fileURL: URL, kind: FolderWatchChangeKind, previousMarkdown: String? = nil) {
-        self.fileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        self.fileURL = FileRouting.normalizedFileURL(fileURL)
         self.kind = kind
         self.previousMarkdown = previousMarkdown
     }

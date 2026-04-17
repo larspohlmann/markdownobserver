@@ -71,7 +71,7 @@ final class FolderWatchDirectoryScanModel: ObservableObject {
         allSubdirectoryPaths = []
         summary = nil
 
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let cacheKey = Self.cacheKey(for: normalizedFolderURL)
         activeTask = Task {
             if let cacheKey,
@@ -151,7 +151,7 @@ final class FolderWatchDirectoryScanModel: ObservableObject {
         at folderURL: URL,
         onDirectoryScanned: @escaping @Sendable (Int) -> Void
     ) -> FolderWatchDirectoryScanResult {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         guard (try? normalizedFolderURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
             return FolderWatchDirectoryScanResult(
                 rootNode: nil,
@@ -221,7 +221,7 @@ final class FolderWatchDirectoryScanModel: ObservableObject {
             return nil
         }
 
-        let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
+        let normalizedDirectoryURL = FileRouting.normalizedFileURL(directoryURL)
         let normalizedDirectoryPath = normalizedDirectoryURL.path
 
         guard visitedDirectoryPaths.count < ScanLimit.maximumVisitedDirectories else {
@@ -258,7 +258,7 @@ final class FolderWatchDirectoryScanModel: ObservableObject {
                 return nil
             }
 
-            let normalizedEntry = ReaderFileRouting.normalizedFileURL(entry)
+            let normalizedEntry = FileRouting.normalizedFileURL(entry)
             let values = try? normalizedEntry.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
 
             if values?.isSymbolicLink == true {
@@ -280,7 +280,7 @@ final class FolderWatchDirectoryScanModel: ObservableObject {
             }
 
             if values?.isRegularFile == true,
-               ReaderFileRouting.isSupportedMarkdownFileURL(normalizedEntry) {
+               FileRouting.isSupportedMarkdownFileURL(normalizedEntry) {
                 markdownCount += 1
             }
         }

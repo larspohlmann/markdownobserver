@@ -84,7 +84,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - CSS Layer Composition
 
     func testSimpleThemeCSSDoesNotContainCustomCSS() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
         XCTAssertTrue(css.contains("--reader-bg:"))
@@ -93,7 +93,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testAmberTerminalCSSIncludesCustomCSSAfterStructural() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.amberTerminal.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
@@ -109,7 +109,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testAmberTerminalUsesSyntaxCSSInsteadOfSyntaxTheme() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.amberTerminal.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
@@ -119,7 +119,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testSimpleThemeUsesSelectedSyntaxTheme() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
@@ -141,11 +141,11 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - JS Injection
 
     func testHTMLDocumentIncludesThemeJSMetaAndBootstrapWhenProvided() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: nil,
                 taskListsScriptPath: nil,
@@ -162,11 +162,11 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testHTMLDocumentOmitsThemeJSMetaWhenNil() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: nil,
                 taskListsScriptPath: nil,
@@ -236,7 +236,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGreenTerminalUsesSyntaxCSSInsteadOfSyntaxTheme() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.greenTerminal.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
@@ -357,7 +357,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Backward Compatibility
 
     func testSimpleThemesCSSOutputContainsExpectedVariables() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         for kind in [ThemeKind.blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey] {
             let theme = kind.themeDefinition
             let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
@@ -454,7 +454,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testNewThemesCSSContainsHeaderVariables() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let newThemes: [ThemeKind] = [.gruvboxDark, .gruvboxLight, .dracula, .monokai]
         for kind in newThemes {
             let theme = kind.themeDefinition
@@ -467,14 +467,14 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testNewThemesUseSelectedSyntaxTheme() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.gruvboxDark.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
         XCTAssertTrue(css.contains("#D73A49"), "Should contain GitHub keyword color from selected syntax theme")
     }
 
     func testSimpleThemesDoNotEmitHeaderVariables() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
         XCTAssertFalse(css.contains("--reader-h1:"), "Simple themes should not emit h1 variable")
@@ -483,7 +483,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testHeaderColorFallbackInCSS() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
         XCTAssertTrue(css.contains("color: var(--reader-h1, var(--reader-fg))"), "h1 should fall back to foreground")

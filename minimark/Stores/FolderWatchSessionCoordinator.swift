@@ -212,7 +212,7 @@ extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
                 guard let previousMarkdown = event.previousMarkdown else {
                     return nil
                 }
-                return (ReaderFileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
+                return (FileRouting.normalizedFileURL(event.fileURL), previousMarkdown)
             }
         )
 

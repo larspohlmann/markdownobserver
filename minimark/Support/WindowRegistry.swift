@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 
 @MainActor
-final class ReaderWindowRegistry {
-    static let shared = ReaderWindowRegistry()
+final class WindowRegistry {
+    static let shared = WindowRegistry()
 
     private var windowByID: [ObjectIdentifier: WeakWindow] = [:]
     private var documentFocusHandlerByWindowID: [ObjectIdentifier: DocumentFocusHandler] = [:]
@@ -40,7 +40,7 @@ final class ReaderWindowRegistry {
 
     @discardableResult
     func focusDocumentIfAlreadyOpen(at fileURL: URL) -> Bool {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedURL = FileRouting.normalizedFileURL(fileURL)
 
         for windowID in prioritizedWindowIDs() {
             guard let window = windowByID[windowID]?.window,
@@ -70,7 +70,7 @@ final class ReaderWindowRegistry {
             return false
         }
 
-        let normalizedWatchedFolderURL = ReaderFileRouting.normalizedFileURL(watchedFolderURL)
+        let normalizedWatchedFolderURL = FileRouting.normalizedFileURL(watchedFolderURL)
         for windowID in prioritizedWindowIDs() {
             guard let window = windowByID[windowID]?.window,
                   let watchedFolderProvider = watchedFolderURLProviderByWindowID[windowID],
@@ -78,7 +78,7 @@ final class ReaderWindowRegistry {
                 continue
             }
 
-            if ReaderFileRouting.normalizedFileURL(currentWatchedFolderURL) == normalizedWatchedFolderURL {
+            if FileRouting.normalizedFileURL(currentWatchedFolderURL) == normalizedWatchedFolderURL {
                 NSApp.activate(ignoringOtherApps: true)
                 window.makeKeyAndOrderFront(nil)
                 return true

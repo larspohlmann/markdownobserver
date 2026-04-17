@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WatchPillOverlayView: View {
     let state: WatchPillState
-    let insets: ReaderOverlayInsetValues
+    let insets: OverlayInsetValues
     let hasChangeNavigation: Bool
     let colorScheme: ColorScheme
     let onAction: (WatchPillAction) -> Void

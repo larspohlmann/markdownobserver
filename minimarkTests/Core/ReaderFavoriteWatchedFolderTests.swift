@@ -381,7 +381,7 @@ struct ReaderFavoriteWatchedFolderTests {
         )
         #expect(store.currentSettings.favoriteWatchedFolders.count == 1)
 
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+        let normalizedPath = FileRouting.normalizedFileURL(session.folderURL).path
         let match = store.currentSettings.favoriteWatchedFolders.first {
             $0.matches(folderPath: normalizedPath, options: session.options)
         }
@@ -401,7 +401,7 @@ struct ReaderFavoriteWatchedFolderTests {
             startedAt: .now
         )
 
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+        let normalizedPath = FileRouting.normalizedFileURL(session.folderURL).path
         let isFavoriteBefore = store.currentSettings.favoriteWatchedFolders.contains {
             $0.matches(folderPath: normalizedPath, options: session.options)
         }
@@ -435,7 +435,7 @@ struct ReaderFavoriteWatchedFolderTests {
             startedAt: .now
         )
 
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+        let normalizedPath = FileRouting.normalizedFileURL(session.folderURL).path
         let isFavorite = store.currentSettings.favoriteWatchedFolders.contains {
             $0.matches(folderPath: normalizedPath, options: session.options)
         }
@@ -467,7 +467,7 @@ struct ReaderFavoriteWatchedFolderTests {
         #expect(reloadedStore.currentSettings.favoriteWatchedFolders.count == 1)
         let reloaded = reloadedStore.currentSettings.favoriteWatchedFolders[0]
         #expect(reloaded.name == "My Project")
-        #expect(reloaded.folderPath == ReaderFileRouting.normalizedFileURL(URL(fileURLWithPath: "/tmp/project")).path)
+        #expect(reloaded.folderPath == FileRouting.normalizedFileURL(URL(fileURLWithPath: "/tmp/project")).path)
         #expect(reloaded.options.openMode == .openAllMarkdownFiles)
         #expect(reloaded.options.scope == .includeSubfolders)
         #expect(reloaded.options.excludedSubdirectoryPaths == ["/tmp/project/node_modules"])

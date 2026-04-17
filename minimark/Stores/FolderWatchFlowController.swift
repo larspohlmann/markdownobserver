@@ -140,7 +140,7 @@ final class FolderWatchFlowController {
         var didDeactivateFavorite = false
 
         if favoriteWorkspaceController?.activeFavoriteID != nil {
-            let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+            let normalizedPath = FileRouting.normalizedFileURL(folderURL).path
             let matchesActiveFavorite = settingsStore.currentSettings.favoriteWatchedFolders.contains {
                 $0.id == favoriteWorkspaceController?.activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
             }
@@ -249,7 +249,7 @@ final class FolderWatchFlowController {
 
     func closeDocumentsInExcludedPaths(_ excludedPaths: [String]) {
         let excludedPrefixes = excludedPaths.map { path in
-            let normalized = ReaderFileRouting.normalizedFileURL(
+            let normalized = FileRouting.normalizedFileURL(
                 URL(fileURLWithPath: path, isDirectory: true)
             ).path
             return normalized.hasSuffix("/") ? normalized : normalized + "/"
@@ -257,14 +257,14 @@ final class FolderWatchFlowController {
 
         let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
             doc.readerStore.document.fileURL.map { url in
-                let normalized = ReaderFileRouting.normalizedFileURL(url).path
+                let normalized = FileRouting.normalizedFileURL(url).path
                 return excludedPrefixes.contains { normalized.hasPrefix($0) }
             }
         } ?? false
 
         let documentsToClose = sidebarDocumentController.documents.filter { doc in
             guard let fileURL = doc.readerStore.document.fileURL else { return false }
-            let normalized = ReaderFileRouting.normalizedFileURL(fileURL).path
+            let normalized = FileRouting.normalizedFileURL(fileURL).path
             return excludedPrefixes.contains { normalized.hasPrefix($0) }
         }
 
@@ -282,7 +282,7 @@ final class FolderWatchFlowController {
     ) {
         let fileOpenCoordinator = sidebarDocumentController.fileOpenCoordinator
         let includedPrefixes = includedPaths.map { path in
-            let normalized = ReaderFileRouting.normalizedFileURL(
+            let normalized = FileRouting.normalizedFileURL(
                 URL(fileURLWithPath: path, isDirectory: true)
             ).path
             return normalized.hasSuffix("/") ? normalized : normalized + "/"
@@ -293,12 +293,12 @@ final class FolderWatchFlowController {
 
             let alreadyOpenPaths = Set(
                 sidebarDocumentController.documents.compactMap {
-                    $0.readerStore.document.fileURL.map { ReaderFileRouting.normalizedFileURL($0).path }
+                    $0.readerStore.document.fileURL.map { FileRouting.normalizedFileURL($0).path }
                 }
             )
 
             let newFileURLs = scannedURLs.filter { url in
-                let normalized = ReaderFileRouting.normalizedFileURL(url).path
+                let normalized = FileRouting.normalizedFileURL(url).path
                 guard !alreadyOpenPaths.contains(normalized) else { return false }
                 return includedPrefixes.contains { normalized.hasPrefix($0) }
             }

@@ -64,7 +64,7 @@ final class WindowSidebarMetricsController {
         }
 
         let oldWidth = window.frame.width
-        let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
+        let newFrame = WindowDefaults.sidebarResizedFrame(
             windowFrame: window.frame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: delta

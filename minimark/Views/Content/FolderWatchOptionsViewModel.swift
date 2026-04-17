@@ -36,7 +36,7 @@ struct FolderWatchOptionsViewModel {
             return []
         }
 
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let normalizedFolderPath = normalizedFolderURL.path
         let folderPathPrefix = normalizedFolderPath.hasSuffix("/")
             ? normalizedFolderPath
@@ -52,7 +52,7 @@ struct FolderWatchOptionsViewModel {
                 return trimmedPath
             }
 
-            let normalizedPath = ReaderFileRouting.normalizedFileURL(
+            let normalizedPath = FileRouting.normalizedFileURL(
                 URL(fileURLWithPath: path, isDirectory: true)
             ).path
             guard normalizedPath.hasPrefix(folderPathPrefix),

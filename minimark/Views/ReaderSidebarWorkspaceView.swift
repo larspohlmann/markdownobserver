@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 enum ReaderSidebarWorkspaceMetrics {
-    static let sidebarMinimumWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 220
-    static let sidebarIdealWidth: CGFloat = ReaderUITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 250
+    static let sidebarMinimumWidth: CGFloat = UITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 220
+    static let sidebarIdealWidth: CGFloat = UITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 250
     static let detailMinimumWidth: CGFloat = 420
     static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
 }
@@ -376,7 +376,7 @@ private struct ReaderSidebarDocumentRow: View {
         indicatorState.color(for: settings, colorScheme: colorScheme)
     }
 
-    private var indicatorState: ReaderDocumentIndicatorState {
+    private var indicatorState: DocumentIndicatorState {
         state.indicatorState
     }
 
@@ -589,7 +589,7 @@ private struct ReaderSidebarGroupHeader: View {
     let displayName: String
     let documentCount: Int
     let isPinned: Bool
-    let indicatorStates: [ReaderDocumentIndicatorState]
+    let indicatorStates: [DocumentIndicatorState]
     let indicatorPulseToken: Int
     let settings: ReaderSettings
     let onTogglePin: () -> Void

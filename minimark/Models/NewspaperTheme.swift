@@ -13,6 +13,6 @@ enum NewspaperTheme {
     )
 
     static var customCSS: String {
-        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-newspaper")
+        BundledAssetLoader.loadBundledCSS(named: "theme-newspaper")
     }
 }

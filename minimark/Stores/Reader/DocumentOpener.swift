@@ -54,7 +54,7 @@ final class DocumentOpener {
         onActivateDeferredSetupIfNeeded?()
         do {
             let accessibleURL = url
-            let normalizedURL = ReaderFileRouting.normalizedFileURL(accessibleURL)
+            let normalizedURL = FileRouting.normalizedFileURL(accessibleURL)
             securityScopeResolver.activateFileSecurityScope(for: accessibleURL, reason: "open")
             if let folderWatchSession {
                 folderWatchDispatcher.setSession(securityScopeResolver.normalizedFolderWatchSession(folderWatchSession))
@@ -136,12 +136,12 @@ final class DocumentOpener {
             return
         }
 
-        guard ReaderFileRouting.isSupportedMarkdownFileURL(url) else {
+        guard FileRouting.isSupportedMarkdownFileURL(url) else {
             return
         }
 
-        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(url)
-        if let fileURL = document.fileURL, ReaderFileRouting.normalizedFileURL(fileURL) == normalizedIncomingURL {
+        let normalizedIncomingURL = FileRouting.normalizedFileURL(url)
+        if let fileURL = document.fileURL, FileRouting.normalizedFileURL(fileURL) == normalizedIncomingURL {
             return
         }
 

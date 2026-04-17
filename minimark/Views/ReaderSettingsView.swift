@@ -199,7 +199,7 @@ struct ReaderSettingsView: View {
     }
 
     private var layoutHelpText: String {
-        ReaderSettingsGuidance.layoutHelpText(selectedMode: settingsStore.currentSettings.multiFileDisplayMode)
+        SettingsGuidance.layoutHelpText(selectedMode: settingsStore.currentSettings.multiFileDisplayMode)
     }
 
     private func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode) {

@@ -12,14 +12,14 @@ struct OverlayLayoutModel: Equatable, Sendable {
         return height
     }
 
-    var insets: ReaderOverlayInsetValues {
-        ReaderOverlayInsetCalculator.compute(
+    var insets: OverlayInsetValues {
+        OverlayInsetCalculator.compute(
             topBarInset: topInset,
             hasStatusBanner: isStatusBannerVisible
         )
     }
 
     var statusBannerTopPadding: CGFloat {
-        ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: topInset)
+        OverlayInsetCalculator.statusBannerTopPadding(topBarInset: topInset)
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 
 struct ChangedRegionNavigationRequest: Equatable {
     let id: Int
-    let direction: ReaderChangedRegionNavigationDirection
+    let direction: ChangedRegionNavigationDirection
 }
 
 struct ScrollSyncRequest: Equatable {

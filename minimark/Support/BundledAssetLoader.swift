@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-enum ReaderBundledAssetLoader {
+enum BundledAssetLoader {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
         category: "BundledAssetLoader"
