@@ -167,10 +167,7 @@ final class ReaderSidebarDocumentController {
             return
         }
 
-        if selectedDocumentID == documentID {
-            return
-        }
-
+        let isReselection = (selectedDocumentID == documentID)
         selectedDocumentID = documentID
         let store = selectedReaderStore
 
@@ -178,8 +175,8 @@ final class ReaderSidebarDocumentController {
             scheduleLoadWithOverlay(on: store) {
                 store.materializeDeferredDocument()
             }
-            bindSelectedStore()
-        } else {
+            if !isReselection { bindSelectedStore() }
+        } else if !isReselection {
             bindSelectedStore()
         }
     }

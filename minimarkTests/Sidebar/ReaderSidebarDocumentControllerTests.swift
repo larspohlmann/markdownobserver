@@ -1302,4 +1302,83 @@ struct ReaderSidebarDocumentControllerTests {
         #expect(controller.documents.count == 1)
         _ = controller
     }
+
+    // MARK: - #345 selectDocumentWithNewestModificationDate materializes deferred target
+
+    /// Regression for #345. When `discoverNewFilesForFavorite` appends new files with
+    /// `.deferOnly` and then asks the controller to select the newest, the newest
+    /// doc's id equals `selectedDocumentID` (set by the last appended assignment).
+    /// The early-return guard in `selectDocument` must not skip materialization.
+    @Test @MainActor
+    func sidebarControllerMaterializesNewestDeferredDocumentWhenSelectionDoesNotChange() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        // Deterministic mtimes: secondary (zeta.md) is newer so it ends up the "newest".
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date(timeIntervalSince1970: 1_000_000)],
+            ofItemAtPath: harness.primaryFileURL.path
+        )
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date(timeIntervalSince1970: 2_000_000)],
+            ofItemAtPath: harness.secondaryFileURL.path
+        )
+
+        // Simulate the buggy `discoverNewFilesForFavorite` inner call: append deferred slots.
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL, harness.secondaryFileURL],
+            origin: .folderWatchInitialBatchAutoOpen,
+            slotStrategy: .alwaysAppend,
+            materializationStrategy: .deferOnly
+        ))
+
+        // Both appended docs deferred; selection is on the last appended doc (zeta.md by sort order).
+        let newestDoc = try #require(
+            harness.controller.documents.first { $0.readerStore.document.fileURL?.path == harness.secondaryFileURL.path }
+        )
+        let primaryDoc = try #require(
+            harness.controller.documents.first { $0.readerStore.document.fileURL?.path == harness.primaryFileURL.path }
+        )
+        #expect(newestDoc.readerStore.document.isDeferredDocument)
+        #expect(primaryDoc.readerStore.document.isDeferredDocument)
+        #expect(harness.controller.selectedDocumentID == newestDoc.id)
+
+        // Trigger the code path `FavoriteWorkspaceController.discoverNewFilesForFavorite` uses.
+        harness.controller.selectDocumentWithNewestModificationDate()
+
+        // `scheduleLoadWithOverlay` defers the materialization one run-loop turn.
+        await Task.yield()
+        await Task.yield()
+
+        #expect(harness.controller.selectedReaderStore.document.fileURL?.path == harness.secondaryFileURL.path)
+        #expect(!harness.controller.selectedReaderStore.document.isDeferredDocument)
+    }
+
+    /// Guards the ready-state path: re-selecting an already materialized document
+    /// must remain a no-op and must not re-enter the load overlay.
+    @Test @MainActor
+    func sidebarControllerReselectingLoadedDocumentDoesNotReenterLoadingState() async throws {
+        let harness = try ReaderSidebarControllerTestHarness()
+        defer { harness.cleanup() }
+
+        let coordinator = FileOpenCoordinator(controller: harness.controller)
+        coordinator.open(FileOpenRequest(
+            fileURLs: [harness.primaryFileURL],
+            origin: .manual,
+            slotStrategy: .reuseEmptySlotForFirst,
+            materializationStrategy: .loadAll
+        ))
+
+        let documentID = try #require(harness.controller.documents.first?.id)
+        #expect(harness.controller.selectedDocumentID == documentID)
+        #expect(harness.controller.selectedReaderStore.document.documentLoadState == .ready)
+
+        // Re-selecting the already-ready document should not regress it into loading.
+        harness.controller.selectDocument(documentID)
+        await Task.yield()
+
+        #expect(harness.controller.selectedReaderStore.document.documentLoadState == .ready)
+        #expect(harness.controller.selectedFileURL?.path == harness.primaryFileURL.path)
+    }
 }
