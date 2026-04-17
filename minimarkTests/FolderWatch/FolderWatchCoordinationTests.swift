@@ -778,7 +778,7 @@ struct FolderWatchCoordinationTests {
             multiFileDisplayMode: .sidebarLeft
         )
 
-        view.windowCoordinator.openAdditionalDocumentInCurrentWindow(markdownURL)
+        view.windowCoordinator.documentOpen.openAdditionalDocumentInCurrentWindow(markdownURL)
 
         #expect(focusedURLs.isEmpty)
         #expect(view.sidebarDocumentController.selectedReaderStore.document.fileURL?.path == markdownURL.path)
@@ -824,7 +824,7 @@ struct FolderWatchCoordinationTests {
             multiFileDisplayMode: .sidebarLeft
         )
 
-        view.windowCoordinator.openFileRequest(FileOpenRequest(
+        view.windowCoordinator.documentOpen.openFileRequest(FileOpenRequest(
             fileURLs: [zetaURL, alphaURL],
             origin: .manual,
             slotStrategy: .reuseEmptySlotForFirst
@@ -847,14 +847,14 @@ struct FolderWatchCoordinationTests {
             sidebarDocumentController: harness.controller
         )
 
-        coordinator.applyWindowTitlePresentation()
+        coordinator.shell.applyTitlePresentation()
 
         let expectedTitle = ReaderWindowTitleFormatter.resolveWindowTitle(
             documentTitle: harness.controller.selectedWindowTitle,
             activeFolderWatch: nil,
             hasUnacknowledgedExternalChange: harness.controller.selectedHasUnacknowledgedExternalChange
         )
-        #expect(coordinator.effectiveWindowTitle == expectedTitle)
+        #expect(coordinator.shell.effectiveWindowTitle == expectedTitle)
     }
 
     @Test @MainActor func readerWindowCoordinatorQueuesFolderWatchOpenEventsUntilFlushIsPossible() throws {
@@ -872,17 +872,17 @@ struct FolderWatchCoordinationTests {
             previousMarkdown: "# Before"
         )
 
-        coordinator.enqueueFolderWatchOpen(
+        coordinator.folderWatchOpen.enqueue(
             queuedEvent,
             folderWatchSession: nil,
             origin: .folderWatchAutoOpen
         )
 
-        #expect(coordinator.hasPendingFolderWatchOpenEvents)
+        #expect(coordinator.folderWatchOpen.hasPendingEvents)
 
         // Without a host window, flush should not consume the queued events
-        coordinator.flushQueuedFolderWatchOpens()
-        #expect(coordinator.hasPendingFolderWatchOpenEvents)
+        coordinator.folderWatchOpen.flush()
+        #expect(coordinator.folderWatchOpen.hasPendingEvents)
     }
 
     @Test @MainActor func folderWatchControllerDoesNotSetWarningForLiveEventsExceedingLimit() async throws {

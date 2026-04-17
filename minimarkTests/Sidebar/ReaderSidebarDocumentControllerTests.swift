@@ -857,7 +857,7 @@ struct ReaderSidebarDocumentControllerTests {
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )
-        coordinator.configureStoreCallbacks(
+        coordinator.documentOpen.configureStoreCallbacks(
             lockedAppearanceProvider: { lockedAppearance }
         )
 
@@ -885,7 +885,7 @@ struct ReaderSidebarDocumentControllerTests {
             settingsStore: harness.settingsStore,
             sidebarDocumentController: harness.controller
         )
-        coordinator.configureStoreCallbacks(lockedAppearanceProvider: { nil })
+        coordinator.documentOpen.configureStoreCallbacks(lockedAppearanceProvider: { nil })
 
         let fileCoordinator = FileOpenCoordinator(controller: harness.controller)
         fileCoordinator.open(FileOpenRequest(

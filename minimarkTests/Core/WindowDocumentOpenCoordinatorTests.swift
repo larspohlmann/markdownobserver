@@ -14,14 +14,14 @@ struct WindowDocumentOpenCoordinatorTests {
     ) throws -> (WindowDocumentOpenCoordinator, WindowFolderWatchOpenController, ReaderSidebarControllerTestHarness) {
         ReaderWindowRegistry.shared.resetForTesting()
         let harness = try ReaderSidebarControllerTestHarness()
-        let folderWatchOpenController = WindowFolderWatchOpenController(
+        let folderWatchOpen = WindowFolderWatchOpenController(
             fileOpenCoordinator: harness.controller.fileOpenCoordinator,
             isHostWindowAttached: { false },
             onAfterFlush: {}
         )
         let coordinator = WindowDocumentOpenCoordinator(
             fileOpenCoordinator: harness.controller.fileOpenCoordinator,
-            folderWatchOpenController: folderWatchOpenController,
+            folderWatchOpen: folderWatchOpen,
             sidebarDocumentController: harness.controller,
             settingsStore: harness.settingsStore,
             folderWatchSessionProvider: { folderWatchSession },
@@ -29,7 +29,7 @@ struct WindowDocumentOpenCoordinatorTests {
             refreshWindowPresentation: onAfterRefresh,
             prepareRecentFolderWatch: onPrepareRecentFolderWatch
         )
-        return (coordinator, folderWatchOpenController, harness)
+        return (coordinator, folderWatchOpen, harness)
     }
 
     @Test @MainActor
@@ -61,7 +61,7 @@ struct WindowDocumentOpenCoordinatorTests {
             options: FolderWatchOptions.default,
             startedAt: Date()
         )
-        let (coordinator, folderWatchOpenController, harness) = try makeCoordinator()
+        let (coordinator, folderWatchOpen, harness) = try makeCoordinator()
         defer { harness.cleanup() }
 
         coordinator.openAdditionalDocumentInCurrentWindow(
@@ -71,7 +71,7 @@ struct WindowDocumentOpenCoordinatorTests {
             initialDiffBaselineMarkdown: "# baseline"
         )
 
-        #expect(folderWatchOpenController.hasPendingEvents)
+        #expect(folderWatchOpen.hasPendingEvents)
     }
 
     @Test @MainActor

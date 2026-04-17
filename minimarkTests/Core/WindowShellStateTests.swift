@@ -38,13 +38,13 @@ struct WindowShellStateTests {
         let window = makeWindow()
 
         coordinator.handleWindowAccessorUpdate(window)
-        #expect(coordinator.hostWindow === window)
+        #expect(coordinator.shell.hostWindow === window)
 
-        let titleAfterFirst = coordinator.effectiveWindowTitle
+        let titleAfterFirst = coordinator.shell.effectiveWindowTitle
 
         coordinator.handleWindowAccessorUpdate(window)
-        #expect(coordinator.hostWindow === window)
-        #expect(coordinator.effectiveWindowTitle == titleAfterFirst)
+        #expect(coordinator.shell.hostWindow === window)
+        #expect(coordinator.shell.effectiveWindowTitle == titleAfterFirst)
     }
 
     @Test @MainActor
@@ -56,10 +56,10 @@ struct WindowShellStateTests {
         let window2 = makeWindow()
 
         coordinator.handleWindowAccessorUpdate(window1)
-        #expect(coordinator.hostWindow === window1)
+        #expect(coordinator.shell.hostWindow === window1)
 
         coordinator.handleWindowAccessorUpdate(window2)
-        #expect(coordinator.hostWindow === window2)
+        #expect(coordinator.shell.hostWindow === window2)
     }
 
     @Test @MainActor
@@ -70,10 +70,10 @@ struct WindowShellStateTests {
         let window = makeWindow()
 
         coordinator.handleWindowAccessorUpdate(window)
-        #expect(coordinator.hostWindow === window)
+        #expect(coordinator.shell.hostWindow === window)
 
         coordinator.handleWindowAccessorUpdate(nil)
-        #expect(coordinator.hostWindow == nil)
+        #expect(coordinator.shell.hostWindow == nil)
     }
 
     @Test @MainActor
@@ -84,11 +84,11 @@ struct WindowShellStateTests {
         let window = makeWindow()
         coordinator.handleWindowAccessorUpdate(window)
 
-        coordinator.registerWindowIfNeeded()
-        coordinator.registerWindowIfNeeded()
-        coordinator.registerWindowIfNeeded()
+        coordinator.shell.registerIfNeeded()
+        coordinator.shell.registerIfNeeded()
+        coordinator.shell.registerIfNeeded()
 
-        #expect(coordinator.hostWindow === window)
+        #expect(coordinator.shell.hostWindow === window)
     }
 
     @Test @MainActor
@@ -101,7 +101,7 @@ struct WindowShellStateTests {
 
         coordinator.refreshWindowShellState()
 
-        #expect(coordinator.effectiveWindowTitle == ReaderWindowTitleFormatter.appName)
+        #expect(coordinator.shell.effectiveWindowTitle == ReaderWindowTitleFormatter.appName)
         #expect(window.title == ReaderWindowTitleFormatter.appName)
     }
 
@@ -117,6 +117,6 @@ struct WindowShellStateTests {
 
         // Re-registering the same window should work (identity was cleared)
         coordinator.handleWindowAccessorUpdate(window)
-        #expect(coordinator.hostWindow === window)
+        #expect(coordinator.shell.hostWindow === window)
     }
 }

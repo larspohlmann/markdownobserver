@@ -34,7 +34,7 @@ private struct WindowStoreCallbackConfigurator {
 @MainActor
 final class WindowDocumentOpenCoordinator {
     private let fileOpenCoordinator: FileOpenCoordinator
-    private let folderWatchOpenController: WindowFolderWatchOpenController
+    private let folderWatchOpen: WindowFolderWatchOpenController
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private let settingsStore: ReaderSettingsStore
     private let folderWatchSessionProvider: () -> FolderWatchSession?
@@ -44,7 +44,7 @@ final class WindowDocumentOpenCoordinator {
 
     init(
         fileOpenCoordinator: FileOpenCoordinator,
-        folderWatchOpenController: WindowFolderWatchOpenController,
+        folderWatchOpen: WindowFolderWatchOpenController,
         sidebarDocumentController: ReaderSidebarDocumentController,
         settingsStore: ReaderSettingsStore,
         folderWatchSessionProvider: @escaping () -> FolderWatchSession?,
@@ -53,7 +53,7 @@ final class WindowDocumentOpenCoordinator {
         prepareRecentFolderWatch: @escaping (URL, FolderWatchOptions) -> Void
     ) {
         self.fileOpenCoordinator = fileOpenCoordinator
-        self.folderWatchOpenController = folderWatchOpenController
+        self.folderWatchOpen = folderWatchOpen
         self.sidebarDocumentController = sidebarDocumentController
         self.settingsStore = settingsStore
         self.folderWatchSessionProvider = folderWatchSessionProvider
@@ -163,7 +163,7 @@ final class WindowDocumentOpenCoordinator {
                 kind: initialDiffBaselineMarkdown == nil ? .added : .modified,
                 previousMarkdown: initialDiffBaselineMarkdown
             )
-            folderWatchOpenController.enqueue(event, folderWatchSession: folderWatchSession, origin: origin)
+            folderWatchOpen.enqueue(event, folderWatchSession: folderWatchSession, origin: origin)
             return
         }
 

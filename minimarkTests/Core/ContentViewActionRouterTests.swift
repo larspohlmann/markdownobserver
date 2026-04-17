@@ -9,9 +9,9 @@ struct ContentViewActionRouterTests {
     private final class TestRouterEnvironment {
         let harness: ReaderSidebarControllerTestHarness
         let appearanceController: WindowAppearanceController
-        let documentOpenCoordinator: WindowDocumentOpenCoordinator
-        let appearanceLockCoordinator: AppearanceLockCoordinator
-        let folderWatchOpenController: WindowFolderWatchOpenController
+        let documentOpen: WindowDocumentOpenCoordinator
+        let appearanceLock: AppearanceLockCoordinator
+        let folderWatchOpen: WindowFolderWatchOpenController
         var confirmFolderWatchCalls: [FolderWatchOptions] = []
         var stopFolderWatchCalls = 0
         var startFavoriteWatchCalls: [ReaderFavoriteWatchedFolder] = []
@@ -24,14 +24,14 @@ struct ContentViewActionRouterTests {
             let harness = try ReaderSidebarControllerTestHarness()
             self.harness = harness
             self.appearanceController = WindowAppearanceController(settingsStore: harness.settingsStore)
-            self.folderWatchOpenController = WindowFolderWatchOpenController(
+            self.folderWatchOpen = WindowFolderWatchOpenController(
                 fileOpenCoordinator: harness.controller.fileOpenCoordinator,
                 isHostWindowAttached: { false },
                 onAfterFlush: {}
             )
-            self.documentOpenCoordinator = WindowDocumentOpenCoordinator(
+            self.documentOpen = WindowDocumentOpenCoordinator(
                 fileOpenCoordinator: harness.controller.fileOpenCoordinator,
-                folderWatchOpenController: folderWatchOpenController,
+                folderWatchOpen: folderWatchOpen,
                 sidebarDocumentController: harness.controller,
                 settingsStore: harness.settingsStore,
                 folderWatchSessionProvider: { nil },
@@ -39,7 +39,7 @@ struct ContentViewActionRouterTests {
                 refreshWindowPresentation: {},
                 prepareRecentFolderWatch: { _, _ in }
             )
-            self.appearanceLockCoordinator = AppearanceLockCoordinator(
+            self.appearanceLock = AppearanceLockCoordinator(
                 appearanceControllerProvider: { [appearanceController] in appearanceController },
                 sidebarDocumentController: harness.controller,
                 favoriteWorkspaceControllerProvider: { nil }
@@ -48,8 +48,8 @@ struct ContentViewActionRouterTests {
             // Box mutable state in a class so init-time closures can write to it.
             let state = MutableState()
             self.router = ContentViewActionRouter(
-                documentOpenCoordinator: documentOpenCoordinator,
-                appearanceLockCoordinator: appearanceLockCoordinator,
+                documentOpen: documentOpen,
+                appearanceLock: appearanceLock,
                 sidebarDocumentController: harness.controller,
                 settingsStore: harness.settingsStore,
                 folderWatchFlowControllerProvider: { nil },

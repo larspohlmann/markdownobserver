@@ -7,12 +7,12 @@ import Observation
 final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
-    private var folderWatchOpenController: WindowFolderWatchOpenController!
-    private var shellController: WindowShellController!
-    private var documentOpenCoordinator: WindowDocumentOpenCoordinator!
-    private var sidebarActionRouter: SidebarDocumentActionRouter!
-    private var appearanceLockCoordinator: AppearanceLockCoordinator!
-    private var contentViewActionRouter: ContentViewActionRouter!
+    private(set) var folderWatchOpen: WindowFolderWatchOpenController!
+    private(set) var shell: WindowShellController!
+    private(set) var documentOpen: WindowDocumentOpenCoordinator!
+    private(set) var sidebarActions: SidebarDocumentActionRouter!
+    private(set) var appearanceLock: AppearanceLockCoordinator!
+    private(set) var contentActions: ContentViewActionRouter!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -22,10 +22,6 @@ final class ReaderWindowCoordinator {
     var lastAppliedSidebarDelta: CGFloat = 0
     var isTitlebarEditingFavorites = false
     var isEditingSubfolders = false
-
-    var hostWindow: NSWindow? { shellController.hostWindow }
-    var effectiveWindowTitle: String { shellController.effectiveWindowTitle }
-    var dockTileWindowToken: UUID { shellController.dockTileWindowToken }
 
     // Controller references (set via configure())
     private(set) var appearanceController: WindowAppearanceController?
@@ -49,7 +45,7 @@ final class ReaderWindowCoordinator {
         self.folderWatchFlowController = folderWatchFlowController
         self.uiTestLaunchCoordinator = uiTestLaunchCoordinator
         self.recentHistoryCoordinator = recentHistoryCoordinator
-        documentOpenCoordinator.configureStoreCallbacks(
+        documentOpen.configureStoreCallbacks(
             lockedAppearanceProvider: { [weak appearanceController] in appearanceController?.lockedAppearance }
         )
     }
@@ -60,46 +56,46 @@ final class ReaderWindowCoordinator {
     ) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
-        self.shellController = WindowShellController(
+        self.shell = WindowShellController(
             sidebarDocumentController: sidebarDocumentController,
             folderWatchSessionProvider: { [weak self] in
                 self?.folderWatchFlowController?.sharedFolderWatchSession
             }
         )
-        self.folderWatchOpenController = WindowFolderWatchOpenController(
+        self.folderWatchOpen = WindowFolderWatchOpenController(
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
-            isHostWindowAttached: { [weak self] in self?.hostWindow != nil },
+            isHostWindowAttached: { [weak self] in self?.shell.hostWindow != nil },
             onAfterFlush: { [weak self] in self?.refreshWindowPresentation() }
         )
-        self.documentOpenCoordinator = WindowDocumentOpenCoordinator(
+        self.documentOpen = WindowDocumentOpenCoordinator(
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
-            folderWatchOpenController: folderWatchOpenController,
+            folderWatchOpen: folderWatchOpen,
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
             folderWatchSessionProvider: { [weak self] in
                 self?.folderWatchFlowController?.sharedFolderWatchSession
             },
-            applyTitlePresentation: { [weak self] in self?.applyWindowTitlePresentation() },
+            applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() },
             prepareRecentFolderWatch: { [weak self] folderURL, options in
                 self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
             }
         )
-        self.sidebarActionRouter = SidebarDocumentActionRouter(
+        self.sidebarActions = SidebarDocumentActionRouter(
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
             sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
-        self.appearanceLockCoordinator = AppearanceLockCoordinator(
+        self.appearanceLock = AppearanceLockCoordinator(
             appearanceControllerProvider: { [weak self] in self?.appearanceController },
             sidebarDocumentController: sidebarDocumentController,
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController }
         )
-        self.contentViewActionRouter = ContentViewActionRouter(
-            documentOpenCoordinator: documentOpenCoordinator,
-            appearanceLockCoordinator: appearanceLockCoordinator,
+        self.contentActions = ContentViewActionRouter(
+            documentOpen: documentOpen,
+            appearanceLock: appearanceLock,
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
             folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
@@ -107,7 +103,7 @@ final class ReaderWindowCoordinator {
             recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
             sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
-            applyTitlePresentation: { [weak self] in self?.applyWindowTitlePresentation() },
+            applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
             confirmFolderWatch: { [weak self] options in self?.confirmFolderWatch(options) },
             stopFolderWatch: { [weak self] in self?.stopFolderWatch() },
             startFavoriteWatch: { [weak self] favorite in self?.startFavoriteWatch(favorite) },
@@ -116,37 +112,7 @@ final class ReaderWindowCoordinator {
         )
     }
 
-    var hasPendingFolderWatchOpenEvents: Bool {
-        folderWatchOpenController.hasPendingEvents
-    }
-
-    func configureStoreCallbacks(
-        lockedAppearanceProvider: @escaping @MainActor () -> LockedAppearance? = { nil }
-    ) {
-        documentOpenCoordinator.configureStoreCallbacks(lockedAppearanceProvider: lockedAppearanceProvider)
-    }
-
-    // MARK: - Window Shell Flow
-
-    func applyWindowTitlePresentation() {
-        shellController.applyTitlePresentation()
-    }
-
-    func enqueueFolderWatchOpen(
-        _ event: FolderWatchChangeEvent,
-        folderWatchSession: FolderWatchSession?,
-        origin: ReaderOpenOrigin
-    ) {
-        folderWatchOpenController.enqueue(event, folderWatchSession: folderWatchSession, origin: origin)
-    }
-
-    func flushQueuedFolderWatchOpens() {
-        folderWatchOpenController.flush()
-    }
-
-    func openFileRequest(_ request: FileOpenRequest) {
-        documentOpenCoordinator.openFileRequest(request)
-    }
+    // MARK: - Composite refresh
 
     func refreshSharedFolderWatchState() {
         folderWatchFlowController?.refreshSharedState()
@@ -154,40 +120,26 @@ final class ReaderWindowCoordinator {
 
     func refreshWindowPresentation() {
         refreshSharedFolderWatchState()
-        shellController.applyTitlePresentation()
-    }
-
-    func refreshWindowShellRegistrationAndTitle() {
-        shellController.refreshRegistrationAndTitle()
+        shell.applyTitlePresentation()
     }
 
     func refreshWindowShellState() {
         refreshSharedFolderWatchState()
-        shellController.refreshRegistrationAndTitle()
+        shell.refreshRegistrationAndTitle()
     }
 
-    func registerWindowIfNeeded() {
-        shellController.registerIfNeeded()
-    }
-
-    func handleFolderWatchToolbarAction(_ action: FolderWatchToolbarAction) {
-        contentViewActionRouter.handle(action)
-    }
-
-    func handleEditFavoritesAction(_ action: EditFavoritesAction) {
-        contentViewActionRouter.handle(action)
-    }
+    // MARK: - Window lifecycle
 
     func handleWindowAccessorUpdate(_ window: NSWindow?) {
-        guard shellController.updateHostWindow(window) else { return }
+        guard shell.updateHostWindow(window) else { return }
         handleHostWindowChange()
     }
 
-    func handleHostWindowChange() {
+    private func handleHostWindowChange() {
         refreshWindowShellState()
         uiTestLaunchCoordinator?.applyConfigurationIfNeeded()
-        if hostWindow != nil, hasPendingFolderWatchOpenEvents {
-            flushQueuedFolderWatchOpens()
+        if shell.hostWindow != nil, folderWatchOpen.hasPendingEvents {
+            folderWatchOpen.flush()
         }
     }
 
@@ -249,11 +201,11 @@ final class ReaderWindowCoordinator {
         )
         groupStateController?.observeRowStates(from: sidebarDocumentController)
         openDocumentPathTracker.update(from: sidebarDocumentController.documents)
-        shellController.configureDockTile()
+        shell.configureDockTile()
     }
 
     func handleWindowDisappear() {
-        shellController.clearDockTile()
+        shell.clearDockTile()
     }
 
     func handleSidebarWidthChange(_ newWidth: CGFloat) {
@@ -268,7 +220,7 @@ final class ReaderWindowCoordinator {
         let isSidebarVisible = newCount > 1
         let wasVisible = oldCount > 1
 
-        guard isSidebarVisible != wasVisible, let window = hostWindow else {
+        guard isSidebarVisible != wasVisible, let window = shell.hostWindow else {
             return
         }
 
@@ -301,65 +253,7 @@ final class ReaderWindowCoordinator {
         }
     }
 
-    // MARK: - Open and Watch Flow
-
-    func openIncomingURL(_ url: URL) {
-        documentOpenCoordinator.openIncomingURL(url)
-    }
-
-    func openDocumentInCurrentWindow(_ fileURL: URL) {
-        documentOpenCoordinator.openDocumentInCurrentWindow(fileURL)
-    }
-
-    func applyInitialSeedIfNeeded(seed: ReaderWindowSeed?) {
-        documentOpenCoordinator.applyInitialSeedIfNeeded(seed: seed)
-    }
-
-    func openDocumentInSelectedSlot(
-        at fileURL: URL,
-        origin: ReaderOpenOrigin,
-        folderWatchSession: FolderWatchSession? = nil,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        documentOpenCoordinator.openDocumentInSelectedSlot(
-            at: fileURL,
-            origin: origin,
-            folderWatchSession: folderWatchSession,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-    }
-
-    func openAdditionalDocument(
-        _ fileURL: URL,
-        folderWatchSession: FolderWatchSession? = nil,
-        origin: ReaderOpenOrigin = .manual,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        documentOpenCoordinator.openAdditionalDocument(
-            fileURL,
-            folderWatchSession: folderWatchSession,
-            origin: origin,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-    }
-
-    func openAdditionalDocumentInCurrentWindow(
-        _ fileURL: URL,
-        folderWatchSession: FolderWatchSession? = nil,
-        origin: ReaderOpenOrigin = .manual,
-        initialDiffBaselineMarkdown: String? = nil
-    ) {
-        documentOpenCoordinator.openAdditionalDocumentInCurrentWindow(
-            fileURL,
-            folderWatchSession: folderWatchSession,
-            origin: origin,
-            initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-        )
-    }
-
-    var isSharedFolderWatchAFavorite: Bool {
-        favoriteWorkspaceController?.isCurrentWatchAFavorite ?? false
-    }
+    // MARK: - Composite folder-watch flows (mutate sidebarWidth + refresh)
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
         guard let favoriteWorkspaceController else { return }
@@ -384,50 +278,12 @@ final class ReaderWindowCoordinator {
         refreshWindowPresentation()
     }
 
-    func closeSidebarDocument(_ documentID: UUID) {
-        sidebarActionRouter.closeDocument(documentID)
-    }
-
-    func openSidebarDocumentsInDefaultApp(_ documentIDs: Set<UUID>) {
-        sidebarActionRouter.openDocumentsInDefaultApp(documentIDs)
-    }
-
-    func openSidebarDocumentsInApplication(_ application: ReaderExternalApplication, _ documentIDs: Set<UUID>) {
-        sidebarActionRouter.openDocumentsInApplication(application, documentIDs)
-    }
-
-    func revealSidebarDocumentsInFinder(_ documentIDs: Set<UUID>) {
-        sidebarActionRouter.revealDocumentsInFinder(documentIDs)
-    }
-
-    func stopWatchingSidebarFolders(_ documentIDs: Set<UUID>) {
-        sidebarActionRouter.stopWatchingFolders(documentIDs)
-    }
-
-    func closeOtherSidebarDocuments(keeping documentIDs: Set<UUID>) {
-        sidebarActionRouter.closeOtherDocuments(keeping: documentIDs)
-    }
-
-    func closeSelectedSidebarDocuments(_ documentIDs: Set<UUID>) {
-        sidebarActionRouter.closeSelectedDocuments(documentIDs)
-    }
-
-    func closeAllSidebarDocuments() {
-        sidebarActionRouter.closeAllDocuments()
-    }
-
-    func toggleSidebarPlacement(currentMultiFileDisplayMode: ReaderMultiFileDisplayMode) {
-        sidebarActionRouter.toggleSidebarPlacement(currentMultiFileDisplayMode: currentMultiFileDisplayMode)
-    }
-
     @discardableResult
     func updateFolderWatchExclusions(_ newExcludedPaths: [String]) -> Bool {
         let result = folderWatchFlowController?.updateFolderWatchExclusions(newExcludedPaths) ?? false
         refreshWindowPresentation()
         return result
     }
-
-    // MARK: - Warning Flow
 
     func confirmFolderWatch(_ options: FolderWatchOptions) {
         let deactivated = folderWatchFlowController?.confirmFolderWatch(options) ?? false
@@ -444,35 +300,15 @@ final class ReaderWindowCoordinator {
     }
 
     func handleFolderWatchAutoOpenWarningChange(_ warning: FolderWatchAutoOpenWarning?) {
-        folderWatchFlowController?.handleAutoOpenWarningChangeForWindow(warning, hostWindow: hostWindow)
+        folderWatchFlowController?.handleAutoOpenWarningChangeForWindow(warning, hostWindow: shell.hostWindow)
     }
 
     func refreshFolderWatchAutoOpenWarningPresentation() {
-        folderWatchFlowController?.refreshAutoOpenWarningPresentationForWindow(hostWindow: hostWindow)
+        folderWatchFlowController?.refreshAutoOpenWarningPresentationForWindow(hostWindow: shell.hostWindow)
     }
 
     func openSelectedFolderWatchAutoOpenFiles() {
         folderWatchFlowController?.openSelectedAutoOpenFilesAndRefresh()
         refreshWindowPresentation()
-    }
-
-    // MARK: - Action Dispatch
-
-    func handleContentViewAction(_ action: ContentViewAction) {
-        contentViewActionRouter.handle(action)
-    }
-
-    // MARK: - Appearance Lock
-
-    func toggleAppearanceLock() {
-        appearanceLockCoordinator.toggleLock()
-    }
-
-    func reapplyAppearance() {
-        appearanceLockCoordinator.reapplyAcrossOpenDocuments()
-    }
-
-    func renderSelectedDocumentIfNeeded() {
-        appearanceLockCoordinator.renderSelectedDocumentIfNeeded()
     }
 }

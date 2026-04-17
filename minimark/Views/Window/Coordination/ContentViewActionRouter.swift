@@ -8,8 +8,8 @@ import Foundation
 /// favorite watch start, sidebar-flag toggles).
 @MainActor
 final class ContentViewActionRouter {
-    private let documentOpenCoordinator: WindowDocumentOpenCoordinator
-    private let appearanceLockCoordinator: AppearanceLockCoordinator
+    private let documentOpen: WindowDocumentOpenCoordinator
+    private let appearanceLock: AppearanceLockCoordinator
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private let settingsStore: ReaderSettingsStore
     private let folderWatchFlowControllerProvider: () -> FolderWatchFlowController?
@@ -25,8 +25,8 @@ final class ContentViewActionRouter {
     private let setEditingFavorites: (Bool) -> Void
 
     init(
-        documentOpenCoordinator: WindowDocumentOpenCoordinator,
-        appearanceLockCoordinator: AppearanceLockCoordinator,
+        documentOpen: WindowDocumentOpenCoordinator,
+        appearanceLock: AppearanceLockCoordinator,
         sidebarDocumentController: ReaderSidebarDocumentController,
         settingsStore: ReaderSettingsStore,
         folderWatchFlowControllerProvider: @escaping () -> FolderWatchFlowController?,
@@ -41,8 +41,8 @@ final class ContentViewActionRouter {
         setEditingSubfolders: @escaping (Bool) -> Void,
         setEditingFavorites: @escaping (Bool) -> Void
     ) {
-        self.documentOpenCoordinator = documentOpenCoordinator
-        self.appearanceLockCoordinator = appearanceLockCoordinator
+        self.documentOpen = documentOpen
+        self.appearanceLock = appearanceLock
         self.sidebarDocumentController = sidebarDocumentController
         self.settingsStore = settingsStore
         self.folderWatchFlowControllerProvider = folderWatchFlowControllerProvider
@@ -61,7 +61,7 @@ final class ContentViewActionRouter {
     func handle(_ action: ContentViewAction) {
         switch action {
         case .requestFileOpen(let request):
-            documentOpenCoordinator.openFileRequest(request)
+            documentOpen.openFileRequest(request)
         case .requestFolderWatch(let url):
             folderWatchFlowControllerProvider()?.prepareOptions(for: url)
         case .confirmFolderWatch(let options):
@@ -75,7 +75,7 @@ final class ContentViewActionRouter {
         case .removeCurrentWatchFromFavorites:
             favoriteWorkspaceControllerProvider()?.removeFromFavorites()
         case .toggleAppearanceLock:
-            appearanceLockCoordinator.toggleLock()
+            appearanceLock.toggleLock()
         case .startFavoriteWatch(let fav):
             startFavoriteWatch(fav)
         case .clearFavoriteWatchedFolders:
