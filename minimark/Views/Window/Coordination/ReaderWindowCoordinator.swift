@@ -15,7 +15,7 @@ final class ReaderWindowCoordinator {
     private(set) var contentActions: ContentViewActionRouter!
     private(set) var sidebarMetrics: WindowSidebarMetricsController!
     private(set) var folderWatchSession: WindowFolderWatchSessionFlow!
-    let openDocumentPathTracker = OpenDocumentPathTracker()
+    private(set) var events: WindowEventBridge!
 
     // Window presentation state
     var hasCompletedWindowPhase = false
@@ -105,6 +105,17 @@ final class ReaderWindowCoordinator {
             hostWindowProvider: { [weak self] in self?.shell.hostWindow },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
+        self.events = WindowEventBridge(
+            shell: shell,
+            folderWatchOpen: folderWatchOpen,
+            sidebarDocumentController: sidebarDocumentController,
+            settingsStore: settingsStore,
+            groupStateControllerProvider: { [weak self] in self?.groupStateController },
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            appearanceControllerProvider: { [weak self] in self?.appearanceController },
+            uiTestLaunchCoordinatorProvider: { [weak self] in self?.uiTestLaunchCoordinator },
+            refreshWindowShellState: { [weak self] in self?.refreshWindowShellState() }
+        )
         self.contentActions = ContentViewActionRouter(
             documentOpen: documentOpen,
             appearanceLock: appearanceLock,
@@ -138,86 +149,6 @@ final class ReaderWindowCoordinator {
     func refreshWindowShellState() {
         refreshSharedFolderWatchState()
         shell.refreshRegistrationAndTitle()
-    }
-
-    // MARK: - Window lifecycle
-
-    func handleWindowAccessorUpdate(_ window: NSWindow?) {
-        guard shell.updateHostWindow(window) else { return }
-        handleHostWindowChange()
-    }
-
-    private func handleHostWindowChange() {
-        refreshWindowShellState()
-        uiTestLaunchCoordinator?.applyConfigurationIfNeeded()
-        if shell.hostWindow != nil, folderWatchOpen.hasPendingEvents {
-            folderWatchOpen.flush()
-        }
-    }
-
-    func handleFavoriteWorkspaceStateChange(_ newState: ReaderFavoriteWorkspaceState?) {
-        guard let favoriteID = favoriteWorkspaceController?.activeFavoriteID, var state = newState else {
-            return
-        }
-        state.lockedAppearance = appearanceController?.lockedAppearance
-        settingsStore.updateFavoriteWorkspaceState(id: favoriteID, workspaceState: state)
-    }
-
-    func handleGroupStateChange(
-        oldSnapshot: SidebarGroupStateController.WorkspaceStateSnapshot,
-        newSnapshot: SidebarGroupStateController.WorkspaceStateSnapshot
-    ) {
-        if let favoriteController = favoriteWorkspaceController, favoriteController.isActive {
-            let needsUpdate =
-                favoriteController.activeFavoriteWorkspaceState?.pinnedGroupIDs != newSnapshot.pinnedGroupIDs ||
-                favoriteController.activeFavoriteWorkspaceState?.collapsedGroupIDs != newSnapshot.collapsedGroupIDs ||
-                favoriteController.activeFavoriteWorkspaceState?.groupSortMode != newSnapshot.sortMode ||
-                favoriteController.activeFavoriteWorkspaceState?.fileSortMode != newSnapshot.fileSortMode ||
-                favoriteController.activeFavoriteWorkspaceState?.manualGroupOrder != newSnapshot.manualGroupOrder
-
-            if needsUpdate {
-                favoriteController.updateGroupState(
-                    pinnedGroupIDs: newSnapshot.pinnedGroupIDs,
-                    collapsedGroupIDs: newSnapshot.collapsedGroupIDs,
-                    groupSortMode: newSnapshot.sortMode,
-                    fileSortMode: newSnapshot.fileSortMode,
-                    manualGroupOrder: newSnapshot.manualGroupOrder
-                )
-            }
-        } else {
-            if oldSnapshot.sortMode != newSnapshot.sortMode {
-                settingsStore.updateSidebarGroupSortMode(newSnapshot.sortMode)
-            }
-            if oldSnapshot.fileSortMode != newSnapshot.fileSortMode {
-                settingsStore.updateSidebarSortMode(newSnapshot.fileSortMode)
-            }
-        }
-    }
-
-    func handleDocumentListChange() {
-        groupStateController?.updateDocuments(
-            sidebarDocumentController.documents,
-            rowStates: sidebarDocumentController.rowStates
-        )
-        openDocumentPathTracker.update(from: sidebarDocumentController.documents)
-    }
-
-    func handleWindowAppear() {
-        groupStateController?.configureSortModes(
-            sortMode: settingsStore.currentSettings.sidebarGroupSortMode,
-            fileSortMode: settingsStore.currentSettings.sidebarSortMode
-        )
-        groupStateController?.updateDocuments(
-            sidebarDocumentController.documents,
-            rowStates: sidebarDocumentController.rowStates
-        )
-        groupStateController?.observeRowStates(from: sidebarDocumentController)
-        openDocumentPathTracker.update(from: sidebarDocumentController.documents)
-        shell.configureDockTile()
-    }
-
-    func handleWindowDisappear() {
-        shell.clearDockTile()
     }
 
 }

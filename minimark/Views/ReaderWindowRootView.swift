@@ -196,7 +196,7 @@ struct ReaderWindowRootView: View {
             }
             .background(
                 WindowAccessor { window in
-                    windowCoordinator.handleWindowAccessorUpdate(window)
+                    windowCoordinator.events.handleWindowAccessorUpdate(window)
                 }
             )
             .navigationTitle(windowCoordinator.shell.effectiveWindowTitle)
@@ -223,7 +223,7 @@ struct ReaderWindowRootView: View {
                 windowCoordinator.shell.refreshRegistrationAndTitle()
                 favoriteWorkspaceController.syncOpenDocumentsIfNeeded()
             }
-            .onChange(of: windowCoordinator.openDocumentPathTracker.openDocumentPaths) { _, _ in
+            .onChange(of: windowCoordinator.events.openDocumentPathTracker.openDocumentPaths) { _, _ in
                 favoriteWorkspaceController.syncOpenDocumentsIfNeeded()
             }
     }
@@ -242,22 +242,22 @@ struct ReaderWindowRootView: View {
                 }
             }
             .onChange(of: groupStateController.persistenceSnapshot) { oldSnapshot, newSnapshot in
-                windowCoordinator.handleGroupStateChange(oldSnapshot: oldSnapshot, newSnapshot: newSnapshot)
+                windowCoordinator.events.handleGroupStateChange(oldSnapshot: oldSnapshot, newSnapshot: newSnapshot)
             }
             .onChange(of: sidebarDocumentController.documents.map(\.id)) { _, _ in
-                windowCoordinator.handleDocumentListChange()
+                windowCoordinator.events.handleDocumentListChange()
             }
             .onAppear {
-                windowCoordinator.handleWindowAppear()
+                windowCoordinator.events.handleWindowAppear()
             }
             .onDisappear {
-                windowCoordinator.handleWindowDisappear()
+                windowCoordinator.events.handleWindowDisappear()
             }
             .onChange(of: appearanceController.effectiveAppearance) { _, _ in
                 windowCoordinator.appearanceLock.reapplyAcrossOpenDocuments()
             }
             .onChange(of: favoriteWorkspaceController.activeFavoriteWorkspaceState) { _, newState in
-                windowCoordinator.handleFavoriteWorkspaceStateChange(newState)
+                windowCoordinator.events.handleFavoriteWorkspaceStateChange(newState)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
                 guard let window = notification.object as? NSWindow,
