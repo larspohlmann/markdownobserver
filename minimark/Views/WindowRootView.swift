@@ -51,51 +51,18 @@ struct WindowRootView: View {
         return effectiveMode.sidebarPlacement
     }
 
-    private var pendingFolderWatchOpenModeBinding: Binding<FolderWatchOpenMode> {
-        Binding(
-            get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.openMode ?? FolderWatchOptions.default.openMode
-            },
-            set: { [folderWatchFlowController] newValue in
-                folderWatchFlowController.updatePendingRequest { request in
-                    request.options.openMode = newValue
-                }
-            }
-        )
-    }
-
-    private var pendingFolderWatchScopeBinding: Binding<FolderWatchScope> {
-        Binding(
-            get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.scope ?? FolderWatchOptions.default.scope
-            },
-            set: { [folderWatchFlowController] newValue in
-                folderWatchFlowController.updatePendingRequest { request in
-                    request.options.scope = newValue
-                }
-            }
-        )
-    }
-
-    private var pendingFolderWatchExcludedSubdirectoryPathsBinding: Binding<[String]> {
-        Binding(
-            get: { [folderWatchFlowController] in
-                folderWatchFlowController.pendingFolderWatchRequest?.options.excludedSubdirectoryPaths ?? []
-            },
-            set: { [folderWatchFlowController] newValue in
-                folderWatchFlowController.updatePendingRequest { request in
-                    request.options.excludedSubdirectoryPaths = newValue
-                }
-            }
-        )
-    }
-
     var body: some View {
-        if windowCoordinator.hasCompletedWindowPhase {
-            commandNotificationAwareView(windowLifecycleChangeObservers(windowLifecycleBaseView(rootContent)))
-        } else {
-            windowShell
+        Group {
+            if windowCoordinator.hasCompletedWindowPhase {
+                commandNotificationAwareView(windowLifecycleChangeObservers(windowLifecycleBaseView(rootContent)))
+            } else {
+                windowShell
+            }
         }
+        .environment(settingsStore)
+        .environment(appearanceController)
+        .environment(sidebarDocumentController)
+        .environment(folderWatchFlowController)
     }
 
     private var windowShell: some View {
@@ -410,22 +377,11 @@ struct WindowRootView: View {
     }
 
     private func contentView(for store: DocumentStore) -> some View {
-        @Bindable var folderWatchFlow = folderWatchFlowController
-        return ContentViewAdapter(
+        ContentViewAdapter(
             documentStore: store,
-            sidebarDocumentController: sidebarDocumentController,
-            settingsStore: settingsStore,
-            appearanceController: appearanceController,
-            sharedFolderWatchSession: folderWatchFlowController.sharedFolderWatchSession,
-            canStopSharedFolderWatch: folderWatchFlowController.canStopSharedFolderWatch,
-            pendingFolderWatchURL: folderWatchFlowController.pendingFolderWatchURL,
             onAction: { action in
                 windowCoordinator.contentActions.handle(action)
-            },
-            isFolderWatchOptionsPresented: $folderWatchFlow.isFolderWatchOptionsPresented,
-            pendingFolderWatchOpenMode: pendingFolderWatchOpenModeBinding,
-            pendingFolderWatchScope: pendingFolderWatchScopeBinding,
-            pendingFolderWatchExcludedSubdirectoryPaths: pendingFolderWatchExcludedSubdirectoryPathsBinding
+            }
         )
     }
 

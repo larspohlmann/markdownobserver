@@ -1,39 +1,32 @@
 import SwiftUI
 
 /// Narrows the `@Observable` observation scope for `ContentView`: reads from the sidebar
-/// controller, settings store, and appearance controller are tracked only for this view's
-/// body, not for the root or sidebar workspace view.
+/// controller, settings store, folder-watch flow, and appearance controller are tracked
+/// only for this view's body, not for the root or sidebar workspace view.
 struct ContentViewAdapter: View {
     let documentStore: DocumentStore
-    let sidebarDocumentController: SidebarDocumentController
-    let settingsStore: SettingsStore
-    let appearanceController: WindowAppearanceController
-
-    let sharedFolderWatchSession: FolderWatchSession?
-    let canStopSharedFolderWatch: Bool
-    let pendingFolderWatchURL: URL?
-
     let onAction: (ContentViewAction) -> Void
 
-    @Binding var isFolderWatchOptionsPresented: Bool
-    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: FolderWatchScope
-    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
+    @Environment(SettingsStore.self) private var settingsStore
+    @Environment(WindowAppearanceController.self) private var appearanceController
+    @Environment(SidebarDocumentController.self) private var sidebarDocumentController
+    @Environment(FolderWatchFlowController.self) private var folderWatchFlow
 
     var body: some View {
         let favorites = settingsStore.currentSettings.favoriteWatchedFolders
+        let session = folderWatchFlow.sharedFolderWatchSession
         let isCurrentWatchAFavorite: Bool = {
-            guard let session = sharedFolderWatchSession else { return false }
+            guard let session else { return false }
             let normalizedPath = FileRouting.normalizedFileURL(session.folderURL).path
             return favorites.contains { $0.matches(folderPath: normalizedPath, options: session.options) }
         }()
 
         let folderWatchState = ContentViewFolderWatchState(
-            activeFolderWatch: sharedFolderWatchSession,
+            activeFolderWatch: session,
             isFolderWatchInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
             isFolderWatchInitialScanFailed: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
-            canStopFolderWatch: canStopSharedFolderWatch,
-            pendingFolderWatchURL: pendingFolderWatchURL,
+            canStopFolderWatch: folderWatchFlow.canStopSharedFolderWatch,
+            pendingFolderWatchURL: folderWatchFlow.pendingFolderWatchURL,
             isCurrentWatchAFavorite: isCurrentWatchAFavorite,
             favoriteWatchedFolders: favorites,
             recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
@@ -46,11 +39,7 @@ struct ContentViewAdapter: View {
             documentStore: documentStore,
             settingsStore: settingsStore,
             folderWatchState: folderWatchState,
-            onAction: onAction,
-            isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
-            pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
-            pendingFolderWatchScope: $pendingFolderWatchScope,
-            pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
+            onAction: onAction
         )
         // Remount the host (and its @State viewModel) when the selected
         // DocumentStore changes; otherwise SwiftUI preserves @State across
@@ -68,11 +57,6 @@ private struct ContentAreaHost: View {
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
 
-    @Binding var isFolderWatchOptionsPresented: Bool
-    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: FolderWatchScope
-    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
-
     @State private var surfaceViewModel: DocumentSurfaceViewModel
     @State private var viewModel: ContentAreaViewModel
 
@@ -80,20 +64,12 @@ private struct ContentAreaHost: View {
         documentStore: DocumentStore,
         settingsStore: SettingsStore,
         folderWatchState: ContentViewFolderWatchState,
-        onAction: @escaping (ContentViewAction) -> Void,
-        isFolderWatchOptionsPresented: Binding<Bool>,
-        pendingFolderWatchOpenMode: Binding<FolderWatchOpenMode>,
-        pendingFolderWatchScope: Binding<FolderWatchScope>,
-        pendingFolderWatchExcludedSubdirectoryPaths: Binding<[String]>
+        onAction: @escaping (ContentViewAction) -> Void
     ) {
         self.documentStore = documentStore
         self.settingsStore = settingsStore
         self.folderWatchState = folderWatchState
         self.onAction = onAction
-        self._isFolderWatchOptionsPresented = isFolderWatchOptionsPresented
-        self._pendingFolderWatchOpenMode = pendingFolderWatchOpenMode
-        self._pendingFolderWatchScope = pendingFolderWatchScope
-        self._pendingFolderWatchExcludedSubdirectoryPaths = pendingFolderWatchExcludedSubdirectoryPaths
         let surfaceViewModel = DocumentSurfaceViewModel()
         _surfaceViewModel = State(wrappedValue: surfaceViewModel)
         _viewModel = State(wrappedValue: ContentAreaViewModel(
@@ -113,17 +89,10 @@ private struct ContentAreaHost: View {
         viewModel.applyHostInputs(folderWatchState: folderWatchState, onAction: onAction)
         return ContentView(
             viewModel: viewModel,
-            toc: documentStore.toc,
-            document: documentStore.document,
-            rendering: documentStore.renderingController,
-            sourceEditing: documentStore.sourceEditingController,
+            documentStore: documentStore,
             settingsStore: settingsStore,
             surfaceViewModel: surfaceViewModel,
-            folderWatchState: folderWatchState,
-            isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
-            pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
-            pendingFolderWatchScope: $pendingFolderWatchScope,
-            pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
+            folderWatchState: folderWatchState
         )
     }
 }

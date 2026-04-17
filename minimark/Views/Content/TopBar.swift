@@ -66,16 +66,15 @@ enum TopBarAction {
 }
 
 struct TopBar: View {
-    let document: DocumentController
-    let sourceEditing: SourceEditingController
+    let documentStore: DocumentStore
     let statusBarTimestamp: StatusBarTimestamp?
-    let canStopFolderWatch: Bool
+    let folderWatchState: ContentViewFolderWatchState
     let apps: [ExternalApplication]
-    let favoriteWatchedFolders: [FavoriteWatchedFolder]
-    let recentWatchedFolders: [RecentWatchedFolder]
-    let recentManuallyOpenedFiles: [RecentOpenedFile]
     let iconProvider: (ExternalApplication) -> NSImage?
     let onAction: (TopBarAction) -> Void
+
+    private var document: DocumentController { documentStore.document }
+    private var sourceEditing: SourceEditingController { documentStore.sourceEditingController }
 
     private enum Metrics {
         static let barHorizontalPadding: CGFloat = 12
@@ -101,11 +100,11 @@ struct TopBar: View {
 
                 OpenInMenuButton(
                     hasFile: document.fileURL != nil,
-                    hasActiveFolderWatch: canStopFolderWatch,
+                    hasActiveFolderWatch: folderWatchState.canStopFolderWatch,
                     apps: apps,
-                    favoriteWatchedFolders: favoriteWatchedFolders,
-                    recentWatchedFolders: recentWatchedFolders,
-                    recentManuallyOpenedFiles: recentManuallyOpenedFiles,
+                    favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
+                    recentWatchedFolders: folderWatchState.recentWatchedFolders,
+                    recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
                     iconProvider: iconProvider,
                     onAction: { menuAction in
                         if let topBarAction = TopBarAction(menuAction) {
@@ -149,7 +148,7 @@ struct TopBar: View {
         }
         .sheet(isPresented: $isEditingFavorites) {
             EditFavoritesSheet(
-                favorites: favoriteWatchedFolders,
+                favorites: folderWatchState.favoriteWatchedFolders,
                 onAction: { action in
                     switch action {
                     case .rename(let id, let name):
