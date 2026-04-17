@@ -156,7 +156,7 @@ struct FolderWatchFileSelectionSheet: View {
             if model.exceedsPerformanceThreshold {
                 FolderWatchLargeTreeWarningCard(
                     title: "\(model.selectedCount) files selected",
-                    detail: "Opening more than \(ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount) files at once may slow down the system. Consider selecting fewer files.",
+                    detail: "Opening more than \(FolderWatchAutoOpenPolicy.performanceWarningFileCount) files at once may slow down the system. Consider selecting fewer files.",
                     tone: .warning,
                     showsAction: false,
                     onInspect: {}

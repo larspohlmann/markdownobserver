@@ -55,7 +55,7 @@ struct FolderWatchSessionCoordinatorTests {
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
                 systemNotifier: TestReaderSystemNotifier(),
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
             )
         })
         owner.delegate = MockDelegate()
@@ -132,7 +132,7 @@ struct FolderWatchSessionCoordinatorTests {
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
                 systemNotifier: TestReaderSystemNotifier(),
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
             )
         })
         owner.delegate = MockDelegate()

@@ -25,7 +25,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(folderURL: folderURL, options: initialOptions, performInitialAutoOpen: false)
@@ -58,7 +58,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         #expect(throws: FolderWatchUpdateError.self) {
@@ -84,7 +84,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(folderURL: folderURL, options: options, performInitialAutoOpen: false)

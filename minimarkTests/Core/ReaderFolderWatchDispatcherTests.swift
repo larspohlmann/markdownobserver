@@ -8,7 +8,7 @@ struct ReaderFolderWatchDispatcherTests {
     private func makeSUT() -> ReaderFolderWatchDispatcher {
         ReaderFolderWatchDispatcher(
             folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )

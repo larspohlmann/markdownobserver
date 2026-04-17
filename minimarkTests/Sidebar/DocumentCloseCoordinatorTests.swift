@@ -46,7 +46,7 @@ struct DocumentCloseCoordinatorTests {
                 watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
             ),
             folderWatch: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
                 systemNotifier: TestReaderSystemNotifier()
             ),

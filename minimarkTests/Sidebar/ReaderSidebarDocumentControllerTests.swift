@@ -276,7 +276,7 @@ struct ReaderSidebarDocumentControllerTests {
                             watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                         ),
                         folderWatch: ReaderFolderWatchDependencies(
-                            autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                            autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                             settler: settler,
                             systemNotifier: TestReaderSystemNotifier()
                         ),
@@ -299,7 +299,7 @@ struct ReaderSidebarDocumentControllerTests {
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                    folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
         )
@@ -419,7 +419,7 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let performanceLimit = ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
+        let performanceLimit = FolderWatchAutoOpenPolicy.performanceWarningFileCount
         let fileURLs = (0..<performanceLimit + 1).map { index in
             let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
             try? "# File \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
@@ -441,7 +441,7 @@ struct ReaderSidebarDocumentControllerTests {
         let harness = try ReaderSidebarControllerTestHarness()
         defer { harness.cleanup() }
 
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        let autoOpenLimit = FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
         let fileURLs = (0...autoOpenLimit).map { index in
             harness.temporaryDirectoryURL.appendingPathComponent(String(format: "bulk-%02d.md", index))
         }
@@ -473,7 +473,7 @@ struct ReaderSidebarDocumentControllerTests {
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly)
         )
 
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
+        let autoOpenLimit = FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
         let fileURLs = (0..<(autoOpenLimit + 2)).map { index in
             let fileURL = harness.temporaryDirectoryURL.appendingPathComponent(String(format: "live-%02d.md", index))
             try? "# File \(index)".write(to: fileURL, atomically: true, encoding: .utf8)
@@ -736,11 +736,11 @@ struct ReaderSidebarDocumentControllerTests {
         let loadedDocs = harness.controller.documents.filter { !$0.readerStore.document.isDeferredDocument }
         let deferredDocs = harness.controller.documents.filter { $0.readerStore.document.isDeferredDocument }
 
-        #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
-        #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(loadedDocs.count == FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(deferredDocs.count == fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
 
         let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.document.fileURL?.lastPathComponent })
-        for index in (fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
+        for index in (fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
             #expect(loadedFileNames.contains(String(format: "note-%02d.md", index)))
         }
 
@@ -796,11 +796,11 @@ struct ReaderSidebarDocumentControllerTests {
         let loadedDocs = harness.controller.documents.filter { !$0.readerStore.document.isDeferredDocument }
         let deferredDocs = harness.controller.documents.filter { $0.readerStore.document.isDeferredDocument }
 
-        #expect(loadedDocs.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
-        #expect(deferredDocs.count == fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(loadedDocs.count == FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(deferredDocs.count == fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
 
         let loadedFileNames = Set(loadedDocs.compactMap { $0.readerStore.document.fileURL?.lastPathComponent })
-        for index in (fileCount - ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
+        for index in (fileCount - FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)..<fileCount {
             #expect(loadedFileNames.contains(String(format: "fav-%02d.md", index)))
         }
 
@@ -1276,7 +1276,7 @@ struct ReaderSidebarDocumentControllerTests {
                         watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: ReaderFolderWatchDependencies(
-                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
                         systemNotifier: TestReaderSystemNotifier()
                     ),
@@ -1291,7 +1291,7 @@ struct ReaderSidebarDocumentControllerTests {
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                    folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
         )

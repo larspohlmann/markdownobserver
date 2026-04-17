@@ -16,7 +16,7 @@ final class FolderWatchFlowController {
     var pendingFolderWatchRequest: PendingFolderWatchRequest?
     var sharedFolderWatchSession: ReaderFolderWatchSession?
     var canStopSharedFolderWatch = false
-    var warningCoordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+    var warningCoordinator = FolderWatchAutoOpenWarningCoordinator()
 
     var pendingFolderWatchURL: URL? {
         pendingFolderWatchRequest?.folderURL
@@ -85,7 +85,7 @@ final class FolderWatchFlowController {
     // MARK: - Warning Flow
 
     func handleAutoOpenWarningChange(
-        _ warning: ReaderFolderWatchAutoOpenWarning?,
+        _ warning: FolderWatchAutoOpenWarning?,
         canPresent: @escaping @MainActor () -> Bool
     ) {
         warningCoordinator.handleWarningChange(warning, canPresent: canPresent)
@@ -117,7 +117,7 @@ final class FolderWatchFlowController {
     }
 
     func handleAutoOpenWarningChangeForWindow(
-        _ warning: ReaderFolderWatchAutoOpenWarning?,
+        _ warning: FolderWatchAutoOpenWarning?,
         hostWindow: NSWindow?
     ) {
         handleAutoOpenWarningChange(warning) { self.isWarningPresentationAllowed(hostWindow: hostWindow) }

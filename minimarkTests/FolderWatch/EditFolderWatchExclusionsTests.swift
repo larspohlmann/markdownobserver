@@ -178,7 +178,7 @@ struct EditFolderWatchExclusionsTests {
                         watcher: fw, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: ReaderFolderWatchDependencies(
-                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                         systemNotifier: TestReaderSystemNotifier()
                     ),
@@ -192,7 +192,7 @@ struct EditFolderWatchExclusionsTests {
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                    folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
         )
@@ -250,7 +250,7 @@ struct EditFolderWatchExclusionsTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(folderURL: folderURL, options: initialOptions, performInitialAutoOpen: false)

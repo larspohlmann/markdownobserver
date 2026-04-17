@@ -6,7 +6,7 @@ import Observation
 final class ReaderFolderWatchDispatcher {
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     var lastWatchedFolderEventAt: Date?
-    var autoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    var autoOpenWarning: FolderWatchAutoOpenWarning?
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
 
     @ObservationIgnored private(set) var onFolderWatchStarted: ((ReaderFolderWatchSession) -> Void)?

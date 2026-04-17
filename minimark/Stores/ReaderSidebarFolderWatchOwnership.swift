@@ -19,7 +19,7 @@ final class ReaderFolderWatchController {
     private let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     private let securityScope: SecurityScopedResourceAccessing
     private let systemNotifier: ReaderSystemNotifying
-    private let folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
+    private let folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning
 
     private var folderSecurityScopeToken: SecurityScopedAccessToken?
     private var initialMarkdownScanTask: Task<Void, Never>?
@@ -35,7 +35,7 @@ final class ReaderFolderWatchController {
         didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
-    private(set) var folderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning? {
+    private(set) var folderWatchAutoOpenWarning: FolderWatchAutoOpenWarning? {
         didSet { delegate?.folderWatchControllerStateDidChange(self) }
     }
 
@@ -64,7 +64,7 @@ final class ReaderFolderWatchController {
         settingsStore: ReaderSettingsReading & ReaderRecentWriting,
         securityScope: SecurityScopedResourceAccessing,
         systemNotifier: ReaderSystemNotifying,
-        folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning
+        folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning
     ) {
         self.folderWatcher = folderWatcher
         self.settingsStore = settingsStore
@@ -403,7 +403,7 @@ final class ReaderFolderWatchController {
             return
         }
 
-        if markdownURLs.count > ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount {
+        if markdownURLs.count > FolderWatchAutoOpenPolicy.performanceWarningFileCount {
             pendingFileSelectionRequest = ReaderFolderWatchFileSelectionRequest(
                 folderURL: session.folderURL,
                 session: session,
@@ -426,7 +426,7 @@ final class ReaderFolderWatchController {
         }
 
         let sortedByModDate = urlsSortedByModificationDateDescending(eligibleURLs)
-        let maxLoad = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        let maxLoad = FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
         let loadURLs = Array(sortedByModDate.prefix(maxLoad))
         let deferURLs = Array(sortedByModDate.dropFirst(maxLoad))
 

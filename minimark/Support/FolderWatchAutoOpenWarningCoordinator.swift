@@ -3,10 +3,10 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderFolderWatchAutoOpenWarningCoordinator {
+final class FolderWatchAutoOpenWarningCoordinator {
     var activeFlow: FolderWatchAutoOpenWarningFlow?
 
-    private var queuedWarning: ReaderFolderWatchAutoOpenWarning?
+    private var queuedWarning: FolderWatchAutoOpenWarning?
     @ObservationIgnored private nonisolated(unsafe) var presentationTask: Task<Void, Never>?
 
     deinit {
@@ -14,7 +14,7 @@ final class ReaderFolderWatchAutoOpenWarningCoordinator {
     }
 
     func handleWarningChange(
-        _ warning: ReaderFolderWatchAutoOpenWarning?,
+        _ warning: FolderWatchAutoOpenWarning?,
         canPresent: @escaping @MainActor () -> Bool
     ) {
         guard let warning else {

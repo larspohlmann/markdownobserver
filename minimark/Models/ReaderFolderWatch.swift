@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum ReaderFolderWatchAutoOpenPolicy {
+nonisolated enum FolderWatchAutoOpenPolicy {
     static let maximumInitialAutoOpenFileCount = 12
     static let maximumLiveAutoOpenFileCount = 12
     static let performanceWarningFileCount = 50
@@ -211,7 +211,7 @@ nonisolated struct ReaderFolderWatchSession: Equatable, Hashable, Codable, Senda
     }
 }
 
-nonisolated struct ReaderFolderWatchAutoOpenWarning: Equatable, Identifiable, Sendable {
+nonisolated struct FolderWatchAutoOpenWarning: Equatable, Identifiable, Sendable {
     let folderURL: URL
     let autoOpenedFileCount: Int
     let omittedFileURLs: [URL]

@@ -12,7 +12,7 @@ import Testing
 @Suite(.serialized)
 struct FolderWatchCoordinationTests {
     @Test func folderWatchAutoOpenPlannerCapsInitialBatchAndSkipsCurrentDocument() {
-        let planner = ReaderFolderWatchAutoOpenPlanner()
+        let planner = FolderWatchAutoOpenPlanner()
         let folderURL = URL(fileURLWithPath: "/tmp/watched")
         let currentDocumentURL = folderURL.appendingPathComponent("keep-open.md")
         let session = ReaderFolderWatchSession(
@@ -23,7 +23,7 @@ struct FolderWatchCoordinationTests {
         let events = [
             ReaderFolderWatchChangeEvent(fileURL: currentDocumentURL, kind: .added),
             ReaderFolderWatchChangeEvent(fileURL: folderURL.appendingPathComponent("ignored.txt"), kind: .added)
-        ] + (0...ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount).map { index in
+        ] + (0...FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount).map { index in
             ReaderFolderWatchChangeEvent(
                 fileURL: folderURL.appendingPathComponent(String(format: "note-%02d.md", index)),
                 kind: .added
@@ -36,7 +36,7 @@ struct FolderWatchCoordinationTests {
             currentDocumentFileURL: currentDocumentURL
         )
 
-        #expect(plan.autoOpenEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+        #expect(plan.autoOpenEvents.count == FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         #expect(!plan.autoOpenEvents.map(\.fileURL).contains(currentDocumentURL))
         #expect(!plan.autoOpenEvents.map(\.fileURL).contains(folderURL.appendingPathComponent("ignored.txt")))
         #expect(plan.warning?.folderURL == folderURL)
@@ -83,7 +83,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
@@ -121,7 +121,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
@@ -162,7 +162,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(
@@ -194,7 +194,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(
@@ -224,7 +224,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
@@ -260,7 +260,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(
@@ -380,7 +380,7 @@ struct FolderWatchCoordinationTests {
 
         let dispatcher = ReaderFolderWatchDispatcher(
             folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -413,7 +413,7 @@ struct FolderWatchCoordinationTests {
 
         let dispatcher = ReaderFolderWatchDispatcher(
             folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -451,7 +451,7 @@ struct FolderWatchCoordinationTests {
 
         let dispatcher = ReaderFolderWatchDispatcher(
             folderWatchDependencies: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
@@ -476,7 +476,7 @@ struct FolderWatchCoordinationTests {
 
     @Test @MainActor func folderWatchAutoOpenPlannerUsesAgedBaselineForRapidSuccessiveModifications() async {
         var now = Date(timeIntervalSince1970: 1_700_000_000)
-        let planner = ReaderFolderWatchAutoOpenPlanner(
+        let planner = FolderWatchAutoOpenPlanner(
             minimumDiffBaselineAge: 0.2,
             nowProvider: { now }
         )
@@ -512,14 +512,14 @@ struct FolderWatchCoordinationTests {
     }
 
     @Test func folderWatchAutoOpenPlannerCapsLiveBurstSize() {
-        let planner = ReaderFolderWatchAutoOpenPlanner()
+        let planner = FolderWatchAutoOpenPlanner()
         let folderURL = URL(fileURLWithPath: "/tmp/watched")
         let session = ReaderFolderWatchSession(
             folderURL: folderURL,
             options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
             startedAt: .now
         )
-        let events = (0..<(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
+        let events = (0..<(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
             ReaderFolderWatchChangeEvent(
                 fileURL: folderURL.appendingPathComponent(String(format: "changed-%02d.md", index)),
                 kind: .added
@@ -532,17 +532,17 @@ struct FolderWatchCoordinationTests {
             currentDocumentFileURL: nil
         )
 
-        #expect(plan.autoOpenEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
-        #expect(plan.autoOpenEvents.map(\ .fileURL) == Array(events.prefix(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
+        #expect(plan.autoOpenEvents.count == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(plan.autoOpenEvents.map(\ .fileURL) == Array(events.prefix(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
         #expect(plan.warning?.folderURL == folderURL)
-        #expect(plan.warning?.autoOpenedFileCount == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
-        #expect(plan.warning?.omittedFileURLs == Array(events.dropFirst(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
+        #expect(plan.warning?.autoOpenedFileCount == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(plan.warning?.omittedFileURLs == Array(events.dropFirst(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
     }
 
     @Test @MainActor func folderWatchWarningCoordinatorWaitsUntilPresentationIsAllowed() async {
-        let coordinator = ReaderFolderWatchAutoOpenWarningCoordinator()
+        let coordinator = FolderWatchAutoOpenWarningCoordinator()
         let omittedFileURL = URL(fileURLWithPath: "/tmp/watched/extra.md")
-        let warning = ReaderFolderWatchAutoOpenWarning(
+        let warning = FolderWatchAutoOpenWarning(
             folderURL: URL(fileURLWithPath: "/tmp/watched"),
             autoOpenedFileCount: 12,
             omittedFileURLs: [omittedFileURL]
@@ -897,7 +897,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate
@@ -910,7 +910,7 @@ struct FolderWatchCoordinationTests {
             )
         )
 
-        let liveEvents = (0..<(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
+        let liveEvents = (0..<(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount + 5)).map { index in
             ReaderFolderWatchChangeEvent(
                 fileURL: folderURL.appendingPathComponent(String(format: "live-%02d.md", index)),
                 kind: .added
@@ -921,7 +921,7 @@ struct FolderWatchCoordinationTests {
         try await Task.sleep(for: .milliseconds(50))
 
         #expect(controller.folderWatchAutoOpenWarning == nil)
-        #expect(delegate.handledEvents.count == ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+        #expect(delegate.handledEvents.count == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
     }
 
     @Test @MainActor func liveAutoOpenNotifiesDelegateWithAutoOpenedFileURLs() async throws {
@@ -936,7 +936,7 @@ struct FolderWatchCoordinationTests {
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
             systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
         controller.delegate = delegate

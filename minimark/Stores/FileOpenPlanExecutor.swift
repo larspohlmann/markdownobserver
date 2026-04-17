@@ -159,7 +159,7 @@ final class FileOpenPlanExecutor {
     }
 
     func materializeNewestDeferredDocuments(
-        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        count: Int = FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
     ) {
         let deferredDocs = documentList.documents
             .filter { $0.readerStore.document.isDeferredDocument }

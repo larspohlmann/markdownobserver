@@ -25,7 +25,7 @@ struct SidebarRowStateComputerTests {
                 watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
             ),
             folderWatch: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             ),

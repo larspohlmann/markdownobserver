@@ -182,7 +182,7 @@ final class FavoriteWorkspaceController {
                 folderWatchSession: session,
                 slotStrategy: .reuseEmptySlotForFirst,
                 materializationStrategy: .deferThenMaterializeNewest(
-                    count: ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+                    count: FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
                 )
             ))
         }

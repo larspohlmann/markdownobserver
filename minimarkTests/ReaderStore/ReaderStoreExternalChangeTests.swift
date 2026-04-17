@@ -804,7 +804,7 @@ struct ReaderStoreExternalChangeTests {
         )
         fixture.store.folderWatchDispatcher.setSession(session)
 
-        let autoOpenLimit = ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
+        let autoOpenLimit = FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount
         let fileURLs = (0..<(autoOpenLimit + 2)).map { index in
             let fileURL = fixture.temporaryDirectoryURL.appendingPathComponent(String(format: "live-%02d.md", index))
             fixture.write(content: "# File \(index)", to: fileURL)

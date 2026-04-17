@@ -20,7 +20,7 @@ final class FolderWatchSessionCoordinator {
     // MARK: - State
 
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
-    private(set) var selectedFolderWatchAutoOpenWarning: ReaderFolderWatchAutoOpenWarning?
+    private(set) var selectedFolderWatchAutoOpenWarning: FolderWatchAutoOpenWarning?
     var pendingFileSelectionRequest: ReaderFolderWatchFileSelectionRequest?
     private(set) var isFolderWatchInitialScanInProgress: Bool
     private(set) var didFolderWatchInitialScanFail: Bool

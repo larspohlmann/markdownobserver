@@ -37,9 +37,9 @@ struct FolderWatchOptionsSheet: View {
         case .openAllMarkdownFiles:
             switch scope {
             case .selectedFolderOnly:
-                return "Will automatically open up to \(ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files in the selected folder, then continue watching that folder."
+                return "Will automatically open up to \(FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files in the selected folder, then continue watching that folder."
             case .includeSubfolders:
-                return "Will automatically open up to \(ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files across the folder tree, then continue watching subfolders."
+                return "Will automatically open up to \(FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files across the folder tree, then continue watching subfolders."
             }
         case .watchChangesOnly:
             switch scope {

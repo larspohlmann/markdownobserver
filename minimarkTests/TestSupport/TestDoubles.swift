@@ -881,7 +881,7 @@ struct ReaderStoreTestFixture {
             rendering: ReaderRenderingDependencies(renderer: renderer, differ: differ),
             file: ReaderFileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
             folderWatch: ReaderFolderWatchDependencies(
-                autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
                 systemNotifier: notifier
             ),
@@ -959,7 +959,7 @@ struct ReaderSidebarControllerTestHarness {
                         watcher: fileWatcher, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: ReaderFolderWatchDependencies(
-                        autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
+                        autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
                         systemNotifier: TestReaderSystemNotifier()
                     ),
@@ -974,7 +974,7 @@ struct ReaderSidebarControllerTestHarness {
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
                     systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                    folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
         )

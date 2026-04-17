@@ -1,28 +1,28 @@
 import Foundation
 
-struct ReaderFolderWatchAutoOpenPlan: Equatable, Sendable {
+struct FolderWatchAutoOpenPlan: Equatable, Sendable {
     let autoOpenEvents: [ReaderFolderWatchChangeEvent]
-    let warning: ReaderFolderWatchAutoOpenWarning?
+    let warning: FolderWatchAutoOpenWarning?
 }
 
-protocol ReaderFolderWatchAutoOpenPlanning: AnyObject {
+protocol FolderWatchAutoOpenPlanning: AnyObject {
     func initialPlan(
         for events: [ReaderFolderWatchChangeEvent],
         activeSession: ReaderFolderWatchSession?,
         currentDocumentFileURL: URL?
-    ) -> ReaderFolderWatchAutoOpenPlan
+    ) -> FolderWatchAutoOpenPlan
 
     func livePlan(
         for events: [ReaderFolderWatchChangeEvent],
         activeSession: ReaderFolderWatchSession?,
         currentDocumentFileURL: URL?
-    ) -> ReaderFolderWatchAutoOpenPlan
+    ) -> FolderWatchAutoOpenPlan
 
     func resetTransientState()
     func updateMinimumDiffBaselineAge(_ age: TimeInterval)
 }
 
-final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning {
+final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
     private let diffBaselineTracker: DiffBaselineTracking
     private let nowProvider: () -> Date
 
@@ -38,22 +38,22 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
         for events: [ReaderFolderWatchChangeEvent],
         activeSession: ReaderFolderWatchSession?,
         currentDocumentFileURL: URL?
-    ) -> ReaderFolderWatchAutoOpenPlan {
+    ) -> FolderWatchAutoOpenPlan {
         let eligibleEvents = eligibleEvents(
             from: events,
             currentDocumentFileURL: currentDocumentFileURL
         )
         let autoOpenEvents = Array(
-            eligibleEvents.prefix(ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
+            eligibleEvents.prefix(FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount)
         )
 
-        let warning: ReaderFolderWatchAutoOpenWarning?
+        let warning: FolderWatchAutoOpenWarning?
         if let activeSession {
             let omittedFileURLs = Array(eligibleEvents.dropFirst(autoOpenEvents.count)).map(\.fileURL)
             if omittedFileURLs.isEmpty {
                 warning = nil
             } else {
-                warning = ReaderFolderWatchAutoOpenWarning(
+                warning = FolderWatchAutoOpenWarning(
                     folderURL: activeSession.folderURL,
                     autoOpenedFileCount: autoOpenEvents.count,
                     omittedFileURLs: omittedFileURLs
@@ -63,7 +63,7 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
             warning = nil
         }
 
-        return ReaderFolderWatchAutoOpenPlan(
+        return FolderWatchAutoOpenPlan(
             autoOpenEvents: autoOpenEvents,
             warning: warning
         )
@@ -84,20 +84,20 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
         for events: [ReaderFolderWatchChangeEvent],
         activeSession: ReaderFolderWatchSession?,
         currentDocumentFileURL: URL?
-    ) -> ReaderFolderWatchAutoOpenPlan {
+    ) -> FolderWatchAutoOpenPlan {
         let eligible = eligibleEvents(from: events, currentDocumentFileURL: currentDocumentFileURL)
         let liveEvents = eventsWithAgedDiffBaselines(from: eligible, now: nowProvider())
         let autoOpenEvents = Array(
-            liveEvents.prefix(ReaderFolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
+            liveEvents.prefix(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
         )
 
-        let warning: ReaderFolderWatchAutoOpenWarning?
+        let warning: FolderWatchAutoOpenWarning?
         if let activeSession {
             let omittedFileURLs = Array(liveEvents.dropFirst(autoOpenEvents.count)).map(\.fileURL)
             if omittedFileURLs.isEmpty {
                 warning = nil
             } else {
-                warning = ReaderFolderWatchAutoOpenWarning(
+                warning = FolderWatchAutoOpenWarning(
                     folderURL: activeSession.folderURL,
                     autoOpenedFileCount: autoOpenEvents.count,
                     omittedFileURLs: omittedFileURLs
@@ -107,7 +107,7 @@ final class ReaderFolderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanning 
             warning = nil
         }
 
-        return ReaderFolderWatchAutoOpenPlan(
+        return FolderWatchAutoOpenPlan(
             autoOpenEvents: autoOpenEvents,
             warning: warning
         )

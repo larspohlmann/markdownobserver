@@ -29,7 +29,7 @@ final class FolderWatchFileSelectionModel: ObservableObject {
     }
 
     var exceedsPerformanceThreshold: Bool {
-        selectedFileURLs.count > ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
+        selectedFileURLs.count > FolderWatchAutoOpenPolicy.performanceWarningFileCount
     }
 
     init(folderURL: URL, fileURLs: [URL]) {

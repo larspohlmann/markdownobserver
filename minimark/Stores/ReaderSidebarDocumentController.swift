@@ -91,7 +91,7 @@ final class ReaderSidebarDocumentController {
                     actions: ReaderFileActionService()
                 ),
                 folderWatch: ReaderFolderWatchDependencies(
-                    autoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                    autoOpenPlanner: FolderWatchAutoOpenPlanner(
                         minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                     ),
                     settler: settler,
@@ -109,7 +109,7 @@ final class ReaderSidebarDocumentController {
                 settingsStore: settingsStore,
                 securityScope: SecurityScopedResourceAccess(),
                 systemNotifier: ReaderSystemNotifier.shared,
-                folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(
+                folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner(
                     minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                 )
             )
@@ -205,7 +205,7 @@ final class ReaderSidebarDocumentController {
     }
 
     func materializeNewestDeferredDocuments(
-        count: Int = ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
+        count: Int = FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount
     ) {
         fileOpenPlanExecutor.materializeNewestDeferredDocuments(count: count)
     }
