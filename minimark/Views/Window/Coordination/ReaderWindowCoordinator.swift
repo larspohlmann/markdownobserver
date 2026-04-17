@@ -27,7 +27,7 @@ private struct ReaderWindowStoreCallbackConfigurator {
 final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
-    private let folderWatchOpenCoordinator = FolderWatchOpenBatcher()
+    private var folderWatchOpenController: WindowFolderWatchOpenController!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -97,10 +97,15 @@ final class ReaderWindowCoordinator {
     ) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
+        self.folderWatchOpenController = WindowFolderWatchOpenController(
+            fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
+            isHostWindowAttached: { [weak self] in self?.hostWindow != nil },
+            onAfterFlush: { [weak self] in self?.refreshWindowPresentation() }
+        )
     }
 
     var hasPendingFolderWatchOpenEvents: Bool {
-        folderWatchOpenCoordinator.hasPendingEvents
+        folderWatchOpenController.hasPendingEvents
     }
 
     func configureStoreCallbacks(
@@ -160,45 +165,11 @@ final class ReaderWindowCoordinator {
         folderWatchSession: FolderWatchSession?,
         origin: ReaderOpenOrigin
     ) {
-        folderWatchOpenCoordinator.enqueue(
-            event,
-            folderWatchSession: folderWatchSession,
-            origin: origin
-        ) { [weak self] in
-            self?.flushQueuedFolderWatchOpens()
-        }
-    }
-
-    func folderWatchChangeEvent(
-        for fileURL: URL,
-        initialDiffBaselineMarkdown: String?
-    ) -> FolderWatchChangeEvent {
-        FolderWatchChangeEvent(
-            fileURL: fileURL,
-            kind: initialDiffBaselineMarkdown == nil ? .added : .modified,
-            previousMarkdown: initialDiffBaselineMarkdown
-        )
+        folderWatchOpenController.enqueue(event, folderWatchSession: folderWatchSession, origin: origin)
     }
 
     func flushQueuedFolderWatchOpens() {
-        let batch = folderWatchOpenCoordinator.consumeBatchIfPossible(
-            canFlushImmediately: hostWindow != nil
-        ) { [weak self] in
-            self?.flushQueuedFolderWatchOpens()
-        }
-
-        guard let batch else {
-            return
-        }
-
-        fileOpenCoordinator.open(FileOpenRequest(
-            fileURLs: batch.fileURLs,
-            origin: batch.openOrigin,
-            folderWatchSession: batch.folderWatchSession,
-            initialDiffBaselineMarkdownByURL: batch.initialDiffBaselineMarkdownByURL,
-            slotStrategy: .reuseEmptySlotForFirst
-        ))
-        refreshWindowPresentation()
+        folderWatchOpenController.flush()
     }
 
     func openFileRequest(_ request: FileOpenRequest) {
@@ -503,14 +474,12 @@ final class ReaderWindowCoordinator {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
 
         if folderWatchSession != nil {
-            enqueueFolderWatchOpen(
-                folderWatchChangeEvent(
-                    for: normalizedFileURL,
-                    initialDiffBaselineMarkdown: initialDiffBaselineMarkdown
-                ),
-                folderWatchSession: folderWatchSession,
-                origin: origin
+            let event = FolderWatchChangeEvent(
+                fileURL: normalizedFileURL,
+                kind: initialDiffBaselineMarkdown == nil ? .added : .modified,
+                previousMarkdown: initialDiffBaselineMarkdown
             )
+            enqueueFolderWatchOpen(event, folderWatchSession: folderWatchSession, origin: origin)
             return
         }
 
