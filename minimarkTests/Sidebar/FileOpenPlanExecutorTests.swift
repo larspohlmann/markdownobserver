@@ -60,7 +60,7 @@ struct FileOpenPlanExecutorTests {
             file: ReaderFileDependencies(
                 watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
             ),
-            folderWatch: ReaderFolderWatchDependencies(
+            folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
                 systemNotifier: TestReaderSystemNotifier()

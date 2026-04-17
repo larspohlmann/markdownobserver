@@ -20,7 +20,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.update-excl.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -53,7 +53,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.update-excl-err.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -79,7 +79,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.update-excl-noop.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),

@@ -64,7 +64,7 @@ final class ReaderSidebarDocumentController {
     init(
         settingsStore: ReaderSettingsStore,
         makeReaderStore: (() -> ReaderStore)? = nil,
-        makeFolderWatchController: (() -> ReaderFolderWatchController)? = nil
+        makeFolderWatchController: (() -> FolderWatchController)? = nil
     ) {
         let resolvedMakeReaderStore = makeReaderStore ?? {
             let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
@@ -90,7 +90,7 @@ final class ReaderSidebarDocumentController {
                     io: ReaderDocumentIOService(),
                     actions: ReaderFileActionService()
                 ),
-                folderWatch: ReaderFolderWatchDependencies(
+                folderWatch: FolderWatchDependencies(
                     autoOpenPlanner: FolderWatchAutoOpenPlanner(
                         minimumDiffBaselineAge: settingsStore.currentSettings.diffBaselineLookback.timeInterval
                     ),
@@ -104,7 +104,7 @@ final class ReaderSidebarDocumentController {
         }
         self.makeReaderStore = resolvedMakeReaderStore
         let resolvedMakeFolderWatchController = makeFolderWatchController ?? {
-            ReaderFolderWatchController(
+            FolderWatchController(
                 folderWatcher: FolderChangeWatcher(),
                 settingsStore: settingsStore,
                 securityScope: SecurityScopedResourceAccess(),

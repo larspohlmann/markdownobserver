@@ -11,7 +11,7 @@ struct ReaderFileDependencies {
     let actions: ReaderFileActionHandling
 }
 
-struct ReaderFolderWatchDependencies {
+struct FolderWatchDependencies {
     let autoOpenPlanner: FolderWatchAutoOpenPlanning
     let settler: ReaderAutoOpenSettling
     let systemNotifier: ReaderSystemNotifying

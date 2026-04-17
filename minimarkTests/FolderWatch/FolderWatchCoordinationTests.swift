@@ -78,7 +78,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.async-start.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -116,7 +116,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.stale-initial.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -157,7 +157,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -189,7 +189,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress-stop.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -219,7 +219,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.scan-failure.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -255,7 +255,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress-restart.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -378,8 +378,8 @@ struct FolderWatchCoordinationTests {
         ]
         var openedPrimaryEvents: [ReaderFolderWatchChangeEvent] = []
 
-        let dispatcher = ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
+        let dispatcher = FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
@@ -411,8 +411,8 @@ struct FolderWatchCoordinationTests {
         var additionalOpenEvents: [ReaderFolderWatchChangeEvent] = []
         var openedPrimaryEvents: [ReaderFolderWatchChangeEvent] = []
 
-        let dispatcher = ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
+        let dispatcher = FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
@@ -449,8 +449,8 @@ struct FolderWatchCoordinationTests {
         var primaryOpenCalls: [(ReaderFolderWatchChangeEvent, ReaderOpenOrigin)] = []
         var additionalOpenCalls: [(ReaderFolderWatchChangeEvent, ReaderOpenOrigin)] = []
 
-        let dispatcher = ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
+        let dispatcher = FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
@@ -892,7 +892,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.live-no-warning.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
@@ -931,7 +931,7 @@ struct FolderWatchCoordinationTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.live-indicator.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),

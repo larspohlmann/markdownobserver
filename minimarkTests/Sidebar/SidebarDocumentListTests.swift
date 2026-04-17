@@ -25,7 +25,7 @@ struct SidebarDocumentListTests {
             file: ReaderFileDependencies(
                 watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
             ),
-            folderWatch: ReaderFolderWatchDependencies(
+            folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()

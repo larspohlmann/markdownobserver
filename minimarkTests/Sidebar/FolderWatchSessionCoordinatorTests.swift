@@ -50,7 +50,7 @@ struct FolderWatchSessionCoordinatorTests {
         )
         let owner = FolderWatchSessionCoordinator(makeFolderWatchController: {
             controllerCreated = true
-            return ReaderFolderWatchController(
+            return FolderWatchController(
                 folderWatcher: TestFolderWatcher(),
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),
@@ -127,7 +127,7 @@ struct FolderWatchSessionCoordinatorTests {
             storageKey: "test.\(UUID().uuidString)"
         )
         let owner = FolderWatchSessionCoordinator(makeFolderWatchController: {
-            ReaderFolderWatchController(
+            FolderWatchController(
                 folderWatcher: TestFolderWatcher(),
                 settingsStore: settingsStore,
                 securityScope: TestSecurityScopeAccess(),

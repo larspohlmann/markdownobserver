@@ -12,7 +12,7 @@ enum FolderWatchUpdateError: Error, LocalizedError {
 }
 
 @MainActor
-final class ReaderFolderWatchController {
+final class FolderWatchController {
     private static let scanProgressLingerDuration: Duration = .milliseconds(500)
 
     private let folderWatcher: FolderChangeWatching
@@ -25,7 +25,7 @@ final class ReaderFolderWatchController {
     private var initialMarkdownScanTask: Task<Void, Never>?
     private var scanProgressTask: Task<Void, Never>?
 
-    weak var delegate: ReaderFolderWatchControllerDelegate?
+    weak var delegate: FolderWatchControllerDelegate?
 
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession? {
         didSet { delegate?.folderWatchControllerStateDidChange(self) }

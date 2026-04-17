@@ -275,7 +275,7 @@ struct ReaderSidebarDocumentControllerTests {
                         file: ReaderFileDependencies(
                             watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                         ),
-                        folderWatch: ReaderFolderWatchDependencies(
+                        folderWatch: FolderWatchDependencies(
                             autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                             settler: settler,
                             systemNotifier: TestReaderSystemNotifier()
@@ -286,7 +286,7 @@ struct ReaderSidebarDocumentControllerTests {
                 }()
             },
             makeFolderWatchController: {
-                ReaderFolderWatchController(
+                FolderWatchController(
                     folderWatcher: FolderChangeWatcher(
                         verificationDelay: .milliseconds(20),
                         makeEventSource: { _ in
@@ -1275,7 +1275,7 @@ struct ReaderSidebarDocumentControllerTests {
                     file: ReaderFileDependencies(
                         watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
-                    folderWatch: ReaderFolderWatchDependencies(
+                    folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
                         systemNotifier: TestReaderSystemNotifier()
@@ -1286,7 +1286,7 @@ struct ReaderSidebarDocumentControllerTests {
             },
             makeFolderWatchController: {
                 controllerCreated = true
-                return ReaderFolderWatchController(
+                return FolderWatchController(
                     folderWatcher: TestFolderWatcher(),
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),

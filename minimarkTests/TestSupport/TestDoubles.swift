@@ -786,23 +786,23 @@ func makeTestApplicationBundle(
 }
 
 @MainActor
-final class TestFolderWatchControllerDelegate: ReaderFolderWatchControllerDelegate {
+final class TestFolderWatchControllerDelegate: FolderWatchControllerDelegate {
     var currentDocumentFileURL: URL?
     var openDocumentFileURLs: [URL] = []
     private(set) var handledEvents: [ReaderFolderWatchChangeEvent] = []
     private(set) var selectNewestDocumentCallCount = 0
     private(set) var stateDidChangeCallCount = 0
 
-    func folderWatchControllerCurrentDocumentFileURL(_ controller: ReaderFolderWatchController) -> URL? {
+    func folderWatchControllerCurrentDocumentFileURL(_ controller: FolderWatchController) -> URL? {
         currentDocumentFileURL
     }
 
-    func folderWatchControllerOpenDocumentFileURLs(_ controller: ReaderFolderWatchController) -> [URL] {
+    func folderWatchControllerOpenDocumentFileURLs(_ controller: FolderWatchController) -> [URL] {
         openDocumentFileURLs
     }
 
     func folderWatchController(
-        _ controller: ReaderFolderWatchController,
+        _ controller: FolderWatchController,
         handleEvents events: [ReaderFolderWatchChangeEvent],
         in session: ReaderFolderWatchSession,
         origin: ReaderOpenOrigin
@@ -812,15 +812,15 @@ final class TestFolderWatchControllerDelegate: ReaderFolderWatchControllerDelega
 
     private(set) var liveAutoOpenedURLs: [URL] = []
 
-    func folderWatchController(_ controller: ReaderFolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
+    func folderWatchController(_ controller: FolderWatchController, didLiveAutoOpenFileURLs urls: [URL]) {
         liveAutoOpenedURLs.append(contentsOf: urls)
     }
 
-    func folderWatchControllerShouldSelectNewestDocument(_ controller: ReaderFolderWatchController) {
+    func folderWatchControllerShouldSelectNewestDocument(_ controller: FolderWatchController) {
         selectNewestDocumentCallCount += 1
     }
 
-    func folderWatchControllerStateDidChange(_ controller: ReaderFolderWatchController) {
+    func folderWatchControllerStateDidChange(_ controller: FolderWatchController) {
         stateDidChangeCallCount += 1
     }
 }
@@ -880,7 +880,7 @@ struct ReaderStoreTestFixture {
         store = ReaderStore(
             rendering: ReaderRenderingDependencies(renderer: renderer, differ: differ),
             file: ReaderFileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
-            folderWatch: ReaderFolderWatchDependencies(
+            folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
                 systemNotifier: notifier
@@ -903,7 +903,7 @@ struct ReaderStoreTestFixture {
     var sourceEditing: ReaderSourceEditingController { store.sourceEditingController }
     var externalChange: ReaderExternalChangeController { store.externalChange }
     var tocController: ReaderTOCController { store.toc }
-    var folderWatchDispatcherController: ReaderFolderWatchDispatcher { store.folderWatchDispatcher }
+    var folderWatchDispatcherController: FolderWatchDispatcher { store.folderWatchDispatcher }
 
     func cleanup() {
         try? FileManager.default.removeItem(at: temporaryDirectoryURL)
@@ -958,7 +958,7 @@ struct ReaderSidebarControllerTestHarness {
                     file: ReaderFileDependencies(
                         watcher: fileWatcher, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
-                    folderWatch: ReaderFolderWatchDependencies(
+                    folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
                         systemNotifier: TestReaderSystemNotifier()
@@ -969,7 +969,7 @@ struct ReaderSidebarControllerTestHarness {
                 return store
             },
             makeFolderWatchController: {
-                ReaderFolderWatchController(
+                FolderWatchController(
                     folderWatcher: controllerWatcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),

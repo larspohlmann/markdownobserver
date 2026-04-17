@@ -3,7 +3,7 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderFolderWatchDispatcher {
+final class FolderWatchDispatcher {
     private(set) var activeFolderWatchSession: ReaderFolderWatchSession?
     var lastWatchedFolderEventAt: Date?
     var autoOpenWarning: FolderWatchAutoOpenWarning?
@@ -13,13 +13,13 @@ final class ReaderFolderWatchDispatcher {
     @ObservationIgnored private(set) var onFolderWatchStopped: (() -> Void)?
     @ObservationIgnored private var eventDispatchCoordinator: FolderWatchEventDispatchCoordinator
 
-    let folderWatchDependencies: ReaderFolderWatchDependencies
+    let folderWatchDependencies: FolderWatchDependencies
 
     var isWatchingFolder: Bool {
         activeFolderWatchSession != nil
     }
 
-    init(folderWatchDependencies: ReaderFolderWatchDependencies) {
+    init(folderWatchDependencies: FolderWatchDependencies) {
         self.folderWatchDependencies = folderWatchDependencies
         self.eventDispatchCoordinator = FolderWatchEventDispatchCoordinator()
     }

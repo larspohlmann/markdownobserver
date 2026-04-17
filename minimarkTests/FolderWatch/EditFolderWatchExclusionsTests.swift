@@ -177,7 +177,7 @@ struct EditFolderWatchExclusionsTests {
                     file: ReaderFileDependencies(
                         watcher: fw, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
-                    folderWatch: ReaderFolderWatchDependencies(
+                    folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                         systemNotifier: TestReaderSystemNotifier()
@@ -187,7 +187,7 @@ struct EditFolderWatchExclusionsTests {
                 )
             },
             makeFolderWatchController: {
-                ReaderFolderWatchController(
+                FolderWatchController(
                     folderWatcher: controllerWatcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
@@ -245,7 +245,7 @@ struct EditFolderWatchExclusionsTests {
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-restart.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),

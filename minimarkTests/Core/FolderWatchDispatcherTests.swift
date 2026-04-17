@@ -3,11 +3,11 @@ import Foundation
 @testable import minimark
 
 @MainActor
-@Suite("ReaderFolderWatchDispatcher")
-struct ReaderFolderWatchDispatcherTests {
-    private func makeSUT() -> ReaderFolderWatchDispatcher {
-        ReaderFolderWatchDispatcher(
-            folderWatchDependencies: ReaderFolderWatchDependencies(
+@Suite("FolderWatchDispatcher")
+struct FolderWatchDispatcherTests {
+    private func makeSUT() -> FolderWatchDispatcher {
+        FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
