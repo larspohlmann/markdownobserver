@@ -2,7 +2,6 @@
 import AppKit
 import Foundation
 import Observation
-import SwiftUI
 
 @MainActor
 @Observable
@@ -74,47 +73,6 @@ final class FolderWatchFlowController {
         guard var request = pendingFolderWatchRequest else { return }
         update(&request)
         pendingFolderWatchRequest = request
-    }
-
-    // MARK: - Sheet Bindings
-
-    /// Binding to the pending request's open mode, falling back to the default value when
-    /// no pending request exists. Used by `FolderWatchOptionsSheet`.
-    var pendingOpenModeBinding: Binding<FolderWatchOpenMode> {
-        Binding(
-            get: { [self] in
-                pendingFolderWatchRequest?.options.openMode ?? FolderWatchOptions.default.openMode
-            },
-            set: { [self] newValue in
-                updatePendingRequest { $0.options.openMode = newValue }
-            }
-        )
-    }
-
-    /// Binding to the pending request's scope, falling back to the default value when
-    /// no pending request exists.
-    var pendingScopeBinding: Binding<FolderWatchScope> {
-        Binding(
-            get: { [self] in
-                pendingFolderWatchRequest?.options.scope ?? FolderWatchOptions.default.scope
-            },
-            set: { [self] newValue in
-                updatePendingRequest { $0.options.scope = newValue }
-            }
-        )
-    }
-
-    /// Binding to the pending request's excluded subdirectory paths, falling back to an
-    /// empty array when no pending request exists.
-    var pendingExcludedSubdirectoryPathsBinding: Binding<[String]> {
-        Binding(
-            get: { [self] in
-                pendingFolderWatchRequest?.options.excludedSubdirectoryPaths ?? []
-            },
-            set: { [self] newValue in
-                updatePendingRequest { $0.options.excludedSubdirectoryPaths = newValue }
-            }
-        )
     }
 
     // MARK: - Shared State Sync

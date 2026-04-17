@@ -12,6 +12,33 @@ struct ContentViewFocusedValues: ViewModifier {
     private var sourceEditing: SourceEditingController { documentStore.sourceEditingController }
     private var toc: TOCController { documentStore.toc }
 
+    private var pendingOpenModeBinding: Binding<FolderWatchOpenMode> {
+        Binding(
+            get: { folderWatchFlow.pendingFolderWatchRequest?.options.openMode ?? FolderWatchOptions.default.openMode },
+            set: { newValue in
+                folderWatchFlow.updatePendingRequest { $0.options.openMode = newValue }
+            }
+        )
+    }
+
+    private var pendingScopeBinding: Binding<FolderWatchScope> {
+        Binding(
+            get: { folderWatchFlow.pendingFolderWatchRequest?.options.scope ?? FolderWatchOptions.default.scope },
+            set: { newValue in
+                folderWatchFlow.updatePendingRequest { $0.options.scope = newValue }
+            }
+        )
+    }
+
+    private var pendingExcludedSubdirectoryPathsBinding: Binding<[String]> {
+        Binding(
+            get: { folderWatchFlow.pendingFolderWatchRequest?.options.excludedSubdirectoryPaths ?? [] },
+            set: { newValue in
+                folderWatchFlow.updatePendingRequest { $0.options.excludedSubdirectoryPaths = newValue }
+            }
+        )
+    }
+
     private func openOrAppendDocument(_ fileURL: URL) {
         let strategy: FileOpenRequest.SlotStrategy =
             document.fileURL == nil ? .replaceSelectedSlot : .alwaysAppend
@@ -122,9 +149,9 @@ struct ContentViewFocusedValues: ViewModifier {
             .sheet(isPresented: $folderWatchFlow.isFolderWatchOptionsPresented) {
                 FolderWatchOptionsSheet(
                     folderURL: folderWatchState.pendingFolderWatchURL,
-                    openMode: folderWatchFlow.pendingOpenModeBinding,
-                    scope: folderWatchFlow.pendingScopeBinding,
-                    excludedSubdirectoryPaths: folderWatchFlow.pendingExcludedSubdirectoryPathsBinding,
+                    openMode: pendingOpenModeBinding,
+                    scope: pendingScopeBinding,
+                    excludedSubdirectoryPaths: pendingExcludedSubdirectoryPathsBinding,
                     onCancel: { onAction(.cancelFolderWatch) },
                     onConfirm: { options in onAction(.confirmFolderWatch(options)) }
                 )

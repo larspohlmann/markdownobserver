@@ -15,8 +15,7 @@ struct ContentView: View {
     private var sourceEditing: SourceEditingController { documentStore.sourceEditingController }
 
     var body: some View {
-        @Bindable var toc = toc
-        return baseBody.modifier(ContentViewFocusedValues(
+        baseBody.modifier(ContentViewFocusedValues(
             documentStore: documentStore,
             folderWatchState: folderWatchState,
             onAction: viewModel.onAction,
