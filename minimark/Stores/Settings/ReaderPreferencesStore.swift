@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import Observation
 
-struct ReaderPreferencesSlice: Equatable, Sendable {
+nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
     var appAppearance: AppAppearance
     var readerTheme: ReaderThemeKind
     var syntaxTheme: SyntaxThemeKind
