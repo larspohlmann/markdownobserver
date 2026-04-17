@@ -87,13 +87,13 @@ struct ReaderOverlayInsetCalculatorTests {
         #expect(result.watchPillTrailing == 70)
     }
 
-    @Test func changeNavigationLeadingPaddingMatchesLeadingAlignmentAdjustment() {
+    @Test func emitsChangeNavigationLeadingPadding() {
         let result = ReaderOverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
 
-        #expect(result.changeNavigationLeadingPadding == ReaderOverlayInsetCalculator.leadingOverlayAlignmentAdjustment)
+        #expect(result.changeNavigationLeadingPadding == 8)
     }
 
     @Test func watchPillAndChangeNavInsetsAreConstantAcrossTopBarConfigurations() {

@@ -19,6 +19,7 @@ enum ReaderOverlayInsetCalculator {
     static let watchPillLeadingWithChangeNav: CGFloat = 150
     static let watchPillLeadingWithoutChangeNav: CGFloat = 60
     static let watchPillTrailing: CGFloat = 70
+    static let changeNavigationLeadingPadding: CGFloat = 8
 
     static let scrollLandingGap: CGFloat = {
         if let raw = Bundle.main.object(forInfoDictionaryKey: "ScrollLandingGap") as? String,
@@ -49,7 +50,7 @@ enum ReaderOverlayInsetCalculator {
             watchPillLeadingWithChangeNav: watchPillLeadingWithChangeNav,
             watchPillLeadingWithoutChangeNav: watchPillLeadingWithoutChangeNav,
             watchPillTrailing: watchPillTrailing,
-            changeNavigationLeadingPadding: leadingOverlayAlignmentAdjustment
+            changeNavigationLeadingPadding: changeNavigationLeadingPadding
         )
     }
 }
