@@ -3,18 +3,18 @@ import Foundation
 @testable import minimark
 
 @MainActor
-@Suite("ReaderDocumentController")
+@Suite("DocumentController")
 struct ReaderDocumentControllerTests {
     private func makeSUT(
         io: DocumentIO = DocumentIOService(),
         watcher: FileChangeWatching = TestFileWatcher(),
         fileActions: FileActionHandling = TestReaderFileActions()
-    ) -> ReaderDocumentController {
+    ) -> DocumentController {
         let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
-        return ReaderDocumentController(
+        return DocumentController(
             fileDependencies: FileDependencies(watcher: watcher, io: io, actions: fileActions),
             settingsStore: settings,
-            settler: ReaderAutoOpenSettler(settlingInterval: 1.0)
+            settler: AutoOpenSettler(settlingInterval: 1.0)
         )
     }
 

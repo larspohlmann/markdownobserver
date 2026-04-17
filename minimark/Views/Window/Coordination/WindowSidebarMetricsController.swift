@@ -16,12 +16,12 @@ final class WindowSidebarMetricsController {
     var width: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     @ObservationIgnored private var lastAppliedDelta: CGFloat = 0
 
-    private let sidebarDocumentController: ReaderSidebarDocumentController
+    private let sidebarDocumentController: SidebarDocumentController
     private let favoriteWorkspaceControllerProvider: () -> FavoriteWorkspaceController?
     private let hostWindowProvider: () -> NSWindow?
 
     init(
-        sidebarDocumentController: ReaderSidebarDocumentController,
+        sidebarDocumentController: SidebarDocumentController,
         favoriteWorkspaceControllerProvider: @escaping () -> FavoriteWorkspaceController?,
         hostWindowProvider: @escaping () -> NSWindow?
     ) {

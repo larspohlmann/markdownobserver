@@ -2,11 +2,11 @@ import Foundation
 
 @MainActor
 protocol FileOpenPlanExecutorDelegate: AnyObject {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     var selectedDocumentID: UUID { get set }
-    var selectedReaderStore: ReaderStore { get }
-    var storeConfigurator: ((ReaderStore) -> Void)? { get }
+    var selectedReaderStore: DocumentStore { get }
+    var storeConfigurator: ((DocumentStore) -> Void)? { get }
     func makeDocument() -> Document
     func selectDocument(_ documentID: UUID?)
     func bindSelectedStore()
@@ -18,7 +18,7 @@ protocol FileOpenPlanExecutorDelegate: AnyObject {
 
 @MainActor
 final class FileOpenPlanExecutor {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     private let documentList: SidebarDocumentList
     private let observationManager: SidebarObservationManager
@@ -193,7 +193,7 @@ final class FileOpenPlanExecutor {
         }
     }
 
-    private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
+    private func scheduleLoadWithOverlay(on store: DocumentStore, load: @escaping @MainActor () -> Void) {
         store.document.transitionToLoading()
         Task { @MainActor in
             await Task.yield()

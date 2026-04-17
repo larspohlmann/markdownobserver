@@ -3,7 +3,7 @@ import SwiftUI
 struct FirstUseHintModifier: ViewModifier {
     let hint: FirstUseHint
     let message: String
-    let settingsStore: ReaderSettingsStore
+    let settingsStore: SettingsStore
     let isActive: Bool
 
     @State private var isPresented = false
@@ -53,7 +53,7 @@ extension View {
     func firstUseHint(
         _ hint: FirstUseHint,
         message: String,
-        settingsStore: ReaderSettingsStore,
+        settingsStore: SettingsStore,
         isActive: Bool = true
     ) -> some View {
         modifier(FirstUseHintModifier(hint: hint, message: message, settingsStore: settingsStore, isActive: isActive))

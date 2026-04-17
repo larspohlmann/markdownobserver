@@ -60,7 +60,7 @@ struct FolderWatchControllerScanProgressTests {
     }
 
     @MainActor private func makeController(folderWatcher: TestFolderWatcher) -> FolderWatchController {
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.scan-progress-tests.\(UUID().uuidString)"
         )

@@ -5,8 +5,8 @@ import Testing
 @Suite(.serialized)
 struct SidebarRowStateComputerTests {
     @MainActor
-    private func makeSettingsStore() -> ReaderSettingsStore {
-        ReaderSettingsStore(
+    private func makeSettingsStore() -> SettingsStore {
+        SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "row-state-tests.\(UUID().uuidString)"
         )
@@ -15,9 +15,9 @@ struct SidebarRowStateComputerTests {
     @MainActor
     private func makeDocument(
         id: UUID = UUID(),
-        settingsStore: ReaderSettingsStore
-    ) -> ReaderSidebarDocumentController.Document {
-        let store = ReaderStore(
+        settingsStore: SettingsStore
+    ) -> SidebarDocumentController.Document {
+        let store = DocumentStore(
             rendering: RenderingDependencies(
                 renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
             ),
@@ -26,7 +26,7 @@ struct SidebarRowStateComputerTests {
             ),
             folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                settler: AutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             ),
             settingsStore: settingsStore,
@@ -36,7 +36,7 @@ struct SidebarRowStateComputerTests {
                 requestWatchedFolderReauthorization: { _ in nil }
             )
         )
-        return ReaderSidebarDocumentController.Document(
+        return SidebarDocumentController.Document(
             id: id, readerStore: store, normalizedFileURL: nil
         )
     }

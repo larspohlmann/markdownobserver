@@ -2,24 +2,24 @@ import Foundation
 
 @MainActor
 final class ExternalChangeHandler {
-    private let document: ReaderDocumentController
-    private let sourceEditingController: ReaderSourceEditingController
-    private let externalChange: ReaderExternalChangeController
+    private let document: DocumentController
+    private let sourceEditingController: SourceEditingController
+    private let externalChange: ExternalChangeController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let folderWatch: FolderWatchDependencies
-    private let settingsStore: ReaderSettingsReading
+    private let settingsStore: SettingsReading
     private let diffBaselineTracker: DiffBaselineTracking
     private let fileLoader: MarkdownFileLoader
     private let persister: SourceDraftPersister
     private let reloader: DocumentReloader
 
     init(
-        document: ReaderDocumentController,
-        sourceEditingController: ReaderSourceEditingController,
-        externalChange: ReaderExternalChangeController,
+        document: DocumentController,
+        sourceEditingController: SourceEditingController,
+        externalChange: ExternalChangeController,
         folderWatchDispatcher: FolderWatchDispatcher,
         folderWatch: FolderWatchDependencies,
-        settingsStore: ReaderSettingsReading,
+        settingsStore: SettingsReading,
         diffBaselineTracker: DiffBaselineTracking,
         fileLoader: MarkdownFileLoader,
         persister: SourceDraftPersister,

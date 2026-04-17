@@ -13,12 +13,12 @@ final class ContentAreaViewModel {
         category: "ContentAreaViewModel"
     )
 
-    let document: ReaderDocumentController
-    let rendering: ReaderRenderingController
-    let sourceEditing: ReaderSourceEditingController
-    let externalChange: ReaderExternalChangeController
-    let toc: ReaderTOCController
-    let settingsStore: ReaderSettingsStore
+    let document: DocumentController
+    let rendering: RenderingController
+    let sourceEditing: SourceEditingController
+    let externalChange: ExternalChangeController
+    let toc: TOCController
+    let settingsStore: SettingsStore
     var folderWatchState: ContentViewFolderWatchState
     let surfaceViewModel: DocumentSurfaceViewModel
     @ObservationIgnored var onAction: (ContentViewAction) -> Void
@@ -26,12 +26,12 @@ final class ContentAreaViewModel {
     @ObservationIgnored private let observationCoordinator = ContentAreaObservationCoordinator()
 
     init(
-        document: ReaderDocumentController,
-        rendering: ReaderRenderingController,
-        sourceEditing: ReaderSourceEditingController,
-        externalChange: ReaderExternalChangeController,
-        toc: ReaderTOCController,
-        settingsStore: ReaderSettingsStore,
+        document: DocumentController,
+        rendering: RenderingController,
+        sourceEditing: SourceEditingController,
+        externalChange: ExternalChangeController,
+        toc: TOCController,
+        settingsStore: SettingsStore,
         folderWatchState: ContentViewFolderWatchState,
         surfaceViewModel: DocumentSurfaceViewModel,
         onAction: @escaping (ContentViewAction) -> Void
@@ -58,7 +58,7 @@ final class ContentAreaViewModel {
         onAction = newOnAction
     }
 
-    var statusBarTimestamp: ReaderStatusBarTimestamp? {
+    var statusBarTimestamp: StatusBarTimestamp? {
         if let date = externalChange.lastExternalChangeAt { return .updated(date) }
         if let date = document.fileLastModifiedAt { return .lastModified(date) }
         if let date = rendering.lastRefreshAt { return .updated(date) }

@@ -4,16 +4,16 @@ import OSLog
 
 @MainActor
 @Observable
-final class ReaderDocumentController {
+final class DocumentController {
     static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
-        category: "ReaderDocumentController"
+        category: "DocumentController"
     )
 
     // MARK: - Identity state
     var fileURL: URL?
     var fileDisplayName: String = ""
-    var documentLoadState: ReaderDocumentLoadState = .ready
+    var documentLoadState: DocumentLoadState = .ready
     var isCurrentFileMissing: Bool = false
     var lastError: PresentableError?
     var openInApplications: [ExternalApplication] = []
@@ -36,15 +36,15 @@ final class ReaderDocumentController {
 
     // MARK: - Dependencies
     let fileDependencies: FileDependencies
-    let settingsStore: ReaderSettingsReading
-    let settler: ReaderAutoOpenSettling
+    let settingsStore: SettingsReading
+    let settler: AutoOpenSettling
 
     @ObservationIgnored private var loadingOverlayHoldGeneration: UInt = 0
 
     init(
         fileDependencies: FileDependencies,
-        settingsStore: ReaderSettingsReading,
-        settler: ReaderAutoOpenSettling
+        settingsStore: SettingsReading,
+        settler: AutoOpenSettling
     ) {
         self.fileDependencies = fileDependencies
         self.settingsStore = settingsStore

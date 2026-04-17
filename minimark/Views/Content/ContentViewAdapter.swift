@@ -4,9 +4,9 @@ import SwiftUI
 /// controller, settings store, and appearance controller are tracked only for this view's
 /// body, not for the root or sidebar workspace view.
 struct ContentViewAdapter: View {
-    let readerStore: ReaderStore
-    let sidebarDocumentController: ReaderSidebarDocumentController
-    let settingsStore: ReaderSettingsStore
+    let readerStore: DocumentStore
+    let sidebarDocumentController: SidebarDocumentController
+    let settingsStore: SettingsStore
     let appearanceController: WindowAppearanceController
 
     let sharedFolderWatchSession: FolderWatchSession?
@@ -53,7 +53,7 @@ struct ContentViewAdapter: View {
             pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
         )
         // Remount the host (and its @State viewModel) when the selected
-        // ReaderStore changes; otherwise SwiftUI preserves @State across
+        // DocumentStore changes; otherwise SwiftUI preserves @State across
         // document swaps and the VM keeps the prior store's controllers.
         .id(ObjectIdentifier(readerStore))
     }
@@ -63,8 +63,8 @@ struct ContentViewAdapter: View {
 /// across host-body re-evaluations. Inputs that change per parent eval (`folderWatchState`,
 /// `onAction`) are pushed into the VM via `applyHostInputs` on each body.
 private struct ContentAreaHost: View {
-    let readerStore: ReaderStore
-    let settingsStore: ReaderSettingsStore
+    let readerStore: DocumentStore
+    let settingsStore: SettingsStore
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
 
@@ -76,8 +76,8 @@ private struct ContentAreaHost: View {
     @State private var viewModel: ContentAreaViewModel
 
     init(
-        readerStore: ReaderStore,
-        settingsStore: ReaderSettingsStore,
+        readerStore: DocumentStore,
+        settingsStore: SettingsStore,
         folderWatchState: ContentViewFolderWatchState,
         onAction: @escaping (ContentViewAction) -> Void,
         isFolderWatchOptionsPresented: Binding<Bool>,

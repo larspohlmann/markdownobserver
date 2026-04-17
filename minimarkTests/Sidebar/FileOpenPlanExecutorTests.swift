@@ -8,23 +8,23 @@ struct FileOpenPlanExecutorTests {
 
     final class MockDelegate: FileOpenPlanExecutorDelegate {
         var selectedDocumentID: UUID
-        var selectedReaderStore: ReaderStore
-        var storeConfigurator: ((ReaderStore) -> Void)?
+        var selectedReaderStore: DocumentStore
+        var storeConfigurator: ((DocumentStore) -> Void)?
         var selectDocumentCalls: [UUID?] = []
         var bindSelectedStoreCalled = false
-        var makeDocumentFactory: () -> ReaderSidebarDocumentController.Document
+        var makeDocumentFactory: () -> SidebarDocumentController.Document
 
         init(
             selectedDocumentID: UUID,
-            selectedReaderStore: ReaderStore,
-            makeDocument: @escaping () -> ReaderSidebarDocumentController.Document
+            selectedReaderStore: DocumentStore,
+            makeDocument: @escaping () -> SidebarDocumentController.Document
         ) {
             self.selectedDocumentID = selectedDocumentID
             self.selectedReaderStore = selectedReaderStore
             self.makeDocumentFactory = makeDocument
         }
 
-        func makeDocument() -> ReaderSidebarDocumentController.Document {
+        func makeDocument() -> SidebarDocumentController.Document {
             makeDocumentFactory()
         }
 
@@ -46,14 +46,14 @@ struct FileOpenPlanExecutorTests {
 
     // MARK: - Helpers
 
-    private static func makeStore(settingsStore: ReaderSettingsStore) -> ReaderStore {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+    private static func makeStore(settingsStore: SettingsStore) -> DocumentStore {
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let securityScopeResolver = SecurityScopeResolver(
             securityScope: TestSecurityScopeAccess(),
             settingsStore: settingsStore,
             requestWatchedFolderReauthorization: { _ in nil }
         )
-        return ReaderStore(
+        return DocumentStore(
             rendering: RenderingDependencies(
                 renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
             ),
@@ -74,14 +74,14 @@ struct FileOpenPlanExecutorTests {
         executor: FileOpenPlanExecutor,
         delegate: MockDelegate,
         documentList: SidebarDocumentList,
-        settingsStore: ReaderSettingsStore
+        settingsStore: SettingsStore
     ) {
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "test.\(UUID().uuidString)"
         )
         let initialStore = makeStore(settingsStore: settingsStore)
-        let initialDocument = ReaderSidebarDocumentController.Document(
+        let initialDocument = SidebarDocumentController.Document(
             id: UUID(), readerStore: initialStore, normalizedFileURL: nil
         )
         let documentList = SidebarDocumentList(initialDocument: initialDocument)
@@ -99,7 +99,7 @@ struct FileOpenPlanExecutorTests {
             selectedDocumentID: initialDocument.id,
             selectedReaderStore: initialStore,
             makeDocument: {
-                ReaderSidebarDocumentController.Document(
+                SidebarDocumentController.Document(
                     id: UUID(),
                     readerStore: makeStore(settingsStore: settingsStore),
                     normalizedFileURL: nil
@@ -173,7 +173,7 @@ struct FileOpenPlanExecutorTests {
         // Add a document with a file
         let store = Self.makeStore(settingsStore: settingsStore)
         store.opener.open(at: fileURL, origin: .manual)
-        let doc = ReaderSidebarDocumentController.Document(
+        let doc = SidebarDocumentController.Document(
             id: UUID(), readerStore: store, normalizedFileURL: fileURL
         )
         documentList.append(doc)

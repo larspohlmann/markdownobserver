@@ -6,7 +6,7 @@ import Observation
 final class OpenDocumentPathTracker {
     private(set) var openDocumentPaths: Set<String> = []
 
-    func update(from documents: [ReaderSidebarDocumentController.Document]) {
+    func update(from documents: [SidebarDocumentController.Document]) {
         let paths = Set(documents.compactMap { $0.normalizedFileURL?.path })
         if paths != openDocumentPaths {
             openDocumentPaths = paths

@@ -20,10 +20,10 @@ final class WindowAppearanceController {
     /// Must be `nonisolated(unsafe)` so `deinit` (which is nonisolated) can read it.
     @ObservationIgnored private nonisolated(unsafe) var _isLockedForDeinit = false
 
-    private let settingsStore: ReaderSettingsReading
+    private let settingsStore: SettingsReading
     private var cancellable: AnyCancellable?
 
-    init(settingsStore: ReaderSettingsReading) {
+    init(settingsStore: SettingsReading) {
         self.settingsStore = settingsStore
         let current = settingsStore.currentSettings
         self.effectiveAppearance = LockedAppearance(

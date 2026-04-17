@@ -9,8 +9,8 @@ struct SaveLogFormatter {
     )
 
     let securityScopeResolver: SecurityScopeResolver
-    let document: ReaderDocumentController
-    let sourceEditingController: ReaderSourceEditingController
+    let document: DocumentController
+    let sourceEditingController: SourceEditingController
     let folderWatchDispatcher: FolderWatchDispatcher
 
     func saveContext(for url: URL?) -> String {

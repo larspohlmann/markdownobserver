@@ -204,7 +204,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreAddsFavoriteAndPersists() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
 
         store.addFavoriteWatchedFolder(
@@ -225,7 +225,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreUpdatesFavoriteOpenDocuments() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
 
         store.addFavoriteWatchedFolder(
@@ -251,7 +251,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreRemovesFavorite() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         store.addFavoriteWatchedFolder(
             name: "Docs",
@@ -267,7 +267,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreRenamesFavorite() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         store.addFavoriteWatchedFolder(
             name: "Old",
@@ -283,7 +283,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreClearsFavorites() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         store.addFavoriteWatchedFolder(
             name: "A",
@@ -304,7 +304,7 @@ struct ReaderFavoriteWatchedFolderTests {
     @Test @MainActor func settingsStoreResolvesFavoriteBookmark() {
         let storage = TestSettingsKeyValueStorage()
         let resolvedURL = URL(fileURLWithPath: "/tmp/resolved")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: storage,
             bookmarkResolver: { _ in (resolvedURL, false) },
             bookmarkCreator: { _ in Data([0xAB]) },
@@ -326,7 +326,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreReturnsEntryURLWhenBookmarkIsNil() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         let entry = FavoriteWatchedFolder(
             name: "Test",
@@ -345,7 +345,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func saveFavoriteUsingSessionAndSettingsStoreDirectly() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
@@ -366,7 +366,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func removeFavoriteMatchingSessionByPathAndOptions() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
@@ -393,7 +393,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func isFavoriteCheckMatchesSessionPathAndOptions() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         let session = FolderWatchSession(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
@@ -421,7 +421,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func isFavoriteCheckReturnsFalseForDifferentOptions() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         store.addFavoriteWatchedFolder(
             name: "Docs",
@@ -446,7 +446,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func favoriteSurvivesSettingsRoundTrip() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         store.addFavoriteWatchedFolder(
             name: "My Project",
@@ -462,7 +462,7 @@ struct ReaderFavoriteWatchedFolderTests {
             ]
         )
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let reloadedStore = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         #expect(reloadedStore.currentSettings.favoriteWatchedFolders.count == 1)
         let reloaded = reloadedStore.currentSettings.favoriteWatchedFolders[0]
@@ -643,7 +643,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func settingsStoreReordersFavorites() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
 
         store.addFavoriteWatchedFolder(name: "A", folderURL: URL(fileURLWithPath: "/tmp/a"), options: .default)
         store.addFavoriteWatchedFolder(name: "B", folderURL: URL(fileURLWithPath: "/tmp/b"), options: .default)
@@ -694,7 +694,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func favoriteWithKnownPathsSurvivesRoundTrip() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
         let folderURL = URL(fileURLWithPath: "/tmp/project", isDirectory: true)
 
         store.addFavoriteWatchedFolder(
@@ -715,14 +715,14 @@ struct ReaderFavoriteWatchedFolderTests {
             ]
         )
 
-        let reloaded = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let reloaded = SettingsStore(storage: storage, minimumPersistInterval: 0)
         let entry = reloaded.currentSettings.favoriteWatchedFolders[0]
         #expect(entry.allKnownRelativePaths == ["CHANGELOG.md", "README.md", "notes.md"])
     }
 
     @Test @MainActor func updatingOpenDocumentsGrowsKnownPaths() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
 
         store.addFavoriteWatchedFolder(
@@ -759,7 +759,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test @MainActor func closingFileKeepsItInKnownSetAcrossSyncCycles() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
+        let store = SettingsStore(storage: storage, minimumPersistInterval: 0)
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
 
         store.addFavoriteWatchedFolder(

@@ -5,8 +5,8 @@ import Observation
 @MainActor
 @Observable
 final class ReaderWindowCoordinator {
-    private let settingsStore: ReaderSettingsStore
-    private let sidebarDocumentController: ReaderSidebarDocumentController
+    private let settingsStore: SettingsStore
+    private let sidebarDocumentController: SidebarDocumentController
     private(set) var folderWatchOpen: WindowFolderWatchOpenController!
     private(set) var shell: WindowShellController!
     private(set) var documentOpen: WindowDocumentOpenCoordinator!
@@ -51,8 +51,8 @@ final class ReaderWindowCoordinator {
     }
 
     init(
-        settingsStore: ReaderSettingsStore,
-        sidebarDocumentController: ReaderSidebarDocumentController
+        settingsStore: SettingsStore,
+        sidebarDocumentController: SidebarDocumentController
     ) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController

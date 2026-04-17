@@ -2,17 +2,17 @@ import Foundation
 
 @MainActor
 protocol DocumentCloseCoordinatorDelegate: AnyObject {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     var selectedDocumentID: UUID { get set }
-    var storeConfigurator: ((ReaderStore) -> Void)? { get }
+    var storeConfigurator: ((DocumentStore) -> Void)? { get }
     func makeDocument() -> Document
     func bindSelectedStore()
 }
 
 @MainActor
 final class DocumentCloseCoordinator {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     private let documentList: SidebarDocumentList
     private let observationManager: SidebarObservationManager

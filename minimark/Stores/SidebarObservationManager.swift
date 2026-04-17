@@ -3,7 +3,7 @@ import Observation
 
 @MainActor
 final class SidebarObservationManager {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     private var documentObservationTasks: [UUID: Task<Void, Never>] = [:]
     private var selectedStoreObservationTask: Task<Void, Never>?
@@ -61,7 +61,7 @@ final class SidebarObservationManager {
     }
 
     func bindSelectedStore(
-        _ store: ReaderStore,
+        _ store: DocumentStore,
         onChange: @escaping @MainActor () -> Void
     ) {
         selectedStoreBindingGeneration &+= 1

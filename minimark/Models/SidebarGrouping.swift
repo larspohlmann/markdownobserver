@@ -2,14 +2,14 @@ import Foundation
 
 @MainActor
 enum SidebarGrouping: Equatable {
-    case flat([ReaderSidebarDocumentController.Document])
+    case flat([SidebarDocumentController.Document])
     case grouped([Group])
 
     struct Group: Identifiable, Equatable {
         let id: String
         let displayName: String
         let directoryURL: URL?
-        let documents: [ReaderSidebarDocumentController.Document]
+        let documents: [SidebarDocumentController.Document]
         let indicatorStates: [DocumentIndicatorState]
         let indicatorPulseToken: Int
         let newestModificationDate: Date?
@@ -35,9 +35,9 @@ enum SidebarGrouping: Equatable {
     }
 
     static func group(
-        _ documents: [ReaderSidebarDocumentController.Document],
+        _ documents: [SidebarDocumentController.Document],
         sortMode: SidebarSortMode = .lastChangedNewestFirst,
-        directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]? = nil,
+        directoryOrderSourceDocuments: [SidebarDocumentController.Document]? = nil,
         pinnedGroupIDs: Set<String> = [],
         precomputedIndicatorStates: [String: [DocumentIndicatorState]]? = nil,
         precomputedIndicatorPulseTokens: [String: Int]? = nil
@@ -92,7 +92,7 @@ enum SidebarGrouping: Equatable {
     // MARK: - Internal (exposed for testability)
 
     static func indicators(
-        for documents: [ReaderSidebarDocumentController.Document]
+        for documents: [SidebarDocumentController.Document]
     ) -> [DocumentIndicatorState] {
         let states = documents.map { document in
             DocumentIndicatorState(
@@ -141,13 +141,13 @@ enum SidebarGrouping: Equatable {
     // MARK: - Private
 
     private static func directoryURL(
-        for document: ReaderSidebarDocumentController.Document
+        for document: SidebarDocumentController.Document
     ) -> URL? {
         document.readerStore.document.fileURL?.deletingLastPathComponent()
     }
 
     private static func newestModificationDate(
-        for documents: [ReaderSidebarDocumentController.Document]
+        for documents: [SidebarDocumentController.Document]
     ) -> Date? {
         documents.compactMap { document in
             document.readerStore.document.fileLastModifiedAt
@@ -157,7 +157,7 @@ enum SidebarGrouping: Equatable {
     }
 
     private static func orderedUniqueDirectoryPaths(
-        from documents: [ReaderSidebarDocumentController.Document]
+        from documents: [SidebarDocumentController.Document]
     ) -> [String] {
         var seen: Set<String> = []
         var ordered: [String] = []

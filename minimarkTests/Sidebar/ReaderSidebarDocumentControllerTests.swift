@@ -254,21 +254,21 @@ struct ReaderSidebarDocumentControllerTests {
         try FileManager.default.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directoryURL) }
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.sidebar.real-watch.\(UUID().uuidString)"
         )
-        let controller = ReaderSidebarDocumentController(
+        let controller = SidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
                 {
-                    let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                    let settler = AutoOpenSettler(settlingInterval: 1.0)
                     let securityScopeResolver = SecurityScopeResolver(
                         securityScope: TestSecurityScopeAccess(),
                         settingsStore: settingsStore,
                         requestWatchedFolderReauthorization: { _ in nil }
                     )
-                    return ReaderStore(
+                    return DocumentStore(
                         rendering: RenderingDependencies(
                             renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                         ),
@@ -1251,20 +1251,20 @@ struct ReaderSidebarDocumentControllerTests {
 
     @Test @MainActor func folderWatchControllerIsNotCreatedUntilNeeded() throws {
         var controllerCreated = false
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.lazy-test.\(UUID().uuidString)"
         )
-        let controller = ReaderSidebarDocumentController(
+        let controller = SidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
-                let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                let settler = AutoOpenSettler(settlingInterval: 1.0)
                 let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
                     settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
-                return ReaderStore(
+                return DocumentStore(
                     rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),

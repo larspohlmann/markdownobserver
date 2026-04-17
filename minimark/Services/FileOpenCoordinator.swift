@@ -73,9 +73,9 @@ struct FileOpenPlan {
 
 @MainActor
 final class FileOpenCoordinator {
-    private let controller: ReaderSidebarDocumentController
+    private let controller: SidebarDocumentController
 
-    init(controller: ReaderSidebarDocumentController) {
+    init(controller: SidebarDocumentController) {
         self.controller = controller
     }
 

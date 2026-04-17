@@ -3,7 +3,7 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderSourceEditingController {
+final class SourceEditingController {
     var documentViewMode: ReaderDocumentViewMode = .preview
     var isSourceEditing: Bool = false
     var hasUnsavedDraftChanges: Bool = false

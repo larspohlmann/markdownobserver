@@ -66,9 +66,9 @@ enum ReaderTopBarAction {
 }
 
 struct ReaderTopBar: View {
-    let document: ReaderDocumentController
-    let sourceEditing: ReaderSourceEditingController
-    let statusBarTimestamp: ReaderStatusBarTimestamp?
+    let document: DocumentController
+    let sourceEditing: SourceEditingController
+    let statusBarTimestamp: StatusBarTimestamp?
     let canStopFolderWatch: Bool
     let apps: [ExternalApplication]
     let favoriteWatchedFolders: [FavoriteWatchedFolder]
@@ -85,7 +85,7 @@ struct ReaderTopBar: View {
     @State private var isEditingFavorites = false
 
     var body: some View {
-        let projection = ReaderTopBarStoreProjection(
+        let projection = TopBarStoreProjection(
             document: document,
             sourceEditing: sourceEditing,
             statusBarTimestamp: statusBarTimestamp

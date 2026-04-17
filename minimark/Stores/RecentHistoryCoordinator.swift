@@ -4,10 +4,10 @@ import Observation
 @MainActor
 @Observable
 final class RecentHistoryCoordinator {
-    private let settingsStore: ReaderSettingsStore
+    private let settingsStore: SettingsStore
     private var folderWatchFlowController: FolderWatchFlowController?
 
-    init(settingsStore: ReaderSettingsStore) {
+    init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
     }
 

@@ -4,7 +4,7 @@ struct ChangeNavigationOverlayView: View {
     let state: ChangeNavigationState
     let insets: OverlayInsetValues
     let colorScheme: ColorScheme
-    let settingsStore: ReaderSettingsStore
+    let settingsStore: SettingsStore
     let onNavigate: (ChangedRegionNavigationDirection) -> Void
 
     var body: some View {

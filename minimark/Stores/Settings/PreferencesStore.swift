@@ -16,7 +16,7 @@ nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
     var dismissedHints: Set<FirstUseHint>
 }
 
-@MainActor @Observable final class ReaderPreferencesStore: ReaderThemeWriting, ReaderPreferencesWriting, ReaderHintWriting {
+@MainActor @Observable final class PreferencesStore: ThemeWriting, PreferencesWriting, HintWriting {
     static let minimumFontSize: Double = 10
     static let maximumFontSize: Double = 48
 

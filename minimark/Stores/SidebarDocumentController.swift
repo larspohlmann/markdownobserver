@@ -3,10 +3,10 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderSidebarDocumentController {
+final class SidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
-        let readerStore: ReaderStore
+        let readerStore: DocumentStore
         var normalizedFileURL: URL?
 
         static func == (lhs: Document, rhs: Document) -> Bool {
@@ -32,8 +32,8 @@ final class ReaderSidebarDocumentController {
 
     // MARK: - Dependencies
 
-    private let makeReaderStore: () -> ReaderStore
-    @ObservationIgnored private(set) var storeConfigurator: ((ReaderStore) -> Void)?
+    private let makeReaderStore: () -> DocumentStore
+    @ObservationIgnored private(set) var storeConfigurator: ((DocumentStore) -> Void)?
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
     // MARK: - Forwarding API
@@ -62,12 +62,12 @@ final class ReaderSidebarDocumentController {
     // MARK: - Init
 
     init(
-        settingsStore: ReaderSettingsStore,
-        makeReaderStore: (() -> ReaderStore)? = nil,
+        settingsStore: SettingsStore,
+        makeReaderStore: (() -> DocumentStore)? = nil,
         makeFolderWatchController: (() -> FolderWatchController)? = nil
     ) {
         let resolvedMakeReaderStore = makeReaderStore ?? {
-            let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+            let settler = AutoOpenSettler(settlingInterval: 1.0)
             let securityScopeResolver = SecurityScopeResolver(
                 securityScope: SecurityScopedResourceAccess(),
                 settingsStore: settingsStore,
@@ -80,7 +80,7 @@ final class ReaderSidebarDocumentController {
                     )
                 }
             )
-            let store = ReaderStore(
+            let store = DocumentStore(
                 rendering: RenderingDependencies(
                     renderer: MarkdownRenderingService(),
                     differ: ChangedRegionDiffer()
@@ -146,11 +146,11 @@ final class ReaderSidebarDocumentController {
         documents.first(where: { $0.id == selectedDocumentID })
     }
 
-    var selectedReaderStore: ReaderStore {
+    var selectedReaderStore: DocumentStore {
         selectedDocument?.readerStore ?? documents[0].readerStore
     }
 
-    func setStoreConfigurator(_ configurator: @escaping (ReaderStore) -> Void) {
+    func setStoreConfigurator(_ configurator: @escaping (DocumentStore) -> Void) {
         storeConfigurator = configurator
         for document in documents {
             configurator(document.readerStore)
@@ -258,7 +258,7 @@ final class ReaderSidebarDocumentController {
         Document(id: UUID(), readerStore: makeReaderStore(), normalizedFileURL: nil)
     }
 
-    private func scheduleLoadWithOverlay(on store: ReaderStore, load: @escaping @MainActor () -> Void) {
+    private func scheduleLoadWithOverlay(on store: DocumentStore, load: @escaping @MainActor () -> Void) {
         store.document.transitionToLoading()
         Task { @MainActor in
             await Task.yield()
@@ -285,13 +285,13 @@ final class ReaderSidebarDocumentController {
 
 // MARK: - Delegate conformances
 
-extension ReaderSidebarDocumentController: FolderWatchSessionCoordinatorDelegate {
+extension SidebarDocumentController: FolderWatchSessionCoordinatorDelegate {
     func handleFolderWatchOpenRequest(_ request: FileOpenRequest) {
         fileOpenCoordinator.open(request)
     }
 }
 
-extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {
+extension SidebarDocumentController: FileOpenPlanExecutorDelegate {
     func resolvedFolderWatchSession(
         for fileURL: URL,
         requestedSession: FolderWatchSession?
@@ -303,4 +303,4 @@ extension ReaderSidebarDocumentController: FileOpenPlanExecutorDelegate {
     }
 }
 
-extension ReaderSidebarDocumentController: DocumentCloseCoordinatorDelegate {}
+extension SidebarDocumentController: DocumentCloseCoordinatorDelegate {}

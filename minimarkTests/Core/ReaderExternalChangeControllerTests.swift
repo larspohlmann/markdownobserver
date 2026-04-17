@@ -2,11 +2,11 @@ import Testing
 @testable import minimark
 
 @MainActor
-@Suite("ReaderExternalChangeController")
+@Suite("ExternalChangeController")
 struct ReaderExternalChangeControllerTests {
     @Test("noteObservedExternalChange sets state")
     func noteObservedExternalChangeSetsState() {
-        let sut = ReaderExternalChangeController()
+        let sut = ExternalChangeController()
         sut.noteObservedExternalChange(kind: .modified)
         #expect(sut.hasUnacknowledgedExternalChange)
         #expect(sut.lastExternalChangeAt != nil)
@@ -15,7 +15,7 @@ struct ReaderExternalChangeControllerTests {
 
     @Test("noteObservedExternalChange fires onStateChanged on meaningful change")
     func noteObservedExternalChangeFiresCallback() {
-        let sut = ReaderExternalChangeController()
+        let sut = ExternalChangeController()
         var callbackCount = 0
         sut.onStateChanged = { callbackCount += 1 }
 
@@ -34,7 +34,7 @@ struct ReaderExternalChangeControllerTests {
 
     @Test("clear resets external change state")
     func clearResetsState() {
-        let sut = ReaderExternalChangeController()
+        let sut = ExternalChangeController()
         sut.noteObservedExternalChange(kind: .added)
         sut.clear()
         #expect(!sut.hasUnacknowledgedExternalChange)
@@ -43,7 +43,7 @@ struct ReaderExternalChangeControllerTests {
 
     @Test("clear fires onStateChanged only when unacknowledged")
     func clearFiresCallbackOnlyWhenUnacknowledged() {
-        let sut = ReaderExternalChangeController()
+        let sut = ExternalChangeController()
         var callbackCount = 0
         sut.onStateChanged = { callbackCount += 1 }
 

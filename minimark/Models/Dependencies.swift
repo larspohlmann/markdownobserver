@@ -13,6 +13,6 @@ struct FileDependencies {
 
 struct FolderWatchDependencies {
     let autoOpenPlanner: FolderWatchAutoOpenPlanning
-    let settler: ReaderAutoOpenSettling
+    let settler: AutoOpenSettling
     let systemNotifier: SystemNotifying
 }

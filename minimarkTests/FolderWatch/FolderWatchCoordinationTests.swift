@@ -74,7 +74,7 @@ struct FolderWatchCoordinationTests {
         let watcher = TestFolderWatcher()
         watcher.markdownFilesDelay = 0.35
         watcher.markdownFilesToReturn = [initialFileURL]
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.async-start.\(UUID().uuidString)"
         )
@@ -112,7 +112,7 @@ struct FolderWatchCoordinationTests {
         let watcher = TestFolderWatcher()
         watcher.markdownFilesDelay = 0.25
         watcher.markdownFilesToReturn = [staleFileURL]
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.stale-initial.\(UUID().uuidString)"
         )
@@ -153,7 +153,7 @@ struct FolderWatchCoordinationTests {
         let watcher = TestFolderWatcher()
         watcher.markdownFilesDelay = 0.3
         watcher.markdownFilesToReturn = [initialFileURL]
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress.\(UUID().uuidString)"
         )
@@ -185,7 +185,7 @@ struct FolderWatchCoordinationTests {
         let watcher = TestFolderWatcher()
         watcher.markdownFilesDelay = 0.8
         watcher.markdownFilesToReturn = [folderURL.appendingPathComponent("initial.md")]
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress-stop.\(UUID().uuidString)"
         )
@@ -215,7 +215,7 @@ struct FolderWatchCoordinationTests {
         let folderURL = URL(fileURLWithPath: "/tmp/watched-failure-\(UUID().uuidString)", isDirectory: true)
         let watcher = TestFolderWatcher()
         watcher.markdownFilesError = NSError(domain: "FolderWatchCoordinationTests", code: 77)
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.scan-failure.\(UUID().uuidString)"
         )
@@ -251,7 +251,7 @@ struct FolderWatchCoordinationTests {
         let watcher = TestFolderWatcher()
         watcher.markdownFilesDelay = 0.4
         watcher.markdownFilesToReturn = [firstFolderURL.appendingPathComponent("initial.md")]
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.progress-restart.\(UUID().uuidString)"
         )
@@ -381,7 +381,7 @@ struct FolderWatchCoordinationTests {
         let dispatcher = FolderWatchDispatcher(
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                settler: AutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
         )
@@ -414,7 +414,7 @@ struct FolderWatchCoordinationTests {
         let dispatcher = FolderWatchDispatcher(
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                settler: AutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
         )
@@ -452,7 +452,7 @@ struct FolderWatchCoordinationTests {
         let dispatcher = FolderWatchDispatcher(
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                settler: AutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             )
         )
@@ -768,7 +768,7 @@ struct FolderWatchCoordinationTests {
             watchedFolderURLProvider: { nil }
         )
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.window-local-open.\(UUID().uuidString)"
         )
@@ -814,7 +814,7 @@ struct FolderWatchCoordinationTests {
             watchedFolderURLProvider: { nil }
         )
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.window-local-batch-open.\(UUID().uuidString)"
         )
@@ -888,7 +888,7 @@ struct FolderWatchCoordinationTests {
     @Test @MainActor func folderWatchControllerDoesNotSetWarningForLiveEventsExceedingLimit() async throws {
         let folderURL = URL(fileURLWithPath: "/tmp/watched-\(UUID().uuidString)", isDirectory: true)
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.live-no-warning.\(UUID().uuidString)"
         )
@@ -927,7 +927,7 @@ struct FolderWatchCoordinationTests {
     @Test @MainActor func liveAutoOpenNotifiesDelegateWithAutoOpenedFileURLs() async throws {
         let folderURL = URL(fileURLWithPath: "/tmp/watched-live-indicator", isDirectory: true)
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.folder-watch.live-indicator.\(UUID().uuidString)"
         )

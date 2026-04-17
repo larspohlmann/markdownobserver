@@ -2,19 +2,19 @@ import Testing
 @testable import minimark
 
 @MainActor
-@Suite("ReaderRenderingController")
+@Suite("RenderingController")
 struct ReaderRenderingControllerTests {
     private func makeSUT(
         renderer: MarkdownRendering = TestMarkdownRenderer(),
         differ: ChangedRegionDiffering = TestChangedRegionDiffer()
-    ) -> ReaderRenderingController {
+    ) -> RenderingController {
         let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
         let securityScope = SecurityScopeResolver(
             securityScope: TestSecurityScopeAccess(),
             settingsStore: settings,
             requestWatchedFolderReauthorization: { _ in nil }
         )
-        return ReaderRenderingController(
+        return RenderingController(
             renderingDependencies: RenderingDependencies(renderer: renderer, differ: differ),
             settingsStore: settings,
             securityScopeResolver: securityScope
