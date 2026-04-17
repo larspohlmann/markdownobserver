@@ -63,6 +63,7 @@ struct WindowRootView: View {
         .environment(appearanceController)
         .environment(sidebarDocumentController)
         .environment(folderWatchFlowController)
+        .environment(groupStateController)
     }
 
     private var windowShell: some View {
