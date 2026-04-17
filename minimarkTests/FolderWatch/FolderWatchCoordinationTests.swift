@@ -533,10 +533,10 @@ struct FolderWatchCoordinationTests {
         )
 
         #expect(plan.autoOpenEvents.count == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
-        #expect(plan.autoOpenEvents.map(\ .fileURL) == Array(events.prefix(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
+        #expect(plan.autoOpenEvents.map(\.fileURL) == Array(events.prefix(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\.fileURL))
         #expect(plan.warning?.folderURL == folderURL)
         #expect(plan.warning?.autoOpenedFileCount == FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)
-        #expect(plan.warning?.omittedFileURLs == Array(events.dropFirst(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\ .fileURL))
+        #expect(plan.warning?.omittedFileURLs == Array(events.dropFirst(FolderWatchAutoOpenPolicy.maximumLiveAutoOpenFileCount)).map(\.fileURL))
     }
 
     @Test @MainActor func folderWatchWarningCoordinatorWaitsUntilPresentationIsAllowed() async {
