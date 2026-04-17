@@ -5,7 +5,7 @@ import Testing
 @Suite
 struct ReaderFavoriteWorkspaceStateTests {
     @Test func codableRoundTripPreservesAllFields() throws {
-        let state = ReaderFavoriteWorkspaceState(
+        let state = FavoriteWorkspaceState(
             fileSortMode: .nameAscending,
             groupSortMode: .lastChangedNewestFirst,
             sidebarPosition: .sidebarRight,
@@ -15,7 +15,7 @@ struct ReaderFavoriteWorkspaceStateTests {
         )
 
         let data = try JSONEncoder().encode(state)
-        let decoded = try JSONDecoder().decode(ReaderFavoriteWorkspaceState.self, from: data)
+        let decoded = try JSONDecoder().decode(FavoriteWorkspaceState.self, from: data)
 
         #expect(decoded == state)
         #expect(decoded.fileSortMode == .nameAscending)
@@ -28,7 +28,7 @@ struct ReaderFavoriteWorkspaceStateTests {
     }
 
     @Test func codableRoundTripPreservesManualGroupOrder() throws {
-        let state = ReaderFavoriteWorkspaceState(
+        let state = FavoriteWorkspaceState(
             fileSortMode: .nameAscending,
             groupSortMode: .manualOrder,
             sidebarPosition: .sidebarRight,
@@ -39,7 +39,7 @@ struct ReaderFavoriteWorkspaceStateTests {
         )
 
         let data = try JSONEncoder().encode(state)
-        let decoded = try JSONDecoder().decode(ReaderFavoriteWorkspaceState.self, from: data)
+        let decoded = try JSONDecoder().decode(FavoriteWorkspaceState.self, from: data)
 
         #expect(decoded.manualGroupOrder == ["/path/gamma", "/path/alpha"])
         #expect(decoded.groupSortMode == .manualOrder)
@@ -48,23 +48,23 @@ struct ReaderFavoriteWorkspaceStateTests {
     @Test func defaultFactoryUsesGlobalSettingsAndEmptySets() {
         let settings = ReaderSettings.default
 
-        let state = ReaderFavoriteWorkspaceState.from(
+        let state = FavoriteWorkspaceState.from(
             settings: settings,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
 
         #expect(state.fileSortMode == settings.sidebarSortMode)
         #expect(state.groupSortMode == settings.sidebarGroupSortMode)
         #expect(state.sidebarPosition == settings.multiFileDisplayMode)
-        #expect(state.sidebarWidth == ReaderFavoriteWorkspaceState.defaultSidebarWidth)
+        #expect(state.sidebarWidth == FavoriteWorkspaceState.defaultSidebarWidth)
         #expect(state.pinnedGroupIDs.isEmpty)
         #expect(state.collapsedGroupIDs.isEmpty)
     }
 
     @Test func snapshotCapturesCurrentValues() {
-        let state = ReaderFavoriteWorkspaceState.from(
+        let state = FavoriteWorkspaceState.from(
             settings: ReaderSettings.default,
             pinnedGroupIDs: ["pinned1"],
             collapsedGroupIDs: ["collapsed1", "collapsed2"],
@@ -77,7 +77,7 @@ struct ReaderFavoriteWorkspaceStateTests {
     }
 
     @Test func favoriteWithWorkspaceStateRoundTripsViaReaderSettings() throws {
-        let workspaceState = ReaderFavoriteWorkspaceState(
+        let workspaceState = FavoriteWorkspaceState(
             fileSortMode: .lastChangedOldestFirst,
             groupSortMode: .nameDescending,
             sidebarPosition: .sidebarRight,
@@ -86,7 +86,7 @@ struct ReaderFavoriteWorkspaceStateTests {
             collapsedGroupIDs: ["dir3"]
         )
 
-        let favorite = ReaderFavoriteWatchedFolder(
+        let favorite = FavoriteWatchedFolder(
             name: "Integration Test",
             folderPath: "/tmp/integration",
             options: FolderWatchOptions(
@@ -131,7 +131,7 @@ struct ReaderFavoriteWorkspaceStateTests {
                 settings: .default,
                 pinnedGroupIDs: [],
                 collapsedGroupIDs: [],
-                sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+                sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
             )
         )
 
@@ -165,7 +165,7 @@ struct ReaderFavoriteWorkspaceStateTests {
         settings.sidebarGroupSortMode = .nameDescending
         settings.multiFileDisplayMode = .sidebarRight
 
-        let favorite = ReaderFavoriteWatchedFolder(
+        let favorite = FavoriteWatchedFolder(
             name: "Legacy",
             folderPath: "/tmp/legacy",
             options: FolderWatchOptions(

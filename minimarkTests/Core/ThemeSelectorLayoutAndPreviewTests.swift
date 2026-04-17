@@ -12,7 +12,7 @@ struct ThemeSelectorLayoutAndPreviewTests {
 
     @Test
     func previewReaderTextExamplesIncludeKeyReaderColors() {
-        let readerSamples = ThemePreviewReaderTextExamples.reader(theme: ReaderTheme.theme(for: .monokai))
+        let readerSamples = ThemePreviewReaderTextExamples.reader(theme: Theme.theme(for: .monokai))
 
         #expect(readerSamples.count == 4)
         #expect(readerSamples.contains(where: { $0.role == .body && $0.hex == "#F8F8F2" }))

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
+func appIconImage(for app: ExternalApplication) -> NSImage? {
     let iconPath: String
     if let bundleIdentifier = app.bundleIdentifier,
        let installedURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
@@ -23,15 +23,15 @@ func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
 
 enum OpenInMenuAction {
     case openFiles([URL])
-    case openInApp(ReaderExternalApplication)
+    case openInApp(ExternalApplication)
     case revealInFinder
     case requestFolderWatch(URL)
     case stopFolderWatch
-    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
+    case startFavoriteWatch(FavoriteWatchedFolder)
     case clearFavoriteWatchedFolders
     case editFavoriteWatchedFolders
-    case startRecentManuallyOpenedFile(ReaderRecentOpenedFile)
-    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case startRecentManuallyOpenedFile(RecentOpenedFile)
+    case startRecentFolderWatch(RecentWatchedFolder)
     case clearRecentWatchedFolders
     case clearRecentManuallyOpenedFiles
 }
@@ -39,11 +39,11 @@ enum OpenInMenuAction {
 struct OpenInMenuButton: NSViewRepresentable {
     let hasFile: Bool
     let hasActiveFolderWatch: Bool
-    let apps: [ReaderExternalApplication]
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let iconProvider: (ReaderExternalApplication) -> NSImage?
+    let apps: [ExternalApplication]
+    let favoriteWatchedFolders: [FavoriteWatchedFolder]
+    let recentWatchedFolders: [RecentWatchedFolder]
+    let recentManuallyOpenedFiles: [RecentOpenedFile]
+    let iconProvider: (ExternalApplication) -> NSImage?
     let onAction: (OpenInMenuAction) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -88,7 +88,7 @@ struct OpenInMenuButton: NSViewRepresentable {
 
     final class Coordinator: NSObject {
         var parent: OpenInMenuButton
-        var appByID: [String: ReaderExternalApplication] = [:]
+        var appByID: [String: ExternalApplication] = [:]
         weak var button: NSButton?
 
         init(parent: OpenInMenuButton) {

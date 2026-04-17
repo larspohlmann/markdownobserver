@@ -9,7 +9,7 @@ struct ContentEmptyStateView: View {
     }
 
     let variant: Variant
-    let theme: ReaderTheme
+    let theme: Theme
 
     private var watchTintColor: Color {
         WatchActiveColor.color(for: colorScheme)

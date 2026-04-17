@@ -50,7 +50,7 @@ final class SidebarDocumentActionRouter {
         sidebarDocumentController.openDocumentsInApplication(nil, documentIDs: documentIDs)
     }
 
-    func openDocumentsInApplication(_ application: ReaderExternalApplication, _ documentIDs: Set<UUID>) {
+    func openDocumentsInApplication(_ application: ExternalApplication, _ documentIDs: Set<UUID>) {
         sidebarDocumentController.openDocumentsInApplication(application, documentIDs: documentIDs)
     }
 
@@ -64,7 +64,7 @@ final class SidebarDocumentActionRouter {
         }
     }
 
-    func toggleSidebarPlacement(currentMultiFileDisplayMode: ReaderMultiFileDisplayMode) {
+    func toggleSidebarPlacement(currentMultiFileDisplayMode: MultiFileDisplayMode) {
         if let favoriteController = favoriteWorkspaceControllerProvider(),
            let current = favoriteController.activeFavoriteWorkspaceState?.sidebarPosition {
             favoriteController.updateSidebarPosition(current.toggledSidebarPlacementMode)

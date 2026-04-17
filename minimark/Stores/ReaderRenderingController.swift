@@ -14,12 +14,12 @@ final class ReaderRenderingController {
     @ObservationIgnored var appearanceOverride: LockedAppearance?
     @ObservationIgnored var pendingDraftPreviewRenderTask: Task<Void, Never>?
 
-    private let renderingDependencies: ReaderRenderingDependencies
+    private let renderingDependencies: RenderingDependencies
     private let settingsStore: ReaderSettingsReading
     private let securityScopeResolver: SecurityScopeResolver
 
     init(
-        renderingDependencies: ReaderRenderingDependencies,
+        renderingDependencies: RenderingDependencies,
         settingsStore: ReaderSettingsReading,
         securityScopeResolver: SecurityScopeResolver
     ) {

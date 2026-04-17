@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated struct ReaderRecentWatchedFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
+nonisolated struct RecentWatchedFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
     static let maximumCount = 15
 
     let folderPath: String

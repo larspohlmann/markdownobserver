@@ -12,13 +12,13 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     var controller: ReaderSidebarDocumentController
     var settingsStore: ReaderSettingsStore
     var groupState: SidebarGroupStateController
-    let sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement
+    let sidebarPlacement: MultiFileDisplayMode.SidebarPlacement
     let sidebarWidth: CGFloat
     let onSidebarWidthChanged: (CGFloat) -> Void
     let detail: (ReaderStore) -> Detail
     let onToggleSidebarPlacement: () -> Void
     let onOpenInDefaultApp: (Set<UUID>) -> Void
-    let onOpenInApplication: (ReaderExternalApplication, Set<UUID>) -> Void
+    let onOpenInApplication: (ExternalApplication, Set<UUID>) -> Void
     let onRevealInFinder: (Set<UUID>) -> Void
     let onStopWatchingFolders: (Set<UUID>) -> Void
     let onCloseDocuments: (Set<UUID>) -> Void
@@ -211,7 +211,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var sidebarGroupSortMenu: some View {
         Menu {
-            ForEach(ReaderSidebarSortMode.availableCases(hasManualOrder: groupState.manualGroupOrder != nil), id: \.self) { mode in
+            ForEach(SidebarSortMode.availableCases(hasManualOrder: groupState.manualGroupOrder != nil), id: \.self) { mode in
                 Button {
                     groupState.sortMode = mode
                 } label: {
@@ -248,7 +248,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
     private var sidebarFileSortMenu: some View {
         Menu {
-            ForEach(ReaderSidebarSortMode.allCases, id: \.self) { mode in
+            ForEach(SidebarSortMode.allCases, id: \.self) { mode in
                 Button {
                     groupState.fileSortMode = mode
                 } label: {
@@ -301,7 +301,7 @@ private struct ReaderSidebarDocumentRow: View {
     let showsSelectionBackground: Bool
     let canClose: Bool
     let onOpenInDefaultApp: (Set<UUID>) -> Void
-    let onOpenInApplication: (ReaderExternalApplication, Set<UUID>) -> Void
+    let onOpenInApplication: (ExternalApplication, Set<UUID>) -> Void
     let onRevealInFinder: (Set<UUID>) -> Void
     let onStopWatchingFolders: (Set<UUID>) -> Void
     let onClose: (Set<UUID>) -> Void
@@ -324,7 +324,7 @@ private struct ReaderSidebarDocumentRow: View {
         effectiveDocuments.map(\.readerStore)
     }
 
-    private var effectiveOpenInApplications: [ReaderExternalApplication] {
+    private var effectiveOpenInApplications: [ExternalApplication] {
         guard let firstReaderStore = effectiveReaderStores.first(where: { $0.document.fileURL != nil }) else {
             return []
         }
@@ -722,7 +722,7 @@ private struct SidebarGroupListContent: View {
     let watchedDocumentIDs: Set<UUID>
     let onUpdateSelection: (Set<UUID>) -> Void
     let onOpenInDefaultApp: (Set<UUID>) -> Void
-    let onOpenInApplication: (ReaderExternalApplication, Set<UUID>) -> Void
+    let onOpenInApplication: (ExternalApplication, Set<UUID>) -> Void
     let onRevealInFinder: (Set<UUID>) -> Void
     let onStopWatchingFolders: (Set<UUID>) -> Void
     let onCloseDocuments: (Set<UUID>) -> Void
@@ -763,7 +763,7 @@ private struct SidebarGroupListContent: View {
 
     @ViewBuilder
     private func groupedSidebarList(
-        groups: [ReaderSidebarGrouping.Group]
+        groups: [SidebarGrouping.Group]
     ) -> some View {
         let dragSourceIndex = draggedGroupID.flatMap { id in
             groups.firstIndex { $0.id == id }
@@ -791,7 +791,7 @@ private struct SidebarGroupListContent: View {
     }
 
     private func groupedSection(
-        for group: ReaderSidebarGrouping.Group,
+        for group: SidebarGrouping.Group,
         at index: Int
     ) -> some View {
         let isExpanded = groupState.isGroupExpanded(group.id)
@@ -872,7 +872,7 @@ private struct SidebarGroupListContent: View {
         }
     }
 
-    private func handleDragEnd(_ value: DragGesture.Value, groups grouping: ReaderSidebarGrouping) {
+    private func handleDragEnd(_ value: DragGesture.Value, groups grouping: SidebarGrouping) {
         guard let draggedID = draggedGroupID,
               case .grouped(let groups) = grouping,
               let sourceIndex = groups.firstIndex(where: { $0.id == draggedID }),
@@ -908,7 +908,7 @@ private struct SidebarGroupListContent: View {
         }
     }
 
-    private func targetIndexFromGlobalY(_ globalY: CGFloat, groups: [ReaderSidebarGrouping.Group]) -> Int {
+    private func targetIndexFromGlobalY(_ globalY: CGFloat, groups: [SidebarGrouping.Group]) -> Int {
         for (index, group) in groups.enumerated() {
             if group.id == draggedGroupID { continue }
             guard let frame = groupFrameCache.frames[group.id] else { continue }

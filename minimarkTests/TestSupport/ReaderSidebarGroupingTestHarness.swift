@@ -34,10 +34,10 @@ struct ReaderSidebarGroupingTestHarness {
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
                 let store = ReaderStore(
-                    rendering: ReaderRenderingDependencies(
+                    rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
-                    file: ReaderFileDependencies(
+                    file: FileDependencies(
                         watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(

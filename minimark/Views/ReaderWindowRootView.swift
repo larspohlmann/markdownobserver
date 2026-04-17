@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 
 struct ReaderWindowRootView: View {
-    let seed: ReaderWindowSeed?
+    let seed: WindowSeed?
     var settingsStore: ReaderSettingsStore
-    let multiFileDisplayMode: ReaderMultiFileDisplayMode
+    let multiFileDisplayMode: MultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
     @State var sidebarDocumentController: ReaderSidebarDocumentController
@@ -17,9 +17,9 @@ struct ReaderWindowRootView: View {
     @State var uiTestLaunchCoordinator = UITestLaunchCoordinator()
 
     init(
-        seed: ReaderWindowSeed?,
+        seed: WindowSeed?,
         settingsStore: ReaderSettingsStore,
-        multiFileDisplayMode: ReaderMultiFileDisplayMode
+        multiFileDisplayMode: MultiFileDisplayMode
     ) {
         self.seed = seed
         self.settingsStore = settingsStore
@@ -46,7 +46,7 @@ struct ReaderWindowRootView: View {
         )
     }
 
-    private var sidebarPlacement: ReaderMultiFileDisplayMode.SidebarPlacement {
+    private var sidebarPlacement: MultiFileDisplayMode.SidebarPlacement {
         let effectiveMode = favoriteWorkspaceController.activeFavoriteWorkspaceState?.sidebarPosition ?? multiFileDisplayMode
         return effectiveMode.sidebarPlacement
     }
@@ -99,7 +99,7 @@ struct ReaderWindowRootView: View {
     }
 
     private var windowShell: some View {
-        let theme = ReaderTheme.theme(for: settingsStore.currentSettings.readerTheme)
+        let theme = Theme.theme(for: settingsStore.currentSettings.readerTheme)
         return ZStack {
             Rectangle()
                 .fill(Color(hex: theme.backgroundHex) ?? .clear)

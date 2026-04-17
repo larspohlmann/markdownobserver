@@ -326,7 +326,7 @@ final class FolderWatchController {
     private func dispatchOpenEvents(
         _ events: [FolderWatchChangeEvent],
         session: FolderWatchSession,
-        origin: ReaderOpenOrigin
+        origin: OpenOrigin
     ) {
         guard !events.isEmpty else {
             return

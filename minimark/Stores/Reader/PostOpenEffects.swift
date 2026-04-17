@@ -30,7 +30,7 @@ final class PostOpenEffects {
     func apply(
         accessibleURL: URL,
         normalizedURL: URL,
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String
     ) {
@@ -76,7 +76,7 @@ final class PostOpenEffects {
         }
     }
 
-    private func recordRecentManualOpenIfNeeded(_ accessibleURL: URL, origin: ReaderOpenOrigin) {
+    private func recordRecentManualOpenIfNeeded(_ accessibleURL: URL, origin: OpenOrigin) {
         guard origin == .manual else {
             return
         }
@@ -85,7 +85,7 @@ final class PostOpenEffects {
 
     private func notifyAutoLoadedFileIfNeeded(
         _ normalizedURL: URL,
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         initialDiffBaselineMarkdown: String?
     ) {
         guard origin.shouldNotifyFileAutoLoaded,

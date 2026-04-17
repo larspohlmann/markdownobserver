@@ -3,21 +3,21 @@ import Combine
 import Observation
 
 @MainActor @Observable final class RecentWatchedFoldersStore: ReaderRecentWatchedFolderWriting {
-    private(set) var currentRecentWatchedFolders: [ReaderRecentWatchedFolder]
+    private(set) var currentRecentWatchedFolders: [RecentWatchedFolder]
 
     weak var coordinator: ChildStoreCoordinating?
 
     @ObservationIgnored
-    private let subject: CurrentValueSubject<[ReaderRecentWatchedFolder], Never>
+    private let subject: CurrentValueSubject<[RecentWatchedFolder], Never>
 
     @ObservationIgnored
     private let bookmarkRefreshing: BookmarkRefreshing
 
-    var recentWatchedFoldersPublisher: AnyPublisher<[ReaderRecentWatchedFolder], Never> {
+    var recentWatchedFoldersPublisher: AnyPublisher<[RecentWatchedFolder], Never> {
         subject.eraseToAnyPublisher()
     }
 
-    init(initial: [ReaderRecentWatchedFolder], bookmarkRefreshing: BookmarkRefreshing) {
+    init(initial: [RecentWatchedFolder], bookmarkRefreshing: BookmarkRefreshing) {
         self.currentRecentWatchedFolders = initial
         self.subject = CurrentValueSubject(initial)
         self.bookmarkRefreshing = bookmarkRefreshing
@@ -64,7 +64,7 @@ import Observation
             guard let index = entries.firstIndex(where: { $0.folderPath == folderPath }) else { return }
             let existing = entries[index]
             guard existing.bookmarkData != bookmarkData else { return }
-            entries[index] = ReaderRecentWatchedFolder(
+            entries[index] = RecentWatchedFolder(
                 folderPath: existing.folderPath,
                 options: existing.options,
                 bookmarkData: bookmarkData
@@ -74,7 +74,7 @@ import Observation
 
     private func mutate(
         coalescePersistence: Bool,
-        _ transform: (inout [ReaderRecentWatchedFolder]) -> Void
+        _ transform: (inout [RecentWatchedFolder]) -> Void
     ) {
         var updated = currentRecentWatchedFolders
         transform(&updated)

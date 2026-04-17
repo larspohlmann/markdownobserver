@@ -269,10 +269,10 @@ struct ReaderSidebarDocumentControllerTests {
                         requestWatchedFolderReauthorization: { _ in nil }
                     )
                     return ReaderStore(
-                        rendering: ReaderRenderingDependencies(
+                        rendering: RenderingDependencies(
                             renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                         ),
-                        file: ReaderFileDependencies(
+                        file: FileDependencies(
                             watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                         ),
                         folderWatch: FolderWatchDependencies(
@@ -329,7 +329,7 @@ struct ReaderSidebarDocumentControllerTests {
         let nestedFileURL = nestedDirectoryURL.appendingPathComponent("nested.md")
         try "# Nested".write(to: nestedFileURL, atomically: true, encoding: .utf8)
 
-        let favoriteEntry = ReaderFavoriteWatchedFolder(
+        let favoriteEntry = FavoriteWatchedFolder(
             name: "Docs",
             folderURL: harness.temporaryDirectoryURL,
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -1265,10 +1265,10 @@ struct ReaderSidebarDocumentControllerTests {
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
                 return ReaderStore(
-                    rendering: ReaderRenderingDependencies(
+                    rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
-                    file: ReaderFileDependencies(
+                    file: FileDependencies(
                         watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(

@@ -22,26 +22,26 @@ nonisolated enum ReaderRecentHistory {
 
     static func insertingUniqueFile(
         _ fileURL: URL,
-        into existingEntries: [ReaderRecentOpenedFile]
-    ) -> [ReaderRecentOpenedFile] {
-        let newEntry = ReaderRecentOpenedFile(fileURL: fileURL)
+        into existingEntries: [RecentOpenedFile]
+    ) -> [RecentOpenedFile] {
+        let newEntry = RecentOpenedFile(fileURL: fileURL)
         let deduplicated = existingEntries.filter { $0.filePath != newEntry.filePath }
-        return Array(([newEntry] + deduplicated).prefix(ReaderRecentOpenedFile.maximumCount))
+        return Array(([newEntry] + deduplicated).prefix(RecentOpenedFile.maximumCount))
     }
 
     static func insertingUniqueWatchedFolder(
         _ folderURL: URL,
         options: FolderWatchOptions,
-        into existingEntries: [ReaderRecentWatchedFolder]
-    ) -> [ReaderRecentWatchedFolder] {
-        let newEntry = ReaderRecentWatchedFolder(folderURL: folderURL, options: options)
+        into existingEntries: [RecentWatchedFolder]
+    ) -> [RecentWatchedFolder] {
+        let newEntry = RecentWatchedFolder(folderURL: folderURL, options: options)
         let deduplicated = existingEntries.filter { $0.folderPath != newEntry.folderPath }
-        return Array(([newEntry] + deduplicated).prefix(ReaderRecentWatchedFolder.maximumCount))
+        return Array(([newEntry] + deduplicated).prefix(RecentWatchedFolder.maximumCount))
     }
 
     static func menuTitle(
-        for entry: ReaderRecentOpenedFile,
-        among entries: [ReaderRecentOpenedFile]
+        for entry: RecentOpenedFile,
+        among entries: [RecentOpenedFile]
     ) -> String {
         menuTitle(
             for: entry,
@@ -51,13 +51,13 @@ nonisolated enum ReaderRecentHistory {
         )
     }
 
-    static func menuTitles(for entries: [ReaderRecentOpenedFile]) -> [String: String] {
+    static func menuTitles(for entries: [RecentOpenedFile]) -> [String: String] {
         menuTitles(for: entries, keyPath: \.filePath, displayName: \.displayName, pathText: \.pathText)
     }
 
     static func menuTitle(
-        for entry: ReaderRecentWatchedFolder,
-        among entries: [ReaderRecentWatchedFolder]
+        for entry: RecentWatchedFolder,
+        among entries: [RecentWatchedFolder]
     ) -> String {
         let baseTitle = menuTitle(
             for: entry,
@@ -75,7 +75,7 @@ nonisolated enum ReaderRecentHistory {
         return "\(baseTitle) [\(excludedCount) filtered \(noun)]"
     }
 
-    static func menuTitles(for entries: [ReaderRecentWatchedFolder]) -> [String: String] {
+    static func menuTitles(for entries: [RecentWatchedFolder]) -> [String: String] {
         let baseTitlesByPath = menuTitles(
             for: entries,
             keyPath: \.folderPath,

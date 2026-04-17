@@ -218,7 +218,7 @@ struct SidebarGroupStateControllerTests {
     @Test @MainActor func applyWorkspaceStateRestoresAllGroupState() throws {
         let controller = SidebarGroupStateController()
 
-        let state = ReaderFavoriteWorkspaceState(
+        let state = FavoriteWorkspaceState(
             fileSortMode: .nameAscending,
             groupSortMode: .nameDescending,
             sidebarPosition: .sidebarLeft,

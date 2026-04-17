@@ -10,7 +10,7 @@ import Testing
 struct SourceHTMLDocumentCacheTests {
 
     private static func makeSettings(
-        readerTheme: ReaderThemeKind = .blackOnWhite,
+        readerTheme: ThemeKind = .blackOnWhite,
         baseFontSize: Double = 15
     ) -> ReaderSettings {
         ReaderSettings(

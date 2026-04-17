@@ -1,6 +1,6 @@
 import Foundation
 
-struct ReaderPresentableError: Equatable, Sendable {
+struct PresentableError: Equatable, Sendable {
     enum Kind: Equatable, Sendable {
         case fileRead
         case fileWrite

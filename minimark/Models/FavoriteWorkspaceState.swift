@@ -1,11 +1,11 @@
 import Foundation
 
-nonisolated struct ReaderFavoriteWorkspaceState: Equatable, Hashable, Codable, Sendable {
+nonisolated struct FavoriteWorkspaceState: Equatable, Hashable, Codable, Sendable {
     static let defaultSidebarWidth: CGFloat = 250
 
-    var fileSortMode: ReaderSidebarSortMode
-    var groupSortMode: ReaderSidebarSortMode
-    var sidebarPosition: ReaderMultiFileDisplayMode
+    var fileSortMode: SidebarSortMode
+    var groupSortMode: SidebarSortMode
+    var sidebarPosition: MultiFileDisplayMode
     var sidebarWidth: CGFloat
     var pinnedGroupIDs: Set<String>
     var collapsedGroupIDs: Set<String>
@@ -24,9 +24,9 @@ nonisolated struct ReaderFavoriteWorkspaceState: Equatable, Hashable, Codable, S
     }
 
     init(
-        fileSortMode: ReaderSidebarSortMode,
-        groupSortMode: ReaderSidebarSortMode,
-        sidebarPosition: ReaderMultiFileDisplayMode,
+        fileSortMode: SidebarSortMode,
+        groupSortMode: SidebarSortMode,
+        sidebarPosition: MultiFileDisplayMode,
         sidebarWidth: CGFloat,
         pinnedGroupIDs: Set<String>,
         collapsedGroupIDs: Set<String>,
@@ -45,9 +45,9 @@ nonisolated struct ReaderFavoriteWorkspaceState: Equatable, Hashable, Codable, S
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        fileSortMode = try container.decode(ReaderSidebarSortMode.self, forKey: .fileSortMode)
-        groupSortMode = try container.decode(ReaderSidebarSortMode.self, forKey: .groupSortMode)
-        sidebarPosition = try container.decode(ReaderMultiFileDisplayMode.self, forKey: .sidebarPosition)
+        fileSortMode = try container.decode(SidebarSortMode.self, forKey: .fileSortMode)
+        groupSortMode = try container.decode(SidebarSortMode.self, forKey: .groupSortMode)
+        sidebarPosition = try container.decode(MultiFileDisplayMode.self, forKey: .sidebarPosition)
         sidebarWidth = try container.decode(CGFloat.self, forKey: .sidebarWidth)
         pinnedGroupIDs = try container.decode(Set<String>.self, forKey: .pinnedGroupIDs)
         collapsedGroupIDs = try container.decode(Set<String>.self, forKey: .collapsedGroupIDs)
@@ -60,8 +60,8 @@ nonisolated struct ReaderFavoriteWorkspaceState: Equatable, Hashable, Codable, S
         pinnedGroupIDs: Set<String>,
         collapsedGroupIDs: Set<String>,
         sidebarWidth: CGFloat
-    ) -> ReaderFavoriteWorkspaceState {
-        ReaderFavoriteWorkspaceState(
+    ) -> FavoriteWorkspaceState {
+        FavoriteWorkspaceState(
             fileSortMode: settings.sidebarSortMode,
             groupSortMode: settings.sidebarGroupSortMode,
             sidebarPosition: settings.multiFileDisplayMode,

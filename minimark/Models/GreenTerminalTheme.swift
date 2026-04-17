@@ -3,8 +3,8 @@ import Foundation
 enum GreenTerminalTheme {
     static let definition = ThemeDefinition(
         kind: .greenTerminal,
-        displayName: ReaderThemeKind.greenTerminal.displayName,
-        colors: ReaderTheme.theme(for: .greenTerminal),
+        displayName: ThemeKind.greenTerminal.displayName,
+        colors: Theme.theme(for: .greenTerminal),
         customCSS: customCSS,
         customJavaScript: digitalRainJavaScript,
         providesSyntaxHighlighting: true,
@@ -14,8 +14,8 @@ enum GreenTerminalTheme {
 
     static let staticDefinition = ThemeDefinition(
         kind: .greenTerminalStatic,
-        displayName: ReaderThemeKind.greenTerminalStatic.displayName,
-        colors: ReaderTheme.theme(for: .greenTerminalStatic),
+        displayName: ThemeKind.greenTerminalStatic.displayName,
+        colors: Theme.theme(for: .greenTerminalStatic),
         customCSS: customCSS,
         customJavaScript: nil,
         providesSyntaxHighlighting: true,

@@ -15,9 +15,9 @@ final class ReaderDocumentController {
     var fileDisplayName: String = ""
     var documentLoadState: ReaderDocumentLoadState = .ready
     var isCurrentFileMissing: Bool = false
-    var lastError: ReaderPresentableError?
-    var openInApplications: [ReaderExternalApplication] = []
-    var currentOpenOrigin: ReaderOpenOrigin = .manual
+    var lastError: PresentableError?
+    var openInApplications: [ExternalApplication] = []
+    var currentOpenOrigin: OpenOrigin = .manual
 
     // MARK: - Content state
     var sourceMarkdown: String = ""
@@ -35,14 +35,14 @@ final class ReaderDocumentController {
     }
 
     // MARK: - Dependencies
-    let fileDependencies: ReaderFileDependencies
+    let fileDependencies: FileDependencies
     let settingsStore: ReaderSettingsReading
     let settler: ReaderAutoOpenSettling
 
     @ObservationIgnored private var loadingOverlayHoldGeneration: UInt = 0
 
     init(
-        fileDependencies: ReaderFileDependencies,
+        fileDependencies: FileDependencies,
         settingsStore: ReaderSettingsReading,
         settler: ReaderAutoOpenSettling
     ) {
@@ -75,7 +75,7 @@ final class ReaderDocumentController {
         self.fileLastModifiedAt = nil
         self.openInApplications = []
         self.isCurrentFileMissing = true
-        self.lastError = ReaderPresentableError(from: error)
+        self.lastError = PresentableError(from: error)
         settler.clearSettling()
     }
 
@@ -97,7 +97,7 @@ final class ReaderDocumentController {
 
     func deferFile(
         at url: URL,
-        origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen
+        origin: OpenOrigin = .folderWatchInitialBatchAutoOpen
     ) {
         let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
         fileURL = normalizedURL
@@ -149,7 +149,7 @@ final class ReaderDocumentController {
         }
     }
 
-    func openInApplication(_ application: ReaderExternalApplication?) {
+    func openInApplication(_ application: ExternalApplication?) {
         guard let fileURL else {
             handle(ReaderError.noOpenFileInReader)
             return
@@ -182,7 +182,7 @@ final class ReaderDocumentController {
     // MARK: - Error handling
 
     func handle(_ error: Error) {
-        lastError = ReaderPresentableError(from: error)
+        lastError = PresentableError(from: error)
     }
 
     func clearLastError() {

@@ -7,9 +7,9 @@ struct ContentViewFolderWatchState: Equatable {
     let canStopFolderWatch: Bool
     let pendingFolderWatchURL: URL?
     let isCurrentWatchAFavorite: Bool
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
+    let favoriteWatchedFolders: [FavoriteWatchedFolder]
+    let recentWatchedFolders: [RecentWatchedFolder]
+    let recentManuallyOpenedFiles: [RecentOpenedFile]
     let isAppearanceLocked: Bool
-    let effectiveReaderTheme: ReaderThemeKind
+    let effectiveReaderTheme: ThemeKind
 }

@@ -32,7 +32,7 @@ final class WindowFolderWatchSessionFlow {
         self.refreshWindowPresentation = refreshWindowPresentation
     }
 
-    func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
+    func startFavoriteWatch(_ entry: FavoriteWatchedFolder) {
         guard let favoriteWorkspaceController = favoriteWorkspaceControllerProvider() else { return }
         sidebarMetrics.width = favoriteWorkspaceController.startFavoriteWatch(entry)
         refreshWindowPresentation()

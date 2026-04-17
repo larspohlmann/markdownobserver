@@ -5,14 +5,14 @@ struct FolderWatchOpenBatch: Equatable, Sendable {
     let fileURLs: [URL]
     let initialDiffBaselineMarkdownByURL: [URL: String]
     let folderWatchSession: FolderWatchSession?
-    let openOrigin: ReaderOpenOrigin
+    let openOrigin: OpenOrigin
 }
 
 @MainActor
 final class FolderWatchOpenBatcher: ObservableObject {
     private var queuedEvents: [FolderWatchChangeEvent] = []
     private var queuedFolderWatchSession: FolderWatchSession?
-    private var queuedOpenOrigin: ReaderOpenOrigin = .manual
+    private var queuedOpenOrigin: OpenOrigin = .manual
     private var flushTask: Task<Void, Never>?
     private var flushRetryCount = 0
 
@@ -27,7 +27,7 @@ final class FolderWatchOpenBatcher: ObservableObject {
     func enqueue(
         _ event: FolderWatchChangeEvent,
         folderWatchSession: FolderWatchSession?,
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         onFlushRequested: @escaping @MainActor () -> Void
     ) {
         if let existingIndex = queuedEvents.firstIndex(where: { $0.fileURL == event.fileURL }) {

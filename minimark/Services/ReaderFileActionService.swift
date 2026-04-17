@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 
 protocol ReaderFileActionHandling {
-    func registeredApplications(for fileURL: URL) throws -> [ReaderExternalApplication]
-    func open(fileURL: URL, in application: ReaderExternalApplication?) throws
+    func registeredApplications(for fileURL: URL) throws -> [ExternalApplication]
+    func open(fileURL: URL, in application: ExternalApplication?) throws
     func revealInFinder(fileURL: URL) throws
 }
 
@@ -14,7 +14,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
         self.workspace = workspace
     }
 
-    func registeredApplications(for fileURL: URL) throws -> [ReaderExternalApplication] {
+    func registeredApplications(for fileURL: URL) throws -> [ExternalApplication] {
         try validateReachableFileURL(fileURL)
 
         return uniquedApplications(
@@ -31,7 +31,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
             }
     }
 
-    private func uniquedApplications(from applications: [ReaderExternalApplication]) -> [ReaderExternalApplication] {
+    private func uniquedApplications(from applications: [ExternalApplication]) -> [ExternalApplication] {
         var seenIdentifiers = Set<String>()
 
         return applications.filter { application in
@@ -39,7 +39,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
         }
     }
 
-    func open(fileURL: URL, in application: ReaderExternalApplication?) throws {
+    func open(fileURL: URL, in application: ExternalApplication?) throws {
         try validateReachableFileURL(fileURL)
 
         if let application {
@@ -72,7 +72,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
         }
     }
 
-    private func mapApplication(bundleURL: URL) -> ReaderExternalApplication? {
+    private func mapApplication(bundleURL: URL) -> ExternalApplication? {
         guard let bundle = Bundle(url: bundleURL) else {
             return nil
         }
@@ -85,7 +85,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
 
         let identifier = bundleIdentifier ?? bundleURL.path
 
-        return ReaderExternalApplication(
+        return ExternalApplication(
             id: identifier,
             displayName: displayName,
             bundleIdentifier: bundleIdentifier,

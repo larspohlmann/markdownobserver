@@ -13,7 +13,7 @@ final class FavoriteWorkspaceController {
     private weak var appearanceController: WindowAppearanceController?
 
     private(set) var activeFavoriteID: UUID?
-    private(set) var activeFavoriteWorkspaceState: ReaderFavoriteWorkspaceState?
+    private(set) var activeFavoriteWorkspaceState: FavoriteWorkspaceState?
 
     var isActive: Bool { activeFavoriteID != nil }
 
@@ -35,7 +35,7 @@ final class FavoriteWorkspaceController {
 
     // MARK: - State Mutations
 
-    func activate(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+    func activate(id: UUID, workspaceState: FavoriteWorkspaceState) {
         activeFavoriteID = id
         activeFavoriteWorkspaceState = workspaceState
     }
@@ -49,7 +49,7 @@ final class FavoriteWorkspaceController {
         activeFavoriteWorkspaceState?.sidebarWidth = width
     }
 
-    func updateSidebarPosition(_ position: ReaderMultiFileDisplayMode) {
+    func updateSidebarPosition(_ position: MultiFileDisplayMode) {
         activeFavoriteWorkspaceState?.sidebarPosition = position
     }
 
@@ -60,8 +60,8 @@ final class FavoriteWorkspaceController {
     func updateGroupState(
         pinnedGroupIDs: Set<String>,
         collapsedGroupIDs: Set<String>,
-        groupSortMode: ReaderSidebarSortMode,
-        fileSortMode: ReaderSidebarSortMode,
+        groupSortMode: SidebarSortMode,
+        fileSortMode: SidebarSortMode,
         manualGroupOrder: [String]?
     ) {
         activeFavoriteWorkspaceState?.pinnedGroupIDs = pinnedGroupIDs
@@ -76,13 +76,13 @@ final class FavoriteWorkspaceController {
     func matchingFavorite(
         folderURL: URL,
         options: FolderWatchOptions,
-        in favorites: [ReaderFavoriteWatchedFolder]
-    ) -> ReaderFavoriteWatchedFolder? {
+        in favorites: [FavoriteWatchedFolder]
+    ) -> FavoriteWatchedFolder? {
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
         return favorites.first { $0.matches(folderPath: normalizedPath, options: options) }
     }
 
-    func matchingCurrentSession() -> ReaderFavoriteWatchedFolder? {
+    func matchingCurrentSession() -> FavoriteWatchedFolder? {
         guard let session = folderWatchFlowController?.sharedFolderWatchSession else { return nil }
         return matchingFavorite(
             folderURL: session.folderURL,
@@ -118,7 +118,7 @@ final class FavoriteWorkspaceController {
         guard let session = folderWatchFlowController?.sharedFolderWatchSession,
               let groupStateController else { return }
         let groupSnapshot = groupStateController.persistenceSnapshot
-        var workspaceState = ReaderFavoriteWorkspaceState.from(
+        var workspaceState = FavoriteWorkspaceState.from(
             settings: settingsStore.currentSettings,
             pinnedGroupIDs: groupSnapshot.pinnedGroupIDs,
             collapsedGroupIDs: groupSnapshot.collapsedGroupIDs,
@@ -148,7 +148,7 @@ final class FavoriteWorkspaceController {
     }
 
     /// Returns the sidebar width from the favorite's workspace state (so the caller can apply it to window state).
-    func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) -> CGFloat {
+    func startFavoriteWatch(_ entry: FavoriteWatchedFolder) -> CGFloat {
         // Restore appearance FIRST
         if let lockedAppearance = entry.workspaceState.lockedAppearance {
             appearanceController?.restore(from: lockedAppearance)
@@ -220,7 +220,7 @@ final class FavoriteWorkspaceController {
     // MARK: - Private
 
     private func discoverNewFilesForFavorite(
-        _ entry: ReaderFavoriteWatchedFolder,
+        _ entry: FavoriteWatchedFolder,
         resolvedFolderURL: URL
     ) {
         sidebarDocumentController?.folderWatchCoordinator.scanCurrentMarkdownFiles { [weak self] scannedURLs in

@@ -107,7 +107,7 @@ struct ReaderSettingsView: View {
                     get: { settingsStore.currentSettings.multiFileDisplayMode },
                     set: { updateMultiFileDisplayMode($0) }
                 )) {
-                    ForEach(ReaderMultiFileDisplayMode.allCases, id: \.self) { mode in
+                    ForEach(MultiFileDisplayMode.allCases, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
                 }
@@ -202,7 +202,7 @@ struct ReaderSettingsView: View {
         ReaderSettingsGuidance.layoutHelpText(selectedMode: settingsStore.currentSettings.multiFileDisplayMode)
     }
 
-    private func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) {
+    private func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode) {
         settingsStore.updateMultiFileDisplayMode(mode)
     }
 
@@ -293,8 +293,8 @@ extension Color {
 struct ThemePreviewCard: View {
     let settings: ReaderSettings
 
-    private var theme: ReaderTheme {
-        ReaderTheme.theme(for: settings.readerTheme)
+    private var theme: Theme {
+        Theme.theme(for: settings.readerTheme)
     }
 
     private var syntaxPalette: SyntaxThemePreviewPalette {
@@ -439,7 +439,7 @@ enum ThemePreviewTextRole: String, Sendable {
 }
 
 enum ThemePreviewReaderTextExamples {
-    static func reader(theme: ReaderTheme) -> [ThemePreviewColorSample] {
+    static func reader(theme: Theme) -> [ThemePreviewColorSample] {
         [
             ThemePreviewColorSample(text: "Heading accent sample", role: .heading, hex: theme.h1Hex ?? theme.foregroundHex),
             ThemePreviewColorSample(text: "Primary body sample text", role: .body, hex: theme.foregroundHex),

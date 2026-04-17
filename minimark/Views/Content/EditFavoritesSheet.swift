@@ -8,11 +8,11 @@ enum EditFavoritesAction {
 }
 
 struct EditFavoritesSheet: View {
-    let favorites: [ReaderFavoriteWatchedFolder]
+    let favorites: [FavoriteWatchedFolder]
     let onAction: (EditFavoritesAction) -> Void
 
     @State private var draftNames: [UUID: String] = [:]
-    @State private var localOrder: [ReaderFavoriteWatchedFolder] = []
+    @State private var localOrder: [FavoriteWatchedFolder] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,7 +36,7 @@ struct EditFavoritesSheet: View {
                 newFavorites.map { ($0.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            var updatedOrder: [ReaderFavoriteWatchedFolder] = []
+            var updatedOrder: [FavoriteWatchedFolder] = []
             var seenIDs = Set<UUID>()
             for entry in localOrder {
                 if let updated = favoritesById[entry.id] {
@@ -138,14 +138,14 @@ struct EditFavoritesSheet: View {
         )
     }
 
-    private func bindingForDraft(_ entry: ReaderFavoriteWatchedFolder) -> Binding<String> {
+    private func bindingForDraft(_ entry: FavoriteWatchedFolder) -> Binding<String> {
         Binding(
             get: { draftNames[entry.id] ?? entry.name },
             set: { draftNames[entry.id] = $0 }
         )
     }
 
-    private func commitRename(for entry: ReaderFavoriteWatchedFolder) {
+    private func commitRename(for entry: FavoriteWatchedFolder) {
         guard let draft = draftNames[entry.id] else { return }
         let trimmed = draft.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, trimmed != entry.name else { return }
@@ -161,7 +161,7 @@ struct EditFavoritesSheet: View {
         }
     }
 
-    private func deleteEntry(_ entry: ReaderFavoriteWatchedFolder) {
+    private func deleteEntry(_ entry: FavoriteWatchedFolder) {
         localOrder.removeAll { $0.id == entry.id }
         draftNames.removeValue(forKey: entry.id)
         onAction(.delete(entry.id))
@@ -175,7 +175,7 @@ struct EditFavoritesSheet: View {
 // MARK: - Favorite Row
 
 private struct FavoriteRow: View {
-    let entry: ReaderFavoriteWatchedFolder
+    let entry: FavoriteWatchedFolder
     @Binding var draftName: String
     let onCommitRename: () -> Void
     let onDelete: () -> Void

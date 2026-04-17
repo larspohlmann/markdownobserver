@@ -9,13 +9,13 @@ enum ContentViewAction {
     case saveFolderWatchAsFavorite(String)
     case removeCurrentWatchFromFavorites
     case toggleAppearanceLock
-    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
+    case startFavoriteWatch(FavoriteWatchedFolder)
     case clearFavoriteWatchedFolders
     case renameFavoriteWatchedFolder(id: UUID, name: String)
     case removeFavoriteWatchedFolder(UUID)
     case reorderFavoriteWatchedFolders([UUID])
-    case startRecentManuallyOpenedFile(ReaderRecentOpenedFile)
-    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case startRecentManuallyOpenedFile(RecentOpenedFile)
+    case startRecentFolderWatch(RecentWatchedFolder)
     case clearRecentWatchedFolders
     case clearRecentManuallyOpenedFiles
     case editSubfolders
@@ -24,7 +24,7 @@ enum ContentViewAction {
     case startSourceEditing
     case updateSourceDraft(String)
     case grantImageDirectoryAccess(URL)
-    case openInApplication(ReaderExternalApplication?)
+    case openInApplication(ExternalApplication?)
     case revealInFinder
     case presentError(Error)
     case updateTOCHeadings([TOCHeading])

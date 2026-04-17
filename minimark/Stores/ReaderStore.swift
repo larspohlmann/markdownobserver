@@ -22,8 +22,8 @@ final class ReaderStore {
 
     // MARK: - Dependencies (exposed for wiring + logging + tests)
 
-    let rendering: ReaderRenderingDependencies
-    let file: ReaderFileDependencies
+    let rendering: RenderingDependencies
+    let file: FileDependencies
     let folderWatch: FolderWatchDependencies
     let settingsStore: ReaderSettingsReading & ReaderRecentWriting
     let securityScopeResolver: SecurityScopeResolver
@@ -63,8 +63,8 @@ final class ReaderStore {
     var onFolderWatchStopped: (() -> Void)? { folderWatchDispatcher.onFolderWatchStopped }
 
     init(
-        rendering: ReaderRenderingDependencies,
-        file: ReaderFileDependencies,
+        rendering: RenderingDependencies,
+        file: FileDependencies,
         folderWatch: FolderWatchDependencies,
         settingsStore: ReaderSettingsReading & ReaderRecentWriting,
         securityScopeResolver: SecurityScopeResolver,

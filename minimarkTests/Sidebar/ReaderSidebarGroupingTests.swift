@@ -14,7 +14,7 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        let grouping = ReaderSidebarGrouping.group(harness.documents)
+        let grouping = SidebarGrouping.group(harness.documents)
 
         guard case .flat(let documents) = grouping else {
             Issue.record("Expected flat grouping for single directory")
@@ -30,7 +30,7 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        let grouping = ReaderSidebarGrouping.group(harness.documents)
+        let grouping = SidebarGrouping.group(harness.documents)
 
         guard case .grouped(let groups) = grouping else {
             Issue.record("Expected grouped result for multiple directories")
@@ -53,7 +53,7 @@ struct ReaderSidebarGroupingTests {
         olderDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
         newerDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
-        let grouping = ReaderSidebarGrouping.group(harness.documents)
+        let grouping = SidebarGrouping.group(harness.documents)
 
         guard case .grouped(let groups) = grouping else {
             Issue.record("Expected grouped result")
@@ -71,7 +71,7 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        let grouping = ReaderSidebarGrouping.group(
+        let grouping = SidebarGrouping.group(
             harness.documents,
             sortMode: .nameAscending
         )
@@ -94,7 +94,7 @@ struct ReaderSidebarGroupingTests {
         let alphaDoc = try #require(harness.documentsInSubdirectory("alpha").first)
         let reorderedDocuments = [betaDoc, alphaDoc]
 
-        let grouping = ReaderSidebarGrouping.group(
+        let grouping = SidebarGrouping.group(
             reorderedDocuments,
             sortMode: .openOrder
         )
@@ -120,7 +120,7 @@ struct ReaderSidebarGroupingTests {
         let fileSortedDocuments = [alphaDoc, betaDoc]
         let openOrderSourceDocuments = [betaDoc, alphaDoc]
 
-        let grouping = ReaderSidebarGrouping.group(
+        let grouping = SidebarGrouping.group(
             fileSortedDocuments,
             sortMode: .openOrder,
             directoryOrderSourceDocuments: openOrderSourceDocuments
@@ -149,7 +149,7 @@ struct ReaderSidebarGroupingTests {
         let alphaDoc = try #require(harness.documentsInSubdirectory("alpha").first)
 
         // Intentionally reverse incoming order to ensure tie-break is deterministic by display name.
-        let grouping = ReaderSidebarGrouping.group(
+        let grouping = SidebarGrouping.group(
             [zetaDoc, alphaDoc],
             sortMode: .lastChangedNewestFirst
         )
@@ -175,7 +175,7 @@ struct ReaderSidebarGroupingTests {
         alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
         betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
-        let grouping1 = ReaderSidebarGrouping.group(harness.documents)
+        let grouping1 = SidebarGrouping.group(harness.documents)
         guard case .grouped(let groups1) = grouping1 else {
             Issue.record("Expected grouped result")
             return
@@ -185,7 +185,7 @@ struct ReaderSidebarGroupingTests {
         // Now alpha gets modified more recently
         alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 3000))
 
-        let grouping2 = ReaderSidebarGrouping.group(harness.documents)
+        let grouping2 = SidebarGrouping.group(harness.documents)
         guard case .grouped(let groups2) = grouping2 else {
             Issue.record("Expected grouped result")
             return
@@ -202,7 +202,7 @@ struct ReaderSidebarGroupingTests {
         )
         defer { harness.cleanup() }
 
-        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        let states = SidebarGrouping.indicators(for: harness.documents)
         #expect(states.isEmpty)
     }
 
@@ -216,7 +216,7 @@ struct ReaderSidebarGroupingTests {
         harness.documents[0].readerStore.testSetHasUnacknowledgedExternalChange(true)
         harness.documents[0].readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
 
-        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        let states = SidebarGrouping.indicators(for: harness.documents)
         #expect(states == [.externalChange])
     }
 
@@ -231,7 +231,7 @@ struct ReaderSidebarGroupingTests {
         harness.documents[0].readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
         harness.documents[0].readerStore.testSetIsCurrentFileMissing(true)
 
-        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        let states = SidebarGrouping.indicators(for: harness.documents)
         #expect(states == [.deletedExternalChange])
     }
 
@@ -250,7 +250,7 @@ struct ReaderSidebarGroupingTests {
         }
 
         let gammaPath = harness.directoryPath(for: "gamma")
-        let grouping = ReaderSidebarGrouping.group(harness.documents, pinnedGroupIDs: [gammaPath])
+        let grouping = SidebarGrouping.group(harness.documents, pinnedGroupIDs: [gammaPath])
 
         guard case .grouped(let groups) = grouping else {
             Issue.record("Expected grouped result")
@@ -280,7 +280,7 @@ struct ReaderSidebarGroupingTests {
         let alphaPath = harness.directoryPath(for: "alpha")
         let gammaPath = harness.directoryPath(for: "gamma")
 
-        let grouping = ReaderSidebarGrouping.group(
+        let grouping = SidebarGrouping.group(
             harness.documents,
             pinnedGroupIDs: [alphaPath, gammaPath]
         )
@@ -311,7 +311,7 @@ struct ReaderSidebarGroupingTests {
         alphaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
         betaDoc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 2000))
 
-        let grouping = ReaderSidebarGrouping.group(harness.documents, pinnedGroupIDs: [])
+        let grouping = SidebarGrouping.group(harness.documents, pinnedGroupIDs: [])
 
         guard case .grouped(let groups) = grouping else {
             Issue.record("Expected grouped result")
@@ -345,49 +345,49 @@ struct ReaderSidebarGroupingTests {
         #expect(documentStates.contains(.externalChange))
         #expect(documentStates.contains(.deletedExternalChange))
 
-        let states = ReaderSidebarGrouping.indicators(for: harness.documents)
+        let states = SidebarGrouping.indicators(for: harness.documents)
         #expect(states == [.externalChange, .deletedExternalChange])
     }
 
     // MARK: - Indicator Aggregation from Pre-Computed States
 
     @Test @MainActor func indicatorsFromStatesReturnsEmptyWhenAllNone() {
-        let result = ReaderSidebarGrouping.indicators(
+        let result = SidebarGrouping.indicators(
             from: [.none, .none, .none]
         )
         #expect(result.isEmpty)
     }
 
     @Test @MainActor func indicatorsFromStatesReturnsExternalChangeWhenPresent() {
-        let result = ReaderSidebarGrouping.indicators(
+        let result = SidebarGrouping.indicators(
             from: [.none, .externalChange, .none]
         )
         #expect(result == [.externalChange])
     }
 
     @Test @MainActor func indicatorsFromStatesKeepsAddedAndModifiedDistinct() {
-        let result = ReaderSidebarGrouping.indicators(
+        let result = SidebarGrouping.indicators(
             from: [.none, .addedExternalChange, .none]
         )
         #expect(result == [.addedExternalChange])
     }
 
     @Test @MainActor func indicatorsFromStatesReturnsDeletedWhenPresent() {
-        let result = ReaderSidebarGrouping.indicators(
+        let result = SidebarGrouping.indicators(
             from: [.none, .deletedExternalChange]
         )
         #expect(result == [.deletedExternalChange])
     }
 
     @Test @MainActor func indicatorsFromStatesReturnsAllKindsInStableOrder() {
-        let result = ReaderSidebarGrouping.indicators(
+        let result = SidebarGrouping.indicators(
             from: [.externalChange, .deletedExternalChange, .addedExternalChange, .none]
         )
         #expect(result == [.addedExternalChange, .externalChange, .deletedExternalChange])
     }
 
     @Test @MainActor func indicatorsFromStatesHandlesEmptyArray() {
-        let result = ReaderSidebarGrouping.indicators(from: [])
+        let result = SidebarGrouping.indicators(from: [])
         #expect(result.isEmpty)
     }
 
@@ -410,7 +410,7 @@ struct ReaderSidebarGroupingTests {
             testsPath: 0
         ]
 
-        let grouping = ReaderSidebarGrouping.group(
+        let grouping = SidebarGrouping.group(
             harness.documents,
             precomputedIndicatorStates: precomputed,
             precomputedIndicatorPulseTokens: pulseTokens
@@ -440,7 +440,7 @@ struct ReaderSidebarGroupingTests {
             .testSetHasUnacknowledgedExternalChange(true)
         harness.documentsInSubdirectory("src").first!.readerStore.externalChange.unacknowledgedExternalChangeKind = .modified
 
-        let grouping = ReaderSidebarGrouping.group(harness.documents)
+        let grouping = SidebarGrouping.group(harness.documents)
 
         guard case .grouped(let groups) = grouping else {
             Issue.record("Expected grouped result")
@@ -464,7 +464,7 @@ struct ReaderSidebarGroupingTests {
             .testSetHasUnacknowledgedExternalChange(true)
         harness.documentsInSubdirectory("src").first!.readerStore.externalChange.unacknowledgedExternalChangeKind = .added
 
-        let grouping = ReaderSidebarGrouping.group(harness.documents)
+        let grouping = SidebarGrouping.group(harness.documents)
 
         guard case .grouped(let groups) = grouping else {
             Issue.record("Expected grouped result")

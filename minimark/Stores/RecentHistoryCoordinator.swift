@@ -17,7 +17,7 @@ final class RecentHistoryCoordinator {
 
     // MARK: - Recent Folder Watch
 
-    func startRecentFolderWatch(_ entry: ReaderRecentWatchedFolder) {
+    func startRecentFolderWatch(_ entry: RecentWatchedFolder) {
         folderWatchFlowController?.prepareRecentWatch(entry)
     }
 
@@ -32,7 +32,7 @@ final class RecentHistoryCoordinator {
     }
 
     func openRecentFile(
-        _ entry: ReaderRecentOpenedFile,
+        _ entry: RecentOpenedFile,
         using fileOpenCoordinator: FileOpenCoordinator,
         session: FolderWatchSession?
     ) {

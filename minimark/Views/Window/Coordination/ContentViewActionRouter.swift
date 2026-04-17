@@ -20,7 +20,7 @@ final class ContentViewActionRouter {
     private let applyTitlePresentation: () -> Void
     private let confirmFolderWatch: (FolderWatchOptions) -> Void
     private let stopFolderWatch: () -> Void
-    private let startFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
+    private let startFavoriteWatch: (FavoriteWatchedFolder) -> Void
     private let setEditingSubfolders: (Bool) -> Void
     private let setEditingFavorites: (Bool) -> Void
 
@@ -37,7 +37,7 @@ final class ContentViewActionRouter {
         applyTitlePresentation: @escaping () -> Void,
         confirmFolderWatch: @escaping (FolderWatchOptions) -> Void,
         stopFolderWatch: @escaping () -> Void,
-        startFavoriteWatch: @escaping (ReaderFavoriteWatchedFolder) -> Void,
+        startFavoriteWatch: @escaping (FavoriteWatchedFolder) -> Void,
         setEditingSubfolders: @escaping (Bool) -> Void,
         setEditingFavorites: @escaping (Bool) -> Void
     ) {

@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum ReaderSidebarSortMode: String, Codable, Sendable {
+nonisolated enum SidebarSortMode: String, Codable, Sendable {
     case openOrder
     case nameAscending
     case nameDescending
@@ -8,7 +8,7 @@ nonisolated enum ReaderSidebarSortMode: String, Codable, Sendable {
     case lastChangedOldestFirst
     case manualOrder
 
-    static let allCases: [ReaderSidebarSortMode] = [
+    static let allCases: [SidebarSortMode] = [
         .openOrder,
         .nameAscending,
         .nameDescending,
@@ -16,7 +16,7 @@ nonisolated enum ReaderSidebarSortMode: String, Codable, Sendable {
         .lastChangedOldestFirst
     ]
 
-    static func availableCases(hasManualOrder: Bool) -> [ReaderSidebarSortMode] {
+    static func availableCases(hasManualOrder: Bool) -> [SidebarSortMode] {
         hasManualOrder ? allCases + [.manualOrder] : allCases
     }
 

@@ -10,7 +10,7 @@ import Testing
 @Suite
 struct MarkdownRenderingServiceTests {
     private let service = MarkdownRenderingService()
-    private let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+    private let theme = ThemeKind.blackOnWhite.themeDefinition
 
     @Test func renderProducesHTMLDocument() throws {
         let result = try service.render(

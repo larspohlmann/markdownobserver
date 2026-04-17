@@ -4,7 +4,7 @@ import XCTest
 final class ThemeDefinitionTests: XCTestCase {
 
     func testSimpleThemeDefinitionHasNilCustomCSS() {
-        let definition = ReaderThemeKind.blackOnWhite.themeDefinition
+        let definition = ThemeKind.blackOnWhite.themeDefinition
         XCTAssertNil(definition.customCSS)
         XCTAssertNil(definition.customJavaScript)
         XCTAssertNil(definition.syntaxCSS)
@@ -13,22 +13,22 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testSimpleThemeDefinitionHasCorrectColors() {
-        let definition = ReaderThemeKind.blackOnWhite.themeDefinition
-        let expectedColors = ReaderTheme.theme(for: .blackOnWhite)
+        let definition = ThemeKind.blackOnWhite.themeDefinition
+        let expectedColors = Theme.theme(for: .blackOnWhite)
         XCTAssertEqual(definition.colors, expectedColors)
         XCTAssertEqual(definition.kind, .blackOnWhite)
-        XCTAssertEqual(definition.displayName, ReaderThemeKind.blackOnWhite.displayName)
+        XCTAssertEqual(definition.displayName, ThemeKind.blackOnWhite.displayName)
     }
 
     func testAllExistingThemesProduceValidDefinitions() {
-        let simpleKinds: [ReaderThemeKind] = [
+        let simpleKinds: [ThemeKind] = [
             .blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey
         ]
         for kind in simpleKinds {
             let definition = kind.themeDefinition
             XCTAssertEqual(definition.kind, kind, "Kind mismatch for \(kind)")
             XCTAssertEqual(definition.displayName, kind.displayName, "Display name mismatch for \(kind)")
-            XCTAssertEqual(definition.colors, ReaderTheme.theme(for: kind), "Colors mismatch for \(kind)")
+            XCTAssertEqual(definition.colors, Theme.theme(for: kind), "Colors mismatch for \(kind)")
             XCTAssertNil(definition.customCSS, "Simple theme \(kind) should not have custom CSS")
             XCTAssertNil(definition.customJavaScript, "Simple theme \(kind) should not have custom JS")
             XCTAssertNil(definition.syntaxCSS, "Simple theme \(kind) should not have syntax CSS")
@@ -40,13 +40,13 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Amber Terminal Theme
 
     func testAmberTerminalHasCorrectDisplayName() {
-        let kind = ReaderThemeKind.amberTerminal
+        let kind = ThemeKind.amberTerminal
         XCTAssertEqual(kind.displayName, "Amber Terminal")
         XCTAssertTrue(kind.isDark)
     }
 
     func testAmberTerminalDefinitionProvidesCustomCSS() {
-        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        let definition = ThemeKind.amberTerminal.themeDefinition
         XCTAssertNotNil(definition.customCSS)
         XCTAssertTrue(definition.providesSyntaxHighlighting)
         XCTAssertNotNil(definition.syntaxCSS)
@@ -55,14 +55,14 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testAmberTerminalColorsAreAmberPalette() {
-        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        let definition = ThemeKind.amberTerminal.themeDefinition
         XCTAssertFalse(definition.colors.hasLightBackground)
         XCTAssertEqual(definition.colors.backgroundHex, "#1A1200")
         XCTAssertEqual(definition.colors.foregroundHex, "#FFB000")
     }
 
     func testAmberTerminalCSSContainsCRTEffects() {
-        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        let definition = ThemeKind.amberTerminal.themeDefinition
         let css = definition.customCSS!
         XCTAssertTrue(css.contains("repeating-linear-gradient"), "Should have scanlines")
         XCTAssertTrue(css.contains("radial-gradient"), "Should have vignette")
@@ -71,7 +71,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testAmberTerminalSyntaxCSSCoversAllTokenTypes() {
-        let definition = ReaderThemeKind.amberTerminal.themeDefinition
+        let definition = ThemeKind.amberTerminal.themeDefinition
         let css = definition.syntaxCSS!
         XCTAssertTrue(css.contains(".hljs-comment"))
         XCTAssertTrue(css.contains(".hljs-keyword"))
@@ -85,7 +85,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testSimpleThemeCSSDoesNotContainCustomCSS() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
         XCTAssertTrue(css.contains("--reader-bg:"))
         XCTAssertTrue(css.contains(".hljs-keyword"), "Should contain syntax theme CSS from SyntaxThemeKind")
@@ -94,7 +94,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testAmberTerminalCSSIncludesCustomCSSAfterStructural() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.amberTerminal.themeDefinition
+        let theme = ThemeKind.amberTerminal.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
         XCTAssertTrue(css.contains("--reader-bg:"), "Should contain CSS variables")
@@ -110,7 +110,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testAmberTerminalUsesSyntaxCSSInsteadOfSyntaxTheme() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.amberTerminal.themeDefinition
+        let theme = ThemeKind.amberTerminal.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
         // Should contain amber syntax tokens, not Monokai ones
@@ -120,7 +120,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testSimpleThemeUsesSelectedSyntaxTheme() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
         XCTAssertTrue(css.contains("#F92672"), "Should contain Monokai keyword color")
@@ -129,7 +129,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Green Terminal Static Theme
 
     func testGreenTerminalStaticHasNoJavaScript() {
-        let definition = ReaderThemeKind.greenTerminalStatic.themeDefinition
+        let definition = ThemeKind.greenTerminalStatic.themeDefinition
         XCTAssertNil(definition.customJavaScript)
         XCTAssertNotNil(definition.customCSS)
         XCTAssertTrue(definition.providesSyntaxHighlighting)
@@ -184,13 +184,13 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Green Terminal Theme
 
     func testGreenTerminalHasCorrectDisplayName() {
-        let kind = ReaderThemeKind.greenTerminal
+        let kind = ThemeKind.greenTerminal
         XCTAssertEqual(kind.displayName, "Green Terminal")
         XCTAssertTrue(kind.isDark)
     }
 
     func testGreenTerminalDefinitionProvidesAllCustomFields() {
-        let definition = ReaderThemeKind.greenTerminal.themeDefinition
+        let definition = ThemeKind.greenTerminal.themeDefinition
         XCTAssertNotNil(definition.customCSS)
         XCTAssertNotNil(definition.customJavaScript, "Green Terminal should have digital rain JS")
         XCTAssertTrue(definition.providesSyntaxHighlighting)
@@ -199,14 +199,14 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGreenTerminalColorsAreGreenPalette() {
-        let definition = ReaderThemeKind.greenTerminal.themeDefinition
+        let definition = ThemeKind.greenTerminal.themeDefinition
         XCTAssertFalse(definition.colors.hasLightBackground)
         XCTAssertEqual(definition.colors.backgroundHex, "#0D0208")
         XCTAssertEqual(definition.colors.foregroundHex, "#00FF41")
     }
 
     func testGreenTerminalCSSContainsCRTEffects() {
-        let definition = ReaderThemeKind.greenTerminal.themeDefinition
+        let definition = ThemeKind.greenTerminal.themeDefinition
         let css = definition.customCSS!
         XCTAssertTrue(css.contains("repeating-linear-gradient"), "Should have scanlines")
         XCTAssertTrue(css.contains("radial-gradient"), "Should have vignette")
@@ -216,7 +216,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGreenTerminalSyntaxCSSCoversAllTokenTypes() {
-        let definition = ReaderThemeKind.greenTerminal.themeDefinition
+        let definition = ThemeKind.greenTerminal.themeDefinition
         let css = definition.syntaxCSS!
         XCTAssertTrue(css.contains(".hljs-comment"))
         XCTAssertTrue(css.contains(".hljs-keyword"))
@@ -227,7 +227,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGreenTerminalJSContainsDigitalRain() {
-        let definition = ReaderThemeKind.greenTerminal.themeDefinition
+        let definition = ThemeKind.greenTerminal.themeDefinition
         let js = definition.customJavaScript!
         XCTAssertTrue(js.contains("canvas"), "Should create a canvas element")
         XCTAssertTrue(js.contains("__minimarkThemeCleanup"), "Should register cleanup hook")
@@ -237,7 +237,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testGreenTerminalUsesSyntaxCSSInsteadOfSyntaxTheme() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.greenTerminal.themeDefinition
+        let theme = ThemeKind.greenTerminal.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
 
         XCTAssertTrue(css.contains("color: #00FF41"), "Should contain green syntax CSS")
@@ -247,7 +247,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Newspaper Theme
 
     func testNewspaperThemeDefinition() {
-        let definition = ReaderThemeKind.newspaper.themeDefinition
+        let definition = ThemeKind.newspaper.themeDefinition
         XCTAssertEqual(definition.displayName, "Newspaper")
         XCTAssertFalse(definition.kind.isDark)
         XCTAssertNotNil(definition.customCSS)
@@ -257,7 +257,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testNewspaperCSSContainsSerifTypography() {
-        let css = ReaderThemeKind.newspaper.themeDefinition.customCSS!
+        let css = ThemeKind.newspaper.themeDefinition.customCSS!
         XCTAssertTrue(css.contains("Charter"))
         XCTAssertTrue(css.contains("Georgia"))
         XCTAssertTrue(css.contains("serif"))
@@ -267,7 +267,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Focus Theme
 
     func testFocusThemeDefinition() {
-        let definition = ReaderThemeKind.focus.themeDefinition
+        let definition = ThemeKind.focus.themeDefinition
         XCTAssertEqual(definition.displayName, "Focus")
         XCTAssertFalse(definition.kind.isDark)
         XCTAssertNotNil(definition.customCSS)
@@ -276,7 +276,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testFocusCSSContainsGenerousLineHeight() {
-        let css = ReaderThemeKind.focus.themeDefinition.customCSS!
+        let css = ThemeKind.focus.themeDefinition.customCSS!
         XCTAssertTrue(css.contains("line-height: 1.8"))
         XCTAssertTrue(css.contains("text-decoration: underline"))
     }
@@ -284,7 +284,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Commodore 64 Theme
 
     func testCommodore64ThemeDefinition() {
-        let definition = ReaderThemeKind.commodore64.themeDefinition
+        let definition = ThemeKind.commodore64.themeDefinition
         XCTAssertEqual(definition.displayName, "Commodore 64")
         XCTAssertTrue(definition.kind.isDark)
         XCTAssertNotNil(definition.customCSS)
@@ -295,13 +295,13 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testCommodore64ColorsAreC64Palette() {
-        let definition = ReaderThemeKind.commodore64.themeDefinition
+        let definition = ThemeKind.commodore64.themeDefinition
         XCTAssertEqual(definition.colors.backgroundHex, "#40318D")
         XCTAssertEqual(definition.colors.linkHex, "#FFFFFF")
     }
 
     func testCommodore64SyntaxCSSCoversAllTokenTypes() {
-        let css = ReaderThemeKind.commodore64.themeDefinition.syntaxCSS!
+        let css = ThemeKind.commodore64.themeDefinition.syntaxCSS!
         XCTAssertTrue(css.contains(".hljs-comment"))
         XCTAssertTrue(css.contains(".hljs-keyword"))
         XCTAssertTrue(css.contains(".hljs-string"))
@@ -313,7 +313,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Game Boy Theme
 
     func testGameBoyThemeDefinition() {
-        let definition = ReaderThemeKind.gameBoy.themeDefinition
+        let definition = ThemeKind.gameBoy.themeDefinition
         XCTAssertEqual(definition.displayName, "Game Boy")
         XCTAssertFalse(definition.kind.isDark)
         XCTAssertNotNil(definition.customCSS)
@@ -324,19 +324,19 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGameBoyUsesAuthenticDMGPalette() {
-        let definition = ReaderThemeKind.gameBoy.themeDefinition
+        let definition = ThemeKind.gameBoy.themeDefinition
         XCTAssertEqual(definition.colors.backgroundHex, "#9BBC0F")
         XCTAssertEqual(definition.colors.foregroundHex, "#0F380F")
     }
 
     func testGameBoyCSSContainsPixelGrid() {
-        let css = ReaderThemeKind.gameBoy.themeDefinition.customCSS!
+        let css = ThemeKind.gameBoy.themeDefinition.customCSS!
         XCTAssertTrue(css.contains("background-image"), "Should have pixel grid overlay")
         XCTAssertTrue(css.contains("monospace"))
     }
 
     func testGameBoySyntaxUsesOnly4Shades() {
-        let css = ReaderThemeKind.gameBoy.themeDefinition.syntaxCSS!
+        let css = ThemeKind.gameBoy.themeDefinition.syntaxCSS!
         XCTAssertTrue(css.contains("#0F380F"), "Should use darkest shade")
         XCTAssertTrue(css.contains("#306230"), "Should use dark shade")
         XCTAssertTrue(css.contains("font-weight: bold"), "Should use weight to differentiate")
@@ -345,8 +345,8 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - Theme Color Scheme Consistency
 
     func testIsDarkAndHasLightBackgroundAreConsistentForAllThemes() {
-        for kind in ReaderThemeKind.allCases {
-            let theme = ReaderTheme.theme(for: kind)
+        for kind in ThemeKind.allCases {
+            let theme = Theme.theme(for: kind)
             XCTAssertEqual(
                 kind.isDark, !theme.hasLightBackground,
                 "\(kind): isDark (\(kind.isDark)) must be opposite of hasLightBackground (\(theme.hasLightBackground))"
@@ -358,10 +358,10 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testSimpleThemesCSSOutputContainsExpectedVariables() {
         let factory = ReaderCSSFactory()
-        for kind in [ReaderThemeKind.blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey] {
+        for kind in [ThemeKind.blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey] {
             let theme = kind.themeDefinition
             let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
-            let expectedColors = ReaderTheme.theme(for: kind)
+            let expectedColors = Theme.theme(for: kind)
             XCTAssertTrue(css.contains(expectedColors.backgroundHex), "CSS should contain background hex for \(kind)")
             XCTAssertTrue(css.contains(expectedColors.foregroundHex), "CSS should contain foreground hex for \(kind)")
         }
@@ -370,7 +370,7 @@ final class ThemeDefinitionTests: XCTestCase {
     // MARK: - New Content Themes
 
     func testGruvboxDarkThemeDefinition() {
-        let definition = ReaderThemeKind.gruvboxDark.themeDefinition
+        let definition = ThemeKind.gruvboxDark.themeDefinition
         XCTAssertEqual(definition.displayName, "Gruvbox Dark")
         XCTAssertTrue(definition.kind.isDark)
         XCTAssertNil(definition.customCSS)
@@ -381,7 +381,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGruvboxDarkColors() {
-        let definition = ReaderThemeKind.gruvboxDark.themeDefinition
+        let definition = ThemeKind.gruvboxDark.themeDefinition
         XCTAssertEqual(definition.colors.backgroundHex, "#282828")
         XCTAssertEqual(definition.colors.foregroundHex, "#EBDBB2")
         XCTAssertEqual(definition.colors.linkHex, "#FE8019")
@@ -391,7 +391,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGruvboxLightThemeDefinition() {
-        let definition = ReaderThemeKind.gruvboxLight.themeDefinition
+        let definition = ThemeKind.gruvboxLight.themeDefinition
         XCTAssertEqual(definition.displayName, "Gruvbox Light")
         XCTAssertFalse(definition.kind.isDark)
         XCTAssertNil(definition.customCSS)
@@ -402,7 +402,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testGruvboxLightColors() {
-        let definition = ReaderThemeKind.gruvboxLight.themeDefinition
+        let definition = ThemeKind.gruvboxLight.themeDefinition
         XCTAssertEqual(definition.colors.backgroundHex, "#FBF1C7")
         XCTAssertEqual(definition.colors.foregroundHex, "#3C3836")
         XCTAssertEqual(definition.colors.linkHex, "#076678")
@@ -412,7 +412,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testDraculaThemeDefinition() {
-        let definition = ReaderThemeKind.dracula.themeDefinition
+        let definition = ThemeKind.dracula.themeDefinition
         XCTAssertEqual(definition.displayName, "Dracula")
         XCTAssertTrue(definition.kind.isDark)
         XCTAssertNil(definition.customCSS)
@@ -423,7 +423,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testDraculaColors() {
-        let definition = ReaderThemeKind.dracula.themeDefinition
+        let definition = ThemeKind.dracula.themeDefinition
         XCTAssertEqual(definition.colors.backgroundHex, "#282A36")
         XCTAssertEqual(definition.colors.foregroundHex, "#F8F8F2")
         XCTAssertEqual(definition.colors.linkHex, "#8BE9FD")
@@ -433,7 +433,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testMonokaiThemeDefinition() {
-        let definition = ReaderThemeKind.monokai.themeDefinition
+        let definition = ThemeKind.monokai.themeDefinition
         XCTAssertEqual(definition.displayName, "Monokai")
         XCTAssertTrue(definition.kind.isDark)
         XCTAssertNil(definition.customCSS)
@@ -444,7 +444,7 @@ final class ThemeDefinitionTests: XCTestCase {
     }
 
     func testMonokaiColors() {
-        let definition = ReaderThemeKind.monokai.themeDefinition
+        let definition = ThemeKind.monokai.themeDefinition
         XCTAssertEqual(definition.colors.backgroundHex, "#272822")
         XCTAssertEqual(definition.colors.foregroundHex, "#F8F8F2")
         XCTAssertEqual(definition.colors.linkHex, "#A6E22E")
@@ -455,7 +455,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testNewThemesCSSContainsHeaderVariables() {
         let factory = ReaderCSSFactory()
-        let newThemes: [ReaderThemeKind] = [.gruvboxDark, .gruvboxLight, .dracula, .monokai]
+        let newThemes: [ThemeKind] = [.gruvboxDark, .gruvboxLight, .dracula, .monokai]
         for kind in newThemes {
             let theme = kind.themeDefinition
             let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
@@ -468,14 +468,14 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testNewThemesUseSelectedSyntaxTheme() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.gruvboxDark.themeDefinition
+        let theme = ThemeKind.gruvboxDark.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
         XCTAssertTrue(css.contains("#D73A49"), "Should contain GitHub keyword color from selected syntax theme")
     }
 
     func testSimpleThemesDoNotEmitHeaderVariables() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
         XCTAssertFalse(css.contains("--reader-h1:"), "Simple themes should not emit h1 variable")
         XCTAssertFalse(css.contains("--reader-h2:"), "Simple themes should not emit h2 variable")
@@ -484,7 +484,7 @@ final class ThemeDefinitionTests: XCTestCase {
 
     func testHeaderColorFallbackInCSS() {
         let factory = ReaderCSSFactory()
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
         XCTAssertTrue(css.contains("color: var(--reader-h1, var(--reader-fg))"), "h1 should fall back to foreground")
         XCTAssertTrue(css.contains("color: var(--reader-h2, var(--reader-fg))"), "h2 should fall back to foreground")

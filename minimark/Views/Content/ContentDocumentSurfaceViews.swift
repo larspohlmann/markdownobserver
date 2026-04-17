@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DocumentLoadingOverlay: View {
-    let theme: ReaderTheme
+    let theme: Theme
     let headline: String
     let subtitle: String?
 
@@ -259,7 +259,7 @@ struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: Vie
     let loadingOverlayHeadline: String
     let loadingOverlaySubtitle: String?
     let emptyStateVariant: ContentEmptyStateView.Variant
-    let currentReaderTheme: ReaderTheme
+    let currentReaderTheme: Theme
     let onDroppedFileURLs: ([URL]) -> Void
     let previewSurface: PreviewSurface
     let sourceSurface: SourceSurface

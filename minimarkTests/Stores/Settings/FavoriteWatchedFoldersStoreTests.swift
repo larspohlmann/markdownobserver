@@ -14,7 +14,7 @@ struct FavoriteWatchedFoldersStoreTests {
     }
 
     @MainActor private func makeStore(
-        initial: [ReaderFavoriteWatchedFolder] = [],
+        initial: [FavoriteWatchedFolder] = [],
         resolver: @escaping BookmarkRefreshing.Resolver = { _ in (URL(fileURLWithPath: "/ignored"), false) },
         creator: @escaping BookmarkRefreshing.Creator = { _ in Data() }
     ) -> (FavoriteWatchedFoldersStore, RecordingCoordinator) {
@@ -104,7 +104,7 @@ struct FavoriteWatchedFoldersStoreTests {
         let id = store.currentFavorites[0].id
         coordinator.coalescingCalls.removeAll()
 
-        let newState = ReaderFavoriteWorkspaceState(
+        let newState = FavoriteWorkspaceState(
             fileSortMode: .nameAscending,
             groupSortMode: .nameAscending,
             sidebarPosition: .sidebarRight,
@@ -135,7 +135,7 @@ struct FavoriteWatchedFoldersStoreTests {
 
     @Test @MainActor func resolvedFavoriteWatchedFolderURLReturnsFolderURLWhenNoBookmark() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
-        let entry = ReaderFavoriteWatchedFolder(name: "Docs", folderURL: folderURL, options: .default)
+        let entry = FavoriteWatchedFolder(name: "Docs", folderURL: folderURL, options: .default)
         let (store, _) = makeStore(initial: [entry])
 
         let resolved = store.resolvedFavoriteWatchedFolderURL(for: entry)
@@ -148,7 +148,7 @@ struct FavoriteWatchedFoldersStoreTests {
         let resolvedURL = URL(fileURLWithPath: "/tmp/docs-moved", isDirectory: true)
         let originalBookmark = Data([0x01])
         let refreshedBookmark = Data([0x02, 0x03])
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             id: UUID(),
             name: "Docs",
             folderPath: folderURL.path,
@@ -160,7 +160,7 @@ struct FavoriteWatchedFoldersStoreTests {
                 settings: .default,
                 pinnedGroupIDs: [],
                 collapsedGroupIDs: [],
-                sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+                sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
             ),
             createdAt: Date()
         )
@@ -179,7 +179,7 @@ struct FavoriteWatchedFoldersStoreTests {
 
     @Test @MainActor func resolvedFavoriteWatchedFolderURLClearsInvalidBookmark() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             id: UUID(),
             name: "Docs",
             folderPath: folderURL.path,
@@ -191,7 +191,7 @@ struct FavoriteWatchedFoldersStoreTests {
                 settings: .default,
                 pinnedGroupIDs: [],
                 collapsedGroupIDs: [],
-                sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+                sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
             ),
             createdAt: Date()
         )

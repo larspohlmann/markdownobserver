@@ -3,21 +3,21 @@ import Combine
 import Observation
 
 @MainActor @Observable final class FavoriteWatchedFoldersStore: ReaderFavoriteWriting {
-    private(set) var currentFavorites: [ReaderFavoriteWatchedFolder]
+    private(set) var currentFavorites: [FavoriteWatchedFolder]
 
     weak var coordinator: ChildStoreCoordinating?
 
     @ObservationIgnored
-    private let subject: CurrentValueSubject<[ReaderFavoriteWatchedFolder], Never>
+    private let subject: CurrentValueSubject<[FavoriteWatchedFolder], Never>
 
     @ObservationIgnored
     private let bookmarkRefreshing: BookmarkRefreshing
 
-    var favoritesPublisher: AnyPublisher<[ReaderFavoriteWatchedFolder], Never> {
+    var favoritesPublisher: AnyPublisher<[FavoriteWatchedFolder], Never> {
         subject.eraseToAnyPublisher()
     }
 
-    init(initial: [ReaderFavoriteWatchedFolder], bookmarkRefreshing: BookmarkRefreshing) {
+    init(initial: [FavoriteWatchedFolder], bookmarkRefreshing: BookmarkRefreshing) {
         self.currentFavorites = initial
         self.subject = CurrentValueSubject(initial)
         self.bookmarkRefreshing = bookmarkRefreshing
@@ -28,11 +28,11 @@ import Observation
         folderURL: URL,
         options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
-        workspaceState: ReaderFavoriteWorkspaceState = .from(
+        workspaceState: FavoriteWorkspaceState = .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
     ) {
         mutate(coalescePersistence: false) { favorites in
@@ -68,7 +68,7 @@ import Observation
             guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
 
             let existing = favorites[index]
-            let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+            let scopedRelativePaths = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
                 from: openDocumentFileURLs,
                 relativeTo: folderURL,
                 options: existing.options
@@ -96,7 +96,7 @@ import Observation
             guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
 
             let existing = favorites[index]
-            let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+            let scopedRelativePaths = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
                 from: knownDocumentFileURLs,
                 relativeTo: folderURL,
                 options: existing.options
@@ -110,7 +110,7 @@ import Observation
         }
     }
 
-    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: FavoriteWorkspaceState) {
         mutate(coalescePersistence: true) { favorites in
             guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
             let existing = favorites[index]
@@ -119,7 +119,7 @@ import Observation
         }
     }
 
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
+    func resolvedFavoriteWatchedFolderURL(for entry: FavoriteWatchedFolder) -> URL {
         bookmarkRefreshing.resolveURL(
             bookmarkData: entry.bookmarkData,
             fallbackURL: entry.folderURL,
@@ -196,15 +196,15 @@ import Observation
     }
 
     private static func copy(
-        _ entry: ReaderFavoriteWatchedFolder,
+        _ entry: FavoriteWatchedFolder,
         folderPath: String? = nil,
         options: FolderWatchOptions? = nil,
         bookmarkData: Data?? = nil,
         openDocumentRelativePaths: [String]? = nil,
         allKnownRelativePaths: [String]? = nil,
-        workspaceState: ReaderFavoriteWorkspaceState? = nil
-    ) -> ReaderFavoriteWatchedFolder {
-        ReaderFavoriteWatchedFolder(
+        workspaceState: FavoriteWorkspaceState? = nil
+    ) -> FavoriteWatchedFolder {
+        FavoriteWatchedFolder(
             id: entry.id,
             name: entry.name,
             folderPath: folderPath ?? entry.folderPath,
@@ -219,7 +219,7 @@ import Observation
 
     private func mutate(
         coalescePersistence: Bool,
-        _ transform: (inout [ReaderFavoriteWatchedFolder]) -> Void
+        _ transform: (inout [FavoriteWatchedFolder]) -> Void
     ) {
         var updated = currentFavorites
         transform(&updated)

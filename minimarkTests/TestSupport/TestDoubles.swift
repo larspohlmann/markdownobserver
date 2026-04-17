@@ -104,9 +104,9 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.value
     }
 
-    private(set) var recordedFavoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = []
-    private(set) var recordedRecentWatchedFolders: [ReaderRecentWatchedFolder] = []
-    private(set) var recordedRecentManuallyOpenedFiles: [ReaderRecentOpenedFile] = []
+    private(set) var recordedFavoriteWatchedFolders: [FavoriteWatchedFolder] = []
+    private(set) var recordedRecentWatchedFolders: [RecentWatchedFolder] = []
+    private(set) var recordedRecentManuallyOpenedFiles: [RecentOpenedFile] = []
 
     private let subject: CurrentValueSubject<ReaderSettings, Never>
 
@@ -139,7 +139,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    func updateTheme(_ kind: ReaderThemeKind) {
+    func updateTheme(_ kind: ThemeKind) {
         var next = subject.value
         next.readerTheme = kind
         subject.send(next)
@@ -175,19 +175,19 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) {
+    func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode) {
         var next = subject.value
         next.multiFileDisplayMode = mode
         subject.send(next)
     }
 
-    func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
+    func updateSidebarSortMode(_ mode: SidebarSortMode) {
         var next = subject.value
         next.sidebarSortMode = mode
         subject.send(next)
     }
 
-    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
+    func updateSidebarGroupSortMode(_ mode: SidebarSortMode) {
         var next = subject.value
         next.sidebarGroupSortMode = mode
         subject.send(next)
@@ -198,11 +198,11 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         folderURL: URL,
         options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
-        workspaceState: ReaderFavoriteWorkspaceState = .from(
+        workspaceState: FavoriteWorkspaceState = .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
     ) {
         var next = subject.value
@@ -250,7 +250,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         }
 
         let existing = next.favoriteWatchedFolders[index]
-        let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+        let scopedRelativePaths = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
             from: openDocumentFileURLs,
             relativeTo: folderURL,
             options: existing.options
@@ -258,7 +258,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         let updatedKnownPaths = Array(
             Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
         ).sorted()
-        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+        next.favoriteWatchedFolders[index] = FavoriteWatchedFolder(
             id: existing.id,
             name: existing.name,
             folderPath: existing.folderPath,
@@ -285,7 +285,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         }
 
         let existing = next.favoriteWatchedFolders[index]
-        let scopedRelativePaths = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+        let scopedRelativePaths = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
             from: knownDocumentFileURLs,
             relativeTo: folderURL,
             options: existing.options
@@ -293,7 +293,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         let updatedKnownPaths = Array(
             Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
         ).sorted()
-        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+        next.favoriteWatchedFolders[index] = FavoriteWatchedFolder(
             id: existing.id,
             name: existing.name,
             folderPath: existing.folderPath,
@@ -309,17 +309,17 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
+    func resolvedFavoriteWatchedFolderURL(for entry: FavoriteWatchedFolder) -> URL {
         entry.folderURL
     }
 
-    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: FavoriteWorkspaceState) {
         var next = subject.value
         guard let index = next.favoriteWatchedFolders.firstIndex(where: { $0.id == id }) else {
             return
         }
         let existing = next.favoriteWatchedFolders[index]
-        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+        next.favoriteWatchedFolders[index] = FavoriteWatchedFolder(
             id: existing.id,
             name: existing.name,
             folderPath: existing.folderPath,
@@ -390,7 +390,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         subject.send(next)
     }
 
-    private(set) var recordedTrustedImageFolders: [ReaderTrustedImageFolder] = []
+    private(set) var recordedTrustedImageFolders: [TrustedImageFolder] = []
 
     func addTrustedImageFolder(_ folderURL: URL) {
         var next = subject.value
@@ -461,7 +461,7 @@ final class TestReaderSettingsStore: ReaderSettingsStoring {
         guard existing.options != normalizedOptions else {
             return
         }
-        next.favoriteWatchedFolders[index] = ReaderFavoriteWatchedFolder(
+        next.favoriteWatchedFolders[index] = FavoriteWatchedFolder(
             id: existing.id,
             name: existing.name,
             folderPath: existing.folderPath,
@@ -596,7 +596,7 @@ final class TestReaderAutoOpenSettler: ReaderAutoOpenSettling {
     var handleChangeIfNeededResult = false
 
     func makePendingContext(
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String,
         now: Date
@@ -640,11 +640,11 @@ final class TestReaderDocumentIO: ReaderDocumentIO {
 }
 
 final class TestReaderFileActions: ReaderFileActionHandling {
-    func registeredApplications(for fileURL: URL) throws -> [ReaderExternalApplication] {
+    func registeredApplications(for fileURL: URL) throws -> [ExternalApplication] {
         []
     }
 
-    func open(fileURL: URL, in application: ReaderExternalApplication?) throws {}
+    func open(fileURL: URL, in application: ExternalApplication?) throws {}
     func revealInFinder(fileURL: URL) throws {}
 }
 
@@ -805,7 +805,7 @@ final class TestFolderWatchControllerDelegate: FolderWatchControllerDelegate {
         _ controller: FolderWatchController,
         handleEvents events: [FolderWatchChangeEvent],
         in session: FolderWatchSession,
-        origin: ReaderOpenOrigin
+        origin: OpenOrigin
     ) {
         handledEvents.append(contentsOf: events)
     }
@@ -878,8 +878,8 @@ struct ReaderStoreTestFixture {
         )
         let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
         store = ReaderStore(
-            rendering: ReaderRenderingDependencies(renderer: renderer, differ: differ),
-            file: ReaderFileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
+            rendering: RenderingDependencies(renderer: renderer, differ: differ),
+            file: FileDependencies(watcher: watcher, io: ReaderDocumentIOService(), actions: fileActions),
             folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: settler,
@@ -952,10 +952,10 @@ struct ReaderSidebarControllerTestHarness {
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
                 let store = ReaderStore(
-                    rendering: ReaderRenderingDependencies(
+                    rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
-                    file: ReaderFileDependencies(
+                    file: FileDependencies(
                         watcher: fileWatcher, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(

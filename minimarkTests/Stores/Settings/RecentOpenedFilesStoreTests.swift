@@ -14,7 +14,7 @@ struct RecentOpenedFilesStoreTests {
     }
 
     @MainActor private func makeStore(
-        initial: [ReaderRecentOpenedFile] = [],
+        initial: [RecentOpenedFile] = [],
         resolver: @escaping BookmarkRefreshing.Resolver = { _ in (URL(fileURLWithPath: "/ignored"), false) },
         creator: @escaping BookmarkRefreshing.Creator = { _ in Data() }
     ) -> (RecentOpenedFilesStore, RecordingCoordinator) {
@@ -37,11 +37,11 @@ struct RecentOpenedFilesStoreTests {
 
     @Test @MainActor func addRespectsMaximumCount() {
         let (store, _) = makeStore()
-        for i in 0..<(ReaderRecentOpenedFile.maximumCount + 3) {
+        for i in 0..<(RecentOpenedFile.maximumCount + 3) {
             store.addRecentManuallyOpenedFile(URL(fileURLWithPath: "/tmp/f-\(i).md"))
         }
 
-        #expect(store.currentRecentOpenedFiles.count == ReaderRecentOpenedFile.maximumCount)
+        #expect(store.currentRecentOpenedFiles.count == RecentOpenedFile.maximumCount)
     }
 
     @Test @MainActor func clearEmptiesCollection() {
@@ -63,7 +63,7 @@ struct RecentOpenedFilesStoreTests {
 
     @Test @MainActor func resolvedURLRefreshesStaleBookmark() {
         let fileURL = URL(fileURLWithPath: "/tmp/stale.md")
-        let entry = ReaderRecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x01]))
+        let entry = RecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x01]))
         let refreshed = Data([0xBB])
         let (store, _) = makeStore(
             initial: [entry],
@@ -79,7 +79,7 @@ struct RecentOpenedFilesStoreTests {
 
     @Test @MainActor func resolvedURLClearsInvalidBookmark() {
         let fileURL = URL(fileURLWithPath: "/tmp/broken.md")
-        let entry = ReaderRecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x01]))
+        let entry = RecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x01]))
         let (store, _) = makeStore(
             initial: [entry],
             resolver: { _ in throw NSError(domain: "test", code: 1) }

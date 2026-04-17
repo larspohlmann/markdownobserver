@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum ReaderMultiFileDisplayMode: String, CaseIterable, Codable, Sendable {
+nonisolated enum MultiFileDisplayMode: String, CaseIterable, Codable, Sendable {
     case sidebarLeft
     case sidebarRight
 
@@ -35,7 +35,7 @@ nonisolated enum ReaderMultiFileDisplayMode: String, CaseIterable, Codable, Send
         }
     }
 
-    var toggledSidebarPlacementMode: ReaderMultiFileDisplayMode {
+    var toggledSidebarPlacementMode: MultiFileDisplayMode {
         switch self {
         case .sidebarLeft:
             return .sidebarRight
@@ -44,7 +44,7 @@ nonisolated enum ReaderMultiFileDisplayMode: String, CaseIterable, Codable, Send
         }
     }
 
-    func requiresRestart(from launchedMode: ReaderMultiFileDisplayMode) -> Bool {
+    func requiresRestart(from launchedMode: MultiFileDisplayMode) -> Bool {
         false
     }
 
@@ -60,7 +60,7 @@ nonisolated enum ReaderMultiFileDisplayMode: String, CaseIterable, Codable, Send
         default:
             throw DecodingError.dataCorruptedError(
                 in: container,
-                debugDescription: "Unknown ReaderMultiFileDisplayMode raw value: \(rawValue)"
+                debugDescription: "Unknown MultiFileDisplayMode raw value: \(rawValue)"
             )
         }
     }

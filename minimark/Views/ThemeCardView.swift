@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ReaderThemeCard: View {
-    let kind: ReaderThemeKind
+    let kind: ThemeKind
     let isSelected: Bool
     let action: () -> Void
 

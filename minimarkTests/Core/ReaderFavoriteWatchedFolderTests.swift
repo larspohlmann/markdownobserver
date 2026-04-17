@@ -7,7 +7,7 @@ struct ReaderFavoriteWatchedFolderTests {
     // MARK: - Model
 
     @Test func matchesReturnsTrueForSameFolderPathAndOptions() {
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: "/tmp/docs",
             options: .default,
@@ -19,7 +19,7 @@ struct ReaderFavoriteWatchedFolderTests {
     }
 
     @Test func matchesReturnsFalseForDifferentPath() {
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: "/tmp/docs",
             options: .default,
@@ -31,7 +31,7 @@ struct ReaderFavoriteWatchedFolderTests {
     }
 
     @Test func matchesReturnsFalseForDifferentOptions() {
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: "/tmp/docs",
             options: .default,
@@ -71,7 +71,7 @@ struct ReaderFavoriteWatchedFolderTests {
             excludedSubdirectoryPaths: ["/tmp/docs/excluded"]
         )
 
-        let result = ReaderFavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+        let result = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
             from: [
                 folderURL.appendingPathComponent("a.md"),
                 folderURL.appendingPathComponent("nested/b.md"),
@@ -88,7 +88,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test func resolvedOpenDocumentFileURLsIgnoresInvalidRelativePaths() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: folderURL.path,
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .includeSubfolders),
@@ -110,7 +110,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test func insertingDuplicateFavoriteDoesNotAdd() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs")
-        let existing = [ReaderFavoriteWatchedFolder(
+        let existing = [FavoriteWatchedFolder(
             name: "Docs",
             folderURL: folderURL,
             options: .default
@@ -129,7 +129,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test func insertingSameFolderWithDifferentOptionsAddsNewEntry() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs")
-        let existing = [ReaderFavoriteWatchedFolder(
+        let existing = [FavoriteWatchedFolder(
             name: "Docs",
             folderURL: folderURL,
             options: .default
@@ -155,7 +155,7 @@ struct ReaderFavoriteWatchedFolderTests {
     @Test func removingFavoriteByIDRemovesCorrectEntry() {
         let id = UUID()
         let entries = [
-            ReaderFavoriteWatchedFolder(
+            FavoriteWatchedFolder(
                 id: id,
                 name: "A",
                 folderPath: "/tmp/a",
@@ -163,7 +163,7 @@ struct ReaderFavoriteWatchedFolderTests {
                 bookmarkData: nil,
                 createdAt: .now
             ),
-            ReaderFavoriteWatchedFolder(
+            FavoriteWatchedFolder(
                 id: UUID(),
                 name: "B",
                 folderPath: "/tmp/b",
@@ -184,7 +184,7 @@ struct ReaderFavoriteWatchedFolderTests {
     @Test func renamingFavoriteUpdatesName() {
         let id = UUID()
         let entries = [
-            ReaderFavoriteWatchedFolder(
+            FavoriteWatchedFolder(
                 id: id,
                 name: "Old Name",
                 folderPath: "/tmp/docs",
@@ -311,7 +311,7 @@ struct ReaderFavoriteWatchedFolderTests {
             minimumPersistInterval: 0
         )
 
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Test",
             folderPath: "/tmp/docs",
             options: .default,
@@ -328,7 +328,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let storage = TestSettingsKeyValueStorage()
         let store = ReaderSettingsStore(storage: storage, minimumPersistInterval: 0)
 
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Test",
             folderPath: "/tmp/docs",
             options: .default,
@@ -505,7 +505,7 @@ struct ReaderFavoriteWatchedFolderTests {
         }
         """
 
-        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+        let favorite = try JSONDecoder().decode(FavoriteWatchedFolder.self, from: Data(json.utf8))
         #expect(favorite.allKnownRelativePaths.isEmpty)
     }
 
@@ -523,7 +523,7 @@ struct ReaderFavoriteWatchedFolderTests {
         }
         """
 
-        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+        let favorite = try JSONDecoder().decode(FavoriteWatchedFolder.self, from: Data(json.utf8))
         #expect(favorite.openDocumentRelativePaths.isEmpty)
     }
 
@@ -659,7 +659,7 @@ struct ReaderFavoriteWatchedFolderTests {
     // MARK: - Excluded Subdirectory Relative Paths (Favorite)
 
     @Test func excludedSubdirectoryRelativePathsForFavorite() {
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Test",
             folderPath: "/tmp/project",
             options: FolderWatchOptions(
@@ -675,7 +675,7 @@ struct ReaderFavoriteWatchedFolderTests {
     }
 
     @Test func excludedSubdirectoryRelativePathsEmptyForSelectedFolderOnly() {
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Test",
             folderPath: "/tmp/project",
             options: FolderWatchOptions(
@@ -799,7 +799,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test func newFilesAreThoseNotInKnownSet() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: folderURL.path,
             options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
@@ -823,7 +823,7 @@ struct ReaderFavoriteWatchedFolderTests {
 
     @Test func emptyKnownSetTreatsAllScannedFilesAsNew() {
         let folderURL = URL(fileURLWithPath: "/tmp/docs", isDirectory: true)
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: folderURL.path,
             options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly),
@@ -843,7 +843,7 @@ struct ReaderFavoriteWatchedFolderTests {
     }
 
     @Test func watchChangesOnlyFavoriteDoesNotDiscoverNewFiles() {
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Docs",
             folderPath: "/tmp/docs",
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -875,25 +875,25 @@ struct ReaderFavoriteWatchedFolderTests {
         }
         """
 
-        let favorite = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: Data(json.utf8))
+        let favorite = try JSONDecoder().decode(FavoriteWatchedFolder.self, from: Data(json.utf8))
 
         #expect(favorite.name == "Legacy Favorite")
         #expect(favorite.openDocumentRelativePaths == ["readme.md"])
 
-        let expectedDefault = ReaderFavoriteWorkspaceState.from(
+        let expectedDefault = FavoriteWorkspaceState.from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
         #expect(favorite.workspaceState == expectedDefault)
         #expect(favorite.workspaceState.pinnedGroupIDs.isEmpty)
         #expect(favorite.workspaceState.collapsedGroupIDs.isEmpty)
-        #expect(favorite.workspaceState.sidebarWidth == ReaderFavoriteWorkspaceState.defaultSidebarWidth)
+        #expect(favorite.workspaceState.sidebarWidth == FavoriteWorkspaceState.defaultSidebarWidth)
     }
 
     @Test func encodingAndDecodingPreservesWorkspaceState() throws {
-        let customState = ReaderFavoriteWorkspaceState(
+        let customState = FavoriteWorkspaceState(
             fileSortMode: .nameAscending,
             groupSortMode: .lastChangedNewestFirst,
             sidebarPosition: .sidebarRight,
@@ -902,7 +902,7 @@ struct ReaderFavoriteWatchedFolderTests {
             collapsedGroupIDs: ["group-3"]
         )
 
-        let original = ReaderFavoriteWatchedFolder(
+        let original = FavoriteWatchedFolder(
             name: "Workspace Test",
             folderPath: "/tmp/workspace",
             options: .default,
@@ -912,7 +912,7 @@ struct ReaderFavoriteWatchedFolderTests {
         )
 
         let data = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(ReaderFavoriteWatchedFolder.self, from: data)
+        let decoded = try JSONDecoder().decode(FavoriteWatchedFolder.self, from: data)
 
         #expect(decoded.workspaceState == customState)
         #expect(decoded.workspaceState.fileSortMode == .nameAscending)
@@ -934,7 +934,7 @@ struct ReaderFavoriteWatchedFolderTests {
         let existingFile = tempDir.appendingPathComponent("exists.md")
         try Data("# Exists".utf8).write(to: existingFile)
 
-        let entry = ReaderFavoriteWatchedFolder(
+        let entry = FavoriteWatchedFolder(
             name: "Test",
             folderPath: tempDir.path,
             options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
@@ -953,8 +953,8 @@ struct ReaderFavoriteWatchedFolderTests {
 
     // MARK: - Helpers
 
-    private func makeFavorite(name: String, folderPath: String) -> ReaderFavoriteWatchedFolder {
-        ReaderFavoriteWatchedFolder(
+    private func makeFavorite(name: String, folderPath: String) -> FavoriteWatchedFolder {
+        FavoriteWatchedFolder(
             name: name,
             folderPath: folderPath,
             options: .default,

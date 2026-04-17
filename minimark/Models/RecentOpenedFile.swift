@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated struct ReaderRecentOpenedFile: Equatable, Hashable, Codable, Sendable, Identifiable {
+nonisolated struct RecentOpenedFile: Equatable, Hashable, Codable, Sendable, Identifiable {
     static let maximumCount = 15
 
     let filePath: String

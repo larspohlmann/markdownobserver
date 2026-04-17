@@ -3,7 +3,7 @@ import XCTest
 
 final class ReaderFavoriteWorkspaceStateLockTests: XCTestCase {
     func testWorkspaceStateDefaultsToNilLockedAppearance() {
-        let state = ReaderFavoriteWorkspaceState(
+        let state = FavoriteWorkspaceState(
             fileSortMode: .openOrder,
             groupSortMode: .lastChangedNewestFirst,
             sidebarPosition: .sidebarLeft,
@@ -16,7 +16,7 @@ final class ReaderFavoriteWorkspaceStateLockTests: XCTestCase {
     }
 
     func testWorkspaceStateStoresLockedAppearance() {
-        var state = ReaderFavoriteWorkspaceState(
+        var state = FavoriteWorkspaceState(
             fileSortMode: .openOrder,
             groupSortMode: .lastChangedNewestFirst,
             sidebarPosition: .sidebarLeft,
@@ -43,12 +43,12 @@ final class ReaderFavoriteWorkspaceStateLockTests: XCTestCase {
         }
         """.data(using: .utf8)!
 
-        let state = try JSONDecoder().decode(ReaderFavoriteWorkspaceState.self, from: legacyJSON)
+        let state = try JSONDecoder().decode(FavoriteWorkspaceState.self, from: legacyJSON)
         XCTAssertNil(state.lockedAppearance)
     }
 
     func testWorkspaceStateWithLockedAppearanceRoundTrips() throws {
-        var state = ReaderFavoriteWorkspaceState(
+        var state = FavoriteWorkspaceState(
             fileSortMode: .openOrder,
             groupSortMode: .lastChangedNewestFirst,
             sidebarPosition: .sidebarLeft,
@@ -63,7 +63,7 @@ final class ReaderFavoriteWorkspaceStateLockTests: XCTestCase {
         )
 
         let data = try JSONEncoder().encode(state)
-        let decoded = try JSONDecoder().decode(ReaderFavoriteWorkspaceState.self, from: data)
+        let decoded = try JSONDecoder().decode(FavoriteWorkspaceState.self, from: data)
 
         XCTAssertEqual(decoded.lockedAppearance?.readerTheme, .commodore64)
         XCTAssertEqual(decoded.lockedAppearance?.baseFontSize, 16)

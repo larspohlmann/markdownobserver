@@ -94,7 +94,7 @@ final class DocumentPresenter {
         document.fileLastModifiedAt = nil
         document.openInApplications = []
         document.isCurrentFileMissing = true
-        document.lastError = ReaderPresentableError(from: error)
+        document.lastError = PresentableError(from: error)
         settler.clearSettling()
     }
 

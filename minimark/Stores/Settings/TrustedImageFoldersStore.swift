@@ -3,21 +3,21 @@ import Combine
 import Observation
 
 @MainActor @Observable final class TrustedImageFoldersStore: ReaderTrustedFolderWriting {
-    private(set) var currentTrustedFolders: [ReaderTrustedImageFolder]
+    private(set) var currentTrustedFolders: [TrustedImageFolder]
 
     weak var coordinator: ChildStoreCoordinating?
 
     @ObservationIgnored
-    private let subject: CurrentValueSubject<[ReaderTrustedImageFolder], Never>
+    private let subject: CurrentValueSubject<[TrustedImageFolder], Never>
 
     @ObservationIgnored
     private let bookmarkRefreshing: BookmarkRefreshing
 
-    var trustedFoldersPublisher: AnyPublisher<[ReaderTrustedImageFolder], Never> {
+    var trustedFoldersPublisher: AnyPublisher<[TrustedImageFolder], Never> {
         subject.eraseToAnyPublisher()
     }
 
-    init(initial: [ReaderTrustedImageFolder], bookmarkRefreshing: BookmarkRefreshing) {
+    init(initial: [TrustedImageFolder], bookmarkRefreshing: BookmarkRefreshing) {
         self.currentTrustedFolders = initial
         self.subject = CurrentValueSubject(initial)
         self.bookmarkRefreshing = bookmarkRefreshing
@@ -65,7 +65,7 @@ import Observation
             guard let index = entries.firstIndex(where: { $0.folderPath == folderPath }) else { return }
             let existing = entries[index]
             guard existing.bookmarkData != bookmarkData else { return }
-            entries[index] = ReaderTrustedImageFolder(
+            entries[index] = TrustedImageFolder(
                 folderPath: existing.folderPath,
                 bookmarkData: bookmarkData
             )
@@ -74,7 +74,7 @@ import Observation
 
     private func mutate(
         coalescePersistence: Bool,
-        _ transform: (inout [ReaderTrustedImageFolder]) -> Void
+        _ transform: (inout [TrustedImageFolder]) -> Void
     ) {
         var updated = currentTrustedFolders
         transform(&updated)

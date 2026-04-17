@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderOpenOrigin: String, Hashable, Codable, Sendable {
+enum OpenOrigin: String, Hashable, Codable, Sendable {
     case manual
     case folderWatchAutoOpen
     case folderWatchInitialBatchAutoOpen
@@ -19,22 +19,22 @@ enum ReaderOpenOrigin: String, Hashable, Codable, Sendable {
     }
 }
 
-struct ReaderWindowSeed: Hashable, Codable, Sendable {
+struct WindowSeed: Hashable, Codable, Sendable {
     let id: UUID
     let filePath: String?
     let folderWatchSession: FolderWatchSession?
-    let recentOpenedFile: ReaderRecentOpenedFile?
-    let recentWatchedFolder: ReaderRecentWatchedFolder?
-    let openOrigin: ReaderOpenOrigin
+    let recentOpenedFile: RecentOpenedFile?
+    let recentWatchedFolder: RecentWatchedFolder?
+    let openOrigin: OpenOrigin
     let initialDiffBaselineMarkdown: String?
 
     init(
         id: UUID = UUID(),
         fileURL: URL? = nil,
         folderWatchSession: FolderWatchSession? = nil,
-        recentOpenedFile: ReaderRecentOpenedFile? = nil,
-        recentWatchedFolder: ReaderRecentWatchedFolder? = nil,
-        openOrigin: ReaderOpenOrigin = .manual,
+        recentOpenedFile: RecentOpenedFile? = nil,
+        recentWatchedFolder: RecentWatchedFolder? = nil,
+        openOrigin: OpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         self.id = id
@@ -50,7 +50,7 @@ struct ReaderWindowSeed: Hashable, Codable, Sendable {
         id: UUID = UUID(),
         fileURL: URL? = nil,
         folderWatchSession: FolderWatchSession? = nil,
-        openOrigin: ReaderOpenOrigin = .manual,
+        openOrigin: OpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         self.init(
@@ -79,9 +79,9 @@ struct ReaderWindowSeed: Hashable, Codable, Sendable {
         id = try container.decode(UUID.self, forKey: .id)
         filePath = try container.decodeIfPresent(String.self, forKey: .filePath)
         folderWatchSession = try container.decodeIfPresent(FolderWatchSession.self, forKey: .folderWatchSession)
-        recentOpenedFile = try container.decodeIfPresent(ReaderRecentOpenedFile.self, forKey: .recentOpenedFile)
-        recentWatchedFolder = try container.decodeIfPresent(ReaderRecentWatchedFolder.self, forKey: .recentWatchedFolder)
-        openOrigin = try container.decodeIfPresent(ReaderOpenOrigin.self, forKey: .openOrigin) ?? .manual
+        recentOpenedFile = try container.decodeIfPresent(RecentOpenedFile.self, forKey: .recentOpenedFile)
+        recentWatchedFolder = try container.decodeIfPresent(RecentWatchedFolder.self, forKey: .recentWatchedFolder)
+        openOrigin = try container.decodeIfPresent(OpenOrigin.self, forKey: .openOrigin) ?? .manual
         initialDiffBaselineMarkdown = try container.decodeIfPresent(String.self, forKey: .initialDiffBaselineMarkdown)
     }
 

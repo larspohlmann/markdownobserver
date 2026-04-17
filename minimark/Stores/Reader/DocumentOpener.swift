@@ -47,7 +47,7 @@ final class DocumentOpener {
 
     func open(
         at url: URL,
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -94,7 +94,7 @@ final class DocumentOpener {
     }
 
     func materializeDeferred(
-        origin: ReaderOpenOrigin? = nil,
+        origin: OpenOrigin? = nil,
         folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -128,7 +128,7 @@ final class DocumentOpener {
 
     func handleIncomingURL(
         _ url: URL,
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -155,7 +155,7 @@ final class DocumentOpener {
 
     func deferFile(
         at url: URL,
-        origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen,
+        origin: OpenOrigin = .folderWatchInitialBatchAutoOpen,
         folderWatchSession: FolderWatchSession?
     ) {
         document.deferFile(at: url, origin: origin)

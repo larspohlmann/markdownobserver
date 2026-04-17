@@ -1,7 +1,7 @@
 import Foundation
 
 enum ReaderSettingsGuidance {
-    static func layoutHelpText(selectedMode: ReaderMultiFileDisplayMode) -> String {
+    static func layoutHelpText(selectedMode: MultiFileDisplayMode) -> String {
         switch selectedMode {
         case .sidebarLeft, .sidebarRight:
             return "Sidebar placement changes immediately."

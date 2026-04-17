@@ -19,7 +19,7 @@ struct FavoriteWorkspaceControllerTests {
     @Test @MainActor func activateSetsIDAndWorkspaceState() {
         let controller = makeController()
         let id = UUID()
-        let state = ReaderFavoriteWorkspaceState.from(
+        let state = FavoriteWorkspaceState.from(
             settings: .default, pinnedGroupIDs: ["pinned"], collapsedGroupIDs: [], sidebarWidth: 300
         )
         controller.activate(id: id, workspaceState: state)
@@ -103,7 +103,7 @@ struct FavoriteWorkspaceControllerTests {
         let options = FolderWatchOptions(
             openMode: .watchChangesOnly, scope: .selectedFolderOnly, excludedSubdirectoryPaths: []
         )
-        let favorite = ReaderFavoriteWatchedFolder(
+        let favorite = FavoriteWatchedFolder(
             name: "Test", folderPath: normalizedPath, options: options, bookmarkData: nil, createdAt: .now
         )
         let result = controller.matchingFavorite(folderURL: folderURL, options: options, in: [favorite])
@@ -123,7 +123,7 @@ struct FavoriteWorkspaceControllerTests {
         let controller = FavoriteWorkspaceController(settingsStore: store)
         store.addFavoriteWatchedFolder(name: "Persist", folderURL: URL(fileURLWithPath: "/tmp/persist"), options: .default)
         let favoriteID = store.currentSettings.favoriteWatchedFolders.first!.id
-        var workspaceState = ReaderFavoriteWorkspaceState.from(
+        var workspaceState = FavoriteWorkspaceState.from(
             settings: .default, pinnedGroupIDs: ["pinned1"], collapsedGroupIDs: [], sidebarWidth: 350
         )
         workspaceState.fileSortMode = .nameAscending
@@ -141,9 +141,9 @@ struct FavoriteWorkspaceControllerTests {
         store.addFavoriteWatchedFolder(name: "NoOp", folderURL: URL(fileURLWithPath: "/tmp/no-persist"), options: .default)
         controller.persistFinalState(to: store)
         let persisted = store.currentSettings.favoriteWatchedFolders.first!
-        #expect(persisted.workspaceState == ReaderFavoriteWorkspaceState.from(
+        #expect(persisted.workspaceState == FavoriteWorkspaceState.from(
             settings: .default, pinnedGroupIDs: [], collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         ))
     }
 }
