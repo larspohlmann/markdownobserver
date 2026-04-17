@@ -12,7 +12,7 @@ extension ReaderStore {
             for: fileURL,
             at: .now
         )
-        reloadCurrentFile(
+        reloader.reload(
             at: fileURL,
             diffBaselineMarkdown: baseline,
             acknowledgeExternalChange: false
@@ -43,7 +43,7 @@ extension ReaderStore {
         }
 
         if document.isCurrentFileMissing || currentDocumentHasBeenDeleted {
-            reloadCurrentFile(
+            reloader.reload(
                 at: document.fileURL,
                 diffBaselineMarkdown: nil,
                 acknowledgeExternalChange: false

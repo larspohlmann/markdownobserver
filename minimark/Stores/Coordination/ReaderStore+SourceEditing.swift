@@ -61,7 +61,7 @@ extension ReaderStore {
         guard sourceEditingController.isSourceEditing else { return }
 
         if externalChange.hasUnacknowledgedExternalChange {
-            reloadCurrentFile(
+            reloader.reload(
                 at: document.fileURL,
                 diffBaselineMarkdown: nil,
                 acknowledgeExternalChange: true

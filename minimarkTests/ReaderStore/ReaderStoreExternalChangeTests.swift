@@ -242,7 +242,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.write(content: "# Updated", to: fixture.primaryFileURL)
-        fixture.store.reloadCurrentFile(forceHighlight: true, acknowledgeExternalChange: true)
+        fixture.store.reloader.reloadCurrentFile(forceHighlight: true, acknowledgeExternalChange: true)
 
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
     }

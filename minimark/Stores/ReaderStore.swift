@@ -43,6 +43,7 @@ final class ReaderStore {
     let presenter: DocumentPresenter
     let postOpenEffects: PostOpenEffects
     let opener: DocumentOpener
+    let reloader: DocumentReloader
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -131,6 +132,14 @@ final class ReaderStore {
                 document.handle(error)
             }
         )
+        self.reloader = DocumentReloader(
+            document: self.document,
+            folderWatch: folderWatch,
+            presenter: self.presenter,
+            onError: { [document = self.document] error in
+                document.handle(error)
+            }
+        )
         self.postOpenEffects.onError = { [document = self.document] error in
             document.handle(error)
         }
@@ -162,12 +171,15 @@ final class ReaderStore {
             currentFileURL: { [weak self] in self?.document.fileURL },
             loadFile: { [weak self] url in
                 guard let self else { throw ReaderError.noOpenFileInReader }
-                return try self.loadMarkdownFile(at: url)
+                return try self.fileLoader.load(
+                    at: url,
+                    folderWatchSession: self.folderWatchDispatcher.activeFolderWatchSession
+                )
             },
             onDocumentSettled: { [weak self] loaded, fileURL, diffBaselineMarkdown in
                 guard let self else { return }
                 do {
-                    try self.presentLoadedDocument(
+                    try self.presenter.presentLoaded(
                         loaded,
                         at: fileURL,
                         diffBaselineMarkdown: diffBaselineMarkdown,
@@ -175,7 +187,7 @@ final class ReaderStore {
                         acknowledgeExternalChange: true
                     )
                 } catch {
-                    self.handle(error)
+                    self.document.handle(error)
                 }
             },
             onLoadStateChanged: { [weak self] state in
