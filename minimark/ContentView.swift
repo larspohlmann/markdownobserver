@@ -4,32 +4,26 @@ import SwiftUI
 
 struct ContentView: View {
     let viewModel: ContentAreaViewModel
-    @Bindable var toc: TOCController
-    let document: DocumentController
-    let rendering: RenderingController
-    let sourceEditing: SourceEditingController
+    let documentStore: DocumentStore
     let settingsStore: SettingsStore
     let surfaceViewModel: DocumentSurfaceViewModel
     let folderWatchState: ContentViewFolderWatchState
 
-    @Binding var isFolderWatchOptionsPresented: Bool
-    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: FolderWatchScope
-    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
+    private var toc: TOCController { documentStore.toc }
+    private var document: DocumentController { documentStore.document }
+    private var rendering: RenderingController { documentStore.renderingController }
+    private var sourceEditing: SourceEditingController { documentStore.sourceEditingController }
 
     var body: some View {
-        baseBody.modifier(ContentViewFocusedValues(
-            document: document,
-            sourceEditing: sourceEditing,
-            toc: toc,
+        @Bindable var toc = toc
+        return baseBody.modifier(ContentViewFocusedValues(
+            documentStore: documentStore,
             folderWatchState: folderWatchState,
             onAction: viewModel.onAction,
-            canNavigateChangedRegions: viewModel.canNavigateChangedRegions,
-            onNavigateChangedRegion: viewModel.requestChangeNavigation,
-            isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
-            pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
-            pendingFolderWatchScope: $pendingFolderWatchScope,
-            pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
+            changedRegionNavigation: ChangedRegionNavigationAction(
+                canNavigate: viewModel.canNavigateChangedRegions,
+                navigate: viewModel.requestChangeNavigation
+            )
         ))
     }
 
@@ -70,14 +64,10 @@ struct ContentView: View {
 
     private var topBar: some View {
         TopBar(
-            document: document,
-            sourceEditing: sourceEditing,
+            documentStore: documentStore,
             statusBarTimestamp: viewModel.statusBarTimestamp,
-            canStopFolderWatch: folderWatchState.canStopFolderWatch,
+            folderWatchState: folderWatchState,
             apps: document.openInApplications,
-            favoriteWatchedFolders: folderWatchState.favoriteWatchedFolders,
-            recentWatchedFolders: folderWatchState.recentWatchedFolders,
-            recentManuallyOpenedFiles: folderWatchState.recentManuallyOpenedFiles,
             iconProvider: appIconImage(for:),
             onAction: viewModel.dispatchTopBarAction
         )
@@ -105,7 +95,8 @@ struct ContentView: View {
     }
 
     private var utilityRail: some View {
-        ContentUtilityRailView(
+        @Bindable var toc = toc
+        return ContentUtilityRailView(
             state: ContentUtilityRailState(
                 hasFile: document.fileURL != nil,
                 documentViewMode: sourceEditing.documentViewMode,
@@ -178,34 +169,29 @@ struct ContentView: View {
 
 #Preview {
     let settingsStore = SettingsStore()
-    let settler = AutoOpenSettler(settlingInterval: 1.0)
     let securityScopeResolver = SecurityScopeResolver(
         securityScope: SecurityScopedResourceAccess(),
         settingsStore: settingsStore,
         requestWatchedFolderReauthorization: { _ in nil }
     )
-    let fileDeps = FileDependencies(
-        watcher: FileChangeWatcher(),
-        io: DocumentIOService(),
-        actions: FileActionService()
-    )
-    let renderingDeps = RenderingDependencies(
-        renderer: MarkdownRenderingService(),
-        differ: ChangedRegionDiffer()
-    )
-    let document = DocumentController(
-        fileDependencies: fileDeps,
-        settingsStore: settingsStore,
-        settler: settler
-    )
-    let rendering = RenderingController(
-        renderingDependencies: renderingDeps,
+    let documentStore = DocumentStore(
+        rendering: RenderingDependencies(
+            renderer: MarkdownRenderingService(),
+            differ: ChangedRegionDiffer()
+        ),
+        file: FileDependencies(
+            watcher: FileChangeWatcher(),
+            io: DocumentIOService(),
+            actions: FileActionService()
+        ),
+        folderWatch: FolderWatchDependencies(
+            autoOpenPlanner: FolderWatchAutoOpenPlanner(),
+            settler: AutoOpenSettler(settlingInterval: 1.0),
+            systemNotifier: SystemNotifier.shared
+        ),
         settingsStore: settingsStore,
         securityScopeResolver: securityScopeResolver
     )
-    let sourceEditing = SourceEditingController()
-    let externalChange = ExternalChangeController()
-    let toc = TOCController()
     let surfaceViewModel = DocumentSurfaceViewModel()
     let folderWatchState = ContentViewFolderWatchState(
         activeFolderWatch: nil,
@@ -222,29 +208,33 @@ struct ContentView: View {
     )
 
     let viewModel = ContentAreaViewModel(
-        document: document,
-        rendering: rendering,
-        sourceEditing: sourceEditing,
-        externalChange: externalChange,
-        toc: toc,
+        document: documentStore.document,
+        rendering: documentStore.renderingController,
+        sourceEditing: documentStore.sourceEditingController,
+        externalChange: documentStore.externalChange,
+        toc: documentStore.toc,
         settingsStore: settingsStore,
         folderWatchState: folderWatchState,
         surfaceViewModel: surfaceViewModel,
         onAction: { _ in }
     )
 
+    let sidebarDocumentController = SidebarDocumentController(settingsStore: settingsStore)
+    let appearanceController = WindowAppearanceController(settingsStore: settingsStore)
+    let folderWatchFlow = FolderWatchFlowController(
+        settingsStore: settingsStore,
+        sidebarDocumentController: sidebarDocumentController
+    )
+
     return ContentView(
         viewModel: viewModel,
-        toc: toc,
-        document: document,
-        rendering: rendering,
-        sourceEditing: sourceEditing,
+        documentStore: documentStore,
         settingsStore: settingsStore,
         surfaceViewModel: surfaceViewModel,
-        folderWatchState: folderWatchState,
-        isFolderWatchOptionsPresented: .constant(false),
-        pendingFolderWatchOpenMode: .constant(.watchChangesOnly),
-        pendingFolderWatchScope: .constant(.selectedFolderOnly),
-        pendingFolderWatchExcludedSubdirectoryPaths: .constant([])
+        folderWatchState: folderWatchState
     )
+    .environment(settingsStore)
+    .environment(appearanceController)
+    .environment(sidebarDocumentController)
+    .environment(folderWatchFlow)
 }

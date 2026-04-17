@@ -1,17 +1,16 @@
 import SwiftUI
 
 struct ContentViewFocusedValues: ViewModifier {
-    let document: DocumentController
-    let sourceEditing: SourceEditingController
-    let toc: TOCController
+    let documentStore: DocumentStore
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
-    let canNavigateChangedRegions: Bool
-    let onNavigateChangedRegion: (ChangedRegionNavigationDirection) -> Void
-    @Binding var isFolderWatchOptionsPresented: Bool
-    @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
-    @Binding var pendingFolderWatchScope: FolderWatchScope
-    @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
+    let changedRegionNavigation: ChangedRegionNavigationAction
+
+    @Environment(FolderWatchFlowController.self) private var folderWatchFlow
+
+    private var document: DocumentController { documentStore.document }
+    private var sourceEditing: SourceEditingController { documentStore.sourceEditingController }
+    private var toc: TOCController { documentStore.toc }
 
     private func openOrAppendDocument(_ fileURL: URL) {
         let strategy: FileOpenRequest.SlotStrategy =
@@ -24,7 +23,8 @@ struct ContentViewFocusedValues: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        content
+        @Bindable var folderWatchFlow = folderWatchFlow
+        return content
             .focusedValue(
                 \.openDocumentInCurrentWindow,
                 OpenDocumentInCurrentWindowAction { fileURL in
@@ -106,10 +106,7 @@ struct ContentViewFocusedValues: ViewModifier {
             )
             .focusedValue(
                 \.changedRegionNavigation,
-                ChangedRegionNavigationAction(
-                    canNavigate: canNavigateChangedRegions,
-                    navigate: onNavigateChangedRegion
-                )
+                changedRegionNavigation
             )
             .focusedValue(
                 \.toggleTOC,
@@ -118,16 +115,16 @@ struct ContentViewFocusedValues: ViewModifier {
                     toggle: { toc.toggle() }
                 )
             )
-            .onChange(of: isFolderWatchOptionsPresented) { _, isPresented in
+            .onChange(of: folderWatchFlow.isFolderWatchOptionsPresented) { _, isPresented in
                 guard !isPresented else { return }
                 onAction(.cancelFolderWatch)
             }
-            .sheet(isPresented: $isFolderWatchOptionsPresented) {
+            .sheet(isPresented: $folderWatchFlow.isFolderWatchOptionsPresented) {
                 FolderWatchOptionsSheet(
                     folderURL: folderWatchState.pendingFolderWatchURL,
-                    openMode: $pendingFolderWatchOpenMode,
-                    scope: $pendingFolderWatchScope,
-                    excludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths,
+                    openMode: folderWatchFlow.pendingOpenModeBinding,
+                    scope: folderWatchFlow.pendingScopeBinding,
+                    excludedSubdirectoryPaths: folderWatchFlow.pendingExcludedSubdirectoryPathsBinding,
                     onCancel: { onAction(.cancelFolderWatch) },
                     onConfirm: { options in onAction(.confirmFolderWatch(options)) }
                 )
