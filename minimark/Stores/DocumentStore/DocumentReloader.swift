@@ -2,13 +2,13 @@ import Foundation
 
 @MainActor
 final class DocumentReloader {
-    private let document: ReaderDocumentController
+    private let document: DocumentController
     private let folderWatch: FolderWatchDependencies
     private let presenter: DocumentPresenter
     private let onError: @MainActor (Error) -> Void
 
     init(
-        document: ReaderDocumentController,
+        document: DocumentController,
         folderWatch: FolderWatchDependencies,
         presenter: DocumentPresenter,
         onError: @escaping @MainActor (Error) -> Void

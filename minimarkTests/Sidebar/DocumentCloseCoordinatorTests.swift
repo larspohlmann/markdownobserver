@@ -8,19 +8,19 @@ struct DocumentCloseCoordinatorTests {
 
     final class MockDelegate: DocumentCloseCoordinatorDelegate {
         var selectedDocumentID: UUID
-        var storeConfigurator: ((ReaderStore) -> Void)?
+        var storeConfigurator: ((DocumentStore) -> Void)?
         var bindSelectedStoreCalled = false
-        let makeDocumentFactory: () -> ReaderSidebarDocumentController.Document
+        let makeDocumentFactory: () -> SidebarDocumentController.Document
 
         init(
             selectedDocumentID: UUID,
-            makeDocument: @escaping () -> ReaderSidebarDocumentController.Document
+            makeDocument: @escaping () -> SidebarDocumentController.Document
         ) {
             self.selectedDocumentID = selectedDocumentID
             self.makeDocumentFactory = makeDocument
         }
 
-        func makeDocument() -> ReaderSidebarDocumentController.Document {
+        func makeDocument() -> SidebarDocumentController.Document {
             makeDocumentFactory()
         }
 
@@ -31,14 +31,14 @@ struct DocumentCloseCoordinatorTests {
 
     // MARK: - Helpers
 
-    private static func makeStore(settingsStore: ReaderSettingsStore) -> ReaderStore {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+    private static func makeStore(settingsStore: SettingsStore) -> DocumentStore {
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let securityScopeResolver = SecurityScopeResolver(
             securityScope: TestSecurityScopeAccess(),
             settingsStore: settingsStore,
             requestWatchedFolderReauthorization: { _ in nil }
         )
-        return ReaderStore(
+        return DocumentStore(
             rendering: RenderingDependencies(
                 renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
             ),
@@ -55,8 +55,8 @@ struct DocumentCloseCoordinatorTests {
         )
     }
 
-    private static func makeDocument(settingsStore: ReaderSettingsStore) -> ReaderSidebarDocumentController.Document {
-        ReaderSidebarDocumentController.Document(
+    private static func makeDocument(settingsStore: SettingsStore) -> SidebarDocumentController.Document {
+        SidebarDocumentController.Document(
             id: UUID(),
             readerStore: makeStore(settingsStore: settingsStore),
             normalizedFileURL: nil
@@ -68,7 +68,7 @@ struct DocumentCloseCoordinatorTests {
         delegate: MockDelegate,
         documentList: SidebarDocumentList
     ) {
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "test.\(UUID().uuidString)"
         )

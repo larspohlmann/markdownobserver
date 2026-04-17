@@ -10,15 +10,15 @@ import Foundation
 /// skip the refresh because they don't change the sidebar's document list.
 @MainActor
 final class SidebarDocumentActionRouter {
-    private let sidebarDocumentController: ReaderSidebarDocumentController
-    private let settingsStore: ReaderSettingsStore
+    private let sidebarDocumentController: SidebarDocumentController
+    private let settingsStore: SettingsStore
     private let favoriteWorkspaceControllerProvider: () -> FavoriteWorkspaceController?
     private let sidebarWidthProvider: () -> CGFloat
     private let refreshWindowPresentation: () -> Void
 
     init(
-        sidebarDocumentController: ReaderSidebarDocumentController,
-        settingsStore: ReaderSettingsStore,
+        sidebarDocumentController: SidebarDocumentController,
+        settingsStore: SettingsStore,
         favoriteWorkspaceControllerProvider: @escaping () -> FavoriteWorkspaceController?,
         sidebarWidthProvider: @escaping () -> CGFloat,
         refreshWindowPresentation: @escaping () -> Void

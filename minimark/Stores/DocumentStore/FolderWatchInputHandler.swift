@@ -2,12 +2,12 @@ import Foundation
 
 @MainActor
 final class FolderWatchInputHandler {
-    private let document: ReaderDocumentController
+    private let document: DocumentController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let opener: DocumentOpener
 
     init(
-        document: ReaderDocumentController,
+        document: DocumentController,
         folderWatchDispatcher: FolderWatchDispatcher,
         opener: DocumentOpener
     ) {

@@ -1,17 +1,17 @@
 import Foundation
 
-struct ReaderTopBarStoreProjection {
+struct TopBarStoreProjection {
     let fileURL: URL?
     let fileDisplayName: String
     let isSourceEditing: Bool
     let hasUnsavedDraftChanges: Bool
     let canSaveSourceDraft: Bool
     let canDiscardSourceDraft: Bool
-    let statusBarTimestamp: ReaderStatusBarTimestamp?
+    let statusBarTimestamp: StatusBarTimestamp?
     let isCurrentFileMissing: Bool
 
     @MainActor
-    init(store: ReaderStore) {
+    init(store: DocumentStore) {
         self.init(
             document: store.document,
             sourceEditing: store.sourceEditingController,
@@ -21,9 +21,9 @@ struct ReaderTopBarStoreProjection {
 
     @MainActor
     init(
-        document: ReaderDocumentController,
-        sourceEditing: ReaderSourceEditingController,
-        statusBarTimestamp: ReaderStatusBarTimestamp?
+        document: DocumentController,
+        sourceEditing: SourceEditingController,
+        statusBarTimestamp: StatusBarTimestamp?
     ) {
         self.fileURL = document.fileURL
         self.fileDisplayName = document.fileDisplayName

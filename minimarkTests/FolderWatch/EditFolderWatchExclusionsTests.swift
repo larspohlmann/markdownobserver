@@ -15,7 +15,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsPreservesBookmarkData() throws {
         let folderURL = try makeTemporaryFolder(name: "bookmark")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-bookmark.\(UUID().uuidString)"
         )
@@ -55,7 +55,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsNoOpWhenUnchanged() throws {
         let folderURL = try makeTemporaryFolder(name: "noop")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-noop.\(UUID().uuidString)"
         )
@@ -86,7 +86,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsNoOpForUnknownID() throws {
         let folderURL = try makeTemporaryFolder(name: "unknown")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-unknown.\(UUID().uuidString)"
         )
@@ -112,7 +112,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsPreservesAllOtherProperties() throws {
         let folderURL = try makeTemporaryFolder(name: "props")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-props.\(UUID().uuidString)"
         )
@@ -153,14 +153,14 @@ struct EditFolderWatchExclusionsTests {
         try "# A (older)".write(to: fileA, atomically: true, encoding: .utf8)
         try "# B (newer)".write(to: fileB, atomically: true, encoding: .utf8)
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-fallback.\(UUID().uuidString)"
         )
 
         var createdFileWatchers: [TestFileWatcher] = []
         let controllerWatcher = TestFolderWatcher()
-        let controller = ReaderSidebarDocumentController(
+        let controller = SidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
                 let fw = TestFileWatcher()
@@ -170,7 +170,7 @@ struct EditFolderWatchExclusionsTests {
                     settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
-                return ReaderStore(
+                return DocumentStore(
                     rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
@@ -179,7 +179,7 @@ struct EditFolderWatchExclusionsTests {
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                        settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                        settler: AutoOpenSettler(settlingInterval: 1.0),
                         systemNotifier: TestReaderSystemNotifier()
                     ),
                     settingsStore: settingsStore,
@@ -241,7 +241,7 @@ struct EditFolderWatchExclusionsTests {
         )
 
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-restart.\(UUID().uuidString)"
         )

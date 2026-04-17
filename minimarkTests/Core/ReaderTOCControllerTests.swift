@@ -2,7 +2,7 @@ import Testing
 @testable import minimark
 
 @MainActor
-@Suite("ReaderTOCController")
+@Suite("TOCController")
 struct ReaderTOCControllerTests {
     private func heading(id: String = "h1", title: String = "Title", level: Int = 1, index: Int = 0) -> TOCHeading {
         TOCHeading(elementID: id, level: level, title: title, sourceLine: nil, index: index)
@@ -10,7 +10,7 @@ struct ReaderTOCControllerTests {
 
     @Test("updateHeadings sets headings")
     func updateHeadingsSetsHeadings() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         let headings = [heading()]
         sut.updateHeadings(headings)
         #expect(sut.headings == headings)
@@ -18,7 +18,7 @@ struct ReaderTOCControllerTests {
 
     @Test("updateHeadings hides TOC when headings become empty")
     func updateHeadingsHidesTOCWhenEmpty() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         sut.updateHeadings([heading()])
         sut.isVisible = true
         sut.updateHeadings([])
@@ -27,7 +27,7 @@ struct ReaderTOCControllerTests {
 
     @Test("updateHeadings skips no-op when headings unchanged")
     func updateHeadingsSkipsNoOp() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         let headings = [heading()]
         sut.updateHeadings(headings)
         sut.isVisible = true
@@ -37,7 +37,7 @@ struct ReaderTOCControllerTests {
 
     @Test("toggle shows TOC when headings exist")
     func toggleShowsTOC() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         sut.updateHeadings([heading()])
         sut.toggle()
         #expect(sut.isVisible)
@@ -45,14 +45,14 @@ struct ReaderTOCControllerTests {
 
     @Test("toggle does nothing when headings empty")
     func toggleNoOpWhenEmpty() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         sut.toggle()
         #expect(!sut.isVisible)
     }
 
     @Test("scrollTo sets request and hides TOC")
     func scrollToSetsRequestAndHides() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         let h = heading()
         sut.updateHeadings([h])
         sut.isVisible = true
@@ -64,7 +64,7 @@ struct ReaderTOCControllerTests {
 
     @Test("scrollTo increments request counter")
     func scrollToIncrementsCounter() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         let h = heading()
         sut.scrollTo(h)
         sut.scrollTo(h)
@@ -73,7 +73,7 @@ struct ReaderTOCControllerTests {
 
     @Test("clear resets all state")
     func clearResetsState() {
-        let sut = ReaderTOCController()
+        let sut = TOCController()
         sut.updateHeadings([heading()])
         sut.isVisible = true
         sut.clear()

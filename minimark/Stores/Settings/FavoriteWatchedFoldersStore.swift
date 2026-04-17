@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import Observation
 
-@MainActor @Observable final class FavoriteWatchedFoldersStore: ReaderFavoriteWriting {
+@MainActor @Observable final class FavoriteWatchedFoldersStore: FavoriteWriting {
     private(set) var currentFavorites: [FavoriteWatchedFolder]
 
     weak var coordinator: ChildStoreCoordinating?

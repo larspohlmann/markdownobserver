@@ -136,13 +136,13 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     }
 }
 
-@MainActor protocol ReaderSettingsReading: AnyObject {
+@MainActor protocol SettingsReading: AnyObject {
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> { get }
     var currentSettings: ReaderSettings { get }
     func isHintDismissed(_ hint: FirstUseHint) -> Bool
 }
 
-@MainActor protocol ReaderThemeWriting: AnyObject {
+@MainActor protocol ThemeWriting: AnyObject {
     func updateAppAppearance(_ appearance: AppAppearance)
     func updateTheme(_ kind: ThemeKind)
     func updateSyntaxTheme(_ kind: SyntaxThemeKind)
@@ -152,7 +152,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func resetFontSize()
 }
 
-@MainActor protocol ReaderPreferencesWriting: AnyObject {
+@MainActor protocol PreferencesWriting: AnyObject {
     func updateNotificationsEnabled(_ isEnabled: Bool)
     func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode)
     func updateSidebarSortMode(_ mode: SidebarSortMode)
@@ -160,7 +160,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback)
 }
 
-@MainActor protocol ReaderFavoriteWriting: AnyObject {
+@MainActor protocol FavoriteWriting: AnyObject {
     func addFavoriteWatchedFolder(
         name: String,
         folderURL: URL,
@@ -187,42 +187,42 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String])
 }
 
-@MainActor protocol ReaderRecentWatchedFolderWriting: AnyObject {
+@MainActor protocol RecentWatchedFolderWriting: AnyObject {
     func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions)
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL?
     func clearRecentWatchedFolders()
 }
 
-@MainActor protocol ReaderRecentOpenedFileWriting: AnyObject {
+@MainActor protocol RecentOpenedFileWriting: AnyObject {
     func addRecentManuallyOpenedFile(_ fileURL: URL)
     func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL?
     func clearRecentManuallyOpenedFiles()
 }
 
-typealias ReaderRecentWriting = ReaderRecentWatchedFolderWriting & ReaderRecentOpenedFileWriting
+typealias RecentWriting = RecentWatchedFolderWriting & RecentOpenedFileWriting
 
-@MainActor protocol ReaderTrustedFolderWriting: AnyObject {
+@MainActor protocol TrustedFolderWriting: AnyObject {
     func addTrustedImageFolder(_ folderURL: URL)
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL?
 }
 
-@MainActor protocol ReaderHintWriting: AnyObject {
+@MainActor protocol HintWriting: AnyObject {
     func dismissHint(_ hint: FirstUseHint)
 }
 
-typealias ReaderSettingsWriting = ReaderThemeWriting
-    & ReaderPreferencesWriting
-    & ReaderFavoriteWriting
-    & ReaderRecentWriting
-    & ReaderTrustedFolderWriting
-    & ReaderHintWriting
+typealias SettingsWriting = ThemeWriting
+    & PreferencesWriting
+    & FavoriteWriting
+    & RecentWriting
+    & TrustedFolderWriting
+    & HintWriting
 
-typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
+typealias SettingsStoring = SettingsReading & SettingsWriting
 
-@MainActor @Observable final class ReaderSettingsStore: ReaderSettingsStoring, ChildStoreCoordinating {
+@MainActor @Observable final class SettingsStore: SettingsStoring, ChildStoreCoordinating {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
-        category: "ReaderSettingsStore"
+        category: "SettingsStore"
     )
 
     typealias BookmarkResolution = (url: URL, isStale: Bool)
@@ -235,7 +235,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
     private(set) var currentSettings: ReaderSettings
 
-    let preferences: ReaderPreferencesStore
+    let preferences: PreferencesStore
     let favorites: FavoriteWatchedFoldersStore
     let recentWatchedFolders: RecentWatchedFoldersStore
     let recentOpenedFiles: RecentOpenedFilesStore
@@ -286,7 +286,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
 
         let bookmarkRefreshing = BookmarkRefreshing(resolve: bookmarkResolver, create: bookmarkCreator)
 
-        self.preferences = ReaderPreferencesStore(
+        self.preferences = PreferencesStore(
             initial: ReaderPreferencesSlice(
                 appAppearance: initialSettings.appAppearance,
                 readerTheme: initialSettings.readerTheme,
@@ -366,7 +366,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         )
     }
 
-    // MARK: - ReaderThemeWriting
+    // MARK: - ThemeWriting
 
     func updateAppAppearance(_ appearance: AppAppearance) { preferences.updateAppAppearance(appearance) }
     func updateTheme(_ kind: ThemeKind) { preferences.updateTheme(kind) }
@@ -376,7 +376,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     func decreaseFontSize(step: Double = 1.0) { preferences.decreaseFontSize(step: step) }
     func resetFontSize() { preferences.resetFontSize() }
 
-    // MARK: - ReaderPreferencesWriting
+    // MARK: - PreferencesWriting
 
     func updateNotificationsEnabled(_ isEnabled: Bool) { preferences.updateNotificationsEnabled(isEnabled) }
     func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode) { preferences.updateMultiFileDisplayMode(mode) }
@@ -384,12 +384,12 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     func updateSidebarGroupSortMode(_ mode: SidebarSortMode) { preferences.updateSidebarGroupSortMode(mode) }
     func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) { preferences.updateDiffBaselineLookback(lookback) }
 
-    // MARK: - ReaderHintWriting
+    // MARK: - HintWriting
 
     func isHintDismissed(_ hint: FirstUseHint) -> Bool { preferences.isHintDismissed(hint) }
     func dismissHint(_ hint: FirstUseHint) { preferences.dismissHint(hint) }
 
-    // MARK: - ReaderFavoriteWriting
+    // MARK: - FavoriteWriting
 
     func addFavoriteWatchedFolder(
         name: String,
@@ -443,7 +443,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         favorites.updateFavoriteWatchedFolderExclusions(id: id, excludedSubdirectoryPaths: excludedSubdirectoryPaths)
     }
 
-    // MARK: - ReaderRecentWatchedFolderWriting
+    // MARK: - RecentWatchedFolderWriting
 
     func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions) {
         recentWatchedFolders.addRecentWatchedFolder(folderURL, options: options)
@@ -453,7 +453,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     }
     func clearRecentWatchedFolders() { recentWatchedFolders.clearRecentWatchedFolders() }
 
-    // MARK: - ReaderRecentOpenedFileWriting
+    // MARK: - RecentOpenedFileWriting
 
     func addRecentManuallyOpenedFile(_ fileURL: URL) {
         recentOpenedFiles.addRecentManuallyOpenedFile(fileURL)
@@ -463,7 +463,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     }
     func clearRecentManuallyOpenedFiles() { recentOpenedFiles.clearRecentManuallyOpenedFiles() }
 
-    // MARK: - ReaderTrustedFolderWriting
+    // MARK: - TrustedFolderWriting
 
     func addTrustedImageFolder(_ folderURL: URL) { trustedImageFolders.addTrustedImageFolder(folderURL) }
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {

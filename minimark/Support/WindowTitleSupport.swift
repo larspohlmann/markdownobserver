@@ -10,7 +10,7 @@ enum DocumentIndicatorState: Equatable, Sendable {
     init(
         hasUnacknowledgedExternalChange: Bool,
         isCurrentFileMissing: Bool,
-        unacknowledgedExternalChangeKind: ReaderExternalChangeKind = .modified
+        unacknowledgedExternalChangeKind: ExternalChangeKind = .modified
     ) {
         guard hasUnacknowledgedExternalChange else {
             self = .none

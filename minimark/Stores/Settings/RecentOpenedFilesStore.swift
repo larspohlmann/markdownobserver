@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import Observation
 
-@MainActor @Observable final class RecentOpenedFilesStore: ReaderRecentOpenedFileWriting {
+@MainActor @Observable final class RecentOpenedFilesStore: RecentOpenedFileWriting {
     private(set) var currentRecentOpenedFiles: [RecentOpenedFile]
 
     weak var coordinator: ChildStoreCoordinating?

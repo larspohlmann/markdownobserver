@@ -13,7 +13,7 @@ struct ReaderPreferencesStoreTests {
         }
     }
 
-    @MainActor private func makeStore(_ overrides: (inout ReaderPreferencesSlice) -> Void = { _ in }) -> (ReaderPreferencesStore, RecordingCoordinator) {
+    @MainActor private func makeStore(_ overrides: (inout ReaderPreferencesSlice) -> Void = { _ in }) -> (PreferencesStore, RecordingCoordinator) {
         var slice = ReaderPreferencesSlice(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
@@ -28,7 +28,7 @@ struct ReaderPreferencesStoreTests {
             dismissedHints: []
         )
         overrides(&slice)
-        let store = ReaderPreferencesStore(initial: slice)
+        let store = PreferencesStore(initial: slice)
         let coordinator = RecordingCoordinator()
         store.coordinator = coordinator
         return (store, coordinator)
@@ -56,7 +56,7 @@ struct ReaderPreferencesStoreTests {
 
         store.updateBaseFontSize(5)
 
-        #expect(store.currentPreferences.baseFontSize == ReaderPreferencesStore.minimumFontSize)
+        #expect(store.currentPreferences.baseFontSize == PreferencesStore.minimumFontSize)
     }
 
     @Test @MainActor func updateBaseFontSizeClampsAboveMaximum() {
@@ -64,7 +64,7 @@ struct ReaderPreferencesStoreTests {
 
         store.updateBaseFontSize(999)
 
-        #expect(store.currentPreferences.baseFontSize == ReaderPreferencesStore.maximumFontSize)
+        #expect(store.currentPreferences.baseFontSize == PreferencesStore.maximumFontSize)
     }
 
     @Test @MainActor func increaseDecreaseAndResetFontSize() {

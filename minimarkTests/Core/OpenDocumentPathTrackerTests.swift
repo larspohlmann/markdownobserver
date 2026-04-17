@@ -5,8 +5,8 @@ import Testing
 @Suite(.serialized)
 struct OpenDocumentPathTrackerTests {
     @MainActor
-    private func makeSettingsStore() -> ReaderSettingsStore {
-        ReaderSettingsStore(
+    private func makeSettingsStore() -> SettingsStore {
+        SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "path-tracker-tests.\(UUID().uuidString)"
         )
@@ -15,9 +15,9 @@ struct OpenDocumentPathTrackerTests {
     @MainActor
     private func makeDocument(
         normalizedURL: URL? = nil,
-        settingsStore: ReaderSettingsStore
-    ) -> ReaderSidebarDocumentController.Document {
-        let store = ReaderStore(
+        settingsStore: SettingsStore
+    ) -> SidebarDocumentController.Document {
+        let store = DocumentStore(
             rendering: RenderingDependencies(
                 renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
             ),
@@ -26,7 +26,7 @@ struct OpenDocumentPathTrackerTests {
             ),
             folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                settler: AutoOpenSettler(settlingInterval: 1.0),
                 systemNotifier: TestReaderSystemNotifier()
             ),
             settingsStore: settingsStore,
@@ -36,7 +36,7 @@ struct OpenDocumentPathTrackerTests {
                 requestWatchedFolderReauthorization: { _ in nil }
             )
         )
-        return ReaderSidebarDocumentController.Document(
+        return SidebarDocumentController.Document(
             id: UUID(), readerStore: store, normalizedFileURL: normalizedURL
         )
     }

@@ -3,7 +3,7 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderTOCController {
+final class TOCController {
     var headings: [TOCHeading] = []
     var isVisible: Bool = false
     var scrollRequest: TOCScrollRequest?

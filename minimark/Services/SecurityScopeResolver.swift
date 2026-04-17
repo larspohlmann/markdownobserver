@@ -11,12 +11,12 @@ final class SecurityScopeResolver {
     var context = SecurityScopeContext()
 
     private let securityScope: SecurityScopedResourceAccessing
-    private let settingsStore: ReaderRecentWriting & ReaderTrustedFolderWriting
+    private let settingsStore: RecentWriting & TrustedFolderWriting
     private let requestWatchedFolderReauthorization: (URL) -> URL?
 
     init(
         securityScope: SecurityScopedResourceAccessing,
-        settingsStore: ReaderRecentWriting & ReaderTrustedFolderWriting,
+        settingsStore: RecentWriting & TrustedFolderWriting,
         requestWatchedFolderReauthorization: @escaping (URL) -> URL?
     ) {
         self.securityScope = securityScope

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Configures a newly-created `ReaderStore` with the window's locked appearance
+/// Configures a newly-created `DocumentStore` with the window's locked appearance
 /// and an additional-open handler. Invoked by the sidebar document controller
 /// each time it instantiates a store for a new slot.
 @MainActor
@@ -8,7 +8,7 @@ private struct WindowStoreCallbackConfigurator {
     let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
     let onOpenAdditionalDocument: (URL, FolderWatchSession?, OpenOrigin, String?) -> Void
 
-    func configure(_ store: ReaderStore) {
+    func configure(_ store: DocumentStore) {
         if let lockedAppearance = lockedAppearanceProvider() {
             store.renderingController.setAppearanceOverride(lockedAppearance)
         }
@@ -25,7 +25,7 @@ private struct WindowStoreCallbackConfigurator {
 
 /// Owns the window-level document open flows: incoming URLs, seed application,
 /// current-window / selected-slot / additional-document opens, and the wiring
-/// that configures newly-created `ReaderStore`s with the window's locked
+/// that configures newly-created `DocumentStore`s with the window's locked
 /// appearance plus an additional-open handler.
 ///
 /// Does not own the folder-watch open queue (see `WindowFolderWatchOpenController`) —
@@ -35,8 +35,8 @@ private struct WindowStoreCallbackConfigurator {
 final class WindowDocumentOpenCoordinator {
     private let fileOpenCoordinator: FileOpenCoordinator
     private let folderWatchOpen: WindowFolderWatchOpenController
-    private let sidebarDocumentController: ReaderSidebarDocumentController
-    private let settingsStore: ReaderSettingsStore
+    private let sidebarDocumentController: SidebarDocumentController
+    private let settingsStore: SettingsStore
     private let folderWatchSessionProvider: () -> FolderWatchSession?
     private let applyTitlePresentation: () -> Void
     private let refreshWindowPresentation: () -> Void
@@ -45,8 +45,8 @@ final class WindowDocumentOpenCoordinator {
     init(
         fileOpenCoordinator: FileOpenCoordinator,
         folderWatchOpen: WindowFolderWatchOpenController,
-        sidebarDocumentController: ReaderSidebarDocumentController,
-        settingsStore: ReaderSettingsStore,
+        sidebarDocumentController: SidebarDocumentController,
+        settingsStore: SettingsStore,
         folderWatchSessionProvider: @escaping () -> FolderWatchSession?,
         applyTitlePresentation: @escaping () -> Void,
         refreshWindowPresentation: @escaping () -> Void,

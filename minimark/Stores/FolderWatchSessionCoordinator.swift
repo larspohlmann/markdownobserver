@@ -3,10 +3,10 @@ import Observation
 
 @MainActor
 protocol FolderWatchSessionCoordinatorDelegate: AnyObject {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     var documents: [Document] { get }
-    var selectedReaderStore: ReaderStore { get }
+    var selectedReaderStore: DocumentStore { get }
     func document(for fileURL: URL) -> Document?
     func selectDocumentWithNewestModificationDate()
     func handleFolderWatchOpenRequest(_ request: FileOpenRequest)
@@ -15,7 +15,7 @@ protocol FolderWatchSessionCoordinatorDelegate: AnyObject {
 @MainActor
 @Observable
 final class FolderWatchSessionCoordinator {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     // MARK: - State
 

@@ -1,13 +1,13 @@
 import Foundation
 
-enum ReaderDocumentLoadState: Equatable, Sendable {
+enum DocumentLoadState: Equatable, Sendable {
     case ready
     case loading
     case deferred
     case settlingAutoOpen
 }
 
-enum ReaderStatusBarTimestamp: Equatable, Sendable {
+enum StatusBarTimestamp: Equatable, Sendable {
     case updated(Date)
     case lastModified(Date)
 }

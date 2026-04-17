@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class SidebarRowStateComputer {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     private(set) var rowStates: [UUID: SidebarRowState] = [:]
     @ObservationIgnored private var pulseTokens: [UUID: Int] = [:]
@@ -61,7 +61,7 @@ final class SidebarRowStateComputer {
         )
     }
 
-    private func deriveIndicatorState(from store: ReaderStore) -> DocumentIndicatorState {
+    private func deriveIndicatorState(from store: DocumentStore) -> DocumentIndicatorState {
         DocumentIndicatorState(
             hasUnacknowledgedExternalChange: store.externalChange.hasUnacknowledgedExternalChange,
             isCurrentFileMissing: store.document.isCurrentFileMissing,

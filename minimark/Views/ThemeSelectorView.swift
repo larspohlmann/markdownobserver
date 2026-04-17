@@ -7,13 +7,13 @@ struct ThemeSelectorColumnWidths {
 }
 
 struct ThemeSelectorView: View {
-    private let settingsStore: ReaderSettingsStore
+    private let settingsStore: SettingsStore
 
     @State private var stagedReaderTheme: ThemeKind
     @State private var stagedSyntaxTheme: SyntaxThemeKind
     @State private var selectedBackgroundTab: BackgroundTab = .light
 
-    init(settingsStore: ReaderSettingsStore) {
+    init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
         self._stagedReaderTheme = State(initialValue: settingsStore.currentSettings.readerTheme)
         self._stagedSyntaxTheme = State(initialValue: settingsStore.currentSettings.syntaxTheme)

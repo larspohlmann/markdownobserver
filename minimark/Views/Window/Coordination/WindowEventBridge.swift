@@ -15,8 +15,8 @@ final class WindowEventBridge {
 
     private let shell: WindowShellController
     private let folderWatchOpen: WindowFolderWatchOpenController
-    private let sidebarDocumentController: ReaderSidebarDocumentController
-    private let settingsStore: ReaderSettingsStore
+    private let sidebarDocumentController: SidebarDocumentController
+    private let settingsStore: SettingsStore
     private let groupStateControllerProvider: () -> SidebarGroupStateController?
     private let favoriteWorkspaceControllerProvider: () -> FavoriteWorkspaceController?
     private let appearanceControllerProvider: () -> WindowAppearanceController?
@@ -26,8 +26,8 @@ final class WindowEventBridge {
     init(
         shell: WindowShellController,
         folderWatchOpen: WindowFolderWatchOpenController,
-        sidebarDocumentController: ReaderSidebarDocumentController,
-        settingsStore: ReaderSettingsStore,
+        sidebarDocumentController: SidebarDocumentController,
+        settingsStore: SettingsStore,
         groupStateControllerProvider: @escaping () -> SidebarGroupStateController?,
         favoriteWorkspaceControllerProvider: @escaping () -> FavoriteWorkspaceController?,
         appearanceControllerProvider: @escaping () -> WindowAppearanceController?,

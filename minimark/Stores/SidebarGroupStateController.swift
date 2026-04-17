@@ -27,7 +27,7 @@ final class SidebarGroupStateController {
 
     // MARK: - Private
 
-    private var documents: [ReaderSidebarDocumentController.Document] = []
+    private var documents: [SidebarDocumentController.Document] = []
     private var suppressRecompute = false
     private var lastRowStates: [UUID: SidebarRowState] = [:]
 
@@ -45,7 +45,7 @@ final class SidebarGroupStateController {
     // MARK: - Document Updates
 
     func updateDocuments(
-        _ documents: [ReaderSidebarDocumentController.Document],
+        _ documents: [SidebarDocumentController.Document],
         rowStates: [UUID: SidebarRowState] = [:]
     ) {
         self.documents = documents
@@ -57,7 +57,7 @@ final class SidebarGroupStateController {
         recomputeGrouping()
     }
 
-    func observeRowStates(from documentController: ReaderSidebarDocumentController) {
+    func observeRowStates(from documentController: SidebarDocumentController) {
         documentController.onRowStatesChanged = { [weak self] rowStates in
             self?.handleRowStatesChanged(rowStates)
         }
@@ -186,7 +186,7 @@ final class SidebarGroupStateController {
             )
         }
 
-        let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
+        let directoryOrderSourceDocuments: [SidebarDocumentController.Document]
         if sortMode == .openOrder {
             directoryOrderSourceDocuments = documents
         } else {

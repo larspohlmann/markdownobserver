@@ -1,7 +1,7 @@
 import Foundation
 
 enum CSSThemeGenerator {
-    // All production callers reach this via @MainActor ReaderStore → MarkdownRenderingService.
+    // All production callers reach this via @MainActor DocumentStore → MarkdownRenderingService.
     private nonisolated(unsafe) static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, css: String)?
 
     static func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {

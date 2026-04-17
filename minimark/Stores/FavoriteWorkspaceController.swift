@@ -4,10 +4,10 @@ import Observation
 @MainActor
 @Observable
 final class FavoriteWorkspaceController {
-    private let settingsStore: any ReaderSettingsReading & ReaderFavoriteWriting
+    private let settingsStore: any SettingsReading & FavoriteWriting
 
     // Cross-references (set via configure())
-    private weak var sidebarDocumentController: ReaderSidebarDocumentController?
+    private weak var sidebarDocumentController: SidebarDocumentController?
     private weak var folderWatchFlowController: FolderWatchFlowController?
     private weak var groupStateController: SidebarGroupStateController?
     private weak var appearanceController: WindowAppearanceController?
@@ -17,12 +17,12 @@ final class FavoriteWorkspaceController {
 
     var isActive: Bool { activeFavoriteID != nil }
 
-    init(settingsStore: some ReaderSettingsReading & ReaderFavoriteWriting) {
+    init(settingsStore: some SettingsReading & FavoriteWriting) {
         self.settingsStore = settingsStore
     }
 
     func configure(
-        sidebarDocumentController: ReaderSidebarDocumentController,
+        sidebarDocumentController: SidebarDocumentController,
         folderWatchFlowController: FolderWatchFlowController,
         groupStateController: SidebarGroupStateController,
         appearanceController: WindowAppearanceController
@@ -103,7 +103,7 @@ final class FavoriteWorkspaceController {
 
     // MARK: - Persistence
 
-    func persistFinalState(to settingsStore: some ReaderFavoriteWriting) {
+    func persistFinalState(to settingsStore: some FavoriteWriting) {
         guard let id = activeFavoriteID, let state = activeFavoriteWorkspaceState else { return }
         settingsStore.updateFavoriteWorkspaceState(id: id, workspaceState: state)
     }
