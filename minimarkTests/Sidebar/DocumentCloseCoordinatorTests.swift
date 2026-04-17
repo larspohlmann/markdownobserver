@@ -58,7 +58,7 @@ struct DocumentCloseCoordinatorTests {
     private static func makeDocument(settingsStore: SettingsStore) -> SidebarDocumentController.Document {
         SidebarDocumentController.Document(
             id: UUID(),
-            readerStore: makeStore(settingsStore: settingsStore),
+            documentStore: makeStore(settingsStore: settingsStore),
             normalizedFileURL: nil
         )
     }

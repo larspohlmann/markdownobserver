@@ -50,7 +50,7 @@ struct SidebarGroupStateControllerTests {
         defer { harness.cleanup() }
 
         for doc in harness.documents {
-            doc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+            doc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
         }
 
         let controller = SidebarGroupStateController()
@@ -352,7 +352,7 @@ struct SidebarGroupStateControllerTests {
         defer { harness.cleanup() }
 
         for doc in harness.documents {
-            doc.readerStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
+            doc.documentStore.testSetFileLastModifiedAt(Date(timeIntervalSince1970: 1000))
         }
 
         let betaPath = harness.directoryPath(for: "beta")

@@ -323,7 +323,7 @@ struct BreadcrumbTimestampLine: View {
             case let .updated(d), let .lastModified(d):
                 date = d
             }
-            let relative = ReaderStatusFormatting.relativeText(for: date, relativeTo: now)
+            let relative = StatusFormatting.relativeText(for: date, relativeTo: now)
             parts += " \u{00B7} \(relative)"
         }
         return parts

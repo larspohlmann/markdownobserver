@@ -56,7 +56,7 @@ nonisolated struct FavoriteWorkspaceState: Equatable, Hashable, Codable, Sendabl
     }
 
     static func from(
-        settings: ReaderSettings,
+        settings: Settings,
         pinnedGroupIDs: Set<String>,
         collapsedGroupIDs: Set<String>,
         sidebarWidth: CGFloat

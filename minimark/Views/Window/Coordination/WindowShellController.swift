@@ -8,7 +8,7 @@ import Observation
 /// Intentionally narrow: knows *how* to register a window, resolve its title,
 /// and mirror the dock-tile row states. Does not know about folder-watch flow,
 /// UI-test launch configuration, or the folder-watch open queue — those stay
-/// with `ReaderWindowCoordinator` as composite concerns.
+/// with `WindowCoordinator` as composite concerns.
 @MainActor
 @Observable
 final class WindowShellController {

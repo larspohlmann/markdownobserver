@@ -98,7 +98,7 @@ final class FavoriteWorkspaceController {
     // MARK: - Open Document URLs
 
     func openDocumentFileURLs() -> [URL] {
-        sidebarDocumentController?.documents.compactMap { $0.readerStore.document.fileURL } ?? []
+        sidebarDocumentController?.documents.compactMap { $0.documentStore.document.fileURL } ?? []
     }
 
     // MARK: - Persistence

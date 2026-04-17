@@ -37,7 +37,7 @@ struct OpenDocumentPathTrackerTests {
             )
         )
         return SidebarDocumentController.Document(
-            id: UUID(), readerStore: store, normalizedFileURL: normalizedURL
+            id: UUID(), documentStore: store, normalizedFileURL: normalizedURL
         )
     }
 

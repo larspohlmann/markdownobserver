@@ -15,7 +15,7 @@ protocol RuntimeAssetResolving {
     func requiredRuntimeAssets() throws -> RuntimeAssets
 }
 
-struct BundledReaderRuntimeAssetResolver: RuntimeAssetResolving {
+struct BundledRuntimeAssetResolver: RuntimeAssetResolving {
     func requiredRuntimeAssets() throws -> RuntimeAssets {
         try BundledAssets.requiredRuntimeAssets()
     }

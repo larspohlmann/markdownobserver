@@ -3,7 +3,7 @@ import Combine
 import Observation
 import OSLog
 
-nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
+nonisolated struct Settings: Equatable, Codable, Sendable {
     var appAppearance: AppAppearance
     var readerTheme: ThemeKind
     var syntaxTheme: SyntaxThemeKind
@@ -72,7 +72,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         case dismissedHints
     }
 
-    static let `default` = ReaderSettings(
+    static let `default` = Settings(
         appAppearance: .system,
         readerTheme: .blackOnWhite,
         syntaxTheme: .monokai,
@@ -137,8 +137,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 }
 
 @MainActor protocol SettingsReading: AnyObject {
-    var settingsPublisher: AnyPublisher<ReaderSettings, Never> { get }
-    var currentSettings: ReaderSettings { get }
+    var settingsPublisher: AnyPublisher<Settings, Never> { get }
+    var currentSettings: Settings { get }
     func isHintDismissed(_ hint: FirstUseHint) -> Bool
 }
 
@@ -229,11 +229,11 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
     typealias BookmarkResolver = (Data) throws -> BookmarkResolution
     typealias BookmarkCreator = (URL) throws -> Data
 
-    var settingsPublisher: AnyPublisher<ReaderSettings, Never> {
+    var settingsPublisher: AnyPublisher<Settings, Never> {
         subject.eraseToAnyPublisher()
     }
 
-    private(set) var currentSettings: ReaderSettings
+    private(set) var currentSettings: Settings
 
     let preferences: PreferencesStore
     let favorites: FavoriteWatchedFoldersStore
@@ -243,7 +243,7 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
 
     @ObservationIgnored private let storage: SettingsKeyValueStoring
     @ObservationIgnored private let storageKey: String
-    @ObservationIgnored private let subject: CurrentValueSubject<ReaderSettings, Never>
+    @ObservationIgnored private let subject: CurrentValueSubject<Settings, Never>
     @ObservationIgnored private let encoder = JSONEncoder()
     @ObservationIgnored private let decoder = JSONDecoder()
     @ObservationIgnored private let minimumPersistInterval: TimeInterval
@@ -276,9 +276,9 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
         self.storageKey = storageKey
         self.minimumPersistInterval = max(0, minimumPersistInterval)
 
-        let initialSettings: ReaderSettings
+        let initialSettings: Settings
         if let data = storage.data(forKey: storageKey),
-           let decoded = try? decoder.decode(ReaderSettings.self, from: data) {
+           let decoded = try? decoder.decode(Settings.self, from: data) {
             initialSettings = decoded
         } else {
             initialSettings = .default
@@ -345,9 +345,9 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
         }
     }
 
-    private func reassembleSettings() -> ReaderSettings {
+    private func reassembleSettings() -> Settings {
         let prefs = preferences.currentPreferences
-        return ReaderSettings(
+        return Settings(
             appAppearance: prefs.appAppearance,
             readerTheme: prefs.readerTheme,
             syntaxTheme: prefs.syntaxTheme,

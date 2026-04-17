@@ -6,7 +6,7 @@ protocol FolderWatchSessionCoordinatorDelegate: AnyObject {
     typealias Document = SidebarDocumentController.Document
 
     var documents: [Document] { get }
-    var selectedReaderStore: DocumentStore { get }
+    var selectedDocumentStore: DocumentStore { get }
     func document(for fileURL: URL) -> Document?
     func selectDocumentWithNewestModificationDate()
     func handleFolderWatchOpenRequest(_ request: FileOpenRequest)
@@ -191,13 +191,13 @@ final class FolderWatchSessionCoordinator {
 
 extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
     func folderWatchControllerCurrentDocumentFileURL(_ controller: FolderWatchController) -> URL? {
-        delegate?.selectedReaderStore.document.fileURL
+        delegate?.selectedDocumentStore.document.fileURL
     }
 
     func folderWatchControllerOpenDocumentFileURLs(_ controller: FolderWatchController) -> [URL] {
         guard let delegate else { return [] }
         return delegate.documents.compactMap { document in
-            document.readerStore.document.isDeferredDocument ? nil : document.readerStore.document.fileURL
+            document.documentStore.document.isDeferredDocument ? nil : document.documentStore.document.fileURL
         }
     }
 
@@ -233,7 +233,7 @@ extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
         guard let delegate else { return }
         for url in urls {
             if let doc = delegate.document(for: url) {
-                doc.readerStore.opener.markAsLiveAutoOpened()
+                doc.documentStore.opener.markAsLiveAutoOpened()
             }
         }
     }

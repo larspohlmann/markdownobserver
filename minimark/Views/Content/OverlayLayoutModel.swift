@@ -5,9 +5,9 @@ struct OverlayLayoutModel: Equatable, Sendable {
     let isStatusBannerVisible: Bool
 
     var topInset: CGFloat {
-        var height = ReaderTopBarMetrics.mainBarHeight
+        var height = TopBarMetrics.mainBarHeight
         if isSourceEditing {
-            height += ReaderTopBarMetrics.sourceEditingBarHeight
+            height += TopBarMetrics.sourceEditingBarHeight
         }
         return height
     }

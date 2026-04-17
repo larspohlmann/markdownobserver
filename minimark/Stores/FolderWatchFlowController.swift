@@ -165,7 +165,7 @@ final class FolderWatchFlowController {
                 performInitialAutoOpen: performInitialAutoOpen
             )
         } catch {
-            sidebarDocumentController.selectedReaderStore.document.handle(error)
+            sidebarDocumentController.selectedDocumentStore.document.handle(error)
         }
 
         return didDeactivateFavorite
@@ -220,7 +220,7 @@ final class FolderWatchFlowController {
         do {
             try sidebarDocumentController.folderWatchCoordinator.updateFolderWatchExcludedSubdirectories(newExcludedPaths)
         } catch {
-            sidebarDocumentController.selectedReaderStore.document.handle(error)
+            sidebarDocumentController.selectedDocumentStore.document.handle(error)
             return false
         }
 
@@ -256,14 +256,14 @@ final class FolderWatchFlowController {
         }
 
         let wasSelectedExcluded = sidebarDocumentController.selectedDocument.flatMap { doc in
-            doc.readerStore.document.fileURL.map { url in
+            doc.documentStore.document.fileURL.map { url in
                 let normalized = FileRouting.normalizedFileURL(url).path
                 return excludedPrefixes.contains { normalized.hasPrefix($0) }
             }
         } ?? false
 
         let documentsToClose = sidebarDocumentController.documents.filter { doc in
-            guard let fileURL = doc.readerStore.document.fileURL else { return false }
+            guard let fileURL = doc.documentStore.document.fileURL else { return false }
             let normalized = FileRouting.normalizedFileURL(fileURL).path
             return excludedPrefixes.contains { normalized.hasPrefix($0) }
         }
@@ -293,7 +293,7 @@ final class FolderWatchFlowController {
 
             let alreadyOpenPaths = Set(
                 sidebarDocumentController.documents.compactMap {
-                    $0.readerStore.document.fileURL.map { FileRouting.normalizedFileURL($0).path }
+                    $0.documentStore.document.fileURL.map { FileRouting.normalizedFileURL($0).path }
                 }
             )
 

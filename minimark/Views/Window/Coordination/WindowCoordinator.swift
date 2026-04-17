@@ -4,7 +4,7 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderWindowCoordinator {
+final class WindowCoordinator {
     private let settingsStore: SettingsStore
     private let sidebarDocumentController: SidebarDocumentController
     private(set) var folderWatchOpen: WindowFolderWatchOpenController!
@@ -85,7 +85,7 @@ final class ReaderWindowCoordinator {
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
-            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
+            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? SidebarWorkspaceMetrics.sidebarIdealWidth },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
         self.appearanceLock = AppearanceLockCoordinator(
@@ -125,7 +125,7 @@ final class ReaderWindowCoordinator {
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
             recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
-            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
+            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? SidebarWorkspaceMetrics.sidebarIdealWidth },
             applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
             confirmFolderWatch: { [weak self] options in self?.folderWatchSession.confirm(options) },
             stopFolderWatch: { [weak self] in self?.folderWatchSession.stop() },

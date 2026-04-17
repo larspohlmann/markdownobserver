@@ -8,8 +8,8 @@ struct FolderWatchSessionCoordinatorTests {
 
     final class MockDelegate: FolderWatchSessionCoordinatorDelegate {
         var documents: [SidebarDocumentController.Document] = []
-        var _selectedReaderStore: DocumentStore?
-        var selectedReaderStore: DocumentStore { _selectedReaderStore! }
+        var _selectedDocumentStore: DocumentStore?
+        var selectedDocumentStore: DocumentStore { _selectedDocumentStore! }
         var documentForURLResult: SidebarDocumentController.Document?
         var selectNewestCalled = false
         var lastOpenRequest: FileOpenRequest?

@@ -9,7 +9,7 @@ struct SidebarDocumentActionRouterTests {
     @MainActor
     private func makeRouter(
         favoriteWorkspaceController: FavoriteWorkspaceController? = nil,
-        sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth,
+        sidebarWidth: CGFloat = SidebarWorkspaceMetrics.sidebarIdealWidth,
         onAfterRefresh: @escaping () -> Void = {}
     ) throws -> (SidebarDocumentActionRouter, ReaderSidebarControllerTestHarness) {
         let harness = try ReaderSidebarControllerTestHarness()

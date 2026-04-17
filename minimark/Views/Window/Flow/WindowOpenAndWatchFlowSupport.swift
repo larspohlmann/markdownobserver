@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderWindowOpenAndWatchFlowSupport {
+enum WindowOpenAndWatchFlowSupport {
     static func isSupportedIncomingMarkdownFile(_ url: URL) -> Bool {
         url.isFileURL && FileRouting.isSupportedMarkdownFileURL(url)
     }

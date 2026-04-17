@@ -6,7 +6,7 @@ import Observation
 final class SidebarDocumentController {
     struct Document: Identifiable, Equatable {
         let id: UUID
-        let readerStore: DocumentStore
+        let documentStore: DocumentStore
         var normalizedFileURL: URL?
 
         static func == (lhs: Document, rhs: Document) -> Bool {
@@ -32,7 +32,7 @@ final class SidebarDocumentController {
 
     // MARK: - Dependencies
 
-    private let makeReaderStore: () -> DocumentStore
+    private let makeDocumentStore: () -> DocumentStore
     @ObservationIgnored private(set) var storeConfigurator: ((DocumentStore) -> Void)?
     @ObservationIgnored lazy var fileOpenCoordinator = FileOpenCoordinator(controller: self)
 
@@ -63,10 +63,10 @@ final class SidebarDocumentController {
 
     init(
         settingsStore: SettingsStore,
-        makeReaderStore: (() -> DocumentStore)? = nil,
+        makeDocumentStore: (() -> DocumentStore)? = nil,
         makeFolderWatchController: (() -> FolderWatchController)? = nil
     ) {
-        let resolvedMakeReaderStore = makeReaderStore ?? {
+        let resolvedMakeDocumentStore = makeDocumentStore ?? {
             let settler = AutoOpenSettler(settlingInterval: 1.0)
             let securityScopeResolver = SecurityScopeResolver(
                 securityScope: SecurityScopedResourceAccess(),
@@ -102,7 +102,7 @@ final class SidebarDocumentController {
             )
             return store
         }
-        self.makeReaderStore = resolvedMakeReaderStore
+        self.makeDocumentStore = resolvedMakeDocumentStore
         let resolvedMakeFolderWatchController = makeFolderWatchController ?? {
             FolderWatchController(
                 folderWatcher: FolderChangeWatcher(),
@@ -118,7 +118,7 @@ final class SidebarDocumentController {
             makeFolderWatchController: resolvedMakeFolderWatchController
         )
 
-        let initialDocument = Document(id: UUID(), readerStore: resolvedMakeReaderStore(), normalizedFileURL: nil)
+        let initialDocument = Document(id: UUID(), documentStore: resolvedMakeDocumentStore(), normalizedFileURL: nil)
         documentList = SidebarDocumentList(initialDocument: initialDocument)
         fileOpenPlanExecutor = FileOpenPlanExecutor(
             documentList: documentList,
@@ -131,9 +131,9 @@ final class SidebarDocumentController {
             rowStateComputer: rowStateComputer
         )
         selectedDocumentID = initialDocument.id
-        selectedWindowTitle = initialDocument.readerStore.document.windowTitle
-        selectedFileURL = initialDocument.readerStore.document.fileURL
-        selectedHasUnacknowledgedExternalChange = initialDocument.readerStore.externalChange.hasUnacknowledgedExternalChange
+        selectedWindowTitle = initialDocument.documentStore.document.windowTitle
+        selectedFileURL = initialDocument.documentStore.document.fileURL
+        selectedHasUnacknowledgedExternalChange = initialDocument.documentStore.externalChange.hasUnacknowledgedExternalChange
         rowStateComputer.rebuildAllRowStates(from: documentList.documents)
         folderWatchCoordinator.delegate = self
         fileOpenPlanExecutor.delegate = self
@@ -146,14 +146,14 @@ final class SidebarDocumentController {
         documents.first(where: { $0.id == selectedDocumentID })
     }
 
-    var selectedReaderStore: DocumentStore {
-        selectedDocument?.readerStore ?? documents[0].readerStore
+    var selectedDocumentStore: DocumentStore {
+        selectedDocument?.documentStore ?? documents[0].documentStore
     }
 
     func setStoreConfigurator(_ configurator: @escaping (DocumentStore) -> Void) {
         storeConfigurator = configurator
         for document in documents {
-            configurator(document.readerStore)
+            configurator(document.documentStore)
         }
     }
 
@@ -172,7 +172,7 @@ final class SidebarDocumentController {
             // deferred — in that case we must materialize (see #345). Avoid
             // reassigning `selectedDocumentID` so Observation doesn't fire for a
             // ready-state reselect.
-            let store = selectedReaderStore
+            let store = selectedDocumentStore
             guard store.document.isDeferredDocument else { return }
             scheduleLoadWithOverlay(on: store) {
                 store.opener.materializeDeferred()
@@ -181,7 +181,7 @@ final class SidebarDocumentController {
         }
 
         selectedDocumentID = documentID
-        let store = selectedReaderStore
+        let store = selectedDocumentStore
 
         if store.document.isDeferredDocument {
             scheduleLoadWithOverlay(on: store) {
@@ -241,21 +241,21 @@ final class SidebarDocumentController {
     // MARK: - Document actions
 
     func openDocumentsInApplication(_ application: ExternalApplication?, documentIDs: Set<UUID>) {
-        for tab in documentList.orderedDocuments(matching: documentIDs) where tab.readerStore.document.fileURL != nil {
-            tab.readerStore.document.openInApplication(application)
+        for tab in documentList.orderedDocuments(matching: documentIDs) where tab.documentStore.document.fileURL != nil {
+            tab.documentStore.document.openInApplication(application)
         }
     }
 
     func revealDocumentsInFinder(_ documentIDs: Set<UUID>) {
-        for tab in documentList.orderedDocuments(matching: documentIDs) where tab.readerStore.document.fileURL != nil {
-            tab.readerStore.document.revealInFinder()
+        for tab in documentList.orderedDocuments(matching: documentIDs) where tab.documentStore.document.fileURL != nil {
+            tab.documentStore.document.revealInFinder()
         }
     }
 
     // MARK: - Internal helpers
 
     func makeDocument() -> Document {
-        Document(id: UUID(), readerStore: makeReaderStore(), normalizedFileURL: nil)
+        Document(id: UUID(), documentStore: makeDocumentStore(), normalizedFileURL: nil)
     }
 
     private func scheduleLoadWithOverlay(on store: DocumentStore, load: @escaping @MainActor () -> Void) {
@@ -268,7 +268,7 @@ final class SidebarDocumentController {
     }
 
     func bindSelectedStore() {
-        let store = selectedReaderStore
+        let store = selectedDocumentStore
         selectedWindowTitle = store.document.windowTitle
         selectedFileURL = store.document.fileURL
         selectedHasUnacknowledgedExternalChange = store.externalChange.hasUnacknowledgedExternalChange

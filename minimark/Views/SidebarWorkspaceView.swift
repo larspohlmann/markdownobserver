@@ -1,14 +1,14 @@
 import AppKit
 import SwiftUI
 
-enum ReaderSidebarWorkspaceMetrics {
+enum SidebarWorkspaceMetrics {
     static let sidebarMinimumWidth: CGFloat = UITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 220
     static let sidebarIdealWidth: CGFloat = UITestLaunchConfiguration.current.isUITestModeEnabled ? 273 : 250
     static let detailMinimumWidth: CGFloat = 420
-    static let toolbarHeight: CGFloat = ReaderTopBarMetrics.mainBarHeight
+    static let toolbarHeight: CGFloat = TopBarMetrics.mainBarHeight
 }
 
-struct ReaderSidebarWorkspaceView<Detail: View>: View {
+struct SidebarWorkspaceView<Detail: View>: View {
     var controller: SidebarDocumentController
     var settingsStore: SettingsStore
     var groupState: SidebarGroupStateController
@@ -40,7 +40,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                     }
                 }
             } else {
-                detail(controller.selectedReaderStore)
+                detail(controller.selectedDocumentStore)
             }
         }
         .onAppear {
@@ -121,9 +121,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             SidebarScanProgressView(controller: controller)
         }
         .frame(
-            minWidth: ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth,
+            minWidth: SidebarWorkspaceMetrics.sidebarMinimumWidth,
             idealWidth: sidebarWidth,
-            maxWidth: isDraggingDivider ? .infinity : max(sidebarWidth, ReaderSidebarWorkspaceMetrics.sidebarMinimumWidth),
+            maxWidth: isDraggingDivider ? .infinity : max(sidebarWidth, SidebarWorkspaceMetrics.sidebarMinimumWidth),
             maxHeight: .infinity
         )
         .background(SidebarDividerPositionSetter(
@@ -157,7 +157,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
             }
         }
         .padding(.horizontal, 12)
-        .frame(height: ReaderSidebarWorkspaceMetrics.toolbarHeight)
+        .frame(height: SidebarWorkspaceMetrics.toolbarHeight)
         .animation(.easeInOut(duration: 0.15), value: selectedDocumentIDs.count > 1)
     }
 
@@ -201,9 +201,9 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
     }
 
     private var detailColumn: some View {
-        detail(controller.selectedReaderStore)
+        detail(controller.selectedDocumentStore)
             .frame(
-                minWidth: ReaderSidebarWorkspaceMetrics.detailMinimumWidth,
+                minWidth: SidebarWorkspaceMetrics.detailMinimumWidth,
                 maxWidth: .infinity,
                 maxHeight: .infinity
             )
@@ -285,7 +285,7 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
 
 }
 
-private struct ReaderSidebarDocumentRow: View {
+private struct SidebarDocumentRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
     @State private var isIndicatorPulsing = false
@@ -293,9 +293,9 @@ private struct ReaderSidebarDocumentRow: View {
     @State private var indicatorPulseTask: Task<Void, Never>?
 
     let state: SidebarRowState
-    let settings: ReaderSettings
+    let settings: Settings
     let documents: [SidebarDocumentController.Document]
-    let readerStore: DocumentStore
+    let documentStore: DocumentStore
     let watchedDocumentIDs: Set<UUID>
     let selectedDocumentIDs: Set<UUID>
     let showsSelectionBackground: Bool
@@ -320,24 +320,24 @@ private struct ReaderSidebarDocumentRow: View {
         documents.filter { effectiveDocumentIDs.contains($0.id) }
     }
 
-    private var effectiveReaderStores: [DocumentStore] {
-        effectiveDocuments.map(\.readerStore)
+    private var effectiveDocumentStores: [DocumentStore] {
+        effectiveDocuments.map(\.documentStore)
     }
 
     private var effectiveOpenInApplications: [ExternalApplication] {
-        guard let firstReaderStore = effectiveReaderStores.first(where: { $0.document.fileURL != nil }) else {
+        guard let firstDocumentStore = effectiveDocumentStores.first(where: { $0.document.fileURL != nil }) else {
             return []
         }
 
-        return firstReaderStore.document.openInApplications.filter { application in
-            effectiveReaderStores
+        return firstDocumentStore.document.openInApplications.filter { application in
+            effectiveDocumentStores
                 .filter { $0.document.fileURL != nil }
                 .allSatisfy { $0.document.openInApplications.contains(application) }
         }
     }
 
     private var hasAnyOpenFile: Bool {
-        effectiveReaderStores.contains(where: { $0.document.fileURL != nil })
+        effectiveDocumentStores.contains(where: { $0.document.fileURL != nil })
     }
 
     private var watchingDocumentCount: Int {
@@ -557,7 +557,7 @@ private struct ReaderSidebarDocumentRow: View {
             return "No change timestamp"
         }
 
-        return ReaderStatusFormatting.relativeText(
+        return StatusFormatting.relativeText(
             for: fileLastModifiedAt,
             relativeTo: currentDate
         )
@@ -580,7 +580,7 @@ private struct ReaderSidebarDocumentRow: View {
     }
 }
 
-private struct ReaderSidebarGroupHeader: View {
+private struct SidebarGroupHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isIndicatorPulsing = false
     @State private var lastHandledPulseToken: Int = -1
@@ -591,7 +591,7 @@ private struct ReaderSidebarGroupHeader: View {
     let isPinned: Bool
     let indicatorStates: [DocumentIndicatorState]
     let indicatorPulseToken: Int
-    let settings: ReaderSettings
+    let settings: Settings
     let onTogglePin: () -> Void
     let onCloseGroup: () -> Void
 
@@ -797,7 +797,7 @@ private struct SidebarGroupListContent: View {
         let isExpanded = groupState.isGroupExpanded(group.id)
         let isDragging = draggedGroupID == group.id
 
-        let groupHeader = ReaderSidebarGroupHeader(
+        let groupHeader = SidebarGroupHeader(
             displayName: group.displayName,
             documentCount: group.documents.count,
             isPinned: group.isPinned,
@@ -987,11 +987,11 @@ private struct SidebarGroupListContent: View {
         let rowState = controller.rowStates[document.id]
             ?? controller.deriveRowState(from: document)
 
-        return ReaderSidebarDocumentRow(
+        return SidebarDocumentRow(
             state: rowState,
             settings: settingsStore.currentSettings,
             documents: allDocuments,
-            readerStore: document.readerStore,
+            documentStore: document.documentStore,
             watchedDocumentIDs: watchedDocumentIDs,
             selectedDocumentIDs: selectedDocumentIDs,
             showsSelectionBackground: showsSelectionBackground,
@@ -1015,7 +1015,7 @@ private struct SidebarPinnableGroupHeader: View {
     let groupDisplayName: String
     let isExpanded: Bool
     let onToggleExpanded: () -> Void
-    let header: ReaderSidebarGroupHeader
+    let header: SidebarGroupHeader
 
     @State private var isHovering = false
 

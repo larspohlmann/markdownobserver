@@ -70,7 +70,7 @@ nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
     }
 
     func resetFontSize() {
-        updateBaseFontSize(ReaderSettings.default.baseFontSize)
+        updateBaseFontSize(Settings.default.baseFontSize)
     }
 
     func updateNotificationsEnabled(_ isEnabled: Bool) {

@@ -30,7 +30,7 @@ final class AppearanceLockCoordinator {
         if appearanceController.isLocked {
             appearanceController.unlock()
             for document in sidebarDocumentController.documents {
-                document.readerStore.renderingController.clearAppearanceOverride()
+                document.documentStore.renderingController.clearAppearanceOverride()
             }
             if favoriteWorkspaceControllerProvider()?.activeFavoriteWorkspaceState != nil {
                 favoriteWorkspaceControllerProvider()?.updateLockedAppearance(nil)
@@ -39,7 +39,7 @@ final class AppearanceLockCoordinator {
             appearanceController.lock()
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
-                document.readerStore.renderingController.setAppearanceOverride(appearance)
+                document.documentStore.renderingController.setAppearanceOverride(appearance)
             }
             if favoriteWorkspaceControllerProvider()?.activeFavoriteWorkspaceState != nil {
                 favoriteWorkspaceControllerProvider()?.updateLockedAppearance(appearanceController.lockedAppearance)
@@ -54,7 +54,7 @@ final class AppearanceLockCoordinator {
         Task { @MainActor [sidebarDocumentController] in
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {
-                let store = document.readerStore
+                let store = document.documentStore
                 guard store.document.hasOpenDocument, !store.document.isDeferredDocument else { continue }
 
                 if document.id == sidebarDocumentController.selectedDocumentID {
@@ -76,7 +76,7 @@ final class AppearanceLockCoordinator {
     func renderSelectedDocumentIfNeeded() {
         guard let appearanceController = appearanceControllerProvider() else { return }
         guard let document = sidebarDocumentController.selectedDocument else { return }
-        let store = document.readerStore
+        let store = document.documentStore
         guard store.renderingController.needsAppearanceRender,
               store.document.hasOpenDocument,
               !store.document.isDeferredDocument else { return }
