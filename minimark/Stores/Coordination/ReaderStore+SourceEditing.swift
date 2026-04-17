@@ -17,7 +17,7 @@ extension ReaderStore {
     func updateSourceDraft(_ markdown: String) {
         guard sourceEditingController.isSourceEditing else { return }
 
-        let unsavedChangedRegions = changedRegions(
+        let unsavedChangedRegions = renderingController.computeChangedRegions(
             diffBaselineMarkdown: document.savedMarkdown,
             newMarkdown: markdown
         )
@@ -35,18 +35,18 @@ extension ReaderStore {
         guard sourceEditingController.isSourceEditing,
               let draftMarkdown = sourceEditingController.draftMarkdown,
               let fileURL = document.fileURL else {
-            logSaveError("save requested without active editable document: \(saveLogContext(for: document.fileURL))")
+            saveLogFormatter.logError("save requested without active editable document: \(saveLogFormatter.saveContext(for: document.fileURL))")
             handle(ReaderError.noOpenFileInReader)
             return
         }
 
         do {
-            logSaveInfo(
-                "save requested: \(saveLogContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
+            saveLogFormatter.logInfo(
+                "save requested: \(saveLogFormatter.saveContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
             )
             cancelPendingDraftPreviewRender()
             let diffBaselineMarkdown = document.savedMarkdown
-            try persistSourceDraft(
+            try persister.persist(
                 draftMarkdown,
                 to: fileURL,
                 diffBaselineMarkdown: diffBaselineMarkdown,

@@ -44,6 +44,7 @@ final class ReaderStore {
     let postOpenEffects: PostOpenEffects
     let opener: DocumentOpener
     let reloader: DocumentReloader
+    let persister: SourceDraftPersister
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -139,6 +140,16 @@ final class ReaderStore {
             onError: { [document = self.document] error in
                 document.handle(error)
             }
+        )
+        self.persister = SourceDraftPersister(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            renderingController: self.renderingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            securityScopeResolver: securityScopeResolver,
+            fileIO: file.io,
+            saveLogFormatter: self.saveLogFormatter
         )
         self.postOpenEffects.onError = { [document = self.document] error in
             document.handle(error)

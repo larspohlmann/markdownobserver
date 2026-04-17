@@ -110,7 +110,7 @@ final class ContentViewActionRouter {
         case .updateSourceDraft(let markdown):
             sidebarDocumentController.selectedReaderStore.updateSourceDraft(markdown)
         case .grantImageDirectoryAccess(let url):
-            sidebarDocumentController.selectedReaderStore.grantImageDirectoryAccess(folderURL: url)
+            sidebarDocumentController.selectedReaderStore.persister.grantImageDirectoryAccess(folderURL: url)
         case .openInApplication(let app):
             sidebarDocumentController.selectedReaderStore.document.openInApplication(app)
         case .revealInFinder:

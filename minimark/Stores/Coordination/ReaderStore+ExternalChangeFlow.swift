@@ -20,11 +20,20 @@ extension ReaderStore {
     }
 
     func handleObservedFileChange() {
-        if let fileURL = document.fileURL, folderWatch.settler.handleChangeIfNeeded(fileURL: fileURL, loader: { url in try self.loadMarkdownFile(at: url) }) {
+        if let fileURL = document.fileURL,
+           folderWatch.settler.handleChangeIfNeeded(
+               fileURL: fileURL,
+               loader: { url in
+                   try self.fileLoader.load(
+                       at: url,
+                       folderWatchSession: self.folderWatchDispatcher.activeFolderWatchSession
+                   )
+               }
+           ) {
             return
         }
 
-        if handlePendingSavedDraftChangeIfNeeded() {
+        if persister.handlePendingSavedDraftChangeIfNeeded() {
             return
         }
 

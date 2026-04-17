@@ -1,8 +1,43 @@
 import Foundation
 import OSLog
 
-extension ReaderStore {
-    func persistSourceDraft(
+@MainActor
+final class SourceDraftPersister {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "minimark",
+        category: "SourceDraftPersister"
+    )
+
+    private let document: ReaderDocumentController
+    private let sourceEditingController: ReaderSourceEditingController
+    private let externalChange: ReaderExternalChangeController
+    private let renderingController: ReaderRenderingController
+    private let folderWatchDispatcher: FolderWatchDispatcher
+    private let securityScopeResolver: SecurityScopeResolver
+    private let fileIO: ReaderDocumentIO
+    private let saveLogFormatter: SaveLogFormatter
+
+    init(
+        document: ReaderDocumentController,
+        sourceEditingController: ReaderSourceEditingController,
+        externalChange: ReaderExternalChangeController,
+        renderingController: ReaderRenderingController,
+        folderWatchDispatcher: FolderWatchDispatcher,
+        securityScopeResolver: SecurityScopeResolver,
+        fileIO: ReaderDocumentIO,
+        saveLogFormatter: SaveLogFormatter
+    ) {
+        self.document = document
+        self.sourceEditingController = sourceEditingController
+        self.externalChange = externalChange
+        self.renderingController = renderingController
+        self.folderWatchDispatcher = folderWatchDispatcher
+        self.securityScopeResolver = securityScopeResolver
+        self.fileIO = fileIO
+        self.saveLogFormatter = saveLogFormatter
+    }
+
+    func persist(
         _ draftMarkdown: String,
         to fileURL: URL,
         diffBaselineMarkdown: String,
@@ -12,27 +47,33 @@ extension ReaderStore {
             let accessibleURL = securityScopeResolver.effectiveAccessibleFileURL(
                 for: fileURL, reason: "write", folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
             )
-            try file.io.write(draftMarkdown, to: accessibleURL)
+            try fileIO.write(draftMarkdown, to: accessibleURL)
             document.savedMarkdown = draftMarkdown
             sourceEditingController.finishSession(markdown: draftMarkdown)
             document.sourceMarkdown = draftMarkdown
-            document.changedRegions = changedRegions(
+            document.changedRegions = renderingController.computeChangedRegions(
                 diffBaselineMarkdown: diffBaselineMarkdown,
                 newMarkdown: draftMarkdown
             )
-            document.fileLastModifiedAt = file.io.modificationDate(for: fileURL)
+            document.fileLastModifiedAt = fileIO.modificationDate(for: fileURL)
             sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = document.changedRegions.isEmpty ? nil : diffBaselineMarkdown
             externalChange.clear()
             document.isCurrentFileMissing = false
-            try renderCurrentMarkdownImmediately()
+            try renderingController.renderImmediately(
+                sourceMarkdown: document.sourceMarkdown,
+                changedRegions: document.changedRegions,
+                unsavedChangedRegions: sourceEditingController.unsavedChangedRegions,
+                fileURL: document.fileURL,
+                folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
+            )
             document.lastError = nil
             let modifiedAtDescription = document.fileLastModifiedAt?.description ?? "nil"
-            logSaveInfo(
-                "save succeeded: \(saveLogContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
+            saveLogFormatter.logInfo(
+                "save succeeded: \(saveLogFormatter.saveContext(for: fileURL)) modifiedAt=\(modifiedAtDescription) recoveryAttempted=\(recoveryAttempted)"
             )
         } catch {
-            logSaveError(
-                "save failed: \(saveLogContext(for: fileURL)) error=\(error.localizedDescription) recoveryAttempted=\(recoveryAttempted)"
+            saveLogFormatter.logError(
+                "save failed: \(saveLogFormatter.saveContext(for: fileURL)) error=\(error.localizedDescription) recoveryAttempted=\(recoveryAttempted)"
             )
 
             guard !recoveryAttempted else {
@@ -49,10 +90,10 @@ extension ReaderStore {
                 folderWatchDispatcher.setSession(updatedSession)
             }
 
-            logSaveInfo(
-                "save retrying after watched-folder reauthorization: \(saveLogContext(for: fileURL))"
+            saveLogFormatter.logInfo(
+                "save retrying after watched-folder reauthorization: \(saveLogFormatter.saveContext(for: fileURL))"
             )
-            try persistSourceDraft(
+            try persist(
                 draftMarkdown,
                 to: fileURL,
                 diffBaselineMarkdown: diffBaselineMarkdown,
@@ -65,24 +106,16 @@ extension ReaderStore {
         securityScopeResolver.grantImageDirectoryAccess(folderURL: folderURL)
 
         do {
-            try renderCurrentMarkdownImmediately()
+            try renderingController.renderImmediately(
+                sourceMarkdown: document.sourceMarkdown,
+                changedRegions: document.changedRegions,
+                unsavedChangedRegions: sourceEditingController.unsavedChangedRegions,
+                fileURL: document.fileURL,
+                folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
+            )
         } catch {
-            logSaveError("re-render after granting image access failed: \(error.localizedDescription)")
+            saveLogFormatter.logError("re-render after granting image access failed: \(error.localizedDescription)")
         }
-    }
-
-    func changedRegions(
-        diffBaselineMarkdown: String?,
-        newMarkdown: String
-    ) -> [ChangedRegion] {
-        guard let diffBaselineMarkdown else {
-            return []
-        }
-
-        return rendering.differ.computeChangedRegions(
-            oldMarkdown: diffBaselineMarkdown,
-            newMarkdown: newMarkdown
-        )
     }
 
     func handlePendingSavedDraftChangeIfNeeded() -> Bool {
@@ -97,7 +130,7 @@ extension ReaderStore {
         )
         let loaded: (markdown: String, modificationDate: Date)
         do {
-            loaded = try file.io.load(at: accessibleURL)
+            loaded = try fileIO.load(at: accessibleURL)
         } catch {
             let nsError = error as NSError
             Self.logger.error(
@@ -113,37 +146,12 @@ extension ReaderStore {
         }
 
         document.fileLastModifiedAt = loaded.modificationDate
-        document.changedRegions = changedRegions(
+        document.changedRegions = renderingController.computeChangedRegions(
             diffBaselineMarkdown: diffBaselineMarkdown,
             newMarkdown: loaded.markdown
         )
         sourceEditingController.unsavedChangedRegions = []
         sourceEditingController.pendingSavedDraftDiffBaselineMarkdown = nil
         return true
-    }
-
-    func loadMarkdownFile(at url: URL) throws -> (markdown: String, modificationDate: Date) {
-        try fileLoader.load(
-            at: url,
-            folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
-        )
-    }
-
-    // MARK: - Logging
-
-    func saveLogContext(for url: URL?) -> String {
-        saveLogFormatter.saveContext(for: url)
-    }
-
-    func redactedPathText(for url: URL?) -> String {
-        saveLogFormatter.redactedPath(for: url)
-    }
-
-    func logSaveInfo(_ message: String) {
-        saveLogFormatter.logInfo(message)
-    }
-
-    func logSaveError(_ message: String) {
-        saveLogFormatter.logError(message)
     }
 }
