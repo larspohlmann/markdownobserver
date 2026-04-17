@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderCSSThemeGenerator {
+enum CSSThemeGenerator {
     // All production callers reach this via @MainActor ReaderStore → MarkdownRenderingService.
     private nonisolated(unsafe) static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, css: String)?
 
@@ -62,7 +62,7 @@ enum ReaderCSSThemeGenerator {
           box-sizing: border-box;
           width: 100%;
           margin: 0;
-          padding: \(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px 12px 24px calc(var(--reader-gutter-width) + var(--reader-gutter-gap));
+          padding: \(Int(OverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px 12px 24px calc(var(--reader-gutter-width) + var(--reader-gutter-gap));
           color: var(--reader-fg);
           overflow-wrap: anywhere;
         }

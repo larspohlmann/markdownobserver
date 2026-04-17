@@ -16,7 +16,7 @@ final class WindowShellController {
     private let folderWatchSessionProvider: () -> FolderWatchSession?
 
     var hostWindow: NSWindow?
-    var effectiveWindowTitle: String = ReaderWindowTitleFormatter.appName
+    var effectiveWindowTitle: String = WindowTitleFormatter.appName
     let dockTileWindowToken = UUID()
 
     @ObservationIgnored private var registeredIdentity: RegisteredWindowIdentity?
@@ -48,7 +48,7 @@ final class WindowShellController {
     func updateHostWindow(_ window: NSWindow?) -> Bool {
         guard hostWindow !== window else { return false }
         if let existingWindow = hostWindow {
-            ReaderWindowRegistry.shared.unregisterWindow(existingWindow)
+            WindowRegistry.shared.unregisterWindow(existingWindow)
             registeredIdentity = nil
         }
         hostWindow = window
@@ -56,12 +56,12 @@ final class WindowShellController {
     }
 
     func applyTitlePresentation() {
-        let resolvedTitle = ReaderWindowTitleFormatter.resolveWindowTitle(
+        let resolvedTitle = WindowTitleFormatter.resolveWindowTitle(
             documentTitle: sidebarDocumentController.selectedWindowTitle,
             activeFolderWatch: folderWatchSessionProvider(),
             hasUnacknowledgedExternalChange: sidebarDocumentController.selectedHasUnacknowledgedExternalChange
         )
-        let mutation = ReaderWindowTitleFormatter.mutation(
+        let mutation = WindowTitleFormatter.mutation(
             resolvedTitle: resolvedTitle,
             currentEffectiveTitle: effectiveWindowTitle,
             currentHostWindowTitle: hostWindow?.title
@@ -82,7 +82,7 @@ final class WindowShellController {
         )
         guard currentIdentity != registeredIdentity else { return }
         registeredIdentity = currentIdentity
-        ReaderWindowRegistry.shared.registerWindow(
+        WindowRegistry.shared.registerWindow(
             hostWindow,
             focusDocument: { [sidebarDocumentController] fileURL in
                 sidebarDocumentController.focusDocument(at: fileURL)

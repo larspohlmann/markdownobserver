@@ -29,7 +29,7 @@ enum MarkdownOpenPanel {
         }
 
         let markdownURLs = panel.urls.filter { url in
-            ReaderFileRouting.isSupportedMarkdownFileURL(url)
+            FileRouting.isSupportedMarkdownFileURL(url)
         }
 
         return markdownURLs.isEmpty ? nil : markdownURLs

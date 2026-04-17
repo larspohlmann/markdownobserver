@@ -25,14 +25,14 @@ import Observation
 
     func addRecentManuallyOpenedFile(_ fileURL: URL) {
         mutate(coalescePersistence: false) { entries in
-            entries = ReaderRecentHistory.insertingUniqueFile(fileURL, into: entries)
+            entries = RecentHistory.insertingUniqueFile(fileURL, into: entries)
         }
     }
 
     func resolvedRecentManuallyOpenedFileURL(matching fileURL: URL) -> URL? {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         guard let entry = currentRecentOpenedFiles.first(where: { entry in
-            ReaderFileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
+            FileRouting.normalizedFileURL(entry.fileURL) == normalizedFileURL
         }) else {
             return nil
         }

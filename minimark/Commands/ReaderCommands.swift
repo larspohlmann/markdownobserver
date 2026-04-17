@@ -6,17 +6,17 @@ struct ReaderCommands: Commands {
     let multiFileDisplayMode: MultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
-    @FocusedValue(\.readerOpenDocument) private var openDocument
-    @FocusedValue(\.readerOpenDocumentInCurrentWindow) private var openInCurrentWindow
-    @FocusedValue(\.readerOpenAdditionalDocument) private var openAdditionalDocument
-    @FocusedValue(\.readerWatchFolder) private var watchFolder
-    @FocusedValue(\.readerStartRecentFolderWatch) private var startRecentFolderWatch
-    @FocusedValue(\.readerStopFolderWatch) private var stopFolderWatch
-    @FocusedValue(\.readerHasActiveFolderWatch) private var hasActiveFolderWatch
-    @FocusedValue(\.readerDocumentViewModeContext) private var documentViewModeContext
-    @FocusedValue(\.readerChangedRegionNavigation) private var changedRegionNavigation
-    @FocusedValue(\.readerSourceEditingContext) private var sourceEditingContext
-    @FocusedValue(\.readerToggleTOC) private var toggleTOC
+    @FocusedValue(\.openDocument) private var openDocument
+    @FocusedValue(\.openDocumentInCurrentWindow) private var openInCurrentWindow
+    @FocusedValue(\.openAdditionalDocument) private var openAdditionalDocument
+    @FocusedValue(\.watchFolder) private var watchFolder
+    @FocusedValue(\.startRecentFolderWatch) private var startRecentFolderWatch
+    @FocusedValue(\.stopFolderWatch) private var stopFolderWatch
+    @FocusedValue(\.hasActiveFolderWatch) private var hasActiveFolderWatch
+    @FocusedValue(\.documentViewModeContext) private var documentViewModeContext
+    @FocusedValue(\.changedRegionNavigation) private var changedRegionNavigation
+    @FocusedValue(\.sourceEditingContext) private var sourceEditingContext
+    @FocusedValue(\.toggleTOC) private var toggleTOC
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
@@ -182,7 +182,7 @@ struct ReaderCommands: Commands {
         if recentFiles.isEmpty {
             Text("No recent manually opened files")
         } else {
-            let titlesByPath = ReaderRecentHistory.menuTitles(for: recentFiles)
+            let titlesByPath = RecentHistory.menuTitles(for: recentFiles)
             ForEach(recentFiles) { entry in
                 Button(titlesByPath[entry.filePath] ?? entry.displayName) {
                     openRecentOpenedFile(entry)
@@ -203,7 +203,7 @@ struct ReaderCommands: Commands {
         if recentFolders.isEmpty {
             Text("No recent watched folders")
         } else {
-            let titlesByPath = ReaderRecentHistory.menuTitles(for: recentFolders)
+            let titlesByPath = RecentHistory.menuTitles(for: recentFolders)
             ForEach(recentFolders) { entry in
                 Button(titlesByPath[entry.folderPath] ?? entry.displayName) {
                     startRecentWatchedFolder(entry)
@@ -224,12 +224,12 @@ struct ReaderCommands: Commands {
             return
         }
 
-        let payload = ReaderCommandNotification.Payload(
+        let payload = CommandNotification.Payload(
             targetWindowNumber: targetWindowNumber,
             recentFileEntry: entry
         )
         NotificationCenter.default.post(
-            name: ReaderCommandNotification.openRecentFile,
+            name: CommandNotification.openRecentFile,
             object: nil,
             userInfo: payload.asUserInfo
         )
@@ -241,12 +241,12 @@ struct ReaderCommands: Commands {
             return
         }
 
-        let payload = ReaderCommandNotification.Payload(
+        let payload = CommandNotification.Payload(
             targetWindowNumber: targetWindowNumber,
             recentWatchedFolderEntry: entry
         )
         NotificationCenter.default.post(
-            name: ReaderCommandNotification.prepareRecentWatchedFolder,
+            name: CommandNotification.prepareRecentWatchedFolder,
             object: nil,
             userInfo: payload.asUserInfo
         )

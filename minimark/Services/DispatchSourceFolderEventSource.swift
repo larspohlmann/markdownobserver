@@ -275,10 +275,10 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         exclusionMatcher: FolderWatchExclusionMatcher
     ) throws -> [URL] {
         guard folderURL.isFileURL else {
-            throw ReaderError.invalidFileURL
+            throw AppError.invalidFileURL
         }
 
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         guard includeSubfolders else {
             return [normalizedFolderURL]
         }
@@ -297,7 +297,7 @@ final class DispatchSourceFolderEventSource: FolderEventSource, @unchecked Senda
         }
 
         for case let directoryURL as URL in enumerator {
-            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
+            let normalizedDirectoryURL = FileRouting.normalizedFileURL(directoryURL)
             if FolderSnapshotDiffer.shouldSkipEntryBeyondIncludeSubfolderDepth(
                 normalizedDirectoryURL,
                 rootFolderPathWithSlash: rootFolderPathWithSlash,

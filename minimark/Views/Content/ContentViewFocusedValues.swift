@@ -7,7 +7,7 @@ struct ContentViewFocusedValues: ViewModifier {
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
     let canNavigateChangedRegions: Bool
-    let onNavigateChangedRegion: (ReaderChangedRegionNavigationDirection) -> Void
+    let onNavigateChangedRegion: (ChangedRegionNavigationDirection) -> Void
     @Binding var isFolderWatchOptionsPresented: Bool
     @Binding var pendingFolderWatchOpenMode: FolderWatchOpenMode
     @Binding var pendingFolderWatchScope: FolderWatchScope
@@ -26,12 +26,12 @@ struct ContentViewFocusedValues: ViewModifier {
     func body(content: Content) -> some View {
         content
             .focusedValue(
-                \.readerOpenDocumentInCurrentWindow,
-                ReaderOpenDocumentInCurrentWindowAction { fileURL in
-                    let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
-                    let currentURL = document.fileURL.map(ReaderFileRouting.normalizedFileURL)
+                \.openDocumentInCurrentWindow,
+                OpenDocumentInCurrentWindowAction { fileURL in
+                    let normalizedURL = FileRouting.normalizedFileURL(fileURL)
+                    let currentURL = document.fileURL.map(FileRouting.normalizedFileURL)
                     if sourceEditing.hasUnsavedDraftChanges, currentURL != normalizedURL {
-                        onAction(.presentError(ReaderError.unsavedDraftRequiresResolution))
+                        onAction(.presentError(AppError.unsavedDraftRequiresResolution))
                         return
                     }
                     onAction(.requestFileOpen(FileOpenRequest(
@@ -42,28 +42,28 @@ struct ContentViewFocusedValues: ViewModifier {
                 }
             )
             .focusedValue(
-                \.readerOpenDocument,
-                ReaderOpenDocumentAction { fileURL in openOrAppendDocument(fileURL) }
+                \.openDocument,
+                OpenDocumentAction { fileURL in openOrAppendDocument(fileURL) }
             )
             .focusedValue(
-                \.readerOpenAdditionalDocument,
-                ReaderOpenAdditionalDocumentAction { fileURL in openOrAppendDocument(fileURL) }
+                \.openAdditionalDocument,
+                OpenAdditionalDocumentAction { fileURL in openOrAppendDocument(fileURL) }
             )
             .focusedValue(
-                \.readerWatchFolder,
-                ReaderWatchFolderAction { folderURL in
+                \.watchFolder,
+                WatchFolderAction { folderURL in
                     onAction(.requestFolderWatch(folderURL))
                 }
             )
             .focusedValue(
-                \.readerStartRecentFolderWatch,
-                ReaderStartRecentFolderWatchAction { entry in
+                \.startRecentFolderWatch,
+                StartRecentFolderWatchAction { entry in
                     onAction(.startRecentFolderWatch(entry))
                 }
             )
             .focusedValue(
-                \.readerStopFolderWatch,
-                ReaderStopFolderWatchAction {
+                \.stopFolderWatch,
+                StopFolderWatchAction {
                     guard folderWatchState.canStopFolderWatch else {
                         return
                     }
@@ -71,12 +71,12 @@ struct ContentViewFocusedValues: ViewModifier {
                 }
             )
             .focusedValue(
-                \.readerHasActiveFolderWatch,
+                \.hasActiveFolderWatch,
                 folderWatchState.canStopFolderWatch
             )
             .focusedValue(
-                \.readerDocumentViewModeContext,
-                ReaderDocumentViewModeContext(
+                \.documentViewModeContext,
+                DocumentViewModeContext(
                     currentMode: sourceEditing.documentViewMode,
                     canSetMode: document.hasOpenDocument,
                     setMode: { mode in
@@ -88,8 +88,8 @@ struct ContentViewFocusedValues: ViewModifier {
                 )
             )
             .focusedValue(
-                \.readerSourceEditingContext,
-                ReaderSourceEditingContext(
+                \.sourceEditingContext,
+                SourceEditingContext(
                     canStartEditing: (document.hasOpenDocument && !document.isCurrentFileMissing && !sourceEditing.isSourceEditing),
                     canSave: sourceEditing.canSaveSourceDraft,
                     canDiscard: sourceEditing.canDiscardSourceDraft,
@@ -105,15 +105,15 @@ struct ContentViewFocusedValues: ViewModifier {
                 )
             )
             .focusedValue(
-                \.readerChangedRegionNavigation,
-                ReaderChangedRegionNavigationAction(
+                \.changedRegionNavigation,
+                ChangedRegionNavigationAction(
                     canNavigate: canNavigateChangedRegions,
                     navigate: onNavigateChangedRegion
                 )
             )
             .focusedValue(
-                \.readerToggleTOC,
-                ReaderToggleTOCAction(
+                \.toggleTOC,
+                ToggleTOCAction(
                     canToggle: !toc.headings.isEmpty,
                     toggle: { toc.toggle() }
                 )

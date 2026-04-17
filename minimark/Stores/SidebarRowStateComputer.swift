@@ -61,8 +61,8 @@ final class SidebarRowStateComputer {
         )
     }
 
-    private func deriveIndicatorState(from store: ReaderStore) -> ReaderDocumentIndicatorState {
-        ReaderDocumentIndicatorState(
+    private func deriveIndicatorState(from store: ReaderStore) -> DocumentIndicatorState {
+        DocumentIndicatorState(
             hasUnacknowledgedExternalChange: store.externalChange.hasUnacknowledgedExternalChange,
             isCurrentFileMissing: store.document.isCurrentFileMissing,
             unacknowledgedExternalChangeKind: store.externalChange.unacknowledgedExternalChangeKind

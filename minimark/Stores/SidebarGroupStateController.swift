@@ -22,7 +22,7 @@ final class SidebarGroupStateController {
 
     private(set) var computedGrouping: SidebarGrouping = .flat([])
     private(set) var isGrouped: Bool = false
-    private(set) var groupIndicatorStates: [String: [ReaderDocumentIndicatorState]] = [:]
+    private(set) var groupIndicatorStates: [String: [DocumentIndicatorState]] = [:]
     private(set) var groupIndicatorPulseTokens: [String: Int] = [:]
 
     // MARK: - Private
@@ -217,7 +217,7 @@ final class SidebarGroupStateController {
             document.readerStore.document.fileURL?.deletingLastPathComponent()
                 .path(percentEncoded: false) ?? ""
         }
-        var result: [String: [ReaderDocumentIndicatorState]] = [:]
+        var result: [String: [DocumentIndicatorState]] = [:]
         var updatedPulseTokens = groupIndicatorPulseTokens
         for (path, docs) in grouped {
             let states = docs.compactMap { doc in

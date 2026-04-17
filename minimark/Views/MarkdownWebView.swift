@@ -9,7 +9,7 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
     private static let tocMessageName = "minimarkTOC"
-    private static let scrollSyncObserverScript = ReaderBundledAssetLoader.scrollSyncObserverJavaScript
+    private static let scrollSyncObserverScript = BundledAssetLoader.scrollSyncObserverJavaScript
 
     let htmlDocument: String
     let documentIdentity: String?
@@ -22,7 +22,7 @@ struct MarkdownWebView: NSViewRepresentable {
         var scrollSyncRequest: ScrollSyncRequest?
     var tocScrollRequest: TOCScrollRequest?
     var supportsInPlaceContentUpdates: Bool = false
-    var overlayTopInset: CGFloat = ReaderOverlayInsetCalculator.defaultScrollTargetTopInset
+    var overlayTopInset: CGFloat = OverlayInsetCalculator.defaultScrollTargetTopInset
     var reloadAnchorProgress: Double?
     var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
     var onAction: (DocumentSurfaceAction) -> Void = { _ in }
@@ -129,7 +129,7 @@ struct MarkdownWebView: NSViewRepresentable {
         var canAcceptDroppedFileURLs: ([URL]) -> Bool = { _ in true }
         var onAction: (DocumentSurfaceAction) -> Void = { _ in }
         var supportsInPlaceContentUpdates = false
-        var overlayTopInset: CGFloat = ReaderOverlayInsetCalculator.defaultScrollTargetTopInset
+        var overlayTopInset: CGFloat = OverlayInsetCalculator.defaultScrollTargetTopInset
         var reloadAnchorProgress: Double?
         private var lastAppliedOverlayTopInset: CGFloat?
 
@@ -938,7 +938,7 @@ final class DropAwareWKWebView: WKWebView {
     private func dragTargetingUpdate(from draggingInfo: NSDraggingInfo) -> DropTargetingUpdate {
         let fileURLs = droppedFileURLs(from: draggingInfo)
         let hasFileURLs = !fileURLs.isEmpty
-        let containsDirectoryHint = ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs)
+        let containsDirectoryHint = FileRouting.containsLikelyDirectoryPath(in: fileURLs)
         let canDrop = hasFileURLs && (dropDelegate?.dropAwareWebViewCanAcceptDrop(fileURLs) ?? true)
 
         return DropTargetingUpdate(

@@ -9,7 +9,7 @@ struct WindowShellControllerTests {
     private func makeShell(
         folderWatchSession: FolderWatchSession? = nil
     ) throws -> (WindowShellController, ReaderSidebarControllerTestHarness) {
-        ReaderWindowRegistry.shared.resetForTesting()
+        WindowRegistry.shared.resetForTesting()
         let harness = try ReaderSidebarControllerTestHarness()
         let shell = WindowShellController(
             sidebarDocumentController: harness.controller,
@@ -79,8 +79,8 @@ struct WindowShellControllerTests {
 
         shell.applyTitlePresentation()
 
-        #expect(shell.effectiveWindowTitle == ReaderWindowTitleFormatter.appName)
-        #expect(window.title == ReaderWindowTitleFormatter.appName)
+        #expect(shell.effectiveWindowTitle == WindowTitleFormatter.appName)
+        #expect(window.title == WindowTitleFormatter.appName)
     }
 
     @Test @MainActor
@@ -92,7 +92,7 @@ struct WindowShellControllerTests {
 
         shell.refreshRegistrationAndTitle()
 
-        #expect(window.title == ReaderWindowTitleFormatter.appName)
+        #expect(window.title == WindowTitleFormatter.appName)
     }
 
     @Test @MainActor

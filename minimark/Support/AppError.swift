@@ -1,6 +1,6 @@
 import Foundation
 
-enum ReaderError: LocalizedError {
+enum AppError: LocalizedError {
     case invalidFileURL
     case noOpenFileInReader
     case fileNotReachable(URL)

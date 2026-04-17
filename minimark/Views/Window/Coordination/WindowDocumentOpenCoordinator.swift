@@ -118,7 +118,7 @@ final class WindowDocumentOpenCoordinator {
         folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedURL = FileRouting.normalizedFileURL(fileURL)
         fileOpenCoordinator.open(FileOpenRequest(
             fileURLs: [normalizedURL],
             origin: origin,
@@ -135,9 +135,9 @@ final class WindowDocumentOpenCoordinator {
         origin: OpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
 
-        if ReaderWindowRegistry.shared.focusDocumentIfAlreadyOpen(at: normalizedFileURL) {
+        if WindowRegistry.shared.focusDocumentIfAlreadyOpen(at: normalizedFileURL) {
             return
         }
 
@@ -155,7 +155,7 @@ final class WindowDocumentOpenCoordinator {
         origin: OpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
 
         if folderWatchSession != nil {
             let event = FolderWatchChangeEvent(

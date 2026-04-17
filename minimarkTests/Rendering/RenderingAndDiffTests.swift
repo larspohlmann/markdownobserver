@@ -30,7 +30,7 @@ struct RenderingAndDiffTests {
             Issue.record("JavaScript exception: \(message)")
         }
 
-        context.evaluateScript(ReaderBundledAssetLoader.inlineDiffRuntimeJavaScript)
+        context.evaluateScript(BundledAssetLoader.inlineDiffRuntimeJavaScript)
         context.setObject(previous, forKeyedSubscript: "__previous" as NSString)
         context.setObject(current, forKeyedSubscript: "__current" as NSString)
 
@@ -63,11 +63,11 @@ struct RenderingAndDiffTests {
     }
 
     private func renderedDiffComparisonNode(previous: String, current: String) throws -> InlineDiffNode {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,
@@ -105,7 +105,7 @@ struct RenderingAndDiffTests {
             };
             """
         )
-        context.evaluateScript(ReaderBundledAssetLoader.inlineDiffRuntimeJavaScript)
+        context.evaluateScript(BundledAssetLoader.inlineDiffRuntimeJavaScript)
         context.evaluateScript(functionSource)
         context.setObject(previous, forKeyedSubscript: "__previous" as NSString)
         context.setObject(current, forKeyedSubscript: "__current" as NSString)
@@ -150,11 +150,11 @@ struct RenderingAndDiffTests {
     }
 
     @Test func htmlDocumentContainsContentSecurityPolicy() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,
@@ -173,11 +173,11 @@ struct RenderingAndDiffTests {
     }
 
     @Test func htmlRuntimeEmbedsAndUpdatesRuntimeCSS() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "body { color: red; }",
             payloadBase64: "payload",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,
@@ -197,11 +197,11 @@ struct RenderingAndDiffTests {
     }
 
     @Test func htmlRuntimeExposesOverlayTopInsetSetter() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,
@@ -218,11 +218,11 @@ struct RenderingAndDiffTests {
     }
 
     @Test func htmlRuntimeChangedRegionNavigationUsesMutableOverlayInsetVariable() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,
@@ -240,11 +240,11 @@ struct RenderingAndDiffTests {
     }
 
     @Test func htmlRuntimeMeasuresChangedRegionMarkersWithExpandedPanelsStillMounted() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,
@@ -415,7 +415,7 @@ struct RenderingAndDiffTests {
     }
 
     @Test func readerCSSUsesFullAvailableDocumentWidth() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
 
         let css = factory.makeCSS(theme: ThemeKind.blackOnWhite.themeDefinition, syntaxTheme: .default, baseFontSize: 16)
 
@@ -427,11 +427,11 @@ struct RenderingAndDiffTests {
     }
 
     @Test func htmlRuntimeLayersDeletedChangedRegionMarkersAboveOtherMarkers() {
-        let factory = ReaderCSSFactory()
+        let factory = CSSFactory()
         let html = factory.makeHTMLDocument(
             css: "",
             payloadBase64: "",
-            runtimeAssets: ReaderRuntimeAssets(
+            runtimeAssets: RuntimeAssets(
                 markdownItScriptPath: "markdown-it.min.js",
                 highlightScriptPath: "highlight.min.js",
                 taskListsScriptPath: nil,

@@ -98,13 +98,13 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
         changedDirectoryURLs: Set<URL>
     ) throws -> [URL: FolderFileSnapshot] {
         guard folderURL.isFileURL else {
-            throw ReaderError.invalidFileURL
+            throw AppError.invalidFileURL
         }
 
         var snapshot = previousSnapshot
 
         let normalizedChangedDirectoryPaths = Set(
-            changedDirectoryURLs.map { ReaderFileRouting.normalizedFileURL($0).path }
+            changedDirectoryURLs.map { FileRouting.normalizedFileURL($0).path }
         )
 
         // Remove files whose immediate parent is a changed directory.
@@ -118,7 +118,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
         let rootPathWithSlash = exclusionMatcher.normalizedRootPathWithSlash
 
         for directoryURL in changedDirectoryURLs {
-            let normalizedDirectoryURL = ReaderFileRouting.normalizedFileURL(directoryURL)
+            let normalizedDirectoryURL = FileRouting.normalizedFileURL(directoryURL)
 
             // Skip directories beyond the configured depth limit
             let depth = Self.relativePathDepth(
@@ -190,7 +190,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
         includeSubfolders: Bool,
         excludedSubdirectoryURLs: [URL]
     ) throws -> [URL] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         return try enumerateMarkdownFiles(
             folderURL: normalizedFolderURL,
             includeSubfolders: includeSubfolders,
@@ -209,7 +209,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
         exclusionMatcher: FolderWatchExclusionMatcher
     ) throws -> [URL] {
         guard folderURL.isFileURL else {
-            throw ReaderError.invalidFileURL
+            throw AppError.invalidFileURL
         }
 
         let fileManager = FileManager.default
@@ -227,7 +227,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
 
             var result: [URL] = []
             for case let fileURL as URL in enumerator {
-                let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+                let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
                 if Self.shouldSkipEntryBeyondIncludeSubfolderDepth(
                     normalizedFileURL,
                     rootFolderPathWithSlash: rootFolderPathWithSlash,
@@ -260,7 +260,7 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
                 options: []
             )
             return urls
-                .map(ReaderFileRouting.normalizedFileURL)
+                .map(FileRouting.normalizedFileURL)
                 .compactMap(regularMarkdownFileURL(fromNormalized:))
                 .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
         }
@@ -277,13 +277,13 @@ struct FolderSnapshotDiffer: FolderSnapshotDiffing {
             options: []
         )
         return urls
-            .map(ReaderFileRouting.normalizedFileURL)
+            .map(FileRouting.normalizedFileURL)
             .compactMap(regularMarkdownFileURL(fromNormalized:))
             .filter { !exclusionMatcher.excludesNormalizedFilePath($0.path) }
     }
 
     private func regularMarkdownFileURL(fromNormalized normalizedFileURL: URL) -> URL? {
-        guard ReaderFileRouting.isSupportedMarkdownFileURL(normalizedFileURL) else {
+        guard FileRouting.isSupportedMarkdownFileURL(normalizedFileURL) else {
             return nil
         }
 
@@ -484,13 +484,13 @@ struct FolderWatchExclusionMatcher {
     private let excludedDirectoryPaths: [String]
 
     init(rootFolderURL: URL, excludedSubdirectoryURLs: [URL]) {
-        let normalizedRootURL = ReaderFileRouting.normalizedFileURL(rootFolderURL)
+        let normalizedRootURL = FileRouting.normalizedFileURL(rootFolderURL)
         let rootPath = normalizedRootURL.path
         let rootFolderPathWithSlash = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
         self.rootFolderPathWithSlash = rootFolderPathWithSlash
 
         self.excludedDirectoryPaths = excludedSubdirectoryURLs
-            .map(ReaderFileRouting.normalizedFileURL)
+            .map(FileRouting.normalizedFileURL)
             .map(\.path)
             .filter { $0.hasPrefix(rootFolderPathWithSlash) }
             .sorted()
@@ -501,11 +501,11 @@ struct FolderWatchExclusionMatcher {
     }
 
     func excludesDirectory(_ directoryURL: URL) -> Bool {
-        excludesNormalizedDirectoryPath(ReaderFileRouting.normalizedFileURL(directoryURL).path)
+        excludesNormalizedDirectoryPath(FileRouting.normalizedFileURL(directoryURL).path)
     }
 
     func excludesFile(_ fileURL: URL) -> Bool {
-        excludesNormalizedFilePath(ReaderFileRouting.normalizedFileURL(fileURL).path)
+        excludesNormalizedFilePath(FileRouting.normalizedFileURL(fileURL).path)
     }
 
     func excludesNormalizedDirectoryPath(_ normalizedPath: String) -> Bool {

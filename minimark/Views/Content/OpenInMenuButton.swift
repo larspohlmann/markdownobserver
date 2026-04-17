@@ -171,7 +171,7 @@ struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentFilesMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Opened Files", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
-            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentManuallyOpenedFiles)
+            let titlesByPath = RecentHistory.menuTitles(for: parent.recentManuallyOpenedFiles)
 
             if parent.recentManuallyOpenedFiles.isEmpty {
                 let empty = NSMenuItem(title: "No recent manually opened files", action: nil, keyEquivalent: "")
@@ -249,7 +249,7 @@ struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentWatchedFoldersMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Watched Folders", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
-            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentWatchedFolders)
+            let titlesByPath = RecentHistory.menuTitles(for: parent.recentWatchedFolders)
 
             if parent.recentWatchedFolders.isEmpty {
                 let empty = NSMenuItem(title: "No recent watched folders", action: nil, keyEquivalent: "")

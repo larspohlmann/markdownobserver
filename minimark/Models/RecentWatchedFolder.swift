@@ -29,7 +29,7 @@ nonisolated struct RecentWatchedFolder: Equatable, Hashable, Codable, Sendable, 
     }
 
     init(folderURL: URL, options: FolderWatchOptions) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedURL = FileRouting.normalizedFileURL(folderURL)
         folderPath = normalizedURL.path
         self.options = options
         bookmarkData = try? folderURL.bookmarkData(

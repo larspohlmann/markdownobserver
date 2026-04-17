@@ -171,7 +171,7 @@ import Observation
         resolvedURL: URL,
         refreshedBookmarkData: Data?
     ) {
-        let normalizedResolvedPath = ReaderFileRouting.normalizedFileURL(resolvedURL).path
+        let normalizedResolvedPath = FileRouting.normalizedFileURL(resolvedURL).path
 
         mutate(coalescePersistence: false) { favorites in
             guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }

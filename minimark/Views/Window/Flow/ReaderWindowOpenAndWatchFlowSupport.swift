@@ -2,7 +2,7 @@ import Foundation
 
 enum ReaderWindowOpenAndWatchFlowSupport {
     static func isSupportedIncomingMarkdownFile(_ url: URL) -> Bool {
-        url.isFileURL && ReaderFileRouting.isSupportedMarkdownFileURL(url)
+        url.isFileURL && FileRouting.isSupportedMarkdownFileURL(url)
     }
 
     static func applyInitialSeedIfNeeded(

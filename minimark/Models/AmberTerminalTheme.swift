@@ -13,11 +13,11 @@ enum AmberTerminalTheme {
     )
 
     static var customCSS: String {
-        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-amber-terminal")
+        BundledAssetLoader.loadBundledCSS(named: "theme-amber-terminal")
     }
 
     static var syntaxCSS: String {
-        ReaderBundledAssetLoader.loadBundledCSS(named: "theme-amber-terminal-syntax")
+        BundledAssetLoader.loadBundledCSS(named: "theme-amber-terminal-syntax")
     }
 
     static let previewPalette: SyntaxThemePreviewPalette = SyntaxThemePreviewPalette(

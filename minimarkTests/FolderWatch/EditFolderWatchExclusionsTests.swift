@@ -233,7 +233,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateExclusionsPreservesSessionProperties() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let initialOptions = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders,

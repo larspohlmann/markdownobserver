@@ -112,7 +112,7 @@ final class FileOpenCoordinator {
     // MARK: - Private
 
     private nonisolated func deduplicateAndSort(_ urls: [URL]) -> [URL] {
-        Array(Set(urls.map(ReaderFileRouting.normalizedFileURL)))
+        Array(Set(urls.map(FileRouting.normalizedFileURL)))
             .sorted { $0.path < $1.path }
     }
 

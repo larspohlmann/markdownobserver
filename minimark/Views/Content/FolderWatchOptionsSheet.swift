@@ -378,7 +378,7 @@ struct FolderWatchOptionsSheet: View {
             syncViewModel()
             guard let newCount, newCount > FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
                   ProcessInfo.processInfo.environment[
-                      ReaderUITestLaunchConfiguration.screenshotOpenExclusionEnvironmentKey
+                      UITestLaunchConfiguration.screenshotOpenExclusionEnvironmentKey
                   ] == "true" else { return }
 
             // Pre-set excluded/expanded paths from env vars.
@@ -389,7 +389,7 @@ struct FolderWatchOptionsSheet: View {
             } ?? []
 
             if let excludedEnv = ProcessInfo.processInfo.environment[
-                ReaderUITestLaunchConfiguration.screenshotExcludedPathsEnvironmentKey
+                UITestLaunchConfiguration.screenshotExcludedPathsEnvironmentKey
             ], !excludedEnv.isEmpty {
                 let excludeNames = Set(excludedEnv.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) })
                 excludedSubdirectoryPaths = allPaths.filter { path in
@@ -399,7 +399,7 @@ struct FolderWatchOptionsSheet: View {
             }
 
             if let expandedEnv = ProcessInfo.processInfo.environment[
-                ReaderUITestLaunchConfiguration.screenshotExpandedPathsEnvironmentKey
+                UITestLaunchConfiguration.screenshotExpandedPathsEnvironmentKey
             ], !expandedEnv.isEmpty {
                 let expandNames = Set(expandedEnv.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) })
                 expandedDirectoryPaths = Set(allPaths.filter { path in

@@ -54,7 +54,7 @@ struct ReaderDocumentControllerTests {
         let url = URL(fileURLWithPath: "/tmp/missing.md")
         sut.presentMissingDocument(
             at: url,
-            error: ReaderError.noOpenFileInReader
+            error: AppError.noOpenFileInReader
         )
         #expect(sut.isCurrentFileMissing)
         #expect(sut.lastError != nil)
@@ -99,14 +99,14 @@ struct ReaderDocumentControllerTests {
     @Test("handle sets lastError")
     func handleSetsError() {
         let sut = makeSUT()
-        sut.handle(ReaderError.noOpenFileInReader)
+        sut.handle(AppError.noOpenFileInReader)
         #expect(sut.lastError != nil)
     }
 
     @Test("clearLastError clears error")
     func clearLastErrorClears() {
         let sut = makeSUT()
-        sut.handle(ReaderError.noOpenFileInReader)
+        sut.handle(AppError.noOpenFileInReader)
         sut.clearLastError()
         #expect(sut.lastError == nil)
     }
@@ -127,6 +127,6 @@ struct ReaderDocumentControllerTests {
     @Test("windowTitle shows app name when no document")
     func windowTitleShowsAppName() {
         let sut = makeSUT()
-        #expect(sut.windowTitle == ReaderWindowTitleFormatter.appName)
+        #expect(sut.windowTitle == WindowTitleFormatter.appName)
     }
 }

@@ -19,7 +19,7 @@ final class FolderWatchInputHandler {
     func handleObservedWatchedFolderChanges(_ markdownFileEvents: [FolderWatchChangeEvent]) {
         folderWatchDispatcher.handleObservedWatchedFolderChanges(
             markdownFileEvents,
-            currentDocumentFileURL: document.fileURL.map { ReaderFileRouting.normalizedFileURL($0) }
+            currentDocumentFileURL: document.fileURL.map { FileRouting.normalizedFileURL($0) }
         ) { [opener] event, session, origin in
             opener.open(
                 at: event.fileURL,

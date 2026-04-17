@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-enum ReaderDocumentIndicatorState: Equatable, Sendable {
+enum DocumentIndicatorState: Equatable, Sendable {
     case none
     case addedExternalChange
     case externalChange
@@ -48,7 +48,7 @@ enum ReaderDocumentIndicatorState: Equatable, Sendable {
     }
 }
 
-struct ReaderWindowTitleFormatter {
+struct WindowTitleFormatter {
     struct Mutation: Equatable {
         let effectiveTitle: String
         let shouldUpdateEffectiveTitle: Bool

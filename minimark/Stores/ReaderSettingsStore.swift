@@ -241,7 +241,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     let recentOpenedFiles: RecentOpenedFilesStore
     let trustedImageFolders: TrustedImageFoldersStore
 
-    @ObservationIgnored private let storage: ReaderSettingsKeyValueStoring
+    @ObservationIgnored private let storage: SettingsKeyValueStoring
     @ObservationIgnored private let storageKey: String
     @ObservationIgnored private let subject: CurrentValueSubject<ReaderSettings, Never>
     @ObservationIgnored private let encoder = JSONEncoder()
@@ -251,7 +251,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     @ObservationIgnored private var lastPersistAt: Date = .distantPast
 
     init(
-        storage: ReaderSettingsKeyValueStoring = UserDefaults.standard,
+        storage: SettingsKeyValueStoring = UserDefaults.standard,
         storageKey: String = "reader.settings.v1",
         bookmarkResolver: @escaping BookmarkResolver = { bookmarkData in
             var bookmarkIsStale = false

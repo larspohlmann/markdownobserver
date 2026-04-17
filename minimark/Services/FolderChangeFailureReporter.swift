@@ -65,7 +65,7 @@ struct FolderChangeFailureReporter: Sendable {
     }
 
     private static func sanitizedFolderIdentifier(for folderURL: URL) -> String {
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        let normalizedPath = FileRouting.normalizedFileURL(folderURL).path
         return String(normalizedPath.hashValue, radix: 16)
     }
 

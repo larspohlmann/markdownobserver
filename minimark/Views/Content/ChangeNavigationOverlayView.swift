@@ -2,10 +2,10 @@ import SwiftUI
 
 struct ChangeNavigationOverlayView: View {
     let state: ChangeNavigationState
-    let insets: ReaderOverlayInsetValues
+    let insets: OverlayInsetValues
     let colorScheme: ColorScheme
     let settingsStore: ReaderSettingsStore
-    let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
+    let onNavigate: (ChangedRegionNavigationDirection) -> Void
 
     var body: some View {
         if state.canNavigate {

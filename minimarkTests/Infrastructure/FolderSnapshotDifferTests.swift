@@ -23,7 +23,7 @@ struct FolderSnapshotDifferTests {
             excludedSubdirectoryURLs: []
         )
 
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         #expect(snapshot.count == 1)
         #expect(snapshot[normalizedFileURL] != nil)
         #expect(snapshot[normalizedFileURL]?.markdown == nil)

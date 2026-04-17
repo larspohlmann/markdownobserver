@@ -25,7 +25,7 @@ import Observation
 
     func addRecentWatchedFolder(_ folderURL: URL, options: FolderWatchOptions) {
         mutate(coalescePersistence: false) { entries in
-            entries = ReaderRecentHistory.insertingUniqueWatchedFolder(
+            entries = RecentHistory.insertingUniqueWatchedFolder(
                 folderURL,
                 options: options,
                 into: entries
@@ -34,9 +34,9 @@ import Observation
     }
 
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         guard let entry = currentRecentWatchedFolders.first(where: { entry in
-            ReaderFileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
+            FileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
         }) else {
             return nil
         }

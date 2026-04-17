@@ -30,7 +30,7 @@ import Observation
     }
 
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         let filePath = normalizedFileURL.path
 
         for entry in currentTrustedFolders {

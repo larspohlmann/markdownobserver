@@ -27,7 +27,7 @@ enum MarkdownSourceHTMLRenderer {
     static func makeHTMLDocument(markdown: String, settings: ReaderSettings, isEditable: Bool) -> String {
         let theme = Theme.theme(for: settings.readerTheme)
         let baseCSS = theme.cssVariables(baseFontSize: settings.baseFontSize)
-        let codeMirrorScriptPath = ReaderBundledAssets.availableCodeMirrorSourceViewScriptPath()
+        let codeMirrorScriptPath = BundledAssets.availableCodeMirrorSourceViewScriptPath()
         let payloadBase64 = makePayloadBase64(
             markdown: markdown,
             theme: theme,
@@ -220,7 +220,7 @@ enum MarkdownSourceHTMLRenderer {
 
                 #minimark-source-root {
                     min-height: 100vh;
-                    padding-top: \(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px;
+                    padding-top: \(Int(OverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px;
                 }
 
                 .minimark-source-editor {

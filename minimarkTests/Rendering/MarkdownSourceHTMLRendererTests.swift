@@ -80,7 +80,7 @@ struct MarkdownSourceHTMLRendererTests {
             isEditable: true
         )
 
-        let expectedPadding = Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded())
+        let expectedPadding = Int(OverlayInsetCalculator.defaultScrollTargetTopInset.rounded())
         #expect(html.contains("padding-top: \(expectedPadding)px"))
     }
 

@@ -7,7 +7,7 @@ struct ReaderWindowResizeTests {
         let windowFrame = CGRect(x: 100, y: 100, width: 800, height: 1000)
         let screenFrame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
 
-        let result = ReaderWindowDefaults.sidebarResizedFrame(
+        let result = WindowDefaults.sidebarResizedFrame(
             windowFrame: windowFrame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: 250
@@ -23,7 +23,7 @@ struct ReaderWindowResizeTests {
         let windowFrame = CGRect(x: 100, y: 100, width: 1050, height: 1000)
         let screenFrame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
 
-        let result = ReaderWindowDefaults.sidebarResizedFrame(
+        let result = WindowDefaults.sidebarResizedFrame(
             windowFrame: windowFrame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: -250
@@ -38,7 +38,7 @@ struct ReaderWindowResizeTests {
         let windowFrame = CGRect(x: 1700, y: 100, width: 800, height: 1000)
         let screenFrame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
 
-        let result = ReaderWindowDefaults.sidebarResizedFrame(
+        let result = WindowDefaults.sidebarResizedFrame(
             windowFrame: windowFrame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: 250
@@ -54,7 +54,7 @@ struct ReaderWindowResizeTests {
         let windowFrame = CGRect(x: 0, y: 100, width: 800, height: 1000)
         let screenFrame = CGRect(x: 0, y: 0, width: 900, height: 1080)
 
-        let result = ReaderWindowDefaults.sidebarResizedFrame(
+        let result = WindowDefaults.sidebarResizedFrame(
             windowFrame: windowFrame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: 250
@@ -69,20 +69,20 @@ struct ReaderWindowResizeTests {
         let windowFrame = CGRect(x: 100, y: 100, width: 700, height: 1000)
         let screenFrame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
 
-        let result = ReaderWindowDefaults.sidebarResizedFrame(
+        let result = WindowDefaults.sidebarResizedFrame(
             windowFrame: windowFrame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: -250
         )
 
-        #expect(result.width >= ReaderWindowDefaults.minimumUsableWidth)
+        #expect(result.width >= WindowDefaults.minimumUsableWidth)
     }
 
     @Test func sidebarShownRespectsNonZeroScreenOrigin() {
         let windowFrame = CGRect(x: 2600, y: 125, width: 800, height: 1000)
         let screenFrame = CGRect(x: 1920, y: 25, width: 1920, height: 1055)
 
-        let result = ReaderWindowDefaults.sidebarResizedFrame(
+        let result = WindowDefaults.sidebarResizedFrame(
             windowFrame: windowFrame,
             screenVisibleFrame: screenFrame,
             sidebarDelta: 250
