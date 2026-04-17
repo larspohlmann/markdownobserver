@@ -73,6 +73,7 @@ private struct ContentAreaHost: View {
     @Binding var pendingFolderWatchScope: FolderWatchScope
     @Binding var pendingFolderWatchExcludedSubdirectoryPaths: [String]
 
+    @State private var surfaceViewModel: DocumentSurfaceViewModel
     @State private var viewModel: ContentAreaViewModel
 
     init(
@@ -93,6 +94,8 @@ private struct ContentAreaHost: View {
         self._pendingFolderWatchOpenMode = pendingFolderWatchOpenMode
         self._pendingFolderWatchScope = pendingFolderWatchScope
         self._pendingFolderWatchExcludedSubdirectoryPaths = pendingFolderWatchExcludedSubdirectoryPaths
+        let surfaceViewModel = DocumentSurfaceViewModel()
+        _surfaceViewModel = State(wrappedValue: surfaceViewModel)
         _viewModel = State(wrappedValue: ContentAreaViewModel(
             document: documentStore.document,
             rendering: documentStore.renderingController,
@@ -101,7 +104,7 @@ private struct ContentAreaHost: View {
             toc: documentStore.toc,
             settingsStore: settingsStore,
             folderWatchState: folderWatchState,
-            surfaceViewModel: DocumentSurfaceViewModel(),
+            surfaceViewModel: surfaceViewModel,
             onAction: onAction
         ))
     }
@@ -115,7 +118,7 @@ private struct ContentAreaHost: View {
             rendering: documentStore.renderingController,
             sourceEditing: documentStore.sourceEditingController,
             settingsStore: settingsStore,
-            surfaceViewModel: viewModel.surfaceViewModel,
+            surfaceViewModel: surfaceViewModel,
             folderWatchState: folderWatchState,
             isFolderWatchOptionsPresented: $isFolderWatchOptionsPresented,
             pendingFolderWatchOpenMode: $pendingFolderWatchOpenMode,
