@@ -20,7 +20,7 @@ struct ReaderSettingsStoreFavoritesTests {
         )
 
         let favoriteID = store.currentSettings.favoriteWatchedFolders.first!.id
-        let newState = ReaderFavoriteWorkspaceState(
+        let newState = FavoriteWorkspaceState(
             fileSortMode: .nameDescending,
             groupSortMode: .nameAscending,
             sidebarPosition: .sidebarRight,
@@ -53,7 +53,7 @@ struct ReaderSettingsStoreFavoritesTests {
         let before = store.currentSettings.favoriteWatchedFolders
         store.updateFavoriteWorkspaceState(
             id: UUID(),
-            workspaceState: ReaderFavoriteWorkspaceState(
+            workspaceState: FavoriteWorkspaceState(
                 fileSortMode: .nameDescending,
                 groupSortMode: .nameAscending,
                 sidebarPosition: .sidebarRight,

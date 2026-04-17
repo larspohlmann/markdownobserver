@@ -31,17 +31,17 @@ enum ReaderTopBarMetrics {
 
 enum ReaderTopBarAction {
     case openFiles([URL])
-    case openInApp(ReaderExternalApplication)
+    case openInApp(ExternalApplication)
     case revealInFinder
     case requestFolderWatch(URL)
     case stopFolderWatch
-    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
+    case startFavoriteWatch(FavoriteWatchedFolder)
     case clearFavoriteWatchedFolders
     case renameFavoriteWatchedFolder(id: UUID, name: String)
     case removeFavoriteWatchedFolder(UUID)
     case reorderFavoriteWatchedFolders([UUID])
-    case startRecentManuallyOpenedFile(ReaderRecentOpenedFile)
-    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case startRecentManuallyOpenedFile(RecentOpenedFile)
+    case startRecentFolderWatch(RecentWatchedFolder)
     case clearRecentWatchedFolders
     case clearRecentManuallyOpenedFiles
     case saveSourceDraft
@@ -70,11 +70,11 @@ struct ReaderTopBar: View {
     let sourceEditing: ReaderSourceEditingController
     let statusBarTimestamp: ReaderStatusBarTimestamp?
     let canStopFolderWatch: Bool
-    let apps: [ReaderExternalApplication]
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let iconProvider: (ReaderExternalApplication) -> NSImage?
+    let apps: [ExternalApplication]
+    let favoriteWatchedFolders: [FavoriteWatchedFolder]
+    let recentWatchedFolders: [RecentWatchedFolder]
+    let recentManuallyOpenedFiles: [RecentOpenedFile]
+    let iconProvider: (ExternalApplication) -> NSImage?
     let onAction: (ReaderTopBarAction) -> Void
 
     private enum Metrics {

@@ -5,35 +5,35 @@ import OSLog
 
 nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     var appAppearance: AppAppearance
-    var readerTheme: ReaderThemeKind
+    var readerTheme: ThemeKind
     var syntaxTheme: SyntaxThemeKind
     var baseFontSize: Double
     var autoRefreshOnExternalChange: Bool
     var notificationsEnabled: Bool
-    var multiFileDisplayMode: ReaderMultiFileDisplayMode
-    var sidebarSortMode: ReaderSidebarSortMode
-    var sidebarGroupSortMode: ReaderSidebarSortMode
-    var favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    var recentWatchedFolders: [ReaderRecentWatchedFolder]
-    var recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    var trustedImageFolders: [ReaderTrustedImageFolder]
+    var multiFileDisplayMode: MultiFileDisplayMode
+    var sidebarSortMode: SidebarSortMode
+    var sidebarGroupSortMode: SidebarSortMode
+    var favoriteWatchedFolders: [FavoriteWatchedFolder]
+    var recentWatchedFolders: [RecentWatchedFolder]
+    var recentManuallyOpenedFiles: [RecentOpenedFile]
+    var trustedImageFolders: [TrustedImageFolder]
     var diffBaselineLookback: DiffBaselineLookback
     var dismissedHints: Set<FirstUseHint>
 
     init(
         appAppearance: AppAppearance,
-        readerTheme: ReaderThemeKind,
+        readerTheme: ThemeKind,
         syntaxTheme: SyntaxThemeKind,
         baseFontSize: Double,
         autoRefreshOnExternalChange: Bool,
         notificationsEnabled: Bool,
-        multiFileDisplayMode: ReaderMultiFileDisplayMode,
-        sidebarSortMode: ReaderSidebarSortMode,
-        sidebarGroupSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
-        favoriteWatchedFolders: [ReaderFavoriteWatchedFolder] = [],
-        recentWatchedFolders: [ReaderRecentWatchedFolder],
-        recentManuallyOpenedFiles: [ReaderRecentOpenedFile],
-        trustedImageFolders: [ReaderTrustedImageFolder] = [],
+        multiFileDisplayMode: MultiFileDisplayMode,
+        sidebarSortMode: SidebarSortMode,
+        sidebarGroupSortMode: SidebarSortMode = .lastChangedNewestFirst,
+        favoriteWatchedFolders: [FavoriteWatchedFolder] = [],
+        recentWatchedFolders: [RecentWatchedFolder],
+        recentManuallyOpenedFiles: [RecentOpenedFile],
+        trustedImageFolders: [TrustedImageFolder] = [],
         diffBaselineLookback: DiffBaselineLookback = .twoMinutes,
         dismissedHints: Set<FirstUseHint> = []
     ) {
@@ -93,33 +93,33 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         appAppearance = try container.decodeIfPresent(AppAppearance.self, forKey: .appAppearance) ?? .system
-        readerTheme = try container.decode(ReaderThemeKind.self, forKey: .readerTheme)
+        readerTheme = try container.decode(ThemeKind.self, forKey: .readerTheme)
         syntaxTheme = try container.decode(SyntaxThemeKind.self, forKey: .syntaxTheme)
         baseFontSize = try container.decode(Double.self, forKey: .baseFontSize)
         autoRefreshOnExternalChange = try container.decode(Bool.self, forKey: .autoRefreshOnExternalChange)
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
-        multiFileDisplayMode = try container.decode(ReaderMultiFileDisplayMode.self, forKey: .multiFileDisplayMode)
-        sidebarSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarSortMode) ?? .openOrder
-        sidebarGroupSortMode = try container.decodeIfPresent(ReaderSidebarSortMode.self, forKey: .sidebarGroupSortMode) ?? .lastChangedNewestFirst
-        let decodedFavorites = try container.decodeIfPresent([ReaderFavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
-        recentWatchedFolders = try container.decodeIfPresent([ReaderRecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
-        recentManuallyOpenedFiles = try container.decodeIfPresent([ReaderRecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
-        trustedImageFolders = try container.decodeIfPresent([ReaderTrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
+        multiFileDisplayMode = try container.decode(MultiFileDisplayMode.self, forKey: .multiFileDisplayMode)
+        sidebarSortMode = try container.decodeIfPresent(SidebarSortMode.self, forKey: .sidebarSortMode) ?? .openOrder
+        sidebarGroupSortMode = try container.decodeIfPresent(SidebarSortMode.self, forKey: .sidebarGroupSortMode) ?? .lastChangedNewestFirst
+        let decodedFavorites = try container.decodeIfPresent([FavoriteWatchedFolder].self, forKey: .favoriteWatchedFolders) ?? []
+        recentWatchedFolders = try container.decodeIfPresent([RecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
+        recentManuallyOpenedFiles = try container.decodeIfPresent([RecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
+        trustedImageFolders = try container.decodeIfPresent([TrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
         diffBaselineLookback = try container.decodeIfPresent(DiffBaselineLookback.self, forKey: .diffBaselineLookback) ?? .twoMinutes
         dismissedHints = try container.decodeIfPresent(Set<FirstUseHint>.self, forKey: .dismissedHints) ?? []
 
         // Migrate legacy favorites: replace hardcoded-default workspace state with decoded global settings
-        let legacyDefaultState = ReaderFavoriteWorkspaceState.from(
+        let legacyDefaultState = FavoriteWorkspaceState.from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
-        let globalWorkspaceState = ReaderFavoriteWorkspaceState(
+        let globalWorkspaceState = FavoriteWorkspaceState(
             fileSortMode: sidebarSortMode,
             groupSortMode: sidebarGroupSortMode,
             sidebarPosition: multiFileDisplayMode,
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth,
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth,
             pinnedGroupIDs: [],
             collapsedGroupIDs: []
         )
@@ -144,7 +144,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 
 @MainActor protocol ReaderThemeWriting: AnyObject {
     func updateAppAppearance(_ appearance: AppAppearance)
-    func updateTheme(_ kind: ReaderThemeKind)
+    func updateTheme(_ kind: ThemeKind)
     func updateSyntaxTheme(_ kind: SyntaxThemeKind)
     func updateBaseFontSize(_ value: Double)
     func increaseFontSize(step: Double)
@@ -154,9 +154,9 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
 
 @MainActor protocol ReaderPreferencesWriting: AnyObject {
     func updateNotificationsEnabled(_ isEnabled: Bool)
-    func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode)
-    func updateSidebarSortMode(_ mode: ReaderSidebarSortMode)
-    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode)
+    func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode)
+    func updateSidebarSortMode(_ mode: SidebarSortMode)
+    func updateSidebarGroupSortMode(_ mode: SidebarSortMode)
     func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback)
 }
 
@@ -166,7 +166,7 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         folderURL: URL,
         options: FolderWatchOptions,
         openDocumentFileURLs: [URL],
-        workspaceState: ReaderFavoriteWorkspaceState
+        workspaceState: FavoriteWorkspaceState
     )
     func removeFavoriteWatchedFolder(id: UUID)
     func renameFavoriteWatchedFolder(id: UUID, newName: String)
@@ -180,8 +180,8 @@ nonisolated struct ReaderSettings: Equatable, Codable, Sendable {
         folderURL: URL,
         knownDocumentFileURLs: [URL]
     )
-    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState)
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: FavoriteWorkspaceState)
+    func resolvedFavoriteWatchedFolderURL(for entry: FavoriteWatchedFolder) -> URL
     func clearFavoriteWatchedFolders()
     func reorderFavoriteWatchedFolders(orderedIDs: [UUID])
     func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String])
@@ -369,7 +369,7 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     // MARK: - ReaderThemeWriting
 
     func updateAppAppearance(_ appearance: AppAppearance) { preferences.updateAppAppearance(appearance) }
-    func updateTheme(_ kind: ReaderThemeKind) { preferences.updateTheme(kind) }
+    func updateTheme(_ kind: ThemeKind) { preferences.updateTheme(kind) }
     func updateSyntaxTheme(_ kind: SyntaxThemeKind) { preferences.updateSyntaxTheme(kind) }
     func updateBaseFontSize(_ value: Double) { preferences.updateBaseFontSize(value) }
     func increaseFontSize(step: Double = 1.0) { preferences.increaseFontSize(step: step) }
@@ -379,9 +379,9 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
     // MARK: - ReaderPreferencesWriting
 
     func updateNotificationsEnabled(_ isEnabled: Bool) { preferences.updateNotificationsEnabled(isEnabled) }
-    func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) { preferences.updateMultiFileDisplayMode(mode) }
-    func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) { preferences.updateSidebarSortMode(mode) }
-    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) { preferences.updateSidebarGroupSortMode(mode) }
+    func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode) { preferences.updateMultiFileDisplayMode(mode) }
+    func updateSidebarSortMode(_ mode: SidebarSortMode) { preferences.updateSidebarSortMode(mode) }
+    func updateSidebarGroupSortMode(_ mode: SidebarSortMode) { preferences.updateSidebarGroupSortMode(mode) }
     func updateDiffBaselineLookback(_ lookback: DiffBaselineLookback) { preferences.updateDiffBaselineLookback(lookback) }
 
     // MARK: - ReaderHintWriting
@@ -396,11 +396,11 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
         folderURL: URL,
         options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
-        workspaceState: ReaderFavoriteWorkspaceState = .from(
+        workspaceState: FavoriteWorkspaceState = .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
     ) {
         favorites.addFavoriteWatchedFolder(
@@ -429,10 +429,10 @@ typealias ReaderSettingsStoring = ReaderSettingsReading & ReaderSettingsWriting
             knownDocumentFileURLs: knownDocumentFileURLs
         )
     }
-    func updateFavoriteWorkspaceState(id: UUID, workspaceState: ReaderFavoriteWorkspaceState) {
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: FavoriteWorkspaceState) {
         favorites.updateFavoriteWorkspaceState(id: id, workspaceState: workspaceState)
     }
-    func resolvedFavoriteWatchedFolderURL(for entry: ReaderFavoriteWatchedFolder) -> URL {
+    func resolvedFavoriteWatchedFolderURL(for entry: FavoriteWatchedFolder) -> URL {
         favorites.resolvedFavoriteWatchedFolderURL(for: entry)
     }
     func clearFavoriteWatchedFolders() { favorites.clearFavoriteWatchedFolders() }

@@ -11,7 +11,7 @@ import SwiftUI
 /// No per-pixel updates occur — width is only reported on mouse-up.
 struct SidebarDividerPositionSetter: NSViewRepresentable {
     let targetWidth: CGFloat
-    let placement: ReaderMultiFileDisplayMode.SidebarPlacement
+    let placement: MultiFileDisplayMode.SidebarPlacement
     let onDividerDragged: (CGFloat) -> Void
     let onDividerDragActive: (Bool) -> Void
 
@@ -38,11 +38,11 @@ final class SidebarPositionHelperView: NSView {
     private static let dividerHitZone: CGFloat = 6
 
     var targetWidth: CGFloat = 0
-    var placement: ReaderMultiFileDisplayMode.SidebarPlacement = .left
+    var placement: MultiFileDisplayMode.SidebarPlacement = .left
     var onDividerDragged: ((CGFloat) -> Void)?
     var onDividerDragActive: ((Bool) -> Void)?
     private var lastAppliedWidth: CGFloat = 0
-    private var lastAppliedPlacement: ReaderMultiFileDisplayMode.SidebarPlacement?
+    private var lastAppliedPlacement: MultiFileDisplayMode.SidebarPlacement?
     private var mouseDownMonitor: Any?
     private var mouseUpMonitor: Any?
     private var isDraggingDivider = false
@@ -71,7 +71,7 @@ final class SidebarPositionHelperView: NSView {
         onDividerDragActive?(false)
     }
 
-    func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: ReaderMultiFileDisplayMode.SidebarPlacement) {
+    func updateIfNeeded(targetWidth newWidth: CGFloat, placement newPlacement: MultiFileDisplayMode.SidebarPlacement) {
         let widthChanged = abs(targetWidth - newWidth) > Self.widthEpsilon
         let placementChanged = placement != newPlacement
         if widthChanged { targetWidth = newWidth }

@@ -65,8 +65,8 @@ final class ContentAreaViewModel {
         return nil
     }
 
-    var currentReaderTheme: ReaderTheme {
-        ReaderTheme.theme(for: folderWatchState.effectiveReaderTheme)
+    var currentReaderTheme: Theme {
+        Theme.theme(for: folderWatchState.effectiveReaderTheme)
     }
 
     var overlayColorScheme: ColorScheme {

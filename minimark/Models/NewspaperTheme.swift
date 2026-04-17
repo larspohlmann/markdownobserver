@@ -3,8 +3,8 @@ import Foundation
 enum NewspaperTheme {
     static let definition = ThemeDefinition(
         kind: .newspaper,
-        displayName: ReaderThemeKind.newspaper.displayName,
-        colors: ReaderTheme.theme(for: .newspaper),
+        displayName: ThemeKind.newspaper.displayName,
+        colors: Theme.theme(for: .newspaper),
         customCSS: customCSS,
         customJavaScript: nil,
         providesSyntaxHighlighting: false,

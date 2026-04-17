@@ -14,7 +14,7 @@ struct TrustedImageFoldersStoreTests {
     }
 
     @MainActor private func makeStore(
-        initial: [ReaderTrustedImageFolder] = [],
+        initial: [TrustedImageFolder] = [],
         resolver: @escaping BookmarkRefreshing.Resolver = { _ in (URL(fileURLWithPath: "/ignored"), false) },
         creator: @escaping BookmarkRefreshing.Creator = { _ in Data() }
     ) -> (TrustedImageFoldersStore, RecordingCoordinator) {
@@ -35,7 +35,7 @@ struct TrustedImageFoldersStoreTests {
     }
 
     @Test @MainActor func resolvedURLReturnsNilWhenNoFolderContainsFile() {
-        let entry = ReaderTrustedImageFolder(
+        let entry = TrustedImageFolder(
             folderPath: "/tmp/images",
             bookmarkData: Data([0x01])
         )
@@ -47,7 +47,7 @@ struct TrustedImageFoldersStoreTests {
     }
 
     @Test @MainActor func resolvedURLReturnsNilWhenEntryHasNoBookmark() {
-        let entry = ReaderTrustedImageFolder(folderPath: "/tmp/images", bookmarkData: nil)
+        let entry = TrustedImageFolder(folderPath: "/tmp/images", bookmarkData: nil)
         let (store, _) = makeStore(initial: [entry])
 
         let result = store.resolvedTrustedImageFolderURL(containing: URL(fileURLWithPath: "/tmp/images/a.png"))
@@ -58,7 +58,7 @@ struct TrustedImageFoldersStoreTests {
     @Test @MainActor func resolvedURLRefreshesStaleBookmark() {
         let folderURL = URL(fileURLWithPath: "/tmp/images", isDirectory: true)
         let refreshed = Data([0xCC])
-        let entry = ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: Data([0x01]))
+        let entry = TrustedImageFolder(folderPath: folderURL.path, bookmarkData: Data([0x01]))
         let (store, _) = makeStore(
             initial: [entry],
             resolver: { _ in (folderURL, true) },
@@ -72,7 +72,7 @@ struct TrustedImageFoldersStoreTests {
     }
 
     @Test @MainActor func resolvedURLClearsInvalidBookmarkAndReturnsNil() {
-        let entry = ReaderTrustedImageFolder(folderPath: "/tmp/images", bookmarkData: Data([0x01]))
+        let entry = TrustedImageFolder(folderPath: "/tmp/images", bookmarkData: Data([0x01]))
         let (store, _) = makeStore(
             initial: [entry],
             resolver: { _ in throw NSError(domain: "test", code: 1) }

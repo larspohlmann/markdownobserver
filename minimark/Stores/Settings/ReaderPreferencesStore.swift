@@ -4,14 +4,14 @@ import Observation
 
 nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
     var appAppearance: AppAppearance
-    var readerTheme: ReaderThemeKind
+    var readerTheme: ThemeKind
     var syntaxTheme: SyntaxThemeKind
     var baseFontSize: Double
     var autoRefreshOnExternalChange: Bool
     var notificationsEnabled: Bool
-    var multiFileDisplayMode: ReaderMultiFileDisplayMode
-    var sidebarSortMode: ReaderSidebarSortMode
-    var sidebarGroupSortMode: ReaderSidebarSortMode
+    var multiFileDisplayMode: MultiFileDisplayMode
+    var sidebarSortMode: SidebarSortMode
+    var sidebarGroupSortMode: SidebarSortMode
     var diffBaselineLookback: DiffBaselineLookback
     var dismissedHints: Set<FirstUseHint>
 }
@@ -42,7 +42,7 @@ nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
         }
     }
 
-    func updateTheme(_ kind: ReaderThemeKind) {
+    func updateTheme(_ kind: ThemeKind) {
         mutate(coalescePersistence: true) { slice in
             slice.readerTheme = kind
         }
@@ -79,19 +79,19 @@ nonisolated struct ReaderPreferencesSlice: Equatable, Sendable {
         }
     }
 
-    func updateMultiFileDisplayMode(_ mode: ReaderMultiFileDisplayMode) {
+    func updateMultiFileDisplayMode(_ mode: MultiFileDisplayMode) {
         mutate(coalescePersistence: true) { slice in
             slice.multiFileDisplayMode = mode
         }
     }
 
-    func updateSidebarSortMode(_ mode: ReaderSidebarSortMode) {
+    func updateSidebarSortMode(_ mode: SidebarSortMode) {
         mutate(coalescePersistence: true) { slice in
             slice.sidebarSortMode = mode
         }
     }
 
-    func updateSidebarGroupSortMode(_ mode: ReaderSidebarSortMode) {
+    func updateSidebarGroupSortMode(_ mode: SidebarSortMode) {
         mutate(coalescePersistence: true) { slice in
             slice.sidebarGroupSortMode = mode
         }

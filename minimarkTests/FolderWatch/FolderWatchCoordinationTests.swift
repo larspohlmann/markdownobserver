@@ -446,8 +446,8 @@ struct FolderWatchCoordinationTests {
             FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/second.md"), kind: .added),
             FolderWatchChangeEvent(fileURL: URL(fileURLWithPath: "/tmp/watched/third.md"), kind: .added)
         ]
-        var primaryOpenCalls: [(FolderWatchChangeEvent, ReaderOpenOrigin)] = []
-        var additionalOpenCalls: [(FolderWatchChangeEvent, ReaderOpenOrigin)] = []
+        var primaryOpenCalls: [(FolderWatchChangeEvent, OpenOrigin)] = []
+        var additionalOpenCalls: [(FolderWatchChangeEvent, OpenOrigin)] = []
 
         let dispatcher = FolderWatchDispatcher(
             folderWatchDependencies: FolderWatchDependencies(

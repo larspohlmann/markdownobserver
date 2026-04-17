@@ -12,7 +12,7 @@ struct ReaderDocumentControllerTests {
     ) -> ReaderDocumentController {
         let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
         return ReaderDocumentController(
-            fileDependencies: ReaderFileDependencies(watcher: watcher, io: io, actions: fileActions),
+            fileDependencies: FileDependencies(watcher: watcher, io: io, actions: fileActions),
             settingsStore: settings,
             settler: ReaderAutoOpenSettler(settlingInterval: 1.0)
         )

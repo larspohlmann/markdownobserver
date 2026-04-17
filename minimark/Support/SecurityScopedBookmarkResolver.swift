@@ -3,7 +3,7 @@ import Foundation
 /// Resolves security-scoped bookmark data to a URL, falling back to an
 /// original URL when bookmark data is absent or resolution fails.
 ///
-/// Shared by `ReaderRecentOpenedFile` and `ReaderRecentWatchedFolder`.
+/// Shared by `RecentOpenedFile` and `RecentWatchedFolder`.
 nonisolated enum SecurityScopedBookmarkResolver {
 
     /// Resolve security-scoped bookmark data to a URL.

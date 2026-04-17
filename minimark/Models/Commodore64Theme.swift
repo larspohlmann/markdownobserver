@@ -3,8 +3,8 @@ import Foundation
 enum Commodore64Theme {
     static let definition = ThemeDefinition(
         kind: .commodore64,
-        displayName: ReaderThemeKind.commodore64.displayName,
-        colors: ReaderTheme.theme(for: .commodore64),
+        displayName: ThemeKind.commodore64.displayName,
+        colors: Theme.theme(for: .commodore64),
         customCSS: customCSS,
         customJavaScript: nil,
         providesSyntaxHighlighting: true,

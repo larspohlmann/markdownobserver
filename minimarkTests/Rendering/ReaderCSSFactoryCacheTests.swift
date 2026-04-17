@@ -4,7 +4,7 @@ import XCTest
 final class ReaderCSSFactoryCacheTests: XCTestCase {
 
     func testSameInputsReturnIdenticalCSS() {
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css1 = ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 15)
         let css2 = ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 15)
 
@@ -12,8 +12,8 @@ final class ReaderCSSFactoryCacheTests: XCTestCase {
     }
 
     func testDifferentThemeProducesDifferentCSS() {
-        let theme1 = ReaderThemeKind.blackOnWhite.themeDefinition
-        let theme2 = ReaderThemeKind.newspaper.themeDefinition
+        let theme1 = ThemeKind.blackOnWhite.themeDefinition
+        let theme2 = ThemeKind.newspaper.themeDefinition
         let css1 = ReaderCSSThemeGenerator.makeCSS(theme: theme1, syntaxTheme: .monokai, baseFontSize: 15)
         let css2 = ReaderCSSThemeGenerator.makeCSS(theme: theme2, syntaxTheme: .monokai, baseFontSize: 15)
 
@@ -21,7 +21,7 @@ final class ReaderCSSFactoryCacheTests: XCTestCase {
     }
 
     func testDifferentFontSizeProducesDifferentCSS() {
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css1 = ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 15)
         let css2 = ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 20)
 
@@ -29,7 +29,7 @@ final class ReaderCSSFactoryCacheTests: XCTestCase {
     }
 
     func testDifferentSyntaxThemeProducesDifferentCSS() {
-        let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+        let theme = ThemeKind.blackOnWhite.themeDefinition
         let css1 = ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 15)
         let css2 = ReaderCSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: .dracula, baseFontSize: 15)
 

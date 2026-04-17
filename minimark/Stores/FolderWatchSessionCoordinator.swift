@@ -205,7 +205,7 @@ extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
         _ controller: FolderWatchController,
         handleEvents events: [FolderWatchChangeEvent],
         in session: FolderWatchSession,
-        origin: ReaderOpenOrigin
+        origin: OpenOrigin
     ) {
         let diffBaselineByURL: [URL: String] = Dictionary(
             uniqueKeysWithValues: events.compactMap { event in

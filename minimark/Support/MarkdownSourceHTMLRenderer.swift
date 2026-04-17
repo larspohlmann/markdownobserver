@@ -25,7 +25,7 @@ enum MarkdownSourceHTMLRenderer {
     }
 
     static func makeHTMLDocument(markdown: String, settings: ReaderSettings, isEditable: Bool) -> String {
-        let theme = ReaderTheme.theme(for: settings.readerTheme)
+        let theme = Theme.theme(for: settings.readerTheme)
         let baseCSS = theme.cssVariables(baseFontSize: settings.baseFontSize)
         let codeMirrorScriptPath = ReaderBundledAssets.availableCodeMirrorSourceViewScriptPath()
         let payloadBase64 = makePayloadBase64(
@@ -256,7 +256,7 @@ enum MarkdownSourceHTMLRenderer {
 
     private static func makePayloadBase64(
         markdown: String,
-        theme: ReaderTheme,
+        theme: Theme,
         settings: ReaderSettings,
         isEditable: Bool
     ) -> String {
@@ -342,7 +342,7 @@ enum MarkdownSourceHTMLRenderer {
         }
     }
 
-    private static func selectionHex(for theme: ReaderTheme) -> String {
+    private static func selectionHex(for theme: Theme) -> String {
         switch theme.kind {
         case .blackOnWhite: return "rgba(0, 95, 204, 0.18)"
         case .whiteOnBlack: return "rgba(125, 180, 255, 0.22)"
@@ -361,7 +361,7 @@ enum MarkdownSourceHTMLRenderer {
         }
     }
 
-    private static func isDarkTheme(_ theme: ReaderTheme) -> Bool {
+    private static func isDarkTheme(_ theme: Theme) -> Bool {
         theme.kind.isDark
     }
 }

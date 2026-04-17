@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
+nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable, Identifiable {
     let id: UUID
     var name: String
     let folderPath: String
@@ -9,7 +9,7 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
     let openDocumentRelativePaths: [String]
     let allKnownRelativePaths: [String]
     let createdAt: Date
-    var workspaceState: ReaderFavoriteWorkspaceState
+    var workspaceState: FavoriteWorkspaceState
 
     nonisolated var folderURL: URL {
         URL(fileURLWithPath: folderPath)
@@ -43,11 +43,11 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
         allKnownRelativePaths: [String] = [],
-        workspaceState: ReaderFavoriteWorkspaceState = .from(
+        workspaceState: FavoriteWorkspaceState = .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         ),
         createdAt: Date = .now
     ) {
@@ -82,11 +82,11 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         bookmarkData: Data?,
         openDocumentRelativePaths: [String] = [],
         allKnownRelativePaths: [String] = [],
-        workspaceState: ReaderFavoriteWorkspaceState = .from(
+        workspaceState: FavoriteWorkspaceState = .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         ),
         createdAt: Date
     ) {
@@ -134,13 +134,13 @@ nonisolated struct ReaderFavoriteWatchedFolder: Equatable, Hashable, Codable, Se
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
 
         workspaceState = try container.decodeIfPresent(
-            ReaderFavoriteWorkspaceState.self,
+            FavoriteWorkspaceState.self,
             forKey: .workspaceState
         ) ?? .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         )
     }
 
@@ -325,14 +325,14 @@ nonisolated enum ReaderFavoriteHistory {
         folderURL: URL,
         options: FolderWatchOptions,
         openDocumentFileURLs: [URL] = [],
-        workspaceState: ReaderFavoriteWorkspaceState = .from(
+        workspaceState: FavoriteWorkspaceState = .from(
             settings: .default,
             pinnedGroupIDs: [],
             collapsedGroupIDs: [],
-            sidebarWidth: ReaderFavoriteWorkspaceState.defaultSidebarWidth
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
         ),
-        into existingEntries: [ReaderFavoriteWatchedFolder]
-    ) -> [ReaderFavoriteWatchedFolder] {
+        into existingEntries: [FavoriteWatchedFolder]
+    ) -> [FavoriteWatchedFolder] {
         let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
 
         let alreadyExists = existingEntries.contains {
@@ -342,7 +342,7 @@ nonisolated enum ReaderFavoriteHistory {
             return existingEntries
         }
 
-        let newEntry = ReaderFavoriteWatchedFolder(
+        let newEntry = FavoriteWatchedFolder(
             name: name,
             folderURL: folderURL,
             options: options,
@@ -354,19 +354,19 @@ nonisolated enum ReaderFavoriteHistory {
 
     static func removingFavorite(
         id: UUID,
-        from existingEntries: [ReaderFavoriteWatchedFolder]
-    ) -> [ReaderFavoriteWatchedFolder] {
+        from existingEntries: [FavoriteWatchedFolder]
+    ) -> [FavoriteWatchedFolder] {
         existingEntries.filter { $0.id != id }
     }
 
     static func renamingFavorite(
         id: UUID,
         newName: String,
-        in existingEntries: [ReaderFavoriteWatchedFolder]
-    ) -> [ReaderFavoriteWatchedFolder] {
+        in existingEntries: [FavoriteWatchedFolder]
+    ) -> [FavoriteWatchedFolder] {
         existingEntries.map { entry in
             guard entry.id == id else { return entry }
-            return ReaderFavoriteWatchedFolder(
+            return FavoriteWatchedFolder(
                 id: entry.id,
                 name: newName,
                 folderPath: entry.folderPath,
@@ -382,8 +382,8 @@ nonisolated enum ReaderFavoriteHistory {
 
     static func reordering(
         ids orderedIDs: [UUID],
-        in existingEntries: [ReaderFavoriteWatchedFolder]
-    ) -> [ReaderFavoriteWatchedFolder] {
+        in existingEntries: [FavoriteWatchedFolder]
+    ) -> [FavoriteWatchedFolder] {
         let lookup = Dictionary(existingEntries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var result = orderedIDs.compactMap { lookup[$0] }
         let resultIDs = Set(result.map(\.id))

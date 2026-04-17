@@ -32,7 +32,7 @@ final class WindowFolderWatchOpenController {
     func enqueue(
         _ event: FolderWatchChangeEvent,
         folderWatchSession: FolderWatchSession?,
-        origin: ReaderOpenOrigin
+        origin: OpenOrigin
     ) {
         batcher.enqueue(
             event,

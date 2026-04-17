@@ -85,7 +85,7 @@ final class WindowEventBridge {
         openDocumentPathTracker.update(from: sidebarDocumentController.documents)
     }
 
-    func handleFavoriteWorkspaceStateChange(_ newState: ReaderFavoriteWorkspaceState?) {
+    func handleFavoriteWorkspaceStateChange(_ newState: FavoriteWorkspaceState?) {
         guard let favoriteID = favoriteWorkspaceControllerProvider()?.activeFavoriteID,
               var state = newState else { return }
         state.lockedAppearance = appearanceControllerProvider()?.lockedAppearance

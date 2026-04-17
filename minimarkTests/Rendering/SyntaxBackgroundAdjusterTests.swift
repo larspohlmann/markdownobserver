@@ -72,7 +72,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     // MARK: - Real theme pairings
 
     func testGruvboxDarkReaderWithGruvboxDarkSyntax() {
-        let reader = ReaderTheme.theme(for: .gruvboxDark)
+        let reader = Theme.theme(for: .gruvboxDark)
         let syntax = SyntaxThemeKind.gruvboxDark.previewPalette
         let result = SyntaxBackgroundAdjuster.adjustedBlockBackground(
             readerBackgroundHex: reader.backgroundHex,
@@ -83,7 +83,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     }
 
     func testMonokaiReaderWithMonokaiSyntax() {
-        let reader = ReaderTheme.theme(for: .monokai)
+        let reader = Theme.theme(for: .monokai)
         let syntax = SyntaxThemeKind.monokai.previewPalette
         let result = SyntaxBackgroundAdjuster.adjustedBlockBackground(
             readerBackgroundHex: reader.backgroundHex,
@@ -94,7 +94,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     }
 
     func testDraculaReaderWithDraculaSyntax() {
-        let reader = ReaderTheme.theme(for: .dracula)
+        let reader = Theme.theme(for: .dracula)
         let syntax = SyntaxThemeKind.dracula.previewPalette
         let result = SyntaxBackgroundAdjuster.adjustedBlockBackground(
             readerBackgroundHex: reader.backgroundHex,
@@ -105,7 +105,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     }
 
     func testGruvboxDarkReaderWithOneDarkSyntaxNoAdjustment() {
-        let reader = ReaderTheme.theme(for: .gruvboxDark)
+        let reader = Theme.theme(for: .gruvboxDark)
         let syntax = SyntaxThemeKind.oneDark.previewPalette
         let result = SyntaxBackgroundAdjuster.adjustedBlockBackground(
             readerBackgroundHex: reader.backgroundHex,
@@ -119,7 +119,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     // MARK: - effectiveBlockBackgroundHex
 
     func testEffectiveHexReturnsThemePaletteForProvidesSyntaxHighlighting() {
-        let theme = ReaderThemeKind.amberTerminal.themeDefinition
+        let theme = ThemeKind.amberTerminal.themeDefinition
         let result = SyntaxBackgroundAdjuster.effectiveBlockBackgroundHex(
             theme: theme,
             syntaxTheme: .monokai
@@ -128,7 +128,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     }
 
     func testEffectiveHexAdjustsForMatchingNonProvidesSyntaxTheme() {
-        let theme = ReaderThemeKind.gruvboxDark.themeDefinition
+        let theme = ThemeKind.gruvboxDark.themeDefinition
         let original = SyntaxThemeKind.gruvboxDark.previewPalette.blockBackgroundHex
         let result = SyntaxBackgroundAdjuster.effectiveBlockBackgroundHex(
             theme: theme,
@@ -138,7 +138,7 @@ final class SyntaxBackgroundAdjusterTests: XCTestCase {
     }
 
     func testEffectiveHexReturnsOriginalWhenBackgroundsDiffer() {
-        let theme = ReaderThemeKind.gruvboxDark.themeDefinition
+        let theme = ThemeKind.gruvboxDark.themeDefinition
         let original = SyntaxThemeKind.monokai.previewPalette.blockBackgroundHex
         let result = SyntaxBackgroundAdjuster.effectiveBlockBackgroundHex(
             theme: theme,

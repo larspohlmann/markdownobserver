@@ -3,8 +3,8 @@ import Foundation
 enum FocusTheme {
     static let definition = ThemeDefinition(
         kind: .focus,
-        displayName: ReaderThemeKind.focus.displayName,
-        colors: ReaderTheme.theme(for: .focus),
+        displayName: ThemeKind.focus.displayName,
+        colors: Theme.theme(for: .focus),
         customCSS: customCSS,
         customJavaScript: nil,
         providesSyntaxHighlighting: false,

@@ -81,11 +81,11 @@ final class ReaderSidebarDocumentController {
                 }
             )
             let store = ReaderStore(
-                rendering: ReaderRenderingDependencies(
+                rendering: RenderingDependencies(
                     renderer: MarkdownRenderingService(),
                     differ: ChangedRegionDiffer()
                 ),
-                file: ReaderFileDependencies(
+                file: FileDependencies(
                     watcher: FileChangeWatcher(),
                     io: ReaderDocumentIOService(),
                     actions: ReaderFileActionService()
@@ -240,7 +240,7 @@ final class ReaderSidebarDocumentController {
 
     // MARK: - Document actions
 
-    func openDocumentsInApplication(_ application: ReaderExternalApplication?, documentIDs: Set<UUID>) {
+    func openDocumentsInApplication(_ application: ExternalApplication?, documentIDs: Set<UUID>) {
         for tab in documentList.orderedDocuments(matching: documentIDs) where tab.readerStore.document.fileURL != nil {
             tab.readerStore.document.openInApplication(application)
         }

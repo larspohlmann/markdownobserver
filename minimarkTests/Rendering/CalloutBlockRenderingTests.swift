@@ -10,7 +10,7 @@ import Testing
 @Suite
 struct CalloutBlockRenderingTests {
     private let service = MarkdownRenderingService()
-    private let theme = ReaderThemeKind.blackOnWhite.themeDefinition
+    private let theme = ThemeKind.blackOnWhite.themeDefinition
 
     private func renderHTML(_ markdown: String) throws -> String {
         try service.render(

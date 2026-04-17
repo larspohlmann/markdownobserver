@@ -171,10 +171,10 @@ struct EditFolderWatchExclusionsTests {
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
                 return ReaderStore(
-                    rendering: ReaderRenderingDependencies(
+                    rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
-                    file: ReaderFileDependencies(
+                    file: FileDependencies(
                         watcher: fw, io: ReaderDocumentIOService(), actions: TestReaderFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(

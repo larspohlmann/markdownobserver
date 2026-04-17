@@ -1,11 +1,11 @@
 import Foundation
 
-struct ReaderRenderingDependencies {
+struct RenderingDependencies {
     let renderer: MarkdownRendering
     let differ: ChangedRegionDiffering
 }
 
-struct ReaderFileDependencies {
+struct FileDependencies {
     let watcher: FileChangeWatching
     let io: ReaderDocumentIO
     let actions: ReaderFileActionHandling

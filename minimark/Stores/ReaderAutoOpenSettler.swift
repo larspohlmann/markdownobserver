@@ -3,7 +3,7 @@ import Foundation
 @MainActor protocol ReaderAutoOpenSettling: AnyObject {
     var pendingContext: PendingAutoOpenSettlingContext? { get }
     func makePendingContext(
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String,
         now: Date
@@ -67,7 +67,7 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
     }
 
     func makePendingContext(
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         initialDiffBaselineMarkdown: String?,
         loadedMarkdown: String,
         now: Date

@@ -5,8 +5,8 @@ import SwiftUI
 
 enum FolderWatchToolbarAction {
     case activate
-    case startFavoriteWatch(ReaderFavoriteWatchedFolder)
-    case startRecentFolderWatch(ReaderRecentWatchedFolder)
+    case startFavoriteWatch(FavoriteWatchedFolder)
+    case startRecentFolderWatch(RecentWatchedFolder)
     case editFavoriteWatchedFolders
     case clearRecentWatchedFolders
 }
@@ -15,8 +15,8 @@ struct FolderWatchToolbarButton: View {
     let activeFolderWatch: FolderWatchSession?
     let isInitialScanInProgress: Bool
     let didInitialScanFail: Bool
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
+    let favoriteWatchedFolders: [FavoriteWatchedFolder]
+    let recentWatchedFolders: [RecentWatchedFolder]
     let onAction: (FolderWatchToolbarAction) -> Void
     var compact: Bool = false
 

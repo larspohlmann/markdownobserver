@@ -14,7 +14,7 @@ struct RecentWatchedFoldersStoreTests {
     }
 
     @MainActor private func makeStore(
-        initial: [ReaderRecentWatchedFolder] = [],
+        initial: [RecentWatchedFolder] = [],
         resolver: @escaping BookmarkRefreshing.Resolver = { _ in (URL(fileURLWithPath: "/ignored"), false) },
         creator: @escaping BookmarkRefreshing.Creator = { _ in Data() }
     ) -> (RecentWatchedFoldersStore, RecordingCoordinator) {
@@ -37,14 +37,14 @@ struct RecentWatchedFoldersStoreTests {
 
     @Test @MainActor func addRespectsMaximumCount() {
         let (store, _) = makeStore()
-        for i in 0..<(ReaderRecentWatchedFolder.maximumCount + 5) {
+        for i in 0..<(RecentWatchedFolder.maximumCount + 5) {
             store.addRecentWatchedFolder(
                 URL(fileURLWithPath: "/tmp/f-\(i)", isDirectory: true),
                 options: .default
             )
         }
 
-        #expect(store.currentRecentWatchedFolders.count == ReaderRecentWatchedFolder.maximumCount)
+        #expect(store.currentRecentWatchedFolders.count == RecentWatchedFolder.maximumCount)
     }
 
     @Test @MainActor func clearEmptiesCollection() {
@@ -66,7 +66,7 @@ struct RecentWatchedFoldersStoreTests {
 
     @Test @MainActor func resolvedURLRefreshesStaleBookmark() {
         let folderURL = URL(fileURLWithPath: "/tmp/stale", isDirectory: true)
-        let entry = ReaderRecentWatchedFolder(
+        let entry = RecentWatchedFolder(
             folderPath: folderURL.path,
             options: .default,
             bookmarkData: Data([0x01])
@@ -86,7 +86,7 @@ struct RecentWatchedFoldersStoreTests {
 
     @Test @MainActor func resolvedURLClearsInvalidBookmark() {
         let folderURL = URL(fileURLWithPath: "/tmp/broken", isDirectory: true)
-        let entry = ReaderRecentWatchedFolder(
+        let entry = RecentWatchedFolder(
             folderPath: folderURL.path,
             options: .default,
             bookmarkData: Data([0x01])

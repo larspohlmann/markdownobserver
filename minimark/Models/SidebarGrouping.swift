@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-enum ReaderSidebarGrouping: Equatable {
+enum SidebarGrouping: Equatable {
     case flat([ReaderSidebarDocumentController.Document])
     case grouped([Group])
 
@@ -36,12 +36,12 @@ enum ReaderSidebarGrouping: Equatable {
 
     static func group(
         _ documents: [ReaderSidebarDocumentController.Document],
-        sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst,
+        sortMode: SidebarSortMode = .lastChangedNewestFirst,
         directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]? = nil,
         pinnedGroupIDs: Set<String> = [],
         precomputedIndicatorStates: [String: [ReaderDocumentIndicatorState]]? = nil,
         precomputedIndicatorPulseTokens: [String: Int]? = nil
-    ) -> ReaderSidebarGrouping {
+    ) -> SidebarGrouping {
         let grouped = Dictionary(grouping: documents) { document -> String in
             directoryURL(for: document)?.path(percentEncoded: false) ?? ""
         }
@@ -172,7 +172,7 @@ enum ReaderSidebarGrouping: Equatable {
         return ordered
     }
 
-    private static func sorted(_ groups: [Group], mode: ReaderSidebarSortMode) -> [Group] {
+    private static func sorted(_ groups: [Group], mode: SidebarSortMode) -> [Group] {
         groups.enumerated()
             .sorted { lhs, rhs in
                 let left = lhs.element

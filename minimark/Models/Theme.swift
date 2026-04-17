@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
+nonisolated enum ThemeKind: String, CaseIterable, Codable, Sendable {
     case blackOnWhite
     case whiteOnBlack
     case darkGreyOnLightGrey
@@ -21,7 +21,7 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self)
 
-        if let kind = ReaderThemeKind(rawValue: rawValue) {
+        if let kind = ThemeKind(rawValue: rawValue) {
             self = kind
             return
         }
@@ -36,7 +36,7 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
         default:
             throw DecodingError.dataCorruptedError(
                 in: container,
-                debugDescription: "Unknown ReaderThemeKind: \(rawValue)"
+                debugDescription: "Unknown ThemeKind: \(rawValue)"
             )
         }
     }
@@ -86,8 +86,8 @@ nonisolated enum ReaderThemeKind: String, CaseIterable, Codable, Sendable {
     }
 }
 
-nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
-    let kind: ReaderThemeKind
+nonisolated struct Theme: Equatable, Codable, Sendable {
+    let kind: ThemeKind
     let backgroundHex: String
     let foregroundHex: String
     let secondaryForegroundHex: String
@@ -103,12 +103,12 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
     let h2Hex: String?
     let h3Hex: String?
 
-    static let `default` = ReaderTheme.theme(for: .blackOnWhite)
+    static let `default` = Theme.theme(for: .blackOnWhite)
 
-    static func theme(for kind: ReaderThemeKind) -> ReaderTheme {
+    static func theme(for kind: ThemeKind) -> Theme {
         switch kind {
         case .blackOnWhite:
-            return ReaderTheme(
+            return Theme(
                 kind: .blackOnWhite,
                 backgroundHex: "#FFFFFF",
                 foregroundHex: "#111111",
@@ -124,7 +124,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .whiteOnBlack:
-            return ReaderTheme(
+            return Theme(
                 kind: .whiteOnBlack,
                 backgroundHex: "#0D0D0D",
                 foregroundHex: "#F5F5F5",
@@ -140,7 +140,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .darkGreyOnLightGrey:
-            return ReaderTheme(
+            return Theme(
                 kind: .darkGreyOnLightGrey,
                 backgroundHex: "#E6E6E6",
                 foregroundHex: "#2A2A2A",
@@ -156,7 +156,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .lightGreyOnDarkGrey:
-            return ReaderTheme(
+            return Theme(
                 kind: .lightGreyOnDarkGrey,
                 backgroundHex: "#2B2B2B",
                 foregroundHex: "#DCDCDC",
@@ -172,7 +172,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .amberTerminal:
-            return ReaderTheme(
+            return Theme(
                 kind: .amberTerminal,
                 backgroundHex: "#1A1200",
                 foregroundHex: "#FFB000",
@@ -188,7 +188,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .greenTerminal, .greenTerminalStatic:
-            return ReaderTheme(
+            return Theme(
                 kind: kind,
                 backgroundHex: "#0D0208",
                 foregroundHex: "#00FF41",
@@ -204,7 +204,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .newspaper:
-            return ReaderTheme(
+            return Theme(
                 kind: .newspaper,
                 backgroundHex: "#FAF7F0",
                 foregroundHex: "#1A1A1A",
@@ -220,7 +220,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .focus:
-            return ReaderTheme(
+            return Theme(
                 kind: .focus,
                 backgroundHex: "#FAFAFA",
                 foregroundHex: "#2C2C2C",
@@ -236,7 +236,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .commodore64:
-            return ReaderTheme(
+            return Theme(
                 kind: .commodore64,
                 backgroundHex: "#40318D",
                 foregroundHex: "#C8C8FF",
@@ -252,7 +252,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .gameBoy:
-            return ReaderTheme(
+            return Theme(
                 kind: .gameBoy,
                 backgroundHex: "#9BBC0F",
                 foregroundHex: "#0F380F",
@@ -268,7 +268,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         case .gruvboxDark:
-            return ReaderTheme(
+            return Theme(
                 kind: .gruvboxDark,
                 backgroundHex: "#282828",
                 foregroundHex: "#EBDBB2",
@@ -286,7 +286,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h3Hex: "#83A598"
             )
         case .gruvboxLight:
-            return ReaderTheme(
+            return Theme(
                 kind: .gruvboxLight,
                 backgroundHex: "#FBF1C7",
                 foregroundHex: "#3C3836",
@@ -304,7 +304,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h3Hex: "#076678"
             )
         case .dracula:
-            return ReaderTheme(
+            return Theme(
                 kind: .dracula,
                 backgroundHex: "#282A36",
                 foregroundHex: "#F8F8F2",
@@ -322,7 +322,7 @@ nonisolated struct ReaderTheme: Equatable, Codable, Sendable {
                 h3Hex: "#8BE9FD"
             )
         case .monokai:
-            return ReaderTheme(
+            return Theme(
                 kind: .monokai,
                 backgroundHex: "#272822",
                 foregroundHex: "#F8F8F2",

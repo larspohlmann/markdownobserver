@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 private struct WindowStoreCallbackConfigurator {
     let lockedAppearanceProvider: @MainActor () -> LockedAppearance?
-    let onOpenAdditionalDocument: (URL, FolderWatchSession?, ReaderOpenOrigin, String?) -> Void
+    let onOpenAdditionalDocument: (URL, FolderWatchSession?, OpenOrigin, String?) -> Void
 
     func configure(_ store: ReaderStore) {
         if let lockedAppearance = lockedAppearanceProvider() {
@@ -114,7 +114,7 @@ final class WindowDocumentOpenCoordinator {
 
     func openDocumentInSelectedSlot(
         at fileURL: URL,
-        origin: ReaderOpenOrigin,
+        origin: OpenOrigin,
         folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdown: String? = nil
     ) {
@@ -132,7 +132,7 @@ final class WindowDocumentOpenCoordinator {
     func openAdditionalDocument(
         _ fileURL: URL,
         folderWatchSession: FolderWatchSession? = nil,
-        origin: ReaderOpenOrigin = .manual,
+        origin: OpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
@@ -152,7 +152,7 @@ final class WindowDocumentOpenCoordinator {
     func openAdditionalDocumentInCurrentWindow(
         _ fileURL: URL,
         folderWatchSession: FolderWatchSession? = nil,
-        origin: ReaderOpenOrigin = .manual,
+        origin: OpenOrigin = .manual,
         initialDiffBaselineMarkdown: String? = nil
     ) {
         let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
@@ -176,7 +176,7 @@ final class WindowDocumentOpenCoordinator {
         applyTitlePresentation()
     }
 
-    func applyInitialSeedIfNeeded(seed: ReaderWindowSeed?) {
+    func applyInitialSeedIfNeeded(seed: WindowSeed?) {
         ReaderWindowOpenAndWatchFlowSupport.applyInitialSeedIfNeeded(
             seed: seed,
             openDocumentInCurrentWindow: { [weak self] fileURL in

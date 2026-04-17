@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ReaderCommands: Commands {
     var settingsStore: ReaderSettingsStore
-    let multiFileDisplayMode: ReaderMultiFileDisplayMode
+    let multiFileDisplayMode: MultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
     @FocusedValue(\.readerOpenDocument) private var openDocument
@@ -218,9 +218,9 @@ struct ReaderCommands: Commands {
         }
     }
 
-    private func openRecentOpenedFile(_ entry: ReaderRecentOpenedFile) {
+    private func openRecentOpenedFile(_ entry: RecentOpenedFile) {
         guard let targetWindowNumber else {
-            openWindow(value: ReaderWindowSeed(recentOpenedFile: entry))
+            openWindow(value: WindowSeed(recentOpenedFile: entry))
             return
         }
 
@@ -235,9 +235,9 @@ struct ReaderCommands: Commands {
         )
     }
 
-    private func startRecentWatchedFolder(_ entry: ReaderRecentWatchedFolder) {
+    private func startRecentWatchedFolder(_ entry: RecentWatchedFolder) {
         guard let targetWindowNumber else {
-            openWindow(value: ReaderWindowSeed(recentWatchedFolder: entry))
+            openWindow(value: WindowSeed(recentWatchedFolder: entry))
             return
         }
 
@@ -284,7 +284,7 @@ struct ReaderCommands: Commands {
 
     private func openMarkdownInNewWindow(_ url: URL) {
         settingsStore.addRecentManuallyOpenedFile(url)
-        openWindow(value: ReaderWindowSeed(fileURL: url))
+        openWindow(value: WindowSeed(fileURL: url))
     }
 
     private var targetWindowNumber: Int? {

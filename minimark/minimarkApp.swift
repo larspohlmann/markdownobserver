@@ -25,7 +25,7 @@ struct MarkdownObserverApp: App {
         let activeMultiFileDisplayMode = settingsStore.currentSettings.multiFileDisplayMode
         let appAppearance = settingsStore.currentSettings.appAppearance
 
-        WindowGroup("MarkdownObserver", for: ReaderWindowSeed.self) { seed in
+        WindowGroup("MarkdownObserver", for: WindowSeed.self) { seed in
             ReaderWindowRootView(
                 seed: seed.wrappedValue,
                 settingsStore: settingsStore,

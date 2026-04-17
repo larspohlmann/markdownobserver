@@ -9,7 +9,7 @@ final class WindowAppearanceController {
     private(set) var isLocked = false
     private(set) var effectiveAppearance: LockedAppearance
 
-    var effectiveTheme: ReaderThemeKind { effectiveAppearance.readerTheme }
+    var effectiveTheme: ThemeKind { effectiveAppearance.readerTheme }
     var effectiveFontSize: Double { effectiveAppearance.baseFontSize }
     var effectiveSyntaxTheme: SyntaxThemeKind { effectiveAppearance.syntaxTheme }
 

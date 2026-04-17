@@ -37,7 +37,7 @@ final class FolderWatchDispatcher {
     }
 
     func setAdditionalOpenHandler(
-        _ handler: @escaping (FolderWatchChangeEvent, FolderWatchSession?, ReaderOpenOrigin) -> Void
+        _ handler: @escaping (FolderWatchChangeEvent, FolderWatchSession?, OpenOrigin) -> Void
     ) {
         eventDispatchCoordinator.setAdditionalOpenHandler(handler)
     }
@@ -49,7 +49,7 @@ final class FolderWatchDispatcher {
     func handleObservedWatchedFolderChanges(
         _ markdownFileEvents: [FolderWatchChangeEvent],
         currentDocumentFileURL: URL?,
-        openPrimary: @escaping (FolderWatchChangeEvent, FolderWatchSession, ReaderOpenOrigin) -> Void
+        openPrimary: @escaping (FolderWatchChangeEvent, FolderWatchSession, OpenOrigin) -> Void
     ) {
         guard let session = activeFolderWatchSession else { return }
         lastWatchedFolderEventAt = .now
@@ -75,7 +75,7 @@ final class FolderWatchDispatcher {
     func openInitialMarkdownFilesFromWatchedFolder(
         _ markdownFileEvents: [FolderWatchChangeEvent],
         session: FolderWatchSession,
-        openPrimary: @escaping (FolderWatchChangeEvent, FolderWatchSession, ReaderOpenOrigin) -> Void
+        openPrimary: @escaping (FolderWatchChangeEvent, FolderWatchSession, OpenOrigin) -> Void
     ) {
         eventDispatchCoordinator.dispatchInitialEvents(
             markdownFileEvents,
@@ -87,8 +87,8 @@ final class FolderWatchDispatcher {
     // MARK: - Internal dispatch coordinator
 
     private struct FolderWatchEventDispatchCoordinator {
-        typealias AdditionalOpenHandler = (FolderWatchChangeEvent, FolderWatchSession?, ReaderOpenOrigin) -> Void
-        typealias PrimaryOpenHandler = (FolderWatchChangeEvent, FolderWatchSession, ReaderOpenOrigin) -> Void
+        typealias AdditionalOpenHandler = (FolderWatchChangeEvent, FolderWatchSession?, OpenOrigin) -> Void
+        typealias PrimaryOpenHandler = (FolderWatchChangeEvent, FolderWatchSession, OpenOrigin) -> Void
 
         private(set) var additionalOpenHandler: AdditionalOpenHandler?
 
@@ -99,7 +99,7 @@ final class FolderWatchDispatcher {
         func dispatchLiveEvents(
             _ plannedEvents: [FolderWatchChangeEvent],
             session: FolderWatchSession,
-            origin: ReaderOpenOrigin,
+            origin: OpenOrigin,
             openPrimary: PrimaryOpenHandler
         ) {
             guard !plannedEvents.isEmpty else { return }
@@ -118,7 +118,7 @@ final class FolderWatchDispatcher {
             openPrimary: PrimaryOpenHandler
         ) {
             guard let firstEvent = events.first else { return }
-            let initialOrigin: ReaderOpenOrigin = events.count > 1
+            let initialOrigin: OpenOrigin = events.count > 1
                 ? .folderWatchInitialBatchAutoOpen
                 : .folderWatchAutoOpen
             openPrimary(firstEvent, session, initialOrigin)

@@ -180,12 +180,12 @@ struct ContentView: View {
         settingsStore: settingsStore,
         requestWatchedFolderReauthorization: { _ in nil }
     )
-    let fileDeps = ReaderFileDependencies(
+    let fileDeps = FileDependencies(
         watcher: FileChangeWatcher(),
         io: ReaderDocumentIOService(),
         actions: ReaderFileActionService()
     )
-    let renderingDeps = ReaderRenderingDependencies(
+    let renderingDeps = RenderingDependencies(
         renderer: MarkdownRenderingService(),
         differ: ChangedRegionDiffer()
     )

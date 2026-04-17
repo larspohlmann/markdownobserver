@@ -3,21 +3,21 @@ import Combine
 import Observation
 
 @MainActor @Observable final class RecentOpenedFilesStore: ReaderRecentOpenedFileWriting {
-    private(set) var currentRecentOpenedFiles: [ReaderRecentOpenedFile]
+    private(set) var currentRecentOpenedFiles: [RecentOpenedFile]
 
     weak var coordinator: ChildStoreCoordinating?
 
     @ObservationIgnored
-    private let subject: CurrentValueSubject<[ReaderRecentOpenedFile], Never>
+    private let subject: CurrentValueSubject<[RecentOpenedFile], Never>
 
     @ObservationIgnored
     private let bookmarkRefreshing: BookmarkRefreshing
 
-    var recentOpenedFilesPublisher: AnyPublisher<[ReaderRecentOpenedFile], Never> {
+    var recentOpenedFilesPublisher: AnyPublisher<[RecentOpenedFile], Never> {
         subject.eraseToAnyPublisher()
     }
 
-    init(initial: [ReaderRecentOpenedFile], bookmarkRefreshing: BookmarkRefreshing) {
+    init(initial: [RecentOpenedFile], bookmarkRefreshing: BookmarkRefreshing) {
         self.currentRecentOpenedFiles = initial
         self.subject = CurrentValueSubject(initial)
         self.bookmarkRefreshing = bookmarkRefreshing
@@ -60,7 +60,7 @@ import Observation
             guard let index = entries.firstIndex(where: { $0.filePath == filePath }) else { return }
             let existing = entries[index]
             guard existing.bookmarkData != bookmarkData else { return }
-            entries[index] = ReaderRecentOpenedFile(
+            entries[index] = RecentOpenedFile(
                 filePath: existing.filePath,
                 bookmarkData: bookmarkData
             )
@@ -69,7 +69,7 @@ import Observation
 
     private func mutate(
         coalescePersistence: Bool,
-        _ transform: (inout [ReaderRecentOpenedFile]) -> Void
+        _ transform: (inout [RecentOpenedFile]) -> Void
     ) {
         var updated = currentRecentOpenedFiles
         transform(&updated)

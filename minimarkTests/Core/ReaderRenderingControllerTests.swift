@@ -15,7 +15,7 @@ struct ReaderRenderingControllerTests {
             requestWatchedFolderReauthorization: { _ in nil }
         )
         return ReaderRenderingController(
-            renderingDependencies: ReaderRenderingDependencies(renderer: renderer, differ: differ),
+            renderingDependencies: RenderingDependencies(renderer: renderer, differ: differ),
             settingsStore: settings,
             securityScopeResolver: securityScope
         )

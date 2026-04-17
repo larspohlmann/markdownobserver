@@ -7,16 +7,16 @@ enum ReaderCommandNotification {
 
     struct Payload {
         let targetWindowNumber: Int
-        let recentFileEntry: ReaderRecentOpenedFile?
-        let recentWatchedFolderEntry: ReaderRecentWatchedFolder?
+        let recentFileEntry: RecentOpenedFile?
+        let recentWatchedFolderEntry: RecentWatchedFolder?
 
-        init(targetWindowNumber: Int, recentFileEntry: ReaderRecentOpenedFile) {
+        init(targetWindowNumber: Int, recentFileEntry: RecentOpenedFile) {
             self.targetWindowNumber = targetWindowNumber
             self.recentFileEntry = recentFileEntry
             self.recentWatchedFolderEntry = nil
         }
 
-        init(targetWindowNumber: Int, recentWatchedFolderEntry: ReaderRecentWatchedFolder) {
+        init(targetWindowNumber: Int, recentWatchedFolderEntry: RecentWatchedFolder) {
             self.targetWindowNumber = targetWindowNumber
             self.recentFileEntry = nil
             self.recentWatchedFolderEntry = recentWatchedFolderEntry
@@ -28,8 +28,8 @@ enum ReaderCommandNotification {
                 return nil
             }
             self.targetWindowNumber = targetWindowNumber
-            self.recentFileEntry = userInfo[Keys.recentFileEntry] as? ReaderRecentOpenedFile
-            self.recentWatchedFolderEntry = userInfo[Keys.recentWatchedFolderEntry] as? ReaderRecentWatchedFolder
+            self.recentFileEntry = userInfo[Keys.recentFileEntry] as? RecentOpenedFile
+            self.recentWatchedFolderEntry = userInfo[Keys.recentWatchedFolderEntry] as? RecentWatchedFolder
         }
 
         var asUserInfo: [String: Any] {
@@ -78,9 +78,9 @@ struct ReaderWatchFolderAction {
 }
 
 struct ReaderStartRecentFolderWatchAction {
-    let start: (ReaderRecentWatchedFolder) -> Void
+    let start: (RecentWatchedFolder) -> Void
 
-    func callAsFunction(_ entry: ReaderRecentWatchedFolder) {
+    func callAsFunction(_ entry: RecentWatchedFolder) {
         start(entry)
     }
 }

@@ -1,9 +1,9 @@
 import Foundation
 
 struct ThemeDefinition: Equatable, Sendable {
-    let kind: ReaderThemeKind
+    let kind: ThemeKind
     let displayName: String
-    let colors: ReaderTheme
+    let colors: Theme
     let customCSS: String?
     let customJavaScript: String?
     let providesSyntaxHighlighting: Bool
@@ -11,14 +11,14 @@ struct ThemeDefinition: Equatable, Sendable {
     let syntaxPreviewPalette: SyntaxThemePreviewPalette?
 }
 
-extension ReaderThemeKind {
+extension ThemeKind {
     var themeDefinition: ThemeDefinition {
         switch self {
         case .blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey, .gruvboxDark, .gruvboxLight, .dracula, .monokai:
             return ThemeDefinition(
                 kind: self,
                 displayName: displayName,
-                colors: ReaderTheme.theme(for: self),
+                colors: Theme.theme(for: self),
                 customCSS: nil,
                 customJavaScript: nil,
                 providesSyntaxHighlighting: false,

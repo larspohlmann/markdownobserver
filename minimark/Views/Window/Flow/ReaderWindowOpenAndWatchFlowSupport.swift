@@ -6,11 +6,11 @@ enum ReaderWindowOpenAndWatchFlowSupport {
     }
 
     static func applyInitialSeedIfNeeded(
-        seed: ReaderWindowSeed?,
+        seed: WindowSeed?,
         openDocumentInCurrentWindow: (URL) -> Void,
-        openDocumentInSelectedSlot: (URL, ReaderOpenOrigin, FolderWatchSession?, String?) -> Void,
-        resolveRecentOpenedFileURL: (ReaderRecentOpenedFile) -> URL,
-        resolveRecentWatchedFolderURL: (ReaderRecentWatchedFolder) -> URL,
+        openDocumentInSelectedSlot: (URL, OpenOrigin, FolderWatchSession?, String?) -> Void,
+        resolveRecentOpenedFileURL: (RecentOpenedFile) -> URL,
+        resolveRecentWatchedFolderURL: (RecentWatchedFolder) -> URL,
         prepareRecentFolderWatch: (URL, FolderWatchOptions) -> Void
     ) {
         if let recentOpenedFile = seed?.recentOpenedFile {

@@ -9,7 +9,7 @@ struct ThemeSelectorColumnWidths {
 struct ThemeSelectorView: View {
     private let settingsStore: ReaderSettingsStore
 
-    @State private var stagedReaderTheme: ReaderThemeKind
+    @State private var stagedReaderTheme: ThemeKind
     @State private var stagedSyntaxTheme: SyntaxThemeKind
     @State private var selectedBackgroundTab: BackgroundTab = .light
 
@@ -188,8 +188,8 @@ struct ThemeSelectorView: View {
         .padding(.top, 12)
     }
 
-    private var filteredReaderThemes: [ReaderThemeKind] {
-        ReaderThemeKind.allCases.filter {
+    private var filteredReaderThemes: [ThemeKind] {
+        ThemeKind.allCases.filter {
             selectedBackgroundTab == .light ? !$0.isDark : $0.isDark
         }
     }
@@ -202,7 +202,7 @@ struct ThemeSelectorView: View {
         stagedReaderTheme != appliedReaderTheme || stagedSyntaxTheme != appliedSyntaxTheme
     }
 
-    private var appliedReaderTheme: ReaderThemeKind {
+    private var appliedReaderTheme: ThemeKind {
         settingsStore.currentSettings.readerTheme
     }
 

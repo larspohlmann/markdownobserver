@@ -59,7 +59,7 @@ final class FolderWatchFlowController {
         presentOptions(for: folderURL, options: .default)
     }
 
-    func prepareRecentWatch(_ entry: ReaderRecentWatchedFolder) {
+    func prepareRecentWatch(_ entry: RecentWatchedFolder) {
         let resolvedFolderURL = settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
         presentOptions(for: resolvedFolderURL, options: entry.options)
     }

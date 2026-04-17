@@ -14,7 +14,7 @@ struct ContentViewActionRouterTests {
         let folderWatchOpen: WindowFolderWatchOpenController
         var confirmFolderWatchCalls: [FolderWatchOptions] = []
         var stopFolderWatchCalls = 0
-        var startFavoriteWatchCalls: [ReaderFavoriteWatchedFolder] = []
+        var startFavoriteWatchCalls: [FavoriteWatchedFolder] = []
         var setEditingSubfoldersCalls: [Bool] = []
         var setEditingFavoritesCalls: [Bool] = []
         var applyTitleCalls = 0
@@ -73,7 +73,7 @@ struct ContentViewActionRouterTests {
         final class MutableState {
             var confirmFolderWatchCalls: [FolderWatchOptions] = []
             var stopFolderWatchCalls = 0
-            var startFavoriteWatchCalls: [ReaderFavoriteWatchedFolder] = []
+            var startFavoriteWatchCalls: [FavoriteWatchedFolder] = []
             var setEditingSubfoldersCalls: [Bool] = []
             var setEditingFavoritesCalls: [Bool] = []
             var applyTitleCalls = 0

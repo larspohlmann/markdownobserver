@@ -19,7 +19,7 @@ struct ReaderSettingsAndModelsTests {
             options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders),
             startedAt: Date(timeIntervalSince1970: 12345)
         )
-        let seed = ReaderWindowSeed(
+        let seed = WindowSeed(
             id: id,
             fileURL: fileURL,
             folderWatchSession: watchSession,
@@ -28,7 +28,7 @@ struct ReaderSettingsAndModelsTests {
         )
 
         let data = try JSONEncoder().encode(seed)
-        let decoded = try JSONDecoder().decode(ReaderWindowSeed.self, from: data)
+        let decoded = try JSONDecoder().decode(WindowSeed.self, from: data)
 
         #expect(decoded.id == id)
         #expect(decoded.filePath == fileURL.path)
@@ -39,31 +39,31 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test @MainActor func readerWindowSeedCodableRoundTripPreservesRecentWatchedFolderRequest() throws {
-        let entry = ReaderRecentWatchedFolder(
+        let entry = RecentWatchedFolder(
             folderURL: URL(fileURLWithPath: "/tmp/docs"),
             options: FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .includeSubfolders)
         )
-        let seed = ReaderWindowSeed(recentWatchedFolder: entry)
+        let seed = WindowSeed(recentWatchedFolder: entry)
 
         let data = try JSONEncoder().encode(seed)
-        let decoded = try JSONDecoder().decode(ReaderWindowSeed.self, from: data)
+        let decoded = try JSONDecoder().decode(WindowSeed.self, from: data)
 
         #expect(decoded.recentWatchedFolder?.folderPath == entry.folderPath)
         #expect(decoded.recentWatchedFolder?.options == entry.options)
     }
 
     @Test @MainActor func readerWindowSeedCodableRoundTripPreservesRecentOpenedFileRequest() throws {
-        let entry = ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/tmp/recent.md"))
-        let seed = ReaderWindowSeed(recentOpenedFile: entry)
+        let entry = RecentOpenedFile(fileURL: URL(fileURLWithPath: "/tmp/recent.md"))
+        let seed = WindowSeed(recentOpenedFile: entry)
 
         let data = try JSONEncoder().encode(seed)
-        let decoded = try JSONDecoder().decode(ReaderWindowSeed.self, from: data)
+        let decoded = try JSONDecoder().decode(WindowSeed.self, from: data)
 
         #expect(decoded.recentOpenedFile?.filePath == entry.filePath)
     }
 
     @Test @MainActor func readerWindowSeedDefaultOriginIsManual() {
-        let seed = ReaderWindowSeed(fileURL: URL(fileURLWithPath: "/tmp/default-origin.md"))
+        let seed = WindowSeed(fileURL: URL(fileURLWithPath: "/tmp/default-origin.md"))
 
         #expect(seed.openOrigin == .manual)
     }
@@ -244,7 +244,7 @@ struct ReaderSettingsAndModelsTests {
             sidebarSortMode: .openOrder,
             recentWatchedFolders: [],
             recentManuallyOpenedFiles: [
-                ReaderRecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x00, 0x01, 0x02]))
+                RecentOpenedFile(filePath: fileURL.path, bookmarkData: Data([0x00, 0x01, 0x02]))
             ]
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
@@ -270,7 +270,7 @@ struct ReaderSettingsAndModelsTests {
             multiFileDisplayMode: .sidebarLeft,
             sidebarSortMode: .openOrder,
             recentWatchedFolders: [
-                ReaderRecentWatchedFolder(
+                RecentWatchedFolder(
                     folderPath: folderURL.path,
                     options: .default,
                     bookmarkData: Data([0xAA, 0xBB, 0xCC])
@@ -303,7 +303,7 @@ struct ReaderSettingsAndModelsTests {
             multiFileDisplayMode: .sidebarLeft,
             sidebarSortMode: .openOrder,
             recentWatchedFolders: [
-                ReaderRecentWatchedFolder(
+                RecentWatchedFolder(
                     folderPath: folderURL.path,
                     options: .default,
                     bookmarkData: originalBookmarkData
@@ -346,7 +346,7 @@ struct ReaderSettingsAndModelsTests {
             try? FileManager.default.removeItem(at: fileURL)
         }
 
-        let entry = ReaderRecentOpenedFile(fileURL: fileURL)
+        let entry = RecentOpenedFile(fileURL: fileURL)
         let seededSettings = ReaderSettings(
             appAppearance: .system,
             readerTheme: .blackOnWhite,
@@ -370,20 +370,20 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerRecentHistoryMenuTitleAddsParentContextOnlyWhenNeeded() {
         let fileEntries = [
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/todo.md")),
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/ideas.md"))
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/todo.md")),
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/ideas.md"))
         ]
         let folderEntries = [
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
                 options: .default
             ),
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/beta/docs"),
                 options: .default
             ),
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/gamma/guides"),
                 options: .default
             )
@@ -397,7 +397,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerRecentHistoryMenuTitleAddsFilteredIndicatorForWatchedFolders() {
         let entries = [
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
                 options: FolderWatchOptions(
                     openMode: .watchChangesOnly,
@@ -405,7 +405,7 @@ struct ReaderSettingsAndModelsTests {
                     excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
                 )
             ),
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/beta/docs"),
                 options: .default
             )
@@ -421,7 +421,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerRecentHistoryMenuTitleOmitsFilteredIndicatorForSelectedFolderScope() {
         let entries = [
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
                 options: FolderWatchOptions(
                     openMode: .watchChangesOnly,
@@ -429,7 +429,7 @@ struct ReaderSettingsAndModelsTests {
                     excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
                 )
             ),
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/beta/docs"),
                 options: .default
             )
@@ -442,9 +442,9 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerRecentHistoryMenuTitlesDisambiguateMultipleDuplicateNames() {
         let entries = [
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/beta/notes/todo.md")),
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/gamma/tasks/todo.md"))
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/beta/notes/todo.md")),
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/gamma/tasks/todo.md"))
         ]
 
         let titlesByPath = ReaderRecentHistory.menuTitles(for: entries)
@@ -455,12 +455,12 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerRecentHistoryBulkMenuTitlesMatchPerEntryTitles() {
         let recentFiles = [
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/todo.md")),
-            ReaderRecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/ideas.md"))
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/alpha/notes/todo.md")),
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/todo.md")),
+            RecentOpenedFile(fileURL: URL(fileURLWithPath: "/archive/notes/ideas.md"))
         ]
         let recentFolders = [
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/alpha/docs"),
                 options: FolderWatchOptions(
                     openMode: .watchChangesOnly,
@@ -468,7 +468,7 @@ struct ReaderSettingsAndModelsTests {
                     excludedSubdirectoryPaths: ["/work/alpha/docs/build"]
                 )
             ),
-            ReaderRecentWatchedFolder(
+            RecentWatchedFolder(
                 folderURL: URL(fileURLWithPath: "/work/beta/docs"),
                 options: .default
             )
@@ -552,7 +552,7 @@ struct ReaderSettingsAndModelsTests {
             recentWatchedFolders: [],
             recentManuallyOpenedFiles: [],
             trustedImageFolders: [
-                ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: bookmarkData)
+                TrustedImageFolder(folderPath: folderURL.path, bookmarkData: bookmarkData)
             ]
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
@@ -586,7 +586,7 @@ struct ReaderSettingsAndModelsTests {
             recentWatchedFolders: [],
             recentManuallyOpenedFiles: [],
             trustedImageFolders: [
-                ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: bookmarkData)
+                TrustedImageFolder(folderPath: folderURL.path, bookmarkData: bookmarkData)
             ]
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
@@ -619,7 +619,7 @@ struct ReaderSettingsAndModelsTests {
             recentWatchedFolders: [],
             recentManuallyOpenedFiles: [],
             trustedImageFolders: [
-                ReaderTrustedImageFolder(folderPath: folderURL.path, bookmarkData: Data([0xAA, 0xBB]))
+                TrustedImageFolder(folderPath: folderURL.path, bookmarkData: Data([0xAA, 0xBB]))
             ]
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
@@ -842,7 +842,7 @@ struct ReaderSettingsAndModelsTests {
             SidebarSortTestItem(id: "alpha", displayName: "alpha.md", lastChangedAt: nil)
         ]
 
-        let ordered = ReaderSidebarSortMode.nameAscending.sorted(items) { item in
+        let ordered = SidebarSortMode.nameAscending.sorted(items) { item in
             ReaderSidebarSortDescriptor(displayName: item.displayName, lastChangedAt: item.lastChangedAt)
         }
 
@@ -859,7 +859,7 @@ struct ReaderSettingsAndModelsTests {
             SidebarSortTestItem(id: "untitled", displayName: nil, lastChangedAt: nil)
         ]
 
-        let ordered = ReaderSidebarSortMode.lastChangedNewestFirst.sorted(items) { item in
+        let ordered = SidebarSortMode.lastChangedNewestFirst.sorted(items) { item in
             ReaderSidebarSortDescriptor(displayName: item.displayName, lastChangedAt: item.lastChangedAt)
         }
 
@@ -867,8 +867,8 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test func readerMultiFileDisplayModeChangesNeverRequireRestartInSidebarOnlyMode() {
-        #expect(!ReaderMultiFileDisplayMode.sidebarLeft.requiresRestart(from: .sidebarRight))
-        #expect(!ReaderMultiFileDisplayMode.sidebarRight.requiresRestart(from: .sidebarLeft))
+        #expect(!MultiFileDisplayMode.sidebarLeft.requiresRestart(from: .sidebarRight))
+        #expect(!MultiFileDisplayMode.sidebarRight.requiresRestart(from: .sidebarLeft))
     }
 
     @Test func readerSettingsGuidanceExplainsImmediateSidebarLayoutChanges() {

@@ -3,8 +3,8 @@ import Foundation
 enum AmberTerminalTheme {
     static let definition = ThemeDefinition(
         kind: .amberTerminal,
-        displayName: ReaderThemeKind.amberTerminal.displayName,
-        colors: ReaderTheme.theme(for: .amberTerminal),
+        displayName: ThemeKind.amberTerminal.displayName,
+        colors: Theme.theme(for: .amberTerminal),
         customCSS: customCSS,
         customJavaScript: nil,
         providesSyntaxHighlighting: true,

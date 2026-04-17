@@ -3,8 +3,8 @@ import Foundation
 enum GameBoyTheme {
     static let definition = ThemeDefinition(
         kind: .gameBoy,
-        displayName: ReaderThemeKind.gameBoy.displayName,
-        colors: ReaderTheme.theme(for: .gameBoy),
+        displayName: ThemeKind.gameBoy.displayName,
+        colors: Theme.theme(for: .gameBoy),
         customCSS: customCSS,
         customJavaScript: nil,
         providesSyntaxHighlighting: true,
