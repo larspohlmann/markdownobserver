@@ -8,7 +8,7 @@ struct ReaderStoreSourceEditingTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         fixture.store.startEditingSource()
 
@@ -26,7 +26,7 @@ struct ReaderStoreSourceEditingTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
 
         fixture.store.updateSourceDraft("# Draft")
@@ -51,7 +51,7 @@ struct ReaderStoreSourceEditingTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
         fixture.store.updateSourceDraft("# Saved Draft")
 
@@ -84,7 +84,7 @@ struct ReaderStoreSourceEditingTests {
         fixture.securityScope.didStartAccessByPath[fixture.temporaryDirectoryURL.path] = true
         fixture.securityScope.didStartAccessByPath[normalizedFolderPath] = true
 
-        fixture.store.openFile(
+        fixture.store.opener.open(
             at: fixture.primaryFileURL,
             origin: .folderWatchInitialBatchAutoOpen,
             folderWatchSession: session
@@ -154,7 +154,7 @@ struct ReaderStoreSourceEditingTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
         fixture.store.updateSourceDraft("# Saved Draft")
 
@@ -172,7 +172,7 @@ struct ReaderStoreSourceEditingTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
         fixture.store.updateSourceDraft("# Draft")
 
@@ -192,7 +192,7 @@ struct ReaderStoreSourceEditingTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
         fixture.store.updateSourceDraft("# Draft")
         fixture.write(content: "# External", to: fixture.primaryFileURL)
@@ -211,7 +211,7 @@ struct ReaderStoreSourceEditingTests {
         )
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
         fixture.store.updateSourceDraft("# Draft")
         fixture.write(content: "# External", to: fixture.primaryFileURL)
@@ -242,7 +242,7 @@ struct ReaderStoreSourceEditingTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.delete(fixture.primaryFileURL)
         fixture.store.handleObservedFileChange()
 
@@ -257,7 +257,7 @@ struct ReaderStoreSourceEditingTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.store.startEditingSource()
         fixture.store.updateSourceDraft("# Draft")
 
@@ -272,7 +272,7 @@ struct ReaderStoreSourceEditingTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         // updateSourceDraft without startEditingSource — must be a no-op.
         fixture.store.updateSourceDraft("# Should Not Apply")
 
@@ -285,7 +285,7 @@ struct ReaderStoreSourceEditingTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         // discardSourceDraft without an active editing session must be a no-op.
         fixture.store.discardSourceDraft()
 

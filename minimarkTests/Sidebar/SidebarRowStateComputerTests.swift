@@ -91,7 +91,7 @@ struct SidebarRowStateComputerTests {
         try "# Test".write(to: fileURL, atomically: true, encoding: .utf8)
 
         let doc = makeDocument(settingsStore: settings)
-        doc.readerStore.openFile(at: fileURL, origin: .manual)
+        doc.readerStore.opener.open(at: fileURL, origin: .manual)
         let computer = SidebarRowStateComputer()
 
         // First rebuild — no previous state, so no pulse
@@ -179,7 +179,7 @@ struct SidebarRowStateComputerTests {
         try "# Test".write(to: fileURL, atomically: true, encoding: .utf8)
 
         let doc = makeDocument(settingsStore: settings)
-        doc.readerStore.openFile(at: fileURL, origin: .manual)
+        doc.readerStore.opener.open(at: fileURL, origin: .manual)
         let computer = SidebarRowStateComputer()
         computer.rebuildAllRowStates(from: [doc])
 

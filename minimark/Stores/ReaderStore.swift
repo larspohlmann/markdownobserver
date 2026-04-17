@@ -42,6 +42,7 @@ final class ReaderStore {
     let saveLogFormatter: SaveLogFormatter
     let presenter: DocumentPresenter
     let postOpenEffects: PostOpenEffects
+    let opener: DocumentOpener
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -115,11 +116,29 @@ final class ReaderStore {
             diffBaselineTracker: self.diffBaselineTracker,
             fileWatcher: file.watcher
         )
+        self.opener = DocumentOpener(
+            document: self.document,
+            externalChange: self.externalChange,
+            sourceEditingController: self.sourceEditingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            securityScopeResolver: securityScopeResolver,
+            folderWatch: folderWatch,
+            fileWatcher: file.watcher,
+            fileLoader: self.fileLoader,
+            presenter: self.presenter,
+            postOpenEffects: self.postOpenEffects,
+            onError: { [document = self.document] error in
+                document.handle(error)
+            }
+        )
         self.postOpenEffects.onError = { [document = self.document] error in
             document.handle(error)
         }
         self.postOpenEffects.onObservedFileChange = { [weak self] in
             self?.handleObservedFileChange()
+        }
+        self.opener.onActivateDeferredSetupIfNeeded = { [weak self] in
+            self?.activateDeferredSetupIfNeeded()
         }
     }
 
@@ -163,20 +182,6 @@ final class ReaderStore {
                 self?.document.documentLoadState = state
             }
         )
-    }
-
-    /// Marks this document as live-auto-opened: sets the external change
-    /// indicator and clears the settler so subsequent edits are not absorbed.
-    func markAsLiveAutoOpened() {
-        externalChange.noteObservedExternalChange(kind: .added)
-        folderWatch.settler.clearSettling()
-    }
-
-    func deferFile(at url: URL, origin: ReaderOpenOrigin = .folderWatchInitialBatchAutoOpen, folderWatchSession: FolderWatchSession?) {
-        document.deferFile(at: url, origin: origin)
-        if let folderWatchSession {
-            folderWatchDispatcher.setSession(folderWatchSession)
-        }
     }
 
     func clearOpenDocument() {

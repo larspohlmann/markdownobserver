@@ -59,7 +59,7 @@ final class FileOpenPlanExecutor {
                         requestedSession: plan.folderWatchSession
                     )
                     scheduleLoadWithOverlay(on: store) {
-                        store.materializeDeferredDocument(
+                        store.opener.materializeDeferred(
                             origin: plan.origin,
                             folderWatchSession: effectiveSession,
                             initialDiffBaselineMarkdown: assignment.initialDiffBaselineMarkdown
@@ -103,13 +103,13 @@ final class FileOpenPlanExecutor {
 
             switch assignment.loadMode {
             case .deferOnly:
-                targetDocument.readerStore.deferFile(
+                targetDocument.readerStore.opener.deferFile(
                     at: fileURL,
                     origin: plan.origin,
                     folderWatchSession: effectiveFolderWatchSession
                 )
             case .loadFully:
-                targetDocument.readerStore.openFile(
+                targetDocument.readerStore.opener.open(
                     at: fileURL,
                     origin: plan.origin,
                     folderWatchSession: effectiveFolderWatchSession,
@@ -168,7 +168,7 @@ final class FileOpenPlanExecutor {
             }
 
         for document in deferredDocs.prefix(count) {
-            document.readerStore.materializeDeferredDocument()
+            document.readerStore.opener.materializeDeferred()
         }
 
         selectDocumentWithNewestModificationDate()
@@ -187,7 +187,7 @@ final class FileOpenPlanExecutor {
             if delegate.selectedReaderStore.document.isDeferredDocument {
                 let store = delegate.selectedReaderStore
                 scheduleLoadWithOverlay(on: store) {
-                    store.materializeDeferredDocument()
+                    store.opener.materializeDeferred()
                 }
             }
         }

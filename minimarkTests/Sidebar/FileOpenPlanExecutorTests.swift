@@ -172,7 +172,7 @@ struct FileOpenPlanExecutorTests {
 
         // Add a document with a file
         let store = Self.makeStore(settingsStore: settingsStore)
-        store.openFile(at: fileURL, origin: .manual)
+        store.opener.open(at: fileURL, origin: .manual)
         let doc = ReaderSidebarDocumentController.Document(
             id: UUID(), readerStore: store, normalizedFileURL: fileURL
         )

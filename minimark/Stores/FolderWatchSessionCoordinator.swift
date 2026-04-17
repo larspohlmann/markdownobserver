@@ -233,7 +233,7 @@ extension FolderWatchSessionCoordinator: FolderWatchControllerDelegate {
         guard let delegate else { return }
         for url in urls {
             if let doc = delegate.document(for: url) {
-                doc.readerStore.markAsLiveAutoOpened()
+                doc.readerStore.opener.markAsLiveAutoOpened()
             }
         }
     }

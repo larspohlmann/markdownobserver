@@ -6,7 +6,7 @@ extension ReaderStore {
             markdownFileEvents,
             currentDocumentFileURL: fileURLForCurrentDocument
         ) { [self] event, session, origin in
-            openFile(
+            opener.open(
                 at: event.fileURL,
                 origin: origin,
                 folderWatchSession: session,
@@ -23,7 +23,7 @@ extension ReaderStore {
             markdownFileEvents,
             session: session
         ) { [self] event, eventSession, eventOrigin in
-            openFile(
+            opener.open(
                 at: event.fileURL,
                 origin: eventOrigin,
                 folderWatchSession: eventSession,

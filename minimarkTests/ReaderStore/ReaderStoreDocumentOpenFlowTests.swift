@@ -16,7 +16,7 @@ struct ReaderStoreDocumentOpenFlowTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(fixture.store.document.fileURL != nil)
         #expect(fixture.store.document.fileDisplayName == "first.md")
@@ -28,7 +28,7 @@ struct ReaderStoreDocumentOpenFlowTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(fixture.watcher.startCallCount == 1)
     }
@@ -37,8 +37,8 @@ struct ReaderStoreDocumentOpenFlowTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
-        fixture.store.openFile(at: fixture.secondaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.secondaryFileURL)
 
         #expect(fixture.store.document.fileDisplayName == "second.md")
         #expect(fixture.store.renderingController.renderedHTMLDocument.contains("Second"))
@@ -48,10 +48,10 @@ struct ReaderStoreDocumentOpenFlowTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
         let watcherStartCountAfterOpen = fixture.watcher.startCallCount
 
-        fixture.store.handleIncomingOpenURL(fixture.primaryFileURL, origin: .manual)
+        fixture.store.opener.handleIncomingURL(fixture.primaryFileURL, origin: .manual)
 
         #expect(fixture.watcher.startCallCount == watcherStartCountAfterOpen)
     }
@@ -61,7 +61,7 @@ struct ReaderStoreDocumentOpenFlowTests {
         defer { fixture.cleanup() }
 
         let missingFileURL = fixture.temporaryDirectoryURL.appendingPathComponent("nonexistent.md")
-        fixture.store.openFile(at: missingFileURL)
+        fixture.store.opener.open(at: missingFileURL)
 
         #expect(fixture.store.document.lastError != nil || fixture.store.document.isCurrentFileMissing)
     }
@@ -70,7 +70,7 @@ struct ReaderStoreDocumentOpenFlowTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         #expect(fixture.settings.recordedRecentManuallyOpenedFiles.count >= 1)
     }

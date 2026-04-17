@@ -79,7 +79,7 @@ extension ReaderStore {
             return
         }
 
-        openFile(
+        opener.open(
             at: normalizedIncomingURL,
             origin: origin,
             folderWatchSession: folderWatchSession,

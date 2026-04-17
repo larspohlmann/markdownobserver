@@ -26,7 +26,7 @@ struct ReaderStoreAppearanceRenderTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
         #expect(fixture.store.renderingController.needsAppearanceRender)
@@ -40,7 +40,7 @@ struct ReaderStoreAppearanceRenderTests {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: true)
         defer { fixture.cleanup() }
 
-        fixture.store.openFile(at: fixture.primaryFileURL)
+        fixture.store.opener.open(at: fixture.primaryFileURL)
 
         fixture.store.setAppearanceOverride(testAppearance)
         #expect(fixture.store.renderingController.needsAppearanceRender)
