@@ -136,7 +136,6 @@ struct ReaderSidebarWorkspaceView<Detail: View>: View {
                 isDraggingDivider = active
             }
         ))
-        .accessibilityIdentifier("sidebar-column")
     }
 
     private var sidebarToolbar: some View {
