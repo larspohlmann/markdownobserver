@@ -24,12 +24,12 @@ final class ReaderWindowCoordinator {
     var isEditingSubfolders = false
 
     // Controller references (set via configure())
-    private(set) var appearanceController: WindowAppearanceController?
-    private(set) var groupStateController: SidebarGroupStateController?
-    private(set) var favoriteWorkspaceController: FavoriteWorkspaceController?
-    private(set) var folderWatchFlowController: FolderWatchFlowController?
-    private(set) var uiTestLaunchCoordinator: UITestLaunchCoordinator?
-    private(set) var recentHistoryCoordinator: RecentHistoryCoordinator?
+    private var appearanceController: WindowAppearanceController?
+    private var groupStateController: SidebarGroupStateController?
+    private var favoriteWorkspaceController: FavoriteWorkspaceController?
+    private var folderWatchFlowController: FolderWatchFlowController?
+    private var uiTestLaunchCoordinator: UITestLaunchCoordinator?
+    private var recentHistoryCoordinator: RecentHistoryCoordinator?
 
     func configure(
         appearanceController: WindowAppearanceController,
@@ -126,7 +126,7 @@ final class ReaderWindowCoordinator {
 
     // MARK: - Composite refresh
 
-    func refreshSharedFolderWatchState() {
+    private func refreshSharedFolderWatchState() {
         folderWatchFlowController?.refreshSharedState()
     }
 

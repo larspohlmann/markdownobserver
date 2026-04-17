@@ -308,7 +308,7 @@ struct ReaderWindowRootView: View {
             recentHistoryCoordinator: recentHistoryCoordinator
         )
         windowCoordinator.documentOpen.applyInitialSeedIfNeeded(seed: seed)
-        windowCoordinator.refreshSharedFolderWatchState()
+        folderWatchFlowController.refreshSharedState()
         // Now that all controllers are wired, try to apply the UI-test launch
         // configuration. If the host window isn't attached yet, the window-
         // accessor callback in handleHostWindowChange() will retry.
