@@ -58,7 +58,7 @@ struct FileOpenPlanExecutorTests {
                 renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
             ),
             file: FileDependencies(
-                watcher: TestFileWatcher(), io: ReaderDocumentIOService(), actions: TestReaderFileActions()
+                watcher: TestFileWatcher(), io: DocumentIOService(), actions: TestReaderFileActions()
             ),
             folderWatch: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),

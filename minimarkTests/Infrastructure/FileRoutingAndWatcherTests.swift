@@ -1201,7 +1201,7 @@ struct FileRoutingAndWatcherTests {
         let workspace = TestWorkspace(
             applicationURLsToReturn: [duplicateReleaseAppURL, textEditAppURL, duplicateDebugAppURL]
         )
-        let service = ReaderFileActionService(workspace: workspace)
+        let service = FileActionService(workspace: workspace)
 
         let applications = try service.registeredApplications(for: markdownFileURL)
 
@@ -1224,7 +1224,7 @@ struct FileRoutingAndWatcherTests {
         )
         let bundle = try #require(Bundle(url: appURL))
         let launchServices = TestLaunchServices()
-        let service = ReaderDefaultMarkdownAssociationService(
+        let service = DefaultMarkdownAssociationService(
             launchServices: launchServices,
             typeResolver: TestMarkdownContentTypeResolver(identifiers: ["net.daringfireball.markdown"]),
             appBundle: bundle
@@ -1254,7 +1254,7 @@ struct FileRoutingAndWatcherTests {
         )
         let bundle = try #require(Bundle(url: appURL))
         let launchServices = TestLaunchServices(registerStatus: -10814)
-        let service = ReaderDefaultMarkdownAssociationService(
+        let service = DefaultMarkdownAssociationService(
             launchServices: launchServices,
             typeResolver: TestMarkdownContentTypeResolver(identifiers: ["net.daringfireball.markdown"]),
             appBundle: bundle

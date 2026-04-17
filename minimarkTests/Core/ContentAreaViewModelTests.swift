@@ -15,8 +15,8 @@ private func makeTestViewModel(
     )
     let fileDeps = FileDependencies(
         watcher: FileChangeWatcher(),
-        io: ReaderDocumentIOService(),
-        actions: ReaderFileActionService()
+        io: DocumentIOService(),
+        actions: FileActionService()
     )
     let renderingDeps = RenderingDependencies(
         renderer: MarkdownRenderingService(),
@@ -247,8 +247,8 @@ struct ContentAreaViewModelDropRoutingTests {
         )
         let fileDeps = FileDependencies(
             watcher: FileChangeWatcher(),
-            io: ReaderDocumentIOService(),
-            actions: ReaderFileActionService()
+            io: DocumentIOService(),
+            actions: FileActionService()
         )
         let renderingDeps = RenderingDependencies(
             renderer: MarkdownRenderingService(),

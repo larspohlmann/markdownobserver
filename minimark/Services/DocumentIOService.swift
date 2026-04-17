@@ -1,12 +1,12 @@
 import Foundation
 
-protocol ReaderDocumentIO: AnyObject {
+protocol DocumentIO: AnyObject {
     func load(at accessibleURL: URL) throws -> (markdown: String, modificationDate: Date)
     func write(_ markdown: String, to accessibleURL: URL) throws
     func modificationDate(for url: URL) -> Date
 }
 
-final class ReaderDocumentIOService: ReaderDocumentIO {
+final class DocumentIOService: DocumentIO {
     func load(at accessibleURL: URL) throws -> (markdown: String, modificationDate: Date) {
         guard accessibleURL.isFileURL else {
             throw AppError.invalidFileURL
