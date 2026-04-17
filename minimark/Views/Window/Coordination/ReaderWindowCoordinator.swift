@@ -28,30 +28,20 @@ final class ReaderWindowCoordinator {
     private let settingsStore: ReaderSettingsStore
     private let sidebarDocumentController: ReaderSidebarDocumentController
     private var folderWatchOpenController: WindowFolderWatchOpenController!
+    private var shellController: WindowShellController!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
-    var hostWindow: NSWindow?
     var hasCompletedWindowPhase = false
     var hasOpenedInitialFile = false
-    var effectiveWindowTitle = ReaderWindowTitleFormatter.appName
-    let dockTileWindowToken = UUID()
     var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
     var lastAppliedSidebarDelta: CGFloat = 0
     var isTitlebarEditingFavorites = false
     var isEditingSubfolders = false
-    private var registeredWindowIdentity: RegisteredWindowIdentity?
 
-    private struct RegisteredWindowIdentity: Equatable {
-        let windowID: ObjectIdentifier
-        let folderWatchSession: FolderWatchSession?
-
-        init?(window: NSWindow?, folderWatchSession: FolderWatchSession?) {
-            guard let window else { return nil }
-            self.windowID = ObjectIdentifier(window)
-            self.folderWatchSession = folderWatchSession
-        }
-    }
+    var hostWindow: NSWindow? { shellController.hostWindow }
+    var effectiveWindowTitle: String { shellController.effectiveWindowTitle }
+    var dockTileWindowToken: UUID { shellController.dockTileWindowToken }
 
     // Controller references (set via configure())
     private(set) var appearanceController: WindowAppearanceController?
@@ -97,6 +87,12 @@ final class ReaderWindowCoordinator {
     ) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
+        self.shellController = WindowShellController(
+            sidebarDocumentController: sidebarDocumentController,
+            folderWatchSessionProvider: { [weak self] in
+                self?.folderWatchFlowController?.sharedFolderWatchSession
+            }
+        )
         self.folderWatchOpenController = WindowFolderWatchOpenController(
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
             isHostWindowAttached: { [weak self] in self?.hostWindow != nil },
@@ -120,44 +116,10 @@ final class ReaderWindowCoordinator {
         }
     }
 
-    private func resolveWindowTitle(activeFolderWatch: FolderWatchSession?) -> String {
-        ReaderWindowTitleFormatter.resolveWindowTitle(
-            documentTitle: sidebarDocumentController.selectedWindowTitle,
-            activeFolderWatch: activeFolderWatch,
-            hasUnacknowledgedExternalChange: sidebarDocumentController.selectedHasUnacknowledgedExternalChange
-        )
-    }
-
-    private func registerWindow(
-        _ hostWindow: NSWindow?,
-        activeFolderWatch: FolderWatchSession?
-    ) {
-        ReaderWindowRegistry.shared.registerWindow(
-            hostWindow,
-            focusDocument: { [sidebarDocumentController] fileURL in
-                sidebarDocumentController.focusDocument(at: fileURL)
-            },
-            watchedFolderURLProvider: {
-                activeFolderWatch?.folderURL
-            }
-        )
-    }
-
     // MARK: - Window Shell Flow
 
     func applyWindowTitlePresentation() {
-        let resolvedTitle = resolveWindowTitle(activeFolderWatch: folderWatchFlowController?.sharedFolderWatchSession)
-        let mutation = ReaderWindowTitleFormatter.mutation(
-            resolvedTitle: resolvedTitle,
-            currentEffectiveTitle: effectiveWindowTitle,
-            currentHostWindowTitle: hostWindow?.title
-        )
-        if mutation.shouldUpdateEffectiveTitle {
-            effectiveWindowTitle = mutation.effectiveTitle
-        }
-        if mutation.shouldWriteHostWindowTitle {
-            hostWindow?.title = mutation.effectiveTitle
-        }
+        shellController.applyTitlePresentation()
     }
 
     func enqueueFolderWatchOpen(
@@ -183,29 +145,20 @@ final class ReaderWindowCoordinator {
 
     func refreshWindowPresentation() {
         refreshSharedFolderWatchState()
-        applyWindowTitlePresentation()
+        shellController.applyTitlePresentation()
     }
 
     func refreshWindowShellRegistrationAndTitle() {
-        registerWindowIfNeeded()
-        applyWindowTitlePresentation()
+        shellController.refreshRegistrationAndTitle()
     }
 
     func refreshWindowShellState() {
         refreshSharedFolderWatchState()
-        registerWindowIfNeeded()
-        applyWindowTitlePresentation()
+        shellController.refreshRegistrationAndTitle()
     }
 
     func registerWindowIfNeeded() {
-        let session = folderWatchFlowController?.sharedFolderWatchSession
-        let currentIdentity = RegisteredWindowIdentity(
-            window: hostWindow,
-            folderWatchSession: session
-        )
-        guard currentIdentity != registeredWindowIdentity else { return }
-        registeredWindowIdentity = currentIdentity
-        registerWindow(hostWindow, activeFolderWatch: session)
+        shellController.registerIfNeeded()
     }
 
     func handleFolderWatchToolbarAction(_ action: FolderWatchToolbarAction) {
@@ -237,12 +190,7 @@ final class ReaderWindowCoordinator {
     }
 
     func handleWindowAccessorUpdate(_ window: NSWindow?) {
-        guard hostWindow !== window else { return }
-        if let existingWindow = hostWindow {
-            ReaderWindowRegistry.shared.unregisterWindow(existingWindow)
-            registeredWindowIdentity = nil
-        }
-        hostWindow = window
+        guard shellController.updateHostWindow(window) else { return }
         handleHostWindowChange()
     }
 
@@ -312,20 +260,11 @@ final class ReaderWindowCoordinator {
         )
         groupStateController?.observeRowStates(from: sidebarDocumentController)
         openDocumentPathTracker.update(from: sidebarDocumentController.documents)
-        DockTileController.shared.configureDockTileIfNeeded()
-        let token = dockTileWindowToken
-        sidebarDocumentController.onDockTileRowStatesChanged = { rowStates in
-            DockTileController.shared.updateRowStates(for: token, rowStates: rowStates)
-        }
-        DockTileController.shared.updateRowStates(
-            for: token,
-            rowStates: sidebarDocumentController.rowStates
-        )
+        shellController.configureDockTile()
     }
 
     func handleWindowDisappear() {
-        sidebarDocumentController.onDockTileRowStatesChanged = nil
-        DockTileController.shared.removeRowStates(for: dockTileWindowToken)
+        shellController.clearDockTile()
     }
 
     func handleSidebarWidthChange(_ newWidth: CGFloat) {
