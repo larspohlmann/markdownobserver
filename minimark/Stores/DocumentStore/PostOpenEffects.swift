@@ -2,8 +2,8 @@ import Foundation
 
 @MainActor
 final class PostOpenEffects {
-    private let document: ReaderDocumentController
-    private let settingsStore: ReaderSettingsReading & ReaderRecentWriting
+    private let document: DocumentController
+    private let settingsStore: SettingsReading & RecentWriting
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let folderWatch: FolderWatchDependencies
     private let diffBaselineTracker: DiffBaselineTracking
@@ -12,8 +12,8 @@ final class PostOpenEffects {
     var onObservedFileChange: (@MainActor () -> Void)?
 
     init(
-        document: ReaderDocumentController,
-        settingsStore: ReaderSettingsReading & ReaderRecentWriting,
+        document: DocumentController,
+        settingsStore: SettingsReading & RecentWriting,
         folderWatchDispatcher: FolderWatchDispatcher,
         folderWatch: FolderWatchDependencies,
         diffBaselineTracker: DiffBaselineTracking,

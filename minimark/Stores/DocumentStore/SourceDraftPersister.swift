@@ -8,20 +8,20 @@ final class SourceDraftPersister {
         category: "SourceDraftPersister"
     )
 
-    private let document: ReaderDocumentController
-    private let sourceEditingController: ReaderSourceEditingController
-    private let externalChange: ReaderExternalChangeController
-    private let renderingController: ReaderRenderingController
+    private let document: DocumentController
+    private let sourceEditingController: SourceEditingController
+    private let externalChange: ExternalChangeController
+    private let renderingController: RenderingController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let securityScopeResolver: SecurityScopeResolver
     private let fileIO: DocumentIO
     private let saveLogFormatter: SaveLogFormatter
 
     init(
-        document: ReaderDocumentController,
-        sourceEditingController: ReaderSourceEditingController,
-        externalChange: ReaderExternalChangeController,
-        renderingController: ReaderRenderingController,
+        document: DocumentController,
+        sourceEditingController: SourceEditingController,
+        externalChange: ExternalChangeController,
+        renderingController: RenderingController,
         folderWatchDispatcher: FolderWatchDispatcher,
         securityScopeResolver: SecurityScopeResolver,
         fileIO: DocumentIO,

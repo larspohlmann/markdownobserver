@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class SidebarDocumentList {
-    typealias Document = ReaderSidebarDocumentController.Document
+    typealias Document = SidebarDocumentController.Document
 
     private(set) var documents: [Document]
     @ObservationIgnored private var documentsByNormalizedURL: [URL: UUID] = [:]

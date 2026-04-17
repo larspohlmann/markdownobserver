@@ -2,11 +2,11 @@ import AppKit
 import SwiftUI
 
 struct ReaderSettingsView: View {
-    private var settingsStore: ReaderSettingsStore
+    private var settingsStore: SettingsStore
     @ObservedObject private var notificationNotifier: SystemNotifier
 
     init(
-        settingsStore: ReaderSettingsStore,
+        settingsStore: SettingsStore,
         notificationNotifier: SystemNotifier = .shared
     ) {
         self.settingsStore = settingsStore

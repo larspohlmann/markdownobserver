@@ -7,14 +7,14 @@ struct FolderWatchSessionCoordinatorTests {
     // MARK: - Test doubles
 
     final class MockDelegate: FolderWatchSessionCoordinatorDelegate {
-        var documents: [ReaderSidebarDocumentController.Document] = []
-        var _selectedReaderStore: ReaderStore?
-        var selectedReaderStore: ReaderStore { _selectedReaderStore! }
-        var documentForURLResult: ReaderSidebarDocumentController.Document?
+        var documents: [SidebarDocumentController.Document] = []
+        var _selectedReaderStore: DocumentStore?
+        var selectedReaderStore: DocumentStore { _selectedReaderStore! }
+        var documentForURLResult: SidebarDocumentController.Document?
         var selectNewestCalled = false
         var lastOpenRequest: FileOpenRequest?
 
-        func document(for fileURL: URL) -> ReaderSidebarDocumentController.Document? {
+        func document(for fileURL: URL) -> SidebarDocumentController.Document? {
             documentForURLResult
         }
 
@@ -44,7 +44,7 @@ struct FolderWatchSessionCoordinatorTests {
 
     @Test func folderWatchControllerCreatedLazilyOnFirstUse() throws {
         var controllerCreated = false
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "test.\(UUID().uuidString)"
         )
@@ -122,7 +122,7 @@ struct FolderWatchSessionCoordinatorTests {
     }
 
     @Test func dismissPendingFileSelectionRequestClearsBothProperties() {
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "test.\(UUID().uuidString)"
         )

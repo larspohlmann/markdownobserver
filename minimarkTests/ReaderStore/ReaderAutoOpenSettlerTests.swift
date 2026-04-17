@@ -5,7 +5,7 @@ import XCTest
 final class ReaderAutoOpenSettlerTests: XCTestCase {
 
     func test_makePendingContext_returns_nil_for_manual_origin() {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let result = settler.makePendingContext(
             origin: .manual,
             initialDiffBaselineMarkdown: nil,
@@ -16,7 +16,7 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
     }
 
     func test_makePendingContext_returns_context_for_folder_watch_auto_open() {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let now = Date()
         let result = settler.makePendingContext(
             origin: .folderWatchAutoOpen,
@@ -32,7 +32,7 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
     }
 
     func test_makePendingContext_shows_loading_for_empty_new_file() {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let result = settler.makePendingContext(
             origin: .folderWatchAutoOpen,
             initialDiffBaselineMarkdown: nil,
@@ -45,7 +45,7 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
     }
 
     func test_makePendingContext_returns_context_for_initial_batch_auto_open() {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let result = settler.makePendingContext(
             origin: .folderWatchInitialBatchAutoOpen,
             initialDiffBaselineMarkdown: nil,
@@ -73,7 +73,7 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
     }
 
     func test_beginSettling_sets_load_state_to_settling_when_loading_overlay() {
-        var loadStates: [ReaderDocumentLoadState] = []
+        var loadStates: [DocumentLoadState] = []
         let settler = makeConfiguredSettler(onLoadStateChanged: { loadStates.append($0) })
 
         let context = PendingAutoOpenSettlingContext(
@@ -87,7 +87,7 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
     }
 
     func test_clearSettling_resets_state() {
-        var loadStates: [ReaderDocumentLoadState] = []
+        var loadStates: [DocumentLoadState] = []
         let settler = makeConfiguredSettler(onLoadStateChanged: { loadStates.append($0) })
 
         let context = PendingAutoOpenSettlingContext(
@@ -103,7 +103,7 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
     }
 
     func test_handleChangeIfNeeded_returns_false_without_context() {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let url = URL(fileURLWithPath: "/tmp/test.md")
         let result = settler.handleChangeIfNeeded(fileURL: url) { _ in
             ("# Hello", Date())
@@ -228,9 +228,9 @@ final class ReaderAutoOpenSettlerTests: XCTestCase {
         currentFileURL: @escaping () -> URL? = { nil },
         loadFile: @escaping (URL) throws -> (markdown: String, modificationDate: Date) = { _ in throw NSError(domain: "test", code: 0) },
         onDocumentSettled: @escaping ((markdown: String, modificationDate: Date), URL, String?) -> Void = { _, _, _ in },
-        onLoadStateChanged: @escaping (ReaderDocumentLoadState) -> Void = { _ in }
-    ) -> ReaderAutoOpenSettler {
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        onLoadStateChanged: @escaping (DocumentLoadState) -> Void = { _ in }
+    ) -> AutoOpenSettler {
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         settler.configure(
             currentFileURL: currentFileURL,
             loadFile: loadFile,

@@ -12,12 +12,12 @@ import Foundation
 @MainActor
 final class AppearanceLockCoordinator {
     private let appearanceControllerProvider: () -> WindowAppearanceController?
-    private let sidebarDocumentController: ReaderSidebarDocumentController
+    private let sidebarDocumentController: SidebarDocumentController
     private let favoriteWorkspaceControllerProvider: () -> FavoriteWorkspaceController?
 
     init(
         appearanceControllerProvider: @escaping () -> WindowAppearanceController?,
-        sidebarDocumentController: ReaderSidebarDocumentController,
+        sidebarDocumentController: SidebarDocumentController,
         favoriteWorkspaceControllerProvider: @escaping () -> FavoriteWorkspaceController?
     ) {
         self.appearanceControllerProvider = appearanceControllerProvider
@@ -50,7 +50,7 @@ final class AppearanceLockCoordinator {
     func reapplyAcrossOpenDocuments() {
         guard let appearanceController = appearanceControllerProvider() else { return }
         // Defer rendering to the next main actor hop to avoid setting @Published
-        // properties on ReaderStore during a SwiftUI view update cycle.
+        // properties on DocumentStore during a SwiftUI view update cycle.
         Task { @MainActor [sidebarDocumentController] in
             let appearance = appearanceController.effectiveAppearance
             for document in sidebarDocumentController.documents {

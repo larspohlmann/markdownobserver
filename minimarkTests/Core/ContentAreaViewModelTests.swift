@@ -5,9 +5,9 @@ import Testing
 @MainActor
 private func makeTestViewModel(
     folderWatchState: ContentViewFolderWatchState = .testEmpty
-) -> (ContentAreaViewModel, ReaderDocumentController, ReaderRenderingController, ReaderSourceEditingController) {
-    let settingsStore = ReaderSettingsStore()
-    let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+) -> (ContentAreaViewModel, DocumentController, RenderingController, SourceEditingController) {
+    let settingsStore = SettingsStore()
+    let settler = AutoOpenSettler(settlingInterval: 1.0)
     let securityScopeResolver = SecurityScopeResolver(
         securityScope: SecurityScopedResourceAccess(),
         settingsStore: settingsStore,
@@ -22,19 +22,19 @@ private func makeTestViewModel(
         renderer: MarkdownRenderingService(),
         differ: ChangedRegionDiffer()
     )
-    let document = ReaderDocumentController(
+    let document = DocumentController(
         fileDependencies: fileDeps,
         settingsStore: settingsStore,
         settler: settler
     )
-    let rendering = ReaderRenderingController(
+    let rendering = RenderingController(
         renderingDependencies: renderingDeps,
         settingsStore: settingsStore,
         securityScopeResolver: securityScopeResolver
     )
-    let sourceEditing = ReaderSourceEditingController()
-    let externalChange = ReaderExternalChangeController()
-    let toc = ReaderTOCController()
+    let sourceEditing = SourceEditingController()
+    let externalChange = ExternalChangeController()
+    let toc = TOCController()
     let surfaceViewModel = DocumentSurfaceViewModel()
 
     let viewModel = ContentAreaViewModel(
@@ -238,8 +238,8 @@ struct ContentAreaViewModelDropRoutingTests {
 
     @Test @MainActor func handleDroppedMarkdownFiresRequestFileOpen() {
         var captured: [ContentViewAction] = []
-        let settingsStore = ReaderSettingsStore()
-        let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+        let settingsStore = SettingsStore()
+        let settler = AutoOpenSettler(settlingInterval: 1.0)
         let securityScopeResolver = SecurityScopeResolver(
             securityScope: SecurityScopedResourceAccess(),
             settingsStore: settingsStore,
@@ -255,19 +255,19 @@ struct ContentAreaViewModelDropRoutingTests {
             differ: ChangedRegionDiffer()
         )
         let viewModel = ContentAreaViewModel(
-            document: ReaderDocumentController(
+            document: DocumentController(
                 fileDependencies: fileDeps,
                 settingsStore: settingsStore,
                 settler: settler
             ),
-            rendering: ReaderRenderingController(
+            rendering: RenderingController(
                 renderingDependencies: renderingDeps,
                 settingsStore: settingsStore,
                 securityScopeResolver: securityScopeResolver
             ),
-            sourceEditing: ReaderSourceEditingController(),
-            externalChange: ReaderExternalChangeController(),
-            toc: ReaderTOCController(),
+            sourceEditing: SourceEditingController(),
+            externalChange: ExternalChangeController(),
+            toc: TOCController(),
             settingsStore: settingsStore,
             folderWatchState: .testEmpty,
             surfaceViewModel: DocumentSurfaceViewModel(),

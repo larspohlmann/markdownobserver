@@ -229,7 +229,7 @@ struct FolderWatchToolbarButton: View {
 // MARK: - BreadcrumbDocumentContext
 
 struct BreadcrumbDocumentContext: View {
-    let projection: ReaderTopBarStoreProjection
+    let projection: TopBarStoreProjection
     let onRevealInFinder: () -> Void
 
     private var hasFile: Bool { projection.fileURL != nil }
@@ -300,7 +300,7 @@ struct BreadcrumbDocumentContext: View {
 
 struct BreadcrumbTimestampLine: View {
     let breadcrumbPath: String
-    let statusTimestamp: ReaderStatusBarTimestamp?
+    let statusTimestamp: StatusBarTimestamp?
     let isCurrentFileMissing: Bool
 
     var body: some View {

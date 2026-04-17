@@ -1,6 +1,6 @@
 import Foundation
 
-@MainActor protocol ReaderAutoOpenSettling: AnyObject {
+@MainActor protocol AutoOpenSettling: AnyObject {
     var pendingContext: PendingAutoOpenSettlingContext? { get }
     func makePendingContext(
         origin: OpenOrigin,
@@ -18,26 +18,26 @@ import Foundation
         currentFileURL: @escaping () -> URL?,
         loadFile: @escaping (URL) throws -> (markdown: String, modificationDate: Date),
         onDocumentSettled: @escaping (_ loaded: (markdown: String, modificationDate: Date), _ fileURL: URL, _ diffBaselineMarkdown: String?) -> Void,
-        onLoadStateChanged: @escaping (ReaderDocumentLoadState) -> Void
+        onLoadStateChanged: @escaping (DocumentLoadState) -> Void
     )
 }
 
-extension ReaderAutoOpenSettling {
+extension AutoOpenSettling {
     func configure(
         currentFileURL: @escaping () -> URL?,
         loadFile: @escaping (URL) throws -> (markdown: String, modificationDate: Date),
         onDocumentSettled: @escaping (_ loaded: (markdown: String, modificationDate: Date), _ fileURL: URL, _ diffBaselineMarkdown: String?) -> Void,
-        onLoadStateChanged: @escaping (ReaderDocumentLoadState) -> Void
+        onLoadStateChanged: @escaping (DocumentLoadState) -> Void
     ) {}
 }
 
 @MainActor
-final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
+final class AutoOpenSettler: AutoOpenSettling {
     private let settlingInterval: TimeInterval
     private var currentFileURL: (() -> URL?)?
     private var loadFile: ((URL) throws -> (markdown: String, modificationDate: Date))?
     private var onDocumentSettled: ((_ loaded: (markdown: String, modificationDate: Date), _ fileURL: URL, _ diffBaselineMarkdown: String?) -> Void)?
-    private var onLoadStateChanged: ((ReaderDocumentLoadState) -> Void)?
+    private var onLoadStateChanged: ((DocumentLoadState) -> Void)?
 
     private var settlingContext: PendingAutoOpenSettlingContext?
     private var settlingTask: Task<Void, Never>?
@@ -58,7 +58,7 @@ final class ReaderAutoOpenSettler: ReaderAutoOpenSettling {
         currentFileURL: @escaping () -> URL?,
         loadFile: @escaping (URL) throws -> (markdown: String, modificationDate: Date),
         onDocumentSettled: @escaping (_ loaded: (markdown: String, modificationDate: Date), _ fileURL: URL, _ diffBaselineMarkdown: String?) -> Void,
-        onLoadStateChanged: @escaping (ReaderDocumentLoadState) -> Void
+        onLoadStateChanged: @escaping (DocumentLoadState) -> Void
     ) {
         self.currentFileURL = currentFileURL
         self.loadFile = loadFile

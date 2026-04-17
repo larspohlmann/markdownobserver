@@ -4,20 +4,20 @@ import OSLog
 
 @MainActor
 @Observable
-final class ReaderStore {
+final class DocumentStore {
     static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "minimark",
-        category: "ReaderStore"
+        category: "DocumentStore"
     )
 
     // MARK: - State controllers
 
-    let document: ReaderDocumentController
-    let toc = ReaderTOCController()
-    let externalChange = ReaderExternalChangeController()
-    let sourceEditingController = ReaderSourceEditingController()
+    let document: DocumentController
+    let toc = TOCController()
+    let externalChange = ExternalChangeController()
+    let sourceEditingController = SourceEditingController()
     let folderWatchDispatcher: FolderWatchDispatcher
-    let renderingController: ReaderRenderingController
+    let renderingController: RenderingController
     let diffBaselineTracker: DiffBaselineTracking
 
     // MARK: - Dependencies (exposed for wiring + logging + tests)
@@ -25,7 +25,7 @@ final class ReaderStore {
     let rendering: RenderingDependencies
     let file: FileDependencies
     let folderWatch: FolderWatchDependencies
-    let settingsStore: ReaderSettingsReading & ReaderRecentWriting
+    let settingsStore: SettingsReading & RecentWriting
     let securityScopeResolver: SecurityScopeResolver
 
     // MARK: - Services
@@ -47,7 +47,7 @@ final class ReaderStore {
 
     // MARK: - Cross-group view-model projections
 
-    var statusBarTimestamp: ReaderStatusBarTimestamp? {
+    var statusBarTimestamp: StatusBarTimestamp? {
         if let date = externalChange.lastExternalChangeAt { return .updated(date) }
         if let date = document.fileLastModifiedAt { return .lastModified(date) }
         if let date = renderingController.lastRefreshAt { return .updated(date) }
@@ -66,11 +66,11 @@ final class ReaderStore {
         rendering: RenderingDependencies,
         file: FileDependencies,
         folderWatch: FolderWatchDependencies,
-        settingsStore: ReaderSettingsReading & ReaderRecentWriting,
+        settingsStore: SettingsReading & RecentWriting,
         securityScopeResolver: SecurityScopeResolver,
         diffBaselineTracker: DiffBaselineTracking? = nil
     ) {
-        self.document = ReaderDocumentController(
+        self.document = DocumentController(
             fileDependencies: file,
             settingsStore: settingsStore,
             settler: folderWatch.settler
@@ -78,7 +78,7 @@ final class ReaderStore {
         let folderWatchDispatcher = FolderWatchDispatcher(folderWatchDependencies: folderWatch)
         self.folderWatchDispatcher = folderWatchDispatcher
         self.rendering = rendering
-        self.renderingController = ReaderRenderingController(
+        self.renderingController = RenderingController(
             renderingDependencies: rendering,
             settingsStore: settingsStore,
             securityScopeResolver: securityScopeResolver

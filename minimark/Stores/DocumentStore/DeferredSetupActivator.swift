@@ -3,10 +3,10 @@ import Combine
 
 @MainActor
 final class DeferredSetupActivator {
-    private let document: ReaderDocumentController
+    private let document: DocumentController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let folderWatch: FolderWatchDependencies
-    private let settingsStore: ReaderSettingsReading
+    private let settingsStore: SettingsReading
     private let diffBaselineTracker: DiffBaselineTracking
     private let fileLoader: MarkdownFileLoader
     private let presenter: DocumentPresenter
@@ -15,10 +15,10 @@ final class DeferredSetupActivator {
     private var settingsCancellable: AnyCancellable?
 
     init(
-        document: ReaderDocumentController,
+        document: DocumentController,
         folderWatchDispatcher: FolderWatchDispatcher,
         folderWatch: FolderWatchDependencies,
-        settingsStore: ReaderSettingsReading,
+        settingsStore: SettingsReading,
         diffBaselineTracker: DiffBaselineTracking,
         fileLoader: MarkdownFileLoader,
         presenter: DocumentPresenter

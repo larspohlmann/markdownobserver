@@ -12,7 +12,7 @@ import Observation
 @MainActor
 @Observable
 final class WindowShellController {
-    private let sidebarDocumentController: ReaderSidebarDocumentController
+    private let sidebarDocumentController: SidebarDocumentController
     private let folderWatchSessionProvider: () -> FolderWatchSession?
 
     var hostWindow: NSWindow?
@@ -33,7 +33,7 @@ final class WindowShellController {
     }
 
     init(
-        sidebarDocumentController: ReaderSidebarDocumentController,
+        sidebarDocumentController: SidebarDocumentController,
         folderWatchSessionProvider: @escaping () -> FolderWatchSession?
     ) {
         self.sidebarDocumentController = sidebarDocumentController

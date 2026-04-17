@@ -3,7 +3,7 @@ import SwiftUI
 
 @MainActor
 final class HostedWindowController: NSWindowController {
-    init(settingsStore: ReaderSettingsStore) {
+    init(settingsStore: SettingsStore) {
         let hostingController = NSHostingController(
             rootView: ReaderWindowRootView(
                 seed: nil,

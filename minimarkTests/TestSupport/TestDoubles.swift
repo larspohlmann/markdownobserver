@@ -95,7 +95,7 @@ final class TestFileWatcher: FileChangeWatching {
 }
 
 @MainActor
-final class TestReaderSettingsStore: ReaderSettingsStoring {
+final class TestReaderSettingsStore: SettingsStoring {
     var settingsPublisher: AnyPublisher<ReaderSettings, Never> {
         subject.eraseToAnyPublisher()
     }
@@ -585,7 +585,7 @@ final class TestSecurityToken: SecurityScopedAccessToken {
 }
 
 @MainActor
-final class TestReaderAutoOpenSettler: ReaderAutoOpenSettling {
+final class TestReaderAutoOpenSettler: AutoOpenSettling {
     var pendingContext: PendingAutoOpenSettlingContext?
 
     private(set) var beginSettlingCalls: [PendingAutoOpenSettlingContext?] = []
@@ -836,7 +836,7 @@ struct ReaderStoreTestFixture {
     let temporaryDirectoryURL: URL
     let primaryFileURL: URL
     let secondaryFileURL: URL
-    let store: ReaderStore
+    let store: DocumentStore
     let notifier = TestReaderSystemNotifier()
 
     private let renderer = TestMarkdownRenderer()
@@ -876,8 +876,8 @@ struct ReaderStoreTestFixture {
             settingsStore: settings,
             requestWatchedFolderReauthorization: requestWatchedFolderReauthorization
         )
-        let settler = ReaderAutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
-        store = ReaderStore(
+        let settler = AutoOpenSettler(settlingInterval: autoOpenSettlingInterval)
+        store = DocumentStore(
             rendering: RenderingDependencies(renderer: renderer, differ: differ),
             file: FileDependencies(watcher: watcher, io: DocumentIOService(), actions: fileActions),
             folderWatch: FolderWatchDependencies(
@@ -898,11 +898,11 @@ struct ReaderStoreTestFixture {
         try? FileManager.default.removeItem(at: url)
     }
 
-    var document: ReaderDocumentController { store.document }
-    var rendering: ReaderRenderingController { store.renderingController }
-    var sourceEditing: ReaderSourceEditingController { store.sourceEditingController }
-    var externalChange: ReaderExternalChangeController { store.externalChange }
-    var tocController: ReaderTOCController { store.toc }
+    var document: DocumentController { store.document }
+    var rendering: RenderingController { store.renderingController }
+    var sourceEditing: SourceEditingController { store.sourceEditingController }
+    var externalChange: ExternalChangeController { store.externalChange }
+    var tocController: TOCController { store.toc }
     var folderWatchDispatcherController: FolderWatchDispatcher { store.folderWatchDispatcher }
 
     func cleanup() {
@@ -915,10 +915,10 @@ struct ReaderSidebarControllerTestHarness {
     let temporaryDirectoryURL: URL
     let primaryFileURL: URL
     let secondaryFileURL: URL
-    let controller: ReaderSidebarDocumentController
+    let controller: SidebarDocumentController
     let folderWatchControllerWatcher: TestFolderWatcher
     let fileWatchers: [TestFileWatcher]
-    let settingsStore: ReaderSettingsStore
+    let settingsStore: SettingsStore
 
     init() throws {
         let directory = FileManager.default.temporaryDirectory
@@ -932,7 +932,7 @@ struct ReaderSidebarControllerTestHarness {
         try "# Alpha".write(to: primaryFileURL, atomically: true, encoding: .utf8)
         try "# Zeta".write(to: secondaryFileURL, atomically: true, encoding: .utf8)
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.sidebar.tests.\(UUID().uuidString)"
         )
@@ -940,18 +940,18 @@ struct ReaderSidebarControllerTestHarness {
         let controllerWatcher = TestFolderWatcher()
         folderWatchControllerWatcher = controllerWatcher
         var createdFileWatchers: [TestFileWatcher] = []
-        controller = ReaderSidebarDocumentController(
+        controller = SidebarDocumentController(
             settingsStore: settingsStore,
             makeReaderStore: {
                 let fileWatcher = TestFileWatcher()
                 createdFileWatchers.append(fileWatcher)
-                let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+                let settler = AutoOpenSettler(settlingInterval: 1.0)
                 let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
                     settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
-                let store = ReaderStore(
+                let store = DocumentStore(
                     rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),

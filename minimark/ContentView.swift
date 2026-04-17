@@ -173,8 +173,8 @@ struct ContentView: View {
 }
 
 #Preview {
-    let settingsStore = ReaderSettingsStore()
-    let settler = ReaderAutoOpenSettler(settlingInterval: 1.0)
+    let settingsStore = SettingsStore()
+    let settler = AutoOpenSettler(settlingInterval: 1.0)
     let securityScopeResolver = SecurityScopeResolver(
         securityScope: SecurityScopedResourceAccess(),
         settingsStore: settingsStore,
@@ -189,19 +189,19 @@ struct ContentView: View {
         renderer: MarkdownRenderingService(),
         differ: ChangedRegionDiffer()
     )
-    let document = ReaderDocumentController(
+    let document = DocumentController(
         fileDependencies: fileDeps,
         settingsStore: settingsStore,
         settler: settler
     )
-    let rendering = ReaderRenderingController(
+    let rendering = RenderingController(
         renderingDependencies: renderingDeps,
         settingsStore: settingsStore,
         securityScopeResolver: securityScopeResolver
     )
-    let sourceEditing = ReaderSourceEditingController()
-    let externalChange = ReaderExternalChangeController()
-    let toc = ReaderTOCController()
+    let sourceEditing = SourceEditingController()
+    let externalChange = ExternalChangeController()
+    let toc = TOCController()
 
     let viewModel = ContentAreaViewModel(
         document: document,

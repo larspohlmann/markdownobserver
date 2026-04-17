@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct ContentViewFocusedValues: ViewModifier {
-    let document: ReaderDocumentController
-    let sourceEditing: ReaderSourceEditingController
-    let toc: ReaderTOCController
+    let document: DocumentController
+    let sourceEditing: SourceEditingController
+    let toc: TOCController
     let folderWatchState: ContentViewFolderWatchState
     let onAction: (ContentViewAction) -> Void
     let canNavigateChangedRegions: Bool

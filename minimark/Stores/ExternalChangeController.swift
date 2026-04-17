@@ -1,21 +1,21 @@
 import Foundation
 import Observation
 
-enum ReaderExternalChangeKind: Equatable, Sendable {
+enum ExternalChangeKind: Equatable, Sendable {
     case added
     case modified
 }
 
 @MainActor
 @Observable
-final class ReaderExternalChangeController {
+final class ExternalChangeController {
     var lastExternalChangeAt: Date?
     var hasUnacknowledgedExternalChange: Bool = false
-    var unacknowledgedExternalChangeKind: ReaderExternalChangeKind = .modified
+    var unacknowledgedExternalChangeKind: ExternalChangeKind = .modified
 
     @ObservationIgnored var onStateChanged: (() -> Void)?
 
-    func noteObservedExternalChange(kind: ReaderExternalChangeKind = .modified) {
+    func noteObservedExternalChange(kind: ExternalChangeKind = .modified) {
         let previousKind = unacknowledgedExternalChangeKind
         let wasAcknowledged = !hasUnacknowledgedExternalChange
         lastExternalChangeAt = Date()

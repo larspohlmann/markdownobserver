@@ -22,15 +22,15 @@ final class FolderWatchFlowController {
         pendingFolderWatchRequest?.folderURL
     }
 
-    private let settingsStore: ReaderSettingsStore
-    private let sidebarDocumentController: ReaderSidebarDocumentController
+    private let settingsStore: SettingsStore
+    private let sidebarDocumentController: SidebarDocumentController
 
     // Cross-references (set via configure())
     private(set) weak var favoriteWorkspaceController: FavoriteWorkspaceController?
     private(set) weak var groupStateController: SidebarGroupStateController?
     private(set) weak var appearanceController: WindowAppearanceController?
 
-    init(settingsStore: ReaderSettingsStore, sidebarDocumentController: ReaderSidebarDocumentController) {
+    init(settingsStore: SettingsStore, sidebarDocumentController: SidebarDocumentController) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
     }

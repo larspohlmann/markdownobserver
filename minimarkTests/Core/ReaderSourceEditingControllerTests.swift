@@ -2,11 +2,11 @@ import Testing
 @testable import minimark
 
 @MainActor
-@Suite("ReaderSourceEditingController")
+@Suite("SourceEditingController")
 struct ReaderSourceEditingControllerTests {
     @Test("startEditing begins session with saved markdown")
     func startEditingBeginsSession() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.startEditing(
             savedMarkdown: "# Hello",
             hasOpenDocument: true,
@@ -20,7 +20,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("startEditing does nothing without open document")
     func startEditingRequiresOpenDocument() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.startEditing(
             savedMarkdown: "# Hello",
             hasOpenDocument: false,
@@ -31,7 +31,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("startEditing does nothing when file is missing")
     func startEditingRequiresFileNotMissing() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.startEditing(
             savedMarkdown: "# Hello",
             hasOpenDocument: true,
@@ -42,7 +42,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("updateDraft sets draft and flags unsaved changes")
     func updateDraftSetsDraft() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.startEditing(
             savedMarkdown: "# Hello",
             hasOpenDocument: true,
@@ -60,7 +60,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("finishSession clears editing state")
     func finishSessionClearsState() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.startEditing(
             savedMarkdown: "# Hello",
             hasOpenDocument: true,
@@ -75,7 +75,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("reset clears all editing state")
     func resetClearsState() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.startEditing(
             savedMarkdown: "# Hello",
             hasOpenDocument: true,
@@ -89,21 +89,21 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("setViewMode changes mode when document is open")
     func setViewModeChangesMode() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.setViewMode(.split, hasOpenDocument: true)
         #expect(sut.documentViewMode == .split)
     }
 
     @Test("setViewMode falls back to preview without open document")
     func setViewModeFallsBackWithoutDocument() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         sut.setViewMode(.split, hasOpenDocument: false)
         #expect(sut.documentViewMode == .preview)
     }
 
     @Test("toggleViewMode cycles through modes")
     func toggleViewModeCycles() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         #expect(sut.documentViewMode == .preview)
         sut.toggleViewMode()
         #expect(sut.documentViewMode == .split)
@@ -115,7 +115,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("canSaveSourceDraft requires editing and unsaved changes")
     func canSaveSourceDraft() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         #expect(!sut.canSaveSourceDraft)
 
         sut.startEditing(savedMarkdown: "# Hello", hasOpenDocument: true, isCurrentFileMissing: false)
@@ -127,7 +127,7 @@ struct ReaderSourceEditingControllerTests {
 
     @Test("canDiscardSourceDraft requires editing")
     func canDiscardSourceDraft() {
-        let sut = ReaderSourceEditingController()
+        let sut = SourceEditingController()
         #expect(!sut.canDiscardSourceDraft)
 
         sut.startEditing(savedMarkdown: "# Hello", hasOpenDocument: true, isCurrentFileMissing: false)

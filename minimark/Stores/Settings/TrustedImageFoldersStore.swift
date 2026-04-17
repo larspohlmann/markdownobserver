@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import Observation
 
-@MainActor @Observable final class TrustedImageFoldersStore: ReaderTrustedFolderWriting {
+@MainActor @Observable final class TrustedImageFoldersStore: TrustedFolderWriting {
     private(set) var currentTrustedFolders: [TrustedImageFolder]
 
     weak var coordinator: ChildStoreCoordinating?

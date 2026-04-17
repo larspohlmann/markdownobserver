@@ -2,23 +2,23 @@ import Foundation
 
 @MainActor
 final class DocumentPresenter {
-    private let document: ReaderDocumentController
-    private let sourceEditingController: ReaderSourceEditingController
-    private let externalChange: ReaderExternalChangeController
-    private let toc: ReaderTOCController
-    private let renderingController: ReaderRenderingController
+    private let document: DocumentController
+    private let sourceEditingController: SourceEditingController
+    private let externalChange: ExternalChangeController
+    private let toc: TOCController
+    private let renderingController: RenderingController
     private let folderWatchDispatcher: FolderWatchDispatcher
-    private let settler: ReaderAutoOpenSettling
+    private let settler: AutoOpenSettling
     private let fileLoader: MarkdownFileLoader
 
     init(
-        document: ReaderDocumentController,
-        sourceEditingController: ReaderSourceEditingController,
-        externalChange: ReaderExternalChangeController,
-        toc: ReaderTOCController,
-        renderingController: ReaderRenderingController,
+        document: DocumentController,
+        sourceEditingController: SourceEditingController,
+        externalChange: ExternalChangeController,
+        toc: TOCController,
+        renderingController: RenderingController,
         folderWatchDispatcher: FolderWatchDispatcher,
-        settler: ReaderAutoOpenSettling,
+        settler: AutoOpenSettling,
         fileLoader: MarkdownFileLoader
     ) {
         self.document = document

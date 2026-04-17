@@ -9,13 +9,13 @@ enum ReaderSidebarWorkspaceMetrics {
 }
 
 struct ReaderSidebarWorkspaceView<Detail: View>: View {
-    var controller: ReaderSidebarDocumentController
-    var settingsStore: ReaderSettingsStore
+    var controller: SidebarDocumentController
+    var settingsStore: SettingsStore
     var groupState: SidebarGroupStateController
     let sidebarPlacement: MultiFileDisplayMode.SidebarPlacement
     let sidebarWidth: CGFloat
     let onSidebarWidthChanged: (CGFloat) -> Void
-    let detail: (ReaderStore) -> Detail
+    let detail: (DocumentStore) -> Detail
     let onToggleSidebarPlacement: () -> Void
     let onOpenInDefaultApp: (Set<UUID>) -> Void
     let onOpenInApplication: (ExternalApplication, Set<UUID>) -> Void
@@ -294,8 +294,8 @@ private struct ReaderSidebarDocumentRow: View {
 
     let state: SidebarRowState
     let settings: ReaderSettings
-    let documents: [ReaderSidebarDocumentController.Document]
-    let readerStore: ReaderStore
+    let documents: [SidebarDocumentController.Document]
+    let readerStore: DocumentStore
     let watchedDocumentIDs: Set<UUID>
     let selectedDocumentIDs: Set<UUID>
     let showsSelectionBackground: Bool
@@ -316,11 +316,11 @@ private struct ReaderSidebarDocumentRow: View {
         return [state.id]
     }
 
-    private var effectiveDocuments: [ReaderSidebarDocumentController.Document] {
+    private var effectiveDocuments: [SidebarDocumentController.Document] {
         documents.filter { effectiveDocumentIDs.contains($0.id) }
     }
 
-    private var effectiveReaderStores: [ReaderStore] {
+    private var effectiveReaderStores: [DocumentStore] {
         effectiveDocuments.map(\.readerStore)
     }
 
@@ -716,8 +716,8 @@ private struct SidebarGroupDropIndicator: View {
 
 private struct SidebarGroupListContent: View {
     var groupState: SidebarGroupStateController
-    var controller: ReaderSidebarDocumentController
-    let settingsStore: ReaderSettingsStore
+    var controller: SidebarDocumentController
+    let settingsStore: SettingsStore
     @Binding var selectedDocumentIDs: Set<UUID>
     let watchedDocumentIDs: Set<UUID>
     let onUpdateSelection: (Set<UUID>) -> Void
@@ -745,7 +745,7 @@ private struct SidebarGroupListContent: View {
 
     @ViewBuilder
     private func flatSidebarList(
-        documents: [ReaderSidebarDocumentController.Document]
+        documents: [SidebarDocumentController.Document]
     ) -> some View {
         List(
             selection: Binding(
@@ -920,8 +920,8 @@ private struct SidebarGroupListContent: View {
     }
 
     private func groupedDocumentRow(
-        for document: ReaderSidebarDocumentController.Document,
-        allDocuments: [ReaderSidebarDocumentController.Document]
+        for document: SidebarDocumentController.Document,
+        allDocuments: [SidebarDocumentController.Document]
     ) -> some View {
         documentRow(
             for: document,
@@ -980,8 +980,8 @@ private struct SidebarGroupListContent: View {
     }
 
     private func documentRow(
-        for document: ReaderSidebarDocumentController.Document,
-        allDocuments: [ReaderSidebarDocumentController.Document],
+        for document: SidebarDocumentController.Document,
+        allDocuments: [SidebarDocumentController.Document],
         showsSelectionBackground: Bool = false
     ) -> some View {
         let rowState = controller.rowStates[document.id]

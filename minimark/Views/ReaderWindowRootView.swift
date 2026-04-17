@@ -3,11 +3,11 @@ import SwiftUI
 
 struct ReaderWindowRootView: View {
     let seed: WindowSeed?
-    var settingsStore: ReaderSettingsStore
+    var settingsStore: SettingsStore
     let multiFileDisplayMode: MultiFileDisplayMode
 
     @Environment(\.openWindow) private var openWindow
-    @State var sidebarDocumentController: ReaderSidebarDocumentController
+    @State var sidebarDocumentController: SidebarDocumentController
     @State var windowCoordinator: ReaderWindowCoordinator
     @State var appearanceController: WindowAppearanceController
     @State var groupStateController = SidebarGroupStateController()
@@ -18,13 +18,13 @@ struct ReaderWindowRootView: View {
 
     init(
         seed: WindowSeed?,
-        settingsStore: ReaderSettingsStore,
+        settingsStore: SettingsStore,
         multiFileDisplayMode: MultiFileDisplayMode
     ) {
         self.seed = seed
         self.settingsStore = settingsStore
         self.multiFileDisplayMode = multiFileDisplayMode
-        let sidebarDocumentController = ReaderSidebarDocumentController(settingsStore: settingsStore)
+        let sidebarDocumentController = SidebarDocumentController(settingsStore: settingsStore)
         _sidebarDocumentController = State(wrappedValue: sidebarDocumentController)
         _windowCoordinator = State(
             wrappedValue: ReaderWindowCoordinator(
@@ -409,7 +409,7 @@ struct ReaderWindowRootView: View {
         }
     }
 
-    private func contentView(for store: ReaderStore) -> some View {
+    private func contentView(for store: DocumentStore) -> some View {
         @Bindable var folderWatchFlow = folderWatchFlowController
         return ContentViewAdapter(
             readerStore: store,

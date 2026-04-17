@@ -3,7 +3,7 @@ import Observation
 
 @MainActor
 @Observable
-final class ReaderRenderingController {
+final class RenderingController {
     static let draftPreviewRenderDebounceInterval: Duration = .milliseconds(5)
 
     var renderedHTMLDocument: String = ""
@@ -15,12 +15,12 @@ final class ReaderRenderingController {
     @ObservationIgnored var pendingDraftPreviewRenderTask: Task<Void, Never>?
 
     private let renderingDependencies: RenderingDependencies
-    private let settingsStore: ReaderSettingsReading
+    private let settingsStore: SettingsReading
     private let securityScopeResolver: SecurityScopeResolver
 
     init(
         renderingDependencies: RenderingDependencies,
-        settingsStore: ReaderSettingsReading,
+        settingsStore: SettingsReading,
         securityScopeResolver: SecurityScopeResolver
     ) {
         self.renderingDependencies = renderingDependencies

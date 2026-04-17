@@ -10,8 +10,8 @@ import Foundation
 final class ContentViewActionRouter {
     private let documentOpen: WindowDocumentOpenCoordinator
     private let appearanceLock: AppearanceLockCoordinator
-    private let sidebarDocumentController: ReaderSidebarDocumentController
-    private let settingsStore: ReaderSettingsStore
+    private let sidebarDocumentController: SidebarDocumentController
+    private let settingsStore: SettingsStore
     private let folderWatchFlowControllerProvider: () -> FolderWatchFlowController?
     private let favoriteWorkspaceControllerProvider: () -> FavoriteWorkspaceController?
     private let recentHistoryCoordinatorProvider: () -> RecentHistoryCoordinator?
@@ -27,8 +27,8 @@ final class ContentViewActionRouter {
     init(
         documentOpen: WindowDocumentOpenCoordinator,
         appearanceLock: AppearanceLockCoordinator,
-        sidebarDocumentController: ReaderSidebarDocumentController,
-        settingsStore: ReaderSettingsStore,
+        sidebarDocumentController: SidebarDocumentController,
+        settingsStore: SettingsStore,
         folderWatchFlowControllerProvider: @escaping () -> FolderWatchFlowController?,
         favoriteWorkspaceControllerProvider: @escaping () -> FavoriteWorkspaceController?,
         recentHistoryCoordinatorProvider: @escaping () -> RecentHistoryCoordinator?,

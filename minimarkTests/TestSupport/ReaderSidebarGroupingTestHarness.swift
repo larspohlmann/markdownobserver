@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct ReaderSidebarGroupingTestHarness {
     let temporaryDirectoryURL: URL
-    let documents: [ReaderSidebarDocumentController.Document]
+    let documents: [SidebarDocumentController.Document]
 
     init(subdirectories: [String], filesPerSubdirectory: Int) throws {
         let directory = FileManager.default.temporaryDirectory
@@ -13,12 +13,12 @@ struct ReaderSidebarGroupingTestHarness {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         temporaryDirectoryURL = directory
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.grouping.tests.\(UUID().uuidString)"
         )
 
-        var allDocuments: [ReaderSidebarDocumentController.Document] = []
+        var allDocuments: [SidebarDocumentController.Document] = []
 
         for subdirectory in subdirectories {
             let subURL = directory.appendingPathComponent(subdirectory, isDirectory: true)
@@ -33,7 +33,7 @@ struct ReaderSidebarGroupingTestHarness {
                     settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
                 )
-                let store = ReaderStore(
+                let store = DocumentStore(
                     rendering: RenderingDependencies(
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
@@ -42,7 +42,7 @@ struct ReaderSidebarGroupingTestHarness {
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
-                        settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                        settler: AutoOpenSettler(settlingInterval: 1.0),
                         systemNotifier: TestReaderSystemNotifier()
                     ),
                     settingsStore: settingsStore,
@@ -52,7 +52,7 @@ struct ReaderSidebarGroupingTestHarness {
                 store.testSetFileDisplayName(fileURL.lastPathComponent)
 
                 allDocuments.append(
-                    ReaderSidebarDocumentController.Document(id: UUID(), readerStore: store)
+                    SidebarDocumentController.Document(id: UUID(), readerStore: store)
                 )
             }
         }
@@ -60,7 +60,7 @@ struct ReaderSidebarGroupingTestHarness {
         documents = allDocuments
     }
 
-    func documentsInSubdirectory(_ name: String) -> [ReaderSidebarDocumentController.Document] {
+    func documentsInSubdirectory(_ name: String) -> [SidebarDocumentController.Document] {
         let subURL = temporaryDirectoryURL.appendingPathComponent(name, isDirectory: true)
         return documents.filter { doc in
             doc.readerStore.document.fileURL?.deletingLastPathComponent().path(percentEncoded: false) == subURL.path(percentEncoded: false)

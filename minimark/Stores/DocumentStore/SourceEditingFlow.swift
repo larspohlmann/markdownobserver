@@ -2,10 +2,10 @@ import Foundation
 
 @MainActor
 final class SourceEditingFlow {
-    private let document: ReaderDocumentController
-    private let sourceEditingController: ReaderSourceEditingController
-    private let externalChange: ReaderExternalChangeController
-    private let renderingController: ReaderRenderingController
+    private let document: DocumentController
+    private let sourceEditingController: SourceEditingController
+    private let externalChange: ExternalChangeController
+    private let renderingController: RenderingController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let persister: SourceDraftPersister
     private let reloader: DocumentReloader
@@ -13,10 +13,10 @@ final class SourceEditingFlow {
     private let onError: @MainActor (Error) -> Void
 
     init(
-        document: ReaderDocumentController,
-        sourceEditingController: ReaderSourceEditingController,
-        externalChange: ReaderExternalChangeController,
-        renderingController: ReaderRenderingController,
+        document: DocumentController,
+        sourceEditingController: SourceEditingController,
+        externalChange: ExternalChangeController,
+        renderingController: RenderingController,
         folderWatchDispatcher: FolderWatchDispatcher,
         persister: SourceDraftPersister,
         reloader: DocumentReloader,

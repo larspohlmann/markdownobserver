@@ -2,9 +2,9 @@ import Foundation
 
 @MainActor
 final class DocumentOpener {
-    private let document: ReaderDocumentController
-    private let externalChange: ReaderExternalChangeController
-    private let sourceEditingController: ReaderSourceEditingController
+    private let document: DocumentController
+    private let externalChange: ExternalChangeController
+    private let sourceEditingController: SourceEditingController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let securityScopeResolver: SecurityScopeResolver
     private let folderWatch: FolderWatchDependencies
@@ -16,9 +16,9 @@ final class DocumentOpener {
     private let onError: @MainActor (Error) -> Void
 
     init(
-        document: ReaderDocumentController,
-        externalChange: ReaderExternalChangeController,
-        sourceEditingController: ReaderSourceEditingController,
+        document: DocumentController,
+        externalChange: ExternalChangeController,
+        sourceEditingController: SourceEditingController,
         folderWatchDispatcher: FolderWatchDispatcher,
         securityScopeResolver: SecurityScopeResolver,
         folderWatch: FolderWatchDependencies,

@@ -133,61 +133,61 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func readerSettingsStorePersistsMultiFileDisplayMode() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         store.updateMultiFileDisplayMode(.sidebarRight)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(reloadedStore.currentSettings.multiFileDisplayMode == .sidebarRight)
     }
 
     @Test @MainActor func readerSettingsStorePersistsAppAppearance() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.app-appearance.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         store.updateAppAppearance(.dark)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(reloadedStore.currentSettings.appAppearance == .dark)
     }
 
     @Test @MainActor func readerSettingsStorePersistsSidebarSortMode() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.sidebar-sort.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         store.updateSidebarSortMode(.lastChangedNewestFirst)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(reloadedStore.currentSettings.sidebarSortMode == .lastChangedNewestFirst)
     }
 
     @Test @MainActor func readerSettingsStorePersistsSidebarGroupSortMode() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.sidebar-group-sort.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         store.updateSidebarGroupSortMode(.nameAscending)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(reloadedStore.currentSettings.sidebarGroupSortMode == .nameAscending)
     }
 
     @Test @MainActor func readerSettingsStorePersistsNotificationsEnabled() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.notifications.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         store.updateNotificationsEnabled(false)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(!reloadedStore.currentSettings.notificationsEnabled)
     }
 
     @Test @MainActor func readerSettingsStoreDefaultsToSidebarDisplayMode() {
         let storage = TestSettingsKeyValueStorage()
-        let store = ReaderSettingsStore(storage: storage, storageKey: "reader.settings.default-mode.tests")
+        let store = SettingsStore(storage: storage, storageKey: "reader.settings.default-mode.tests")
 
         #expect(store.currentSettings.appAppearance == .system)
         #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
@@ -201,7 +201,7 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func readerSettingsStorePersistsRecentHistoryAndCapsEntries() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.recent-history.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         for index in 0..<20 {
             store.addRecentManuallyOpenedFile(URL(fileURLWithPath: "/tmp/file-\(index).md"))
@@ -220,7 +220,7 @@ struct ReaderSettingsAndModelsTests {
             options: .init(openMode: .watchChangesOnly, scope: .includeSubfolders)
         )
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
 
         #expect(reloadedStore.currentSettings.recentManuallyOpenedFiles.count == 15)
         #expect(reloadedStore.currentSettings.recentWatchedFolders.count == 15)
@@ -249,7 +249,7 @@ struct ReaderSettingsAndModelsTests {
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
 
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
         let resolvedURL = store.resolvedRecentManuallyOpenedFileURL(matching: fileURL)
 
         #expect(resolvedURL?.path == fileURL.path)
@@ -280,7 +280,7 @@ struct ReaderSettingsAndModelsTests {
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
 
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
         let resolvedURL = store.resolvedRecentWatchedFolderURL(matching: folderURL)
 
         #expect(resolvedURL?.path == folderURL.path)
@@ -315,7 +315,7 @@ struct ReaderSettingsAndModelsTests {
 
         var resolvedBookmarkDataValues: [Data] = []
         var createdBookmarkURLs: [URL] = []
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: storage,
             storageKey: storageKey,
             bookmarkResolver: { bookmarkData in
@@ -361,7 +361,7 @@ struct ReaderSettingsAndModelsTests {
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
 
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
         let resolvedURL = store.resolvedRecentManuallyOpenedFileURL(matching: fileURL)
 
         #expect(resolvedURL != nil)
@@ -493,7 +493,7 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func readerSettingsStoreCoalescesPersistCallsWithinThrottleWindow() async {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.persist-throttle.tests"
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: storage,
             storageKey: storageKey,
             minimumPersistInterval: 0.5
@@ -510,7 +510,7 @@ struct ReaderSettingsAndModelsTests {
 
         #expect(storage.setCallCount == 2)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(reloadedStore.currentSettings.baseFontSize == 18)
     }
 
@@ -519,7 +519,7 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func trustedImageFolderInsertDeduplicatesAndPersists() throws {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.trusted-image.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         let folderA = URL(fileURLWithPath: "/tmp/docs-a", isDirectory: true)
         let folderB = URL(fileURLWithPath: "/tmp/docs-b", isDirectory: true)
@@ -557,7 +557,7 @@ struct ReaderSettingsAndModelsTests {
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
 
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: storage,
             storageKey: storageKey,
             bookmarkResolver: { _ in (resolvedURL, false) }
@@ -591,7 +591,7 @@ struct ReaderSettingsAndModelsTests {
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
 
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: storage,
             storageKey: storageKey,
             bookmarkResolver: { _ in (folderURL, false) }
@@ -624,7 +624,7 @@ struct ReaderSettingsAndModelsTests {
         )
         storage.set(try JSONEncoder().encode(seededSettings), forKey: storageKey)
 
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: storage,
             storageKey: storageKey,
             bookmarkResolver: { _ in throw NSError(domain: "test", code: 1) }
@@ -801,7 +801,7 @@ struct ReaderSettingsAndModelsTests {
         let storageKey = "reader.settings.legacy-mode.tests"
         storage.set("{\"readerTheme\":\"blackOnWhite\",\"syntaxTheme\":\"monokai\",\"baseFontSize\":15,\"autoRefreshOnExternalChange\":true,\"multiFileDisplayMode\":\"sidebar\"}".data(using: .utf8), forKey: storageKey)
 
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         #expect(store.currentSettings.appAppearance == .system)
         #expect(store.currentSettings.multiFileDisplayMode == .sidebarLeft)
@@ -820,7 +820,7 @@ struct ReaderSettingsAndModelsTests {
             forKey: storageKey
         )
 
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         #expect(store.currentSettings.appAppearance == .dark)
         #expect(store.currentSettings.readerTheme == .whiteOnBlack)
@@ -942,12 +942,12 @@ struct ReaderSettingsAndModelsTests {
     @Test @MainActor func dismissedHintsPersistAcrossReload() {
         let storage = TestSettingsKeyValueStorage()
         let storageKey = "reader.settings.dismissed-hints.tests"
-        let store = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
 
         store.dismissHint(.manualGroupReorder)
         store.dismissHint(.changeNavigation)
 
-        let reloadedStore = ReaderSettingsStore(storage: storage, storageKey: storageKey)
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
         #expect(reloadedStore.isHintDismissed(.manualGroupReorder))
         #expect(reloadedStore.isHintDismissed(.changeNavigation))
         #expect(!reloadedStore.isHintDismissed(.multiSelect))
