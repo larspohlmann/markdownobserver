@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class ReaderHostedWindowController: NSWindowController {
+final class HostedWindowController: NSWindowController {
     init(settingsStore: ReaderSettingsStore) {
         let hostingController = NSHostingController(
             rootView: ReaderWindowRootView(
@@ -16,15 +16,15 @@ final class ReaderHostedWindowController: NSWindowController {
             contentRect: NSRect(
                 x: 0,
                 y: 0,
-                width: ReaderWindowDefaults.defaultWidth,
-                height: ReaderWindowDefaults.defaultHeight
+                width: WindowDefaults.defaultWidth,
+                height: WindowDefaults.defaultHeight
             ),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.contentViewController = hostingController
-        window.title = ReaderWindowTitleFormatter.appName
+        window.title = WindowTitleFormatter.appName
         window.isReleasedWhenClosed = false
 
         super.init(window: window)

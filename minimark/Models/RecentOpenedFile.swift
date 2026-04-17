@@ -28,7 +28,7 @@ nonisolated struct RecentOpenedFile: Equatable, Hashable, Codable, Sendable, Ide
     }
 
     init(fileURL: URL) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedURL = FileRouting.normalizedFileURL(fileURL)
         filePath = normalizedURL.path
         bookmarkData = try? fileURL.bookmarkData(
             options: [.withSecurityScope],

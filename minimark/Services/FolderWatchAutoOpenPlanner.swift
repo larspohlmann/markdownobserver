@@ -128,12 +128,12 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
         events
             .map {
                 FolderWatchChangeEvent(
-                    fileURL: ReaderFileRouting.normalizedFileURL($0.fileURL),
+                    fileURL: FileRouting.normalizedFileURL($0.fileURL),
                     kind: $0.kind,
                     previousMarkdown: $0.previousMarkdown
                 )
             }
-            .filter { ReaderFileRouting.isSupportedMarkdownFileURL($0.fileURL) }
+            .filter { FileRouting.isSupportedMarkdownFileURL($0.fileURL) }
             .filter { event in
                 guard let currentDocumentFileURL else {
                     return true
@@ -152,7 +152,7 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
                 return event
             }
 
-            let fileURL = ReaderFileRouting.normalizedFileURL(event.fileURL)
+            let fileURL = FileRouting.normalizedFileURL(event.fileURL)
             let baseline = diffBaselineTracker.recordAndSelectBaseline(
                 markdown: previousMarkdown,
                 for: fileURL,

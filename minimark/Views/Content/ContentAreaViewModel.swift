@@ -143,7 +143,7 @@ final class ContentAreaViewModel {
     }
 
     var isUITestModeEnabled: Bool {
-        ReaderUITestLaunchConfiguration.current.isUITestModeEnabled
+        UITestLaunchConfiguration.current.isUITestModeEnabled
     }
 
     func handleAppear() {
@@ -163,18 +163,18 @@ final class ContentAreaViewModel {
     }
 
     func canAcceptDroppedFileURLs(_ fileURLs: [URL]) -> Bool {
-        !ReaderFileRouting.containsLikelyDirectoryPath(in: fileURLs)
+        !FileRouting.containsLikelyDirectoryPath(in: fileURLs)
             || folderWatchState.activeFolderWatch == nil
     }
 
     func handleDroppedFileURLs(_ fileURLs: [URL]) {
-        if let droppedFolderURL = ReaderFileRouting.firstDroppedDirectoryURL(from: fileURLs) {
+        if let droppedFolderURL = FileRouting.firstDroppedDirectoryURL(from: fileURLs) {
             guard folderWatchState.activeFolderWatch == nil else { return }
             onAction(.requestFolderWatch(droppedFolderURL))
             return
         }
 
-        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        let markdownURLs = FileRouting.supportedMarkdownFiles(from: fileURLs)
         guard !markdownURLs.isEmpty else { return }
 
         let slotStrategy: FileOpenRequest.SlotStrategy =
@@ -187,13 +187,13 @@ final class ContentAreaViewModel {
     }
 
     func handlePickedFileURLs(_ fileURLs: [URL]) {
-        let markdownURLs = ReaderFileRouting.supportedMarkdownFiles(from: fileURLs)
+        let markdownURLs = FileRouting.supportedMarkdownFiles(from: fileURLs)
         guard !markdownURLs.isEmpty else { return }
 
-        let normalizedIncomingURL = ReaderFileRouting.normalizedFileURL(markdownURLs[0])
-        let currentURL = document.fileURL.map(ReaderFileRouting.normalizedFileURL)
+        let normalizedIncomingURL = FileRouting.normalizedFileURL(markdownURLs[0])
+        let currentURL = document.fileURL.map(FileRouting.normalizedFileURL)
         if sourceEditing.hasUnsavedDraftChanges, currentURL != normalizedIncomingURL {
-            onAction(.presentError(ReaderError.unsavedDraftRequiresResolution))
+            onAction(.presentError(AppError.unsavedDraftRequiresResolution))
             return
         }
 
@@ -224,7 +224,7 @@ final class ContentAreaViewModel {
         onAction(.grantImageDirectoryAccess(selectedURL))
     }
 
-    func requestChangeNavigation(_ direction: ReaderChangedRegionNavigationDirection) {
+    func requestChangeNavigation(_ direction: ChangedRegionNavigationDirection) {
         surfaceViewModel.changeNavigation.requestNavigation(direction)
         surfaceViewModel.splitScrollCoordinator.suppressPreviewBounceBack()
     }

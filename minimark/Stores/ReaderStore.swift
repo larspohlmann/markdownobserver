@@ -215,11 +215,11 @@ final class ReaderStore {
     }
 
     static func normalizedFileURL(_ url: URL) -> URL {
-        ReaderFileRouting.normalizedFileURL(url)
+        FileRouting.normalizedFileURL(url)
     }
 
     static func isSupportedMarkdownFileURL(_ url: URL) -> Bool {
-        ReaderFileRouting.isSupportedMarkdownFileURL(url)
+        FileRouting.isSupportedMarkdownFileURL(url)
     }
 
     // MARK: - Test Helpers

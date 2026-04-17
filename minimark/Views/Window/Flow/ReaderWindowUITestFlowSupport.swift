@@ -10,7 +10,7 @@ enum ReaderWindowUITestLaunchAction {
 
 struct ReaderWindowUITestFlowSupport {
     static func resolveLaunchAction(
-        configuration: ReaderUITestLaunchConfiguration,
+        configuration: UITestLaunchConfiguration,
         hostWindowAvailable: Bool
     ) -> ReaderWindowUITestLaunchAction {
         guard configuration.isUITestModeEnabled else {

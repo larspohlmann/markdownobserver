@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum ReaderFileRouting {
+nonisolated enum FileRouting {
     private nonisolated static let supportedMarkdownExtensions: Set<String> = ["md", "markdown", "mdown"]
 
     nonisolated static func supportedMarkdownFiles(from urls: [URL]) -> [URL] {

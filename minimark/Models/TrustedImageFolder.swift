@@ -15,7 +15,7 @@ nonisolated struct TrustedImageFolder: Equatable, Hashable, Codable, Sendable, I
     }
 
     init(folderURL: URL) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedURL = FileRouting.normalizedFileURL(folderURL)
         folderPath = normalizedURL.path
         bookmarkData = try? folderURL.bookmarkData(
             options: [.withSecurityScope],

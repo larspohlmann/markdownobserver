@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum ReaderRecentHistory {
+nonisolated enum RecentHistory {
     private struct MenuDisambiguationContext {
         let siblingPathsByDisplayName: [String: [String]]
         let parentComponentsByPath: [String: [String]]

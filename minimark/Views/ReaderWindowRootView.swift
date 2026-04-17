@@ -124,7 +124,7 @@ struct ReaderWindowRootView: View {
                 .padding(.trailing, 8)
             }
         }
-        .navigationTitle(ReaderWindowTitleFormatter.appName)
+        .navigationTitle(WindowTitleFormatter.appName)
         .task {
             await Task.yield()
             windowCoordinator.hasCompletedWindowPhase = true
@@ -317,7 +317,7 @@ struct ReaderWindowRootView: View {
 
     private func commandNotificationAwareView<Content: View>(_ view: Content) -> some View {
         view
-            .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.openRecentFile)) { notification in
+            .onReceive(NotificationCenter.default.publisher(for: CommandNotification.openRecentFile)) { notification in
                 recentHistoryCoordinator.handleOpenRecentFileNotification(
                     notification,
                     hostWindowNumber: windowCoordinator.shell.hostWindow?.windowNumber
@@ -325,7 +325,7 @@ struct ReaderWindowRootView: View {
                     windowCoordinator.documentOpen.openDocumentInCurrentWindow(fileURL)
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: ReaderCommandNotification.prepareRecentWatchedFolder)) { notification in
+            .onReceive(NotificationCenter.default.publisher(for: CommandNotification.prepareRecentWatchedFolder)) { notification in
                 recentHistoryCoordinator.handlePrepareRecentWatchedFolderNotification(
                     notification,
                     hostWindowNumber: windowCoordinator.shell.hostWindow?.windowNumber

@@ -53,7 +53,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
     ) {
         self.id = id
         self.name = name
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedURL = FileRouting.normalizedFileURL(folderURL)
         self.folderPath = normalizedURL.path
         self.options = options
         self.bookmarkData = try? folderURL.bookmarkData(
@@ -95,7 +95,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         self.folderPath = folderPath
         self.options = options
         self.bookmarkData = bookmarkData
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(
+        let normalizedFolderURL = FileRouting.normalizedFileURL(
             URL(fileURLWithPath: folderPath, isDirectory: true)
         )
         self.openDocumentRelativePaths = Self.scopedOpenDocumentRelativePaths(
@@ -116,7 +116,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         options = try container.decode(FolderWatchOptions.self, forKey: .options)
         bookmarkData = try container.decodeIfPresent(Data.self, forKey: .bookmarkData)
 
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(
+        let normalizedFolderURL = FileRouting.normalizedFileURL(
             URL(fileURLWithPath: folderPath, isDirectory: true)
         )
         let decodedRelativePaths = try container.decodeIfPresent(
@@ -158,13 +158,13 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
     }
 
     func newFileURLs(fromScanned scannedURLs: [URL], relativeTo folderURL: URL) -> [URL] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let folderPath = normalizedFolderURL.path
         let folderPathWithSlash = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
         let knownSet = Set(allKnownRelativePaths)
 
         return scannedURLs.filter { url in
-            let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+            let normalizedURL = FileRouting.normalizedFileURL(url)
             let filePath = normalizedURL.path
             guard filePath.hasPrefix(folderPathWithSlash) else { return false }
             let relativePath = String(filePath.dropFirst(folderPathWithSlash.count))
@@ -176,7 +176,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         relativeTo folderURL: URL,
         options overrideOptions: FolderWatchOptions? = nil
     ) -> [URL] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let effectiveOptions = overrideOptions ?? options
         let scopedRelativePaths = Self.scopedOpenDocumentRelativePaths(
             fromRelativePaths: openDocumentRelativePaths,
@@ -185,7 +185,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         )
 
         return scopedRelativePaths.map {
-            ReaderFileRouting.normalizedFileURL(
+            FileRouting.normalizedFileURL(
                 normalizedFolderURL.appendingPathComponent($0, isDirectory: false)
             )
         }
@@ -201,7 +201,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         relativeTo folderURL: URL,
         options: FolderWatchOptions
     ) -> [String] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let folderPath = normalizedFolderURL.path
         let folderPathWithSlash = folderPath.hasSuffix("/") ? folderPath : folderPath + "/"
         let excludedPaths = excludedPathSet(
@@ -211,7 +211,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         )
 
         let scopedRelativePaths = fileURLs.compactMap { fileURL -> String? in
-            let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+            let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
             guard fileURLIsInScope(
                 normalizedFileURL,
                 options: options,
@@ -234,7 +234,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         relativeTo folderURL: URL,
         options: FolderWatchOptions
     ) -> [String] {
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         let candidateURLs = relativePaths.compactMap { path -> URL? in
             let trimmedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedPath.isEmpty,
@@ -242,7 +242,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
                 return nil
             }
 
-            return ReaderFileRouting.normalizedFileURL(
+            return FileRouting.normalizedFileURL(
                 normalizedFolderURL.appendingPathComponent(trimmedPath, isDirectory: false)
             )
         }
@@ -261,7 +261,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         folderPathWithSlash: String,
         excludedPathSet: Set<String>
     ) -> Bool {
-        guard ReaderFileRouting.isSupportedMarkdownFileURL(fileURL) else {
+        guard FileRouting.isSupportedMarkdownFileURL(fileURL) else {
             return false
         }
 
@@ -291,7 +291,7 @@ nonisolated struct FavoriteWatchedFolder: Equatable, Hashable, Codable, Sendable
         }
 
         let paths = options.resolvedExcludedSubdirectoryURLs(relativeTo: folderURL)
-            .map(ReaderFileRouting.normalizedFileURL)
+            .map(FileRouting.normalizedFileURL)
             .map(\.path)
             .filter { $0.hasPrefix(folderPathWithSlash) }
             .map(FolderWatchExclusionCalculator.normalizedDirectoryPath)
@@ -333,7 +333,7 @@ nonisolated enum ReaderFavoriteHistory {
         ),
         into existingEntries: [FavoriteWatchedFolder]
     ) -> [FavoriteWatchedFolder] {
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        let normalizedPath = FileRouting.normalizedFileURL(folderURL).path
 
         let alreadyExists = existingEntries.contains {
             $0.matches(folderPath: normalizedPath, options: options)

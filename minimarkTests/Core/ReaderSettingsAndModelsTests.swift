@@ -69,7 +69,7 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test func readerWindowTitleMutationSkipsWritesWhenTitlesAlreadyMatch() {
-        let mutation = ReaderWindowTitleFormatter.mutation(
+        let mutation = WindowTitleFormatter.mutation(
             resolvedTitle: "notes.md - MarkdownObserver",
             currentEffectiveTitle: "notes.md - MarkdownObserver",
             currentHostWindowTitle: "notes.md - MarkdownObserver"
@@ -80,7 +80,7 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test func readerWindowTitleMutationRequestsWritesWhenTitlesDiffer() {
-        let mutation = ReaderWindowTitleFormatter.mutation(
+        let mutation = WindowTitleFormatter.mutation(
             resolvedTitle: "* notes.md - MarkdownObserver | docs",
             currentEffectiveTitle: "notes.md - MarkdownObserver",
             currentHostWindowTitle: "notes.md - MarkdownObserver"
@@ -91,43 +91,43 @@ struct ReaderSettingsAndModelsTests {
     }
 
     @Test func readerWindowDefaultsUseBaseSizeWhenVisibleFrameCanFitIt() {
-        let size = ReaderWindowDefaults.size(forVisibleFrame: CGRect(x: 0, y: 0, width: 1600, height: 2200))
+        let size = WindowDefaults.size(forVisibleFrame: CGRect(x: 0, y: 0, width: 1600, height: 2200))
 
-        #expect(size.width == ReaderWindowDefaults.baseWidth)
-        #expect(size.height == ReaderWindowDefaults.baseHeight)
+        #expect(size.width == WindowDefaults.baseWidth)
+        #expect(size.height == WindowDefaults.baseHeight)
     }
 
     @Test func readerWindowDefaultsClampToVisibleHeightWhilePreservingAspectRatio() {
         let visibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 1000)
-        let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
-        let maxHeight = visibleFrame.height * ReaderWindowDefaults.fittedHeightUsage
-        let scale = maxHeight / ReaderWindowDefaults.baseHeight
+        let size = WindowDefaults.size(forVisibleFrame: visibleFrame)
+        let maxHeight = visibleFrame.height * WindowDefaults.fittedHeightUsage
+        let scale = maxHeight / WindowDefaults.baseHeight
 
-        #expect(size.width == ReaderWindowDefaults.baseWidth * scale)
-        #expect(size.height == ReaderWindowDefaults.baseHeight * scale)
+        #expect(size.width == WindowDefaults.baseWidth * scale)
+        #expect(size.height == WindowDefaults.baseHeight * scale)
     }
 
     @Test func readerWindowDefaultsKeepMinimumUsableWidthWhenScreenIsCloseToFittingIt() {
-        let minimumUsableHeight = ReaderWindowDefaults.minimumUsableWidth * ReaderWindowDefaults.letterAspectRatio
+        let minimumUsableHeight = WindowDefaults.minimumUsableWidth * WindowDefaults.letterAspectRatio
         let visibleFrame = CGRect(
             x: 0,
             y: 0,
             width: 1440,
-            height: minimumUsableHeight * ReaderWindowDefaults.minimumUsableHeightTolerance
+            height: minimumUsableHeight * WindowDefaults.minimumUsableHeightTolerance
         )
 
-        let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
+        let size = WindowDefaults.size(forVisibleFrame: visibleFrame)
 
-        #expect(size.width == ReaderWindowDefaults.minimumUsableWidth)
+        #expect(size.width == WindowDefaults.minimumUsableWidth)
         #expect(size.height == minimumUsableHeight)
     }
 
     @Test func readerWindowDefaultsPreferFittedSizeWhenMinimumUsableWidthWouldStillBeTooTall() {
         let visibleFrame = CGRect(x: 0, y: 0, width: 1280, height: 780)
-        let size = ReaderWindowDefaults.size(forVisibleFrame: visibleFrame)
+        let size = WindowDefaults.size(forVisibleFrame: visibleFrame)
 
-        #expect(size.width < ReaderWindowDefaults.minimumUsableWidth)
-        #expect(size.height == visibleFrame.height * ReaderWindowDefaults.fittedHeightUsage)
+        #expect(size.width < WindowDefaults.minimumUsableWidth)
+        #expect(size.height == visibleFrame.height * WindowDefaults.fittedHeightUsage)
     }
 
     @Test @MainActor func readerSettingsStorePersistsMultiFileDisplayMode() {
@@ -389,10 +389,10 @@ struct ReaderSettingsAndModelsTests {
             )
         ]
 
-        #expect(ReaderRecentHistory.menuTitle(for: fileEntries[0], among: fileEntries) == "todo.md (alpha/notes)")
-        #expect(ReaderRecentHistory.menuTitle(for: fileEntries[2], among: fileEntries) == "ideas.md")
-        #expect(ReaderRecentHistory.menuTitle(for: folderEntries[0], among: folderEntries) == "docs (alpha)")
-        #expect(ReaderRecentHistory.menuTitle(for: folderEntries[2], among: folderEntries) == "guides")
+        #expect(RecentHistory.menuTitle(for: fileEntries[0], among: fileEntries) == "todo.md (alpha/notes)")
+        #expect(RecentHistory.menuTitle(for: fileEntries[2], among: fileEntries) == "ideas.md")
+        #expect(RecentHistory.menuTitle(for: folderEntries[0], among: folderEntries) == "docs (alpha)")
+        #expect(RecentHistory.menuTitle(for: folderEntries[2], among: folderEntries) == "guides")
     }
 
     @Test func readerRecentHistoryMenuTitleAddsFilteredIndicatorForWatchedFolders() {
@@ -412,10 +412,10 @@ struct ReaderSettingsAndModelsTests {
         ]
 
         #expect(
-            ReaderRecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha) [1 filtered folder]"
+            RecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha) [1 filtered folder]"
         )
         #expect(
-            ReaderRecentHistory.menuTitle(for: entries[1], among: entries) == "docs (beta)"
+            RecentHistory.menuTitle(for: entries[1], among: entries) == "docs (beta)"
         )
     }
 
@@ -436,7 +436,7 @@ struct ReaderSettingsAndModelsTests {
         ]
 
         #expect(
-            ReaderRecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha)"
+            RecentHistory.menuTitle(for: entries[0], among: entries) == "docs (alpha)"
         )
     }
 
@@ -447,7 +447,7 @@ struct ReaderSettingsAndModelsTests {
             RecentOpenedFile(fileURL: URL(fileURLWithPath: "/work/gamma/tasks/todo.md"))
         ]
 
-        let titlesByPath = ReaderRecentHistory.menuTitles(for: entries)
+        let titlesByPath = RecentHistory.menuTitles(for: entries)
         #expect(titlesByPath[entries[0].filePath] == "todo.md (alpha/notes)")
         #expect(titlesByPath[entries[1].filePath] == "todo.md (beta/notes)")
         #expect(titlesByPath[entries[2].filePath] == "todo.md (tasks)")
@@ -474,18 +474,18 @@ struct ReaderSettingsAndModelsTests {
             )
         ]
 
-        let fileTitlesByPath = ReaderRecentHistory.menuTitles(for: recentFiles)
-        let folderTitlesByPath = ReaderRecentHistory.menuTitles(for: recentFolders)
+        let fileTitlesByPath = RecentHistory.menuTitles(for: recentFiles)
+        let folderTitlesByPath = RecentHistory.menuTitles(for: recentFolders)
 
         for entry in recentFiles {
             #expect(
-                fileTitlesByPath[entry.filePath] == ReaderRecentHistory.menuTitle(for: entry, among: recentFiles)
+                fileTitlesByPath[entry.filePath] == RecentHistory.menuTitle(for: entry, among: recentFiles)
             )
         }
 
         for entry in recentFolders {
             #expect(
-                folderTitlesByPath[entry.folderPath] == ReaderRecentHistory.menuTitle(for: entry, among: recentFolders)
+                folderTitlesByPath[entry.folderPath] == RecentHistory.menuTitle(for: entry, among: recentFolders)
             )
         }
     }
@@ -873,7 +873,7 @@ struct ReaderSettingsAndModelsTests {
 
     @Test func readerSettingsGuidanceExplainsImmediateSidebarLayoutChanges() {
         #expect(
-            ReaderSettingsGuidance.layoutHelpText(selectedMode: .sidebarRight)
+            SettingsGuidance.layoutHelpText(selectedMode: .sidebarRight)
                 == "Sidebar placement changes immediately."
         )
     }
@@ -934,7 +934,7 @@ struct ReaderSettingsAndModelsTests {
         ])
 
         #expect(
-            ReaderSettingsGuidance.markdownAssociationErrorMessage(for: error)
+            SettingsGuidance.markdownAssociationErrorMessage(for: error)
                 == "macOS didn’t allow this change. In Finder, select a .md file, choose Get Info, set Open with to MarkdownObserver, then choose Change All."
         )
     }

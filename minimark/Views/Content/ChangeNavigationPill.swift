@@ -3,7 +3,7 @@ import SwiftUI
 struct ChangeNavigationPill: View {
     let currentIndex: Int?
     let totalCount: Int
-    let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
+    let onNavigate: (ChangedRegionNavigationDirection) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
@@ -79,8 +79,8 @@ private struct NavigationChevronButton: View {
     let symbolName: String
     let label: String
     let isEnabled: Bool
-    let direction: ReaderChangedRegionNavigationDirection
-    let onNavigate: (ReaderChangedRegionNavigationDirection) -> Void
+    let direction: ChangedRegionNavigationDirection
+    let onNavigate: (ChangedRegionNavigationDirection) -> Void
 
     @State private var isHovered = false
 

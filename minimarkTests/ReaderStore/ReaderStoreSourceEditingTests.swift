@@ -69,8 +69,8 @@ struct ReaderStoreSourceEditingTests {
     @Test @MainActor func autoOpenedWatchedFolderDraftSaveReacquiresFolderScopeWhenFileScopeFails() throws {
         let fixture = try ReaderStoreTestFixture(autoRefreshOnExternalChange: false)
         defer { fixture.cleanup() }
-        let normalizedPrimaryFilePath = ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL).path
-        let normalizedFolderPath = ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL).path
+        let normalizedPrimaryFilePath = FileRouting.normalizedFileURL(fixture.primaryFileURL).path
+        let normalizedFolderPath = FileRouting.normalizedFileURL(fixture.temporaryDirectoryURL).path
 
         let folderOptions = FolderWatchOptions(openMode: .openAllMarkdownFiles, scope: .selectedFolderOnly)
         let session = FolderWatchSession(
@@ -97,16 +97,16 @@ struct ReaderStoreSourceEditingTests {
         let persistedMarkdown = try String(contentsOf: fixture.primaryFileURL, encoding: .utf8)
         #expect(persistedMarkdown == "# Autoloaded Save")
         #expect(
-            fixture.store.folderWatchDispatcher.activeFolderWatchSession.map { ReaderFileRouting.normalizedFileURL($0.folderURL).path } == normalizedFolderPath
+            fixture.store.folderWatchDispatcher.activeFolderWatchSession.map { FileRouting.normalizedFileURL($0.folderURL).path } == normalizedFolderPath
         )
         #expect(
             fixture.securityScope.accessedURLs
-                .map(ReaderFileRouting.normalizedFileURL)
+                .map(FileRouting.normalizedFileURL)
                 .contains(where: { $0.path == normalizedPrimaryFilePath })
         )
         #expect(
             fixture.securityScope.accessedURLs
-                .map(ReaderFileRouting.normalizedFileURL)
+                .map(FileRouting.normalizedFileURL)
                 .contains(where: { $0.path == normalizedFolderPath })
         )
     }
@@ -141,8 +141,8 @@ struct ReaderStoreSourceEditingTests {
         }
 
         #expect(result.succeeded)
-        #expect(requestedFolderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
-        #expect(fixture.store.folderWatchDispatcher.activeFolderWatchSession?.folderURL == ReaderFileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        #expect(requestedFolderURL == FileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
+        #expect(fixture.store.folderWatchDispatcher.activeFolderWatchSession?.folderURL == FileRouting.normalizedFileURL(fixture.temporaryDirectoryURL))
         #expect(fixture.settings.recordedRecentWatchedFolders.first?.folderPath == fixture.temporaryDirectoryURL.path)
         #expect(fixture.securityScope.accessedURLs.contains(where: { $0.path == fixture.temporaryDirectoryURL.path }))
     }

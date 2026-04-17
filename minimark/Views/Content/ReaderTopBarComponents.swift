@@ -173,7 +173,7 @@ struct FolderWatchToolbarButton: View {
 
                 menuSectionHeader("Recent")
 
-                let titlesByPath = ReaderRecentHistory.menuTitles(for: recentWatchedFolders)
+                let titlesByPath = RecentHistory.menuTitles(for: recentWatchedFolders)
                 ForEach(recentWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false

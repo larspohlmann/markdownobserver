@@ -104,12 +104,12 @@ final class FolderChangeWatcher: FolderChangeWatching, @unchecked Sendable {
     ) throws {
         stopWatching()
 
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
         guard normalizedFolderURL.isFileURL else {
-            throw ReaderError.invalidFileURL
+            throw AppError.invalidFileURL
         }
 
-        let normalizedExcludedSubdirectoryURLs = excludedSubdirectoryURLs.map(ReaderFileRouting.normalizedFileURL)
+        let normalizedExcludedSubdirectoryURLs = excludedSubdirectoryURLs.map(FileRouting.normalizedFileURL)
         let sequence = queue.sync { () -> UInt64 in
             startupSequence &+= 1
             let nextSequence = startupSequence

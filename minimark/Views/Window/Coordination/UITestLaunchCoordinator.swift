@@ -45,7 +45,7 @@ final class UITestLaunchCoordinator {
             applyScreenshotWindowSize()
             var options = FolderWatchOptions.default
             if ProcessInfo.processInfo.environment[
-                ReaderUITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
+                UITestLaunchConfiguration.screenshotWatchScopeEnvironmentKey
             ] == "includeSubfolders" {
                 options.scope = .includeSubfolders
             }
@@ -60,14 +60,14 @@ final class UITestLaunchCoordinator {
 
     private func resolvedLaunchAction() -> ReaderWindowUITestLaunchAction {
         ReaderWindowUITestFlowSupport.resolveLaunchAction(
-            configuration: ReaderUITestLaunchConfiguration.current,
+            configuration: UITestLaunchConfiguration.current,
             hostWindowAvailable: actions?.hostWindow() != nil
         )
     }
 
     private func applyScreenshotWindowSize() {
         guard let sizeStr = ProcessInfo.processInfo.environment[
-            ReaderUITestLaunchConfiguration.screenshotWindowSizeEnvironmentKey
+            UITestLaunchConfiguration.screenshotWindowSizeEnvironmentKey
         ], !sizeStr.isEmpty else { return }
 
         let parts = sizeStr.split(separator: "x").compactMap { Double($0) }

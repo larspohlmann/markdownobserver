@@ -34,14 +34,14 @@ struct CalloutBlockRenderingTests {
     }
 
     @Test func runtimeAssetsIncludesCalloutsScriptPath() throws {
-        let assets = try ReaderBundledAssets.requiredRuntimeAssets()
+        let assets = try BundledAssets.requiredRuntimeAssets()
         #expect(assets.calloutsScriptPath != nil)
-        #expect(assets.calloutsScriptPath == ReaderBundledAssets.calloutsScriptPath)
+        #expect(assets.calloutsScriptPath == BundledAssets.calloutsScriptPath)
     }
 
     @Test func runtimeAssetsIncludesCalloutsCSSPath() throws {
-        let assets = try ReaderBundledAssets.requiredRuntimeAssets()
+        let assets = try BundledAssets.requiredRuntimeAssets()
         #expect(assets.calloutsCSSPath != nil)
-        #expect(assets.calloutsCSSPath == ReaderBundledAssets.calloutsCSSPath)
+        #expect(assets.calloutsCSSPath == BundledAssets.calloutsCSSPath)
     }
 }

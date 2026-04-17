@@ -35,7 +35,7 @@ struct FolderEventSourceTests {
 
         #expect(await waitUntil(timeout: .seconds(3)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(newFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(newFileURL) &&
                 $0.kind == .added
             })
         })
@@ -66,7 +66,7 @@ struct FolderEventSourceTests {
 
         #expect(await waitUntil(timeout: .seconds(3)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(existingFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(existingFileURL) &&
                 $0.kind == .modified &&
                 $0.previousMarkdown == "# Before"
             })
@@ -107,13 +107,13 @@ struct FolderEventSourceTests {
 
         #expect(await waitUntil(timeout: .seconds(3)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(includedFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(includedFileURL) &&
                 $0.kind == .modified
             })
         })
 
         #expect(!receivedEvents.contains(where: {
-            $0.fileURL == ReaderFileRouting.normalizedFileURL(excludedFileURL)
+            $0.fileURL == FileRouting.normalizedFileURL(excludedFileURL)
         }))
     }
 
@@ -135,7 +135,7 @@ struct FolderEventSourceTests {
             watcher.didCompleteStartupForTesting
         })
 
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         let cachedBefore = watcher.cachedMarkdownFileURLs() ?? []
         #expect(cachedBefore.contains(normalizedFileURL))
 
@@ -172,7 +172,7 @@ struct FolderEventSourceTests {
             try "# Version \(version)".write(to: fileURL, atomically: true, encoding: .utf8)
         }
 
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedURL = FileRouting.normalizedFileURL(fileURL)
         #expect(await waitUntil(timeout: .seconds(5)) {
             receivedEvents.contains(where: {
                 $0.fileURL == normalizedURL && $0.kind == .modified
@@ -211,7 +211,7 @@ struct FolderEventSourceTests {
 
         #expect(await waitUntil(timeout: .seconds(3)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(deepFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(deepFileURL) &&
                 $0.kind == .added
             })
         })
@@ -246,7 +246,7 @@ struct FolderEventSourceTests {
         // Wait for any events to settle
         try? await Task.sleep(for: .seconds(1))
 
-        let normalizedEphemeral = ReaderFileRouting.normalizedFileURL(ephemeralURL)
+        let normalizedEphemeral = FileRouting.normalizedFileURL(ephemeralURL)
         let hasEphemeralEvent = receivedEvents.contains(where: {
             $0.fileURL == normalizedEphemeral && $0.kind == .added
         })
@@ -279,8 +279,8 @@ struct FolderEventSourceTests {
         try "# Alpha".write(to: fileA, atomically: true, encoding: .utf8)
         try "# Bravo".write(to: fileB, atomically: true, encoding: .utf8)
 
-        let normalizedA = ReaderFileRouting.normalizedFileURL(fileA)
-        let normalizedB = ReaderFileRouting.normalizedFileURL(fileB)
+        let normalizedA = FileRouting.normalizedFileURL(fileA)
+        let normalizedB = FileRouting.normalizedFileURL(fileB)
 
         #expect(await waitUntil(timeout: .seconds(3)) {
             receivedEvents.contains(where: { $0.fileURL == normalizedA && $0.kind == .added }) &&
@@ -337,7 +337,7 @@ struct FolderEventSourceTests {
         #expect(await waitUntil(timeout: .seconds(3)) {
             secondRoundEvents.contains(where: {
                 $0.kind == .modified &&
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(fileURL)
+                $0.fileURL == FileRouting.normalizedFileURL(fileURL)
             })
         })
     }
@@ -374,8 +374,8 @@ struct FolderEventSourceTests {
         try "# A modified".write(to: fileA, atomically: true, encoding: .utf8)
         try "# B modified".write(to: fileB, atomically: true, encoding: .utf8)
 
-        let normalizedA = ReaderFileRouting.normalizedFileURL(fileA)
-        let normalizedB = ReaderFileRouting.normalizedFileURL(fileB)
+        let normalizedA = FileRouting.normalizedFileURL(fileA)
+        let normalizedB = FileRouting.normalizedFileURL(fileB)
 
         #expect(await waitUntil(timeout: .seconds(5)) {
             receivedEvents.contains(where: { $0.fileURL == normalizedA && $0.kind == .modified }) &&
@@ -421,7 +421,7 @@ struct FolderEventSourceTests {
 
         #expect(await waitUntil(timeout: .seconds(3)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(newFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(newFileURL) &&
                 $0.kind == .added
             })
         })

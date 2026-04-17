@@ -77,7 +77,7 @@ final class SourceEditingFlow {
             saveLogFormatter.logError(
                 "save requested without active editable document: \(saveLogFormatter.saveContext(for: document.fileURL))"
             )
-            onError(ReaderError.noOpenFileInReader)
+            onError(AppError.noOpenFileInReader)
             return
         }
 

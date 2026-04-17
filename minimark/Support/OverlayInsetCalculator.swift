@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-struct ReaderOverlayInsetValues: Equatable {
+struct OverlayInsetValues: Equatable {
     let railTopPadding: CGFloat
     let leadingOverlayTopPadding: CGFloat
     let scrollTargetTopInset: CGFloat
@@ -11,7 +11,7 @@ struct ReaderOverlayInsetValues: Equatable {
     let changeNavigationLeadingPadding: CGFloat
 }
 
-enum ReaderOverlayInsetCalculator {
+enum OverlayInsetCalculator {
     static let overlayBaseGap: CGFloat = 8
     static let leadingOverlayAlignmentAdjustment: CGFloat = 8
     static let overlayControlHeight: CGFloat = 30
@@ -36,14 +36,14 @@ enum ReaderOverlayInsetCalculator {
         max(0, topBarInset)
     }
 
-    static func compute(topBarInset: CGFloat, hasStatusBanner: Bool) -> ReaderOverlayInsetValues {
+    static func compute(topBarInset: CGFloat, hasStatusBanner: Bool) -> OverlayInsetValues {
         let safeTopBarInset = max(0, topBarInset)
         let overlayBaseInset = (hasStatusBanner ? 0 : safeTopBarInset) + overlayBaseGap
         let railTopPadding = overlayBaseInset
         let leadingOverlayTopPadding = overlayBaseInset + leadingOverlayAlignmentAdjustment
         let scrollTargetTopInset = leadingOverlayTopPadding + overlayControlHeight + scrollLandingGap
 
-        return ReaderOverlayInsetValues(
+        return OverlayInsetValues(
             railTopPadding: railTopPadding,
             leadingOverlayTopPadding: leadingOverlayTopPadding,
             scrollTargetTopInset: scrollTargetTopInset,

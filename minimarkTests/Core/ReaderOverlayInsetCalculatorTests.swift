@@ -4,10 +4,10 @@ import Testing
 
 @Suite
 struct ReaderOverlayInsetCalculatorTests {
-    private var gap: CGFloat { ReaderOverlayInsetCalculator.scrollLandingGap }
+    private var gap: CGFloat { OverlayInsetCalculator.scrollLandingGap }
 
     @Test func computesInsetsForTopBarOnly() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
@@ -18,7 +18,7 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func computesInsetsWhenSourceEditBarAndWarningBarAreVisible() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 66,
             hasStatusBanner: true
         )
@@ -29,7 +29,7 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func clampsNegativeBannerHeightToZero() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
@@ -40,7 +40,7 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func ignoresTopBarInsetWhenStatusBannerIsVisible() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 66,
             hasStatusBanner: true
         )
@@ -51,17 +51,17 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func statusBannerTopPaddingMatchesTopBarInset() {
-        let padding = ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: 66)
+        let padding = OverlayInsetCalculator.statusBannerTopPadding(topBarInset: 66)
         #expect(padding == 66)
     }
 
     @Test func statusBannerTopPaddingClampsNegativeInset() {
-        let padding = ReaderOverlayInsetCalculator.statusBannerTopPadding(topBarInset: -10)
+        let padding = OverlayInsetCalculator.statusBannerTopPadding(topBarInset: -10)
         #expect(padding == 0)
     }
 
     @Test func emitsWatchPillLeadingWithChangeNav() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
@@ -70,7 +70,7 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func emitsWatchPillLeadingWithoutChangeNav() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
@@ -79,7 +79,7 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func emitsWatchPillTrailing() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
@@ -88,7 +88,7 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func emitsChangeNavigationLeadingPadding() {
-        let result = ReaderOverlayInsetCalculator.compute(
+        let result = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )
@@ -97,11 +97,11 @@ struct ReaderOverlayInsetCalculatorTests {
     }
 
     @Test func watchPillAndChangeNavInsetsAreConstantAcrossTopBarConfigurations() {
-        let withBanner = ReaderOverlayInsetCalculator.compute(
+        let withBanner = OverlayInsetCalculator.compute(
             topBarInset: 66,
             hasStatusBanner: true
         )
-        let withoutBanner = ReaderOverlayInsetCalculator.compute(
+        let withoutBanner = OverlayInsetCalculator.compute(
             topBarInset: 44,
             hasStatusBanner: false
         )

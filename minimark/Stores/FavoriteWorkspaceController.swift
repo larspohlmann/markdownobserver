@@ -78,7 +78,7 @@ final class FavoriteWorkspaceController {
         options: FolderWatchOptions,
         in favorites: [FavoriteWatchedFolder]
     ) -> FavoriteWatchedFolder? {
-        let normalizedPath = ReaderFileRouting.normalizedFileURL(folderURL).path
+        let normalizedPath = FileRouting.normalizedFileURL(folderURL).path
         return favorites.first { $0.matches(folderPath: normalizedPath, options: options) }
     }
 

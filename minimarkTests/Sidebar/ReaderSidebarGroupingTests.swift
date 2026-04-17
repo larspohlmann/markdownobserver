@@ -336,7 +336,7 @@ struct ReaderSidebarGroupingTests {
         harness.documents[1].readerStore.testSetIsCurrentFileMissing(true)
 
         let documentStates = harness.documents.map { document in
-            ReaderDocumentIndicatorState(
+            DocumentIndicatorState(
                 hasUnacknowledgedExternalChange: document.readerStore.externalChange.hasUnacknowledgedExternalChange,
                 isCurrentFileMissing: document.readerStore.document.isCurrentFileMissing,
                 unacknowledgedExternalChangeKind: document.readerStore.externalChange.unacknowledgedExternalChangeKind
@@ -401,7 +401,7 @@ struct ReaderSidebarGroupingTests {
         let srcPath = harness.directoryPath(for: "src")
         let testsPath = harness.directoryPath(for: "tests")
 
-        let precomputed: [String: [ReaderDocumentIndicatorState]] = [
+        let precomputed: [String: [DocumentIndicatorState]] = [
             srcPath: [.addedExternalChange, .externalChange],
             testsPath: []
         ]

@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 
-enum ReaderWindowDefaults {
+enum WindowDefaults {
     static let letterAspectRatio: CGFloat = 11.0 / 8.5
     static let baseWidth: CGFloat = 1100
     static let baseHeight: CGFloat = baseWidth * letterAspectRatio

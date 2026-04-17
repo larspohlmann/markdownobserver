@@ -1,6 +1,6 @@
 import Foundation
 
-struct ReaderUITestLaunchConfiguration {
+struct UITestLaunchConfiguration {
     static let enableArgument = "-minimark-ui-test"
     static let presentWatchFolderSheetArgument = "-minimark-present-watch-folder-sheet"
     static let autoStartWatchFolderArgument = "-minimark-auto-start-watch-folder"
@@ -22,7 +22,7 @@ struct ReaderUITestLaunchConfiguration {
     let shouldSimulateGroupedSidebar: Bool
     let watchFolderURL: URL?
 
-    static var current: ReaderUITestLaunchConfiguration {
+    static var current: UITestLaunchConfiguration {
         let processInfo = ProcessInfo.processInfo
         let arguments = Set(processInfo.arguments)
         let isUITestModeEnabled = arguments.contains(enableArgument)
@@ -38,7 +38,7 @@ struct ReaderUITestLaunchConfiguration {
             watchFolderURL = nil
         }
 
-        return ReaderUITestLaunchConfiguration(
+        return UITestLaunchConfiguration(
             isUITestModeEnabled: isUITestModeEnabled,
             shouldPresentWatchFolderSheet: shouldPresentWatchFolderSheet,
             shouldAutoStartWatchingFolder: shouldAutoStartWatchingFolder,

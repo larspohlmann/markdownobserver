@@ -147,7 +147,7 @@ final class FSEventStreamFolderEventSource: FolderEventSource, @unchecked Sendab
 
             let path = unsafeBitCast(cfPath, to: CFString.self) as String
             let isDirectory = (flags & UInt32(kFSEventStreamEventFlagItemIsDir)) != 0
-            let normalizedEventURL = ReaderFileRouting.normalizedFileURL(
+            let normalizedEventURL = FileRouting.normalizedFileURL(
                 URL(fileURLWithPath: path, isDirectory: isDirectory)
             )
 

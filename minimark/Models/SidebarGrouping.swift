@@ -10,7 +10,7 @@ enum SidebarGrouping: Equatable {
         let displayName: String
         let directoryURL: URL?
         let documents: [ReaderSidebarDocumentController.Document]
-        let indicatorStates: [ReaderDocumentIndicatorState]
+        let indicatorStates: [DocumentIndicatorState]
         let indicatorPulseToken: Int
         let newestModificationDate: Date?
         let isPinned: Bool
@@ -39,7 +39,7 @@ enum SidebarGrouping: Equatable {
         sortMode: SidebarSortMode = .lastChangedNewestFirst,
         directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]? = nil,
         pinnedGroupIDs: Set<String> = [],
-        precomputedIndicatorStates: [String: [ReaderDocumentIndicatorState]]? = nil,
+        precomputedIndicatorStates: [String: [DocumentIndicatorState]]? = nil,
         precomputedIndicatorPulseTokens: [String: Int]? = nil
     ) -> SidebarGrouping {
         let grouped = Dictionary(grouping: documents) { document -> String in
@@ -93,9 +93,9 @@ enum SidebarGrouping: Equatable {
 
     static func indicators(
         for documents: [ReaderSidebarDocumentController.Document]
-    ) -> [ReaderDocumentIndicatorState] {
+    ) -> [DocumentIndicatorState] {
         let states = documents.map { document in
-            ReaderDocumentIndicatorState(
+            DocumentIndicatorState(
                 hasUnacknowledgedExternalChange: document.readerStore.externalChange.hasUnacknowledgedExternalChange,
                 isCurrentFileMissing: document.readerStore.document.isCurrentFileMissing,
                 unacknowledgedExternalChangeKind: document.readerStore.externalChange.unacknowledgedExternalChangeKind
@@ -106,8 +106,8 @@ enum SidebarGrouping: Equatable {
     }
 
     static func indicators(
-        from states: [ReaderDocumentIndicatorState]
-    ) -> [ReaderDocumentIndicatorState] {
+        from states: [DocumentIndicatorState]
+    ) -> [DocumentIndicatorState] {
         var hasAdded = false
         var hasModified = false
         var hasDeleted = false
@@ -125,7 +125,7 @@ enum SidebarGrouping: Equatable {
             }
         }
 
-        var result: [ReaderDocumentIndicatorState] = []
+        var result: [DocumentIndicatorState] = []
         if hasAdded {
             result.append(.addedExternalChange)
         }

@@ -24,7 +24,7 @@ struct ContentViewAdapter: View {
         let favorites = settingsStore.currentSettings.favoriteWatchedFolders
         let isCurrentWatchAFavorite: Bool = {
             guard let session = sharedFolderWatchSession else { return false }
-            let normalizedPath = ReaderFileRouting.normalizedFileURL(session.folderURL).path
+            let normalizedPath = FileRouting.normalizedFileURL(session.folderURL).path
             return favorites.contains { $0.matches(folderPath: normalizedPath, options: session.options) }
         }()
 

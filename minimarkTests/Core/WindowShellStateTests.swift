@@ -12,7 +12,7 @@ struct WindowShellStateTests {
 
     @MainActor
     private func makeCoordinator() throws -> (ReaderWindowCoordinator, ReaderSidebarControllerTestHarness) {
-        ReaderWindowRegistry.shared.resetForTesting()
+        WindowRegistry.shared.resetForTesting()
         let harness = try ReaderSidebarControllerTestHarness()
         let coordinator = ReaderWindowCoordinator(
             settingsStore: harness.settingsStore,
@@ -101,8 +101,8 @@ struct WindowShellStateTests {
 
         coordinator.refreshWindowShellState()
 
-        #expect(coordinator.shell.effectiveWindowTitle == ReaderWindowTitleFormatter.appName)
-        #expect(window.title == ReaderWindowTitleFormatter.appName)
+        #expect(coordinator.shell.effectiveWindowTitle == WindowTitleFormatter.appName)
+        #expect(window.title == WindowTitleFormatter.appName)
     }
 
     @Test @MainActor

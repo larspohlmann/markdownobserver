@@ -44,7 +44,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
 
         if let application {
             guard workspace.urlsForApplications(toOpen: fileURL).contains(application.bundleURL) else {
-                throw ReaderError.applicationNotRegisteredForFile(fileURL: fileURL, applicationURL: application.bundleURL)
+                throw AppError.applicationNotRegisteredForFile(fileURL: fileURL, applicationURL: application.bundleURL)
             }
 
             workspace.open([fileURL], withApplicationAt: application.bundleURL, configuration: NSWorkspace.OpenConfiguration())
@@ -53,7 +53,7 @@ final class ReaderFileActionService: ReaderFileActionHandling {
 
         let didOpen = workspace.open(fileURL)
         if !didOpen {
-            throw ReaderError.openInDefaultApplicationFailed(fileURL)
+            throw AppError.openInDefaultApplicationFailed(fileURL)
         }
     }
 
@@ -64,11 +64,11 @@ final class ReaderFileActionService: ReaderFileActionHandling {
 
     private func validateReachableFileURL(_ fileURL: URL) throws {
         guard fileURL.isFileURL else {
-            throw ReaderError.invalidFileURL
+            throw AppError.invalidFileURL
         }
 
         if !FileManager.default.fileExists(atPath: fileURL.path) {
-            throw ReaderError.fileNotReachable(fileURL)
+            throw AppError.fileNotReachable(fileURL)
         }
     }
 

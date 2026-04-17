@@ -30,8 +30,8 @@ final class ReaderDocumentController {
     var isDeferredDocument: Bool { documentLoadState == .deferred }
     var windowTitle: String {
         fileDisplayName.isEmpty
-            ? ReaderWindowTitleFormatter.appName
-            : "\(fileDisplayName) - \(ReaderWindowTitleFormatter.appName)"
+            ? WindowTitleFormatter.appName
+            : "\(fileDisplayName) - \(WindowTitleFormatter.appName)"
     }
 
     // MARK: - Dependencies
@@ -99,7 +99,7 @@ final class ReaderDocumentController {
         at url: URL,
         origin: OpenOrigin = .folderWatchInitialBatchAutoOpen
     ) {
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(url)
+        let normalizedURL = FileRouting.normalizedFileURL(url)
         fileURL = normalizedURL
         fileDisplayName = normalizedURL.lastPathComponent
         documentLoadState = .deferred
@@ -151,7 +151,7 @@ final class ReaderDocumentController {
 
     func openInApplication(_ application: ExternalApplication?) {
         guard let fileURL else {
-            handle(ReaderError.noOpenFileInReader)
+            handle(AppError.noOpenFileInReader)
             return
         }
         do {
@@ -164,7 +164,7 @@ final class ReaderDocumentController {
 
     func revealInFinder() {
         guard let fileURL else {
-            handle(ReaderError.noOpenFileInReader)
+            handle(AppError.noOpenFileInReader)
             return
         }
         do {
