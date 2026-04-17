@@ -52,6 +52,10 @@ struct ContentViewAdapter: View {
             pendingFolderWatchScope: $pendingFolderWatchScope,
             pendingFolderWatchExcludedSubdirectoryPaths: $pendingFolderWatchExcludedSubdirectoryPaths
         )
+        // Remount the host (and its @State viewModel) when the selected
+        // ReaderStore changes; otherwise SwiftUI preserves @State across
+        // document swaps and the VM keeps the prior store's controllers.
+        .id(ObjectIdentifier(readerStore))
     }
 }
 
