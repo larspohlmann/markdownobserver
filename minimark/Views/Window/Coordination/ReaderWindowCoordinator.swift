@@ -12,6 +12,7 @@ final class ReaderWindowCoordinator {
     private var documentOpenCoordinator: WindowDocumentOpenCoordinator!
     private var sidebarActionRouter: SidebarDocumentActionRouter!
     private var appearanceLockCoordinator: AppearanceLockCoordinator!
+    private var contentViewActionRouter: ContentViewActionRouter!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -33,10 +34,6 @@ final class ReaderWindowCoordinator {
     private(set) var folderWatchFlowController: FolderWatchFlowController?
     private(set) var uiTestLaunchCoordinator: UITestLaunchCoordinator?
     private(set) var recentHistoryCoordinator: RecentHistoryCoordinator?
-
-    private var fileOpenCoordinator: FileOpenCoordinator {
-        sidebarDocumentController.fileOpenCoordinator
-    }
 
     func configure(
         appearanceController: WindowAppearanceController,
@@ -100,6 +97,23 @@ final class ReaderWindowCoordinator {
             sidebarDocumentController: sidebarDocumentController,
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController }
         )
+        self.contentViewActionRouter = ContentViewActionRouter(
+            documentOpenCoordinator: documentOpenCoordinator,
+            appearanceLockCoordinator: appearanceLockCoordinator,
+            sidebarDocumentController: sidebarDocumentController,
+            settingsStore: settingsStore,
+            folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
+            fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
+            sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
+            applyTitlePresentation: { [weak self] in self?.applyWindowTitlePresentation() },
+            confirmFolderWatch: { [weak self] options in self?.confirmFolderWatch(options) },
+            stopFolderWatch: { [weak self] in self?.stopFolderWatch() },
+            startFavoriteWatch: { [weak self] favorite in self?.startFavoriteWatch(favorite) },
+            setEditingSubfolders: { [weak self] value in self?.isEditingSubfolders = value },
+            setEditingFavorites: { [weak self] value in self?.isTitlebarEditingFavorites = value }
+        )
     }
 
     var hasPendingFolderWatchOpenEvents: Bool {
@@ -157,31 +171,11 @@ final class ReaderWindowCoordinator {
     }
 
     func handleFolderWatchToolbarAction(_ action: FolderWatchToolbarAction) {
-        switch action {
-        case .activate:
-            break // Handled by view (requires modal panel)
-        case .startFavoriteWatch(let favorite):
-            startFavoriteWatch(favorite)
-        case .startRecentFolderWatch(let recent):
-            recentHistoryCoordinator?.startRecentFolderWatch(recent)
-        case .editFavoriteWatchedFolders:
-            isTitlebarEditingFavorites = true
-        case .clearRecentWatchedFolders:
-            recentHistoryCoordinator?.clearRecentWatchedFolders()
-        }
+        contentViewActionRouter.handle(action)
     }
 
     func handleEditFavoritesAction(_ action: EditFavoritesAction) {
-        switch action {
-        case .rename(let id, let name):
-            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
-        case .delete(let id):
-            settingsStore.removeFavoriteWatchedFolder(id: id)
-        case .reorder(let ids):
-            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
-        case .dismiss:
-            isTitlebarEditingFavorites = false
-        }
+        contentViewActionRouter.handle(action)
     }
 
     func handleWindowAccessorUpdate(_ window: NSWindow?) {
@@ -465,64 +459,7 @@ final class ReaderWindowCoordinator {
     // MARK: - Action Dispatch
 
     func handleContentViewAction(_ action: ContentViewAction) {
-        switch action {
-        case .requestFileOpen(let request):
-            fileOpenCoordinator.open(request)
-            refreshWindowPresentation()
-        case .requestFolderWatch(let url):
-            folderWatchFlowController?.prepareOptions(for: url)
-        case .confirmFolderWatch(let options):
-            confirmFolderWatch(options)
-        case .cancelFolderWatch:
-            folderWatchFlowController?.cancelPendingWatch()
-        case .stopFolderWatch:
-            stopFolderWatch()
-        case .saveFolderWatchAsFavorite(let name):
-            favoriteWorkspaceController?.saveAsFavorite(name: name, currentSidebarWidth: sidebarWidth)
-        case .removeCurrentWatchFromFavorites:
-            favoriteWorkspaceController?.removeFromFavorites()
-        case .toggleAppearanceLock:
-            toggleAppearanceLock()
-        case .startFavoriteWatch(let fav):
-            startFavoriteWatch(fav)
-        case .clearFavoriteWatchedFolders:
-            favoriteWorkspaceController?.clearAll()
-        case .renameFavoriteWatchedFolder(let id, let name):
-            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
-        case .removeFavoriteWatchedFolder(let id):
-            settingsStore.removeFavoriteWatchedFolder(id: id)
-        case .reorderFavoriteWatchedFolders(let ids):
-            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
-        case .startRecentManuallyOpenedFile(let entry):
-            recentHistoryCoordinator?.openRecentFile(entry, using: fileOpenCoordinator, session: folderWatchFlowController?.sharedFolderWatchSession)
-            applyWindowTitlePresentation()
-        case .startRecentFolderWatch(let entry):
-            recentHistoryCoordinator?.startRecentFolderWatch(entry)
-        case .clearRecentWatchedFolders:
-            recentHistoryCoordinator?.clearRecentWatchedFolders()
-        case .clearRecentManuallyOpenedFiles:
-            recentHistoryCoordinator?.clearRecentManuallyOpenedFiles()
-        case .editSubfolders:
-            isEditingSubfolders = true
-        case .saveSourceDraft:
-            sidebarDocumentController.selectedReaderStore.saveSourceDraft()
-        case .discardSourceDraft:
-            sidebarDocumentController.selectedReaderStore.discardSourceDraft()
-        case .startSourceEditing:
-            sidebarDocumentController.selectedReaderStore.startEditingSource()
-        case .updateSourceDraft(let markdown):
-            sidebarDocumentController.selectedReaderStore.updateSourceDraft(markdown)
-        case .grantImageDirectoryAccess(let url):
-            sidebarDocumentController.selectedReaderStore.grantImageDirectoryAccess(folderURL: url)
-        case .openInApplication(let app):
-            sidebarDocumentController.selectedReaderStore.document.openInApplication(app)
-        case .revealInFinder:
-            sidebarDocumentController.selectedReaderStore.document.revealInFinder()
-        case .presentError(let error):
-            sidebarDocumentController.selectedReaderStore.handle(error)
-        case .updateTOCHeadings(let headings):
-            sidebarDocumentController.selectedReaderStore.toc.updateHeadings(headings)
-        }
+        contentViewActionRouter.handle(action)
     }
 
     // MARK: - Appearance Lock
