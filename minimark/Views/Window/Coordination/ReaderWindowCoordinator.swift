@@ -10,6 +10,7 @@ final class ReaderWindowCoordinator {
     private var folderWatchOpenController: WindowFolderWatchOpenController!
     private var shellController: WindowShellController!
     private var documentOpenCoordinator: WindowDocumentOpenCoordinator!
+    private var sidebarActionRouter: SidebarDocumentActionRouter!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
@@ -85,6 +86,13 @@ final class ReaderWindowCoordinator {
             prepareRecentFolderWatch: { [weak self] folderURL, options in
                 self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
             }
+        )
+        self.sidebarActionRouter = SidebarDocumentActionRouter(
+            sidebarDocumentController: sidebarDocumentController,
+            settingsStore: settingsStore,
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
+            refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
     }
 
@@ -376,60 +384,40 @@ final class ReaderWindowCoordinator {
         refreshWindowPresentation()
     }
 
-    func performSidebarMutation(_ mutation: () -> Void) {
-        mutation()
-        refreshWindowPresentation()
-    }
-
     func closeSidebarDocument(_ documentID: UUID) {
-        performSidebarMutation {
-            sidebarDocumentController.closeDocument(documentID)
-        }
+        sidebarActionRouter.closeDocument(documentID)
     }
 
     func openSidebarDocumentsInDefaultApp(_ documentIDs: Set<UUID>) {
-        sidebarDocumentController.openDocumentsInApplication(nil, documentIDs: documentIDs)
+        sidebarActionRouter.openDocumentsInDefaultApp(documentIDs)
     }
 
     func openSidebarDocumentsInApplication(_ application: ReaderExternalApplication, _ documentIDs: Set<UUID>) {
-        sidebarDocumentController.openDocumentsInApplication(application, documentIDs: documentIDs)
+        sidebarActionRouter.openDocumentsInApplication(application, documentIDs)
     }
 
     func revealSidebarDocumentsInFinder(_ documentIDs: Set<UUID>) {
-        sidebarDocumentController.revealDocumentsInFinder(documentIDs)
+        sidebarActionRouter.revealDocumentsInFinder(documentIDs)
     }
 
     func stopWatchingSidebarFolders(_ documentIDs: Set<UUID>) {
-        performSidebarMutation {
-            sidebarDocumentController.folderWatchCoordinator.stopWatchingFolders(documentIDs)
-        }
+        sidebarActionRouter.stopWatchingFolders(documentIDs)
     }
 
     func closeOtherSidebarDocuments(keeping documentIDs: Set<UUID>) {
-        performSidebarMutation {
-            sidebarDocumentController.closeOtherDocuments(keeping: documentIDs)
-        }
+        sidebarActionRouter.closeOtherDocuments(keeping: documentIDs)
     }
 
     func closeSelectedSidebarDocuments(_ documentIDs: Set<UUID>) {
-        performSidebarMutation {
-            sidebarDocumentController.closeDocuments(documentIDs)
-        }
+        sidebarActionRouter.closeSelectedDocuments(documentIDs)
     }
 
     func closeAllSidebarDocuments() {
-        performSidebarMutation {
-            sidebarDocumentController.closeAllDocuments()
-        }
+        sidebarActionRouter.closeAllDocuments()
     }
 
     func toggleSidebarPlacement(currentMultiFileDisplayMode: ReaderMultiFileDisplayMode) {
-        if let current = favoriteWorkspaceController?.activeFavoriteWorkspaceState?.sidebarPosition {
-            favoriteWorkspaceController?.updateSidebarPosition(current.toggledSidebarPlacementMode)
-            favoriteWorkspaceController?.updateSidebarWidth(sidebarWidth)
-        } else {
-            settingsStore.updateMultiFileDisplayMode(currentMultiFileDisplayMode.toggledSidebarPlacementMode)
-        }
+        sidebarActionRouter.toggleSidebarPlacement(currentMultiFileDisplayMode: currentMultiFileDisplayMode)
     }
 
     @discardableResult
