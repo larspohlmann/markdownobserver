@@ -8,7 +8,7 @@ struct RenderingControllerTests {
         renderer: MarkdownRendering = TestMarkdownRenderer(),
         differ: ChangedRegionDiffering = TestChangedRegionDiffer()
     ) -> RenderingController {
-        let settings = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
+        let settings = TestSettingsStore(autoRefreshOnExternalChange: true)
         let securityScope = SecurityScopeResolver(
             securityScope: TestSecurityScopeAccess(),
             settingsStore: settings,

@@ -4,11 +4,11 @@ import Observation
 
 @MainActor
 final class WindowAppearanceControllerTests: XCTestCase {
-    private var settingsStore: TestReaderSettingsStore!
+    private var settingsStore: TestSettingsStore!
 
     override func setUp() {
         super.setUp()
-        settingsStore = TestReaderSettingsStore(autoRefreshOnExternalChange: true)
+        settingsStore = TestSettingsStore(autoRefreshOnExternalChange: true)
     }
 
     override func tearDown() {

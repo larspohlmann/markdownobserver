@@ -15,8 +15,8 @@ struct PresentableError: Equatable, Sendable {
 
     init(from error: Error) {
         self.message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-        if let readerError = error as? AppError {
-            switch readerError {
+        if let appError = error as? AppError {
+            switch appError {
             case .fileReadFailed:
                 self.kind = .fileRead
             case .fileNotReachable:

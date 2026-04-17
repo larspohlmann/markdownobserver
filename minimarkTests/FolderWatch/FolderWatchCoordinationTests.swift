@@ -82,7 +82,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
@@ -120,7 +120,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
@@ -161,7 +161,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
@@ -193,7 +193,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
@@ -223,7 +223,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
@@ -259,7 +259,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
@@ -382,7 +382,7 @@ struct FolderWatchCoordinationTests {
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: AutoOpenSettler(settlingInterval: 1.0),
-                systemNotifier: TestReaderSystemNotifier()
+                systemNotifier: TestSystemNotifier()
             )
         )
         dispatcher.setSession(session)
@@ -415,7 +415,7 @@ struct FolderWatchCoordinationTests {
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: AutoOpenSettler(settlingInterval: 1.0),
-                systemNotifier: TestReaderSystemNotifier()
+                systemNotifier: TestSystemNotifier()
             )
         )
         dispatcher.setSession(session)
@@ -453,7 +453,7 @@ struct FolderWatchCoordinationTests {
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: AutoOpenSettler(settlingInterval: 1.0),
-                systemNotifier: TestReaderSystemNotifier()
+                systemNotifier: TestSystemNotifier()
             )
         )
         dispatcher.setAdditionalOpenHandler { event, _, origin in
@@ -896,7 +896,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()
@@ -935,7 +935,7 @@ struct FolderWatchCoordinationTests {
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
         let delegate = TestFolderWatchControllerDelegate()

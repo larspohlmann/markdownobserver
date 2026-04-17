@@ -68,7 +68,7 @@ struct FolderWatchControllerScanProgressTests {
             folderWatcher: folderWatcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
+            systemNotifier: TestSystemNotifier(),
             folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
     }

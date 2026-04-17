@@ -95,7 +95,7 @@ final class TestFileWatcher: FileChangeWatching {
 }
 
 @MainActor
-final class TestReaderSettingsStore: SettingsStoring {
+final class TestSettingsStore: SettingsStoring {
     var settingsPublisher: AnyPublisher<Settings, Never> {
         subject.eraseToAnyPublisher()
     }
@@ -585,7 +585,7 @@ final class TestSecurityToken: SecurityScopedAccessToken {
 }
 
 @MainActor
-final class TestReaderAutoOpenSettler: AutoOpenSettling {
+final class TestAutoOpenSettler: AutoOpenSettling {
     var pendingContext: PendingAutoOpenSettlingContext?
 
     private(set) var beginSettlingCalls: [PendingAutoOpenSettlingContext?] = []
@@ -623,7 +623,7 @@ final class TestReaderAutoOpenSettler: AutoOpenSettling {
     }
 }
 
-final class TestReaderDocumentIO: DocumentIO {
+final class TestDocumentIO: DocumentIO {
     private let realIO = DocumentIOService()
 
     func load(at accessibleURL: URL) throws -> (markdown: String, modificationDate: Date) {
@@ -639,7 +639,7 @@ final class TestReaderDocumentIO: DocumentIO {
     }
 }
 
-final class TestReaderFileActions: FileActionHandling {
+final class TestFileActions: FileActionHandling {
     func registeredApplications(for fileURL: URL) throws -> [ExternalApplication] {
         []
     }
@@ -668,7 +668,7 @@ final class TestWorkspace: WorkspaceControlling {
     func activateFileViewerSelecting(_ fileURLs: [URL]) {}
 }
 
-final class TestReaderSystemNotifier: SystemNotifying {
+final class TestSystemNotifier: SystemNotifying {
     struct FileChangeNotification: Equatable {
         let fileURL: URL
         let changeKind: FolderWatchChangeKind
@@ -837,14 +837,14 @@ struct DocumentStoreTestFixture {
     let primaryFileURL: URL
     let secondaryFileURL: URL
     let store: DocumentStore
-    let notifier = TestReaderSystemNotifier()
+    let notifier = TestSystemNotifier()
 
     private let renderer = TestMarkdownRenderer()
     let differ: TestChangedRegionDiffer
     let watcher = TestFileWatcher()
-    let settings: TestReaderSettingsStore
+    let settings: TestSettingsStore
     let securityScope = TestSecurityScopeAccess()
-    private let fileActions = TestReaderFileActions()
+    private let fileActions = TestFileActions()
 
     init(
         autoRefreshOnExternalChange: Bool,
@@ -866,7 +866,7 @@ struct DocumentStoreTestFixture {
         try "# Second".write(to: secondaryFileURL, atomically: true, encoding: .utf8)
 
         differ = TestChangedRegionDiffer(changedRegionsForModifiedContent: changedRegionsForModifiedContent)
-        settings = TestReaderSettingsStore(
+        settings = TestSettingsStore(
             autoRefreshOnExternalChange: autoRefreshOnExternalChange,
             notificationsEnabled: notificationsEnabled,
             diffBaselineLookback: diffBaselineLookback
@@ -956,12 +956,12 @@ struct SidebarControllerTestHarness {
                         renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
                     ),
                     file: FileDependencies(
-                        watcher: fileWatcher, io: DocumentIOService(), actions: TestReaderFileActions()
+                        watcher: fileWatcher, io: DocumentIOService(), actions: TestFileActions()
                     ),
                     folderWatch: FolderWatchDependencies(
                         autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                         settler: settler,
-                        systemNotifier: TestReaderSystemNotifier()
+                        systemNotifier: TestSystemNotifier()
                     ),
                     settingsStore: settingsStore,
                     securityScopeResolver: securityScopeResolver
@@ -973,7 +973,7 @@ struct SidebarControllerTestHarness {
                     folderWatcher: controllerWatcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    systemNotifier: TestReaderSystemNotifier(),
+                    systemNotifier: TestSystemNotifier(),
                     folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }

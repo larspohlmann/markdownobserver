@@ -115,7 +115,7 @@ struct FavoriteWorkspaceStateTests {
     }
 
     @Test @MainActor func workspaceStateUpdatePersistsAndRoundTrips() {
-        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let store = TestSettingsStore(autoRefreshOnExternalChange: false)
         let folderURL = URL(fileURLWithPath: "/tmp/roundtrip")
         let options = FolderWatchOptions(
             openMode: .watchChangesOnly,

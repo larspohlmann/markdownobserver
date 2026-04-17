@@ -10,7 +10,7 @@ struct FolderWatchDispatcherTests {
             folderWatchDependencies: FolderWatchDependencies(
                 autoOpenPlanner: FolderWatchAutoOpenPlanner(),
                 settler: AutoOpenSettler(settlingInterval: 1.0),
-                systemNotifier: TestReaderSystemNotifier()
+                systemNotifier: TestSystemNotifier()
             )
         )
     }

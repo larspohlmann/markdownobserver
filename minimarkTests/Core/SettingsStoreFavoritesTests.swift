@@ -5,7 +5,7 @@ import Testing
 @Suite
 struct SettingsStoreFavoritesTests {
     @Test @MainActor func updateFavoriteWorkspaceStatePersistsChanges() {
-        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let store = TestSettingsStore(autoRefreshOnExternalChange: false)
         let folderURL = URL(fileURLWithPath: "/tmp/test")
         let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
@@ -36,7 +36,7 @@ struct SettingsStoreFavoritesTests {
     }
 
     @Test @MainActor func updateFavoriteWorkspaceStateNoOpForUnknownID() {
-        let store = TestReaderSettingsStore(autoRefreshOnExternalChange: false)
+        let store = TestSettingsStore(autoRefreshOnExternalChange: false)
         let folderURL = URL(fileURLWithPath: "/tmp/test")
         let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
