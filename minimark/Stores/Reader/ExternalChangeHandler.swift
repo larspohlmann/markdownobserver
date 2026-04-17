@@ -1,6 +1,42 @@
 import Foundation
 
-extension ReaderStore {
+@MainActor
+final class ExternalChangeHandler {
+    private let document: ReaderDocumentController
+    private let sourceEditingController: ReaderSourceEditingController
+    private let externalChange: ReaderExternalChangeController
+    private let folderWatchDispatcher: FolderWatchDispatcher
+    private let folderWatch: FolderWatchDependencies
+    private let settingsStore: ReaderSettingsReading
+    private let diffBaselineTracker: DiffBaselineTracking
+    private let fileLoader: MarkdownFileLoader
+    private let persister: SourceDraftPersister
+    private let reloader: DocumentReloader
+
+    init(
+        document: ReaderDocumentController,
+        sourceEditingController: ReaderSourceEditingController,
+        externalChange: ReaderExternalChangeController,
+        folderWatchDispatcher: FolderWatchDispatcher,
+        folderWatch: FolderWatchDependencies,
+        settingsStore: ReaderSettingsReading,
+        diffBaselineTracker: DiffBaselineTracking,
+        fileLoader: MarkdownFileLoader,
+        persister: SourceDraftPersister,
+        reloader: DocumentReloader
+    ) {
+        self.document = document
+        self.sourceEditingController = sourceEditingController
+        self.externalChange = externalChange
+        self.folderWatchDispatcher = folderWatchDispatcher
+        self.folderWatch = folderWatch
+        self.settingsStore = settingsStore
+        self.diffBaselineTracker = diffBaselineTracker
+        self.fileLoader = fileLoader
+        self.persister = persister
+        self.reloader = reloader
+    }
+
     func refreshFromExternalChange() {
         guard settingsStore.currentSettings.autoRefreshOnExternalChange,
               !sourceEditingController.isSourceEditing,
@@ -23,10 +59,10 @@ extension ReaderStore {
         if let fileURL = document.fileURL,
            folderWatch.settler.handleChangeIfNeeded(
                fileURL: fileURL,
-               loader: { url in
-                   try self.fileLoader.load(
+               loader: { [fileLoader, folderWatchDispatcher] url in
+                   try fileLoader.load(
                        at: url,
-                       folderWatchSession: self.folderWatchDispatcher.activeFolderWatchSession
+                       folderWatchSession: folderWatchDispatcher.activeFolderWatchSession
                    )
                }
            ) {
@@ -67,7 +103,7 @@ extension ReaderStore {
         guard let fileURL = document.fileURL else {
             return nil
         }
-        return Self.normalizedFileURL(fileURL)
+        return ReaderFileRouting.normalizedFileURL(fileURL)
     }
 
     private var watchedFolderURLForCurrentFile: URL? {
@@ -76,7 +112,7 @@ extension ReaderStore {
             return nil
         }
 
-        let normalizedWatchedFolderURL = Self.normalizedFileURL(activeFolderWatchSession.folderURL)
+        let normalizedWatchedFolderURL = ReaderFileRouting.normalizedFileURL(activeFolderWatchSession.folderURL)
         switch activeFolderWatchSession.options.scope {
         case .selectedFolderOnly:
             return fileURL.deletingLastPathComponent().path == normalizedWatchedFolderURL.path

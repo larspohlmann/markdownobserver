@@ -17,7 +17,7 @@ struct ReaderStoreExternalChangeTests {
 
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.store.externalChange.lastExternalChangeAt != nil)
@@ -33,7 +33,7 @@ struct ReaderStoreExternalChangeTests {
 
         #expect(fixture.store.statusBarTimestamp == .lastModified(fixture.store.document.fileLastModifiedAt!))
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.statusBarTimestamp == .updated(fixture.store.externalChange.lastExternalChangeAt!))
     }
@@ -43,7 +43,7 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -60,7 +60,7 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.delete(fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -125,7 +125,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.folderWatchDispatcher.setSession(session)
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications == [
             TestReaderSystemNotifier.FileChangeNotification(
@@ -144,7 +144,7 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.notifier.fileChangeNotifications.isEmpty)
     }
@@ -170,7 +170,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.decoratedWindowTitle == "\(fixture.store.document.windowTitle)")
         #expect(!fixture.store.decoratedWindowTitle.hasPrefix("* "))
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.decoratedWindowTitle == "* \(fixture.store.document.windowTitle)")
     }
@@ -237,7 +237,7 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
@@ -258,7 +258,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.sourceMarkdown == "# Modified")
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
@@ -274,7 +274,7 @@ struct ReaderStoreExternalChangeTests {
         let originalHTML = fixture.store.renderingController.renderedHTMLDocument
         fixture.delete(fixture.primaryFileURL)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.isCurrentFileMissing)
         #expect(fixture.store.document.fileURL == ReaderFileRouting.normalizedFileURL(fixture.primaryFileURL))
@@ -290,12 +290,12 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.delete(fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.isCurrentFileMissing)
 
         fixture.write(content: "# Restored", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(!fixture.store.document.isCurrentFileMissing)
         #expect(fixture.store.document.sourceMarkdown == "# Restored")
@@ -311,7 +311,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
         #expect(fixture.store.document.changedRegions.isEmpty)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
         #expect(fixture.store.document.changedRegions.isEmpty)
@@ -329,7 +329,7 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         fixture.write(content: "# Updated Once", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions.isEmpty)
         #expect(fixture.store.document.sourceMarkdown == "# Updated Once")
@@ -374,12 +374,12 @@ struct ReaderStoreExternalChangeTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
         #expect(fixture.store.document.changedRegions.isEmpty)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Updated Again", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Updated Again")
@@ -399,11 +399,11 @@ struct ReaderStoreExternalChangeTests {
             initialDiffBaselineMarkdown: "# Initial"
         )
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
 
         fixture.write(content: "# Updated Twice", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Updated Twice")
@@ -420,14 +420,14 @@ struct ReaderStoreExternalChangeTests {
         fixture.store.opener.open(at: fixture.primaryFileURL, origin: .folderWatchAutoOpen)
 
         fixture.write(content: "# Settled Initial Content", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions.isEmpty)
         #expect(fixture.store.document.sourceMarkdown == "# Settled Initial Content")
         #expect(!fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
         fixture.write(content: "# Real Follow Up Change", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Real Follow Up Change")
@@ -501,7 +501,7 @@ struct ReaderStoreExternalChangeTests {
         try? await Task.sleep(for: .milliseconds(30))
 
         fixture.write(content: "# Later External Change", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
         #expect(fixture.store.document.sourceMarkdown == "# Later External Change")
@@ -520,7 +520,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.document.documentLoadState == .ready)
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
     }
@@ -560,7 +560,7 @@ struct ReaderStoreExternalChangeTests {
         defer { fixture.cleanup() }
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
 
@@ -617,7 +617,7 @@ struct ReaderStoreExternalChangeTests {
         #expect(fixture.store.document.sourceMarkdown == "# Initial")
 
         fixture.write(content: "# Modified", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.externalChange.hasUnacknowledgedExternalChange)
         #expect(fixture.store.document.sourceMarkdown == "# Initial")

@@ -4,7 +4,7 @@ extension ReaderStore {
     func handleObservedWatchedFolderChanges(_ markdownFileEvents: [FolderWatchChangeEvent]) {
         folderWatchDispatcher.handleObservedWatchedFolderChanges(
             markdownFileEvents,
-            currentDocumentFileURL: fileURLForCurrentDocument
+            currentDocumentFileURL: document.fileURL.map { Self.normalizedFileURL($0) }
         ) { [self] event, session, origin in
             opener.open(
                 at: event.fileURL,

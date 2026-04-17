@@ -46,6 +46,7 @@ final class ReaderStore {
     let reloader: DocumentReloader
     let persister: SourceDraftPersister
     let editingFlow: SourceEditingFlow
+    let externalChangeHandler: ExternalChangeHandler
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -165,11 +166,23 @@ final class ReaderStore {
                 document.handle(error)
             }
         )
+        self.externalChangeHandler = ExternalChangeHandler(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            externalChange: self.externalChange,
+            folderWatchDispatcher: folderWatchDispatcher,
+            folderWatch: folderWatch,
+            settingsStore: settingsStore,
+            diffBaselineTracker: self.diffBaselineTracker,
+            fileLoader: self.fileLoader,
+            persister: self.persister,
+            reloader: self.reloader
+        )
         self.postOpenEffects.onError = { [document = self.document] error in
             document.handle(error)
         }
         self.postOpenEffects.onObservedFileChange = { [weak self] in
-            self?.handleObservedFileChange()
+            self?.externalChangeHandler.handleObservedFileChange()
         }
         self.opener.onActivateDeferredSetupIfNeeded = { [weak self] in
             self?.activateDeferredSetupIfNeeded()

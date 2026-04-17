@@ -21,11 +21,11 @@ struct ReaderStoreDiffBaselineTests {
 
         // First external change
         fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         // Second external change
         fixture.write(content: "# Changed twice", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         // With a 10-minute lookback, nothing is old enough to be "aged".
         // Fallback is the oldest recorded baseline ("# Initial").
@@ -46,10 +46,10 @@ struct ReaderStoreDiffBaselineTests {
         fixture.differ.computeChangedRegionsCalls = []
 
         fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         fixture.write(content: "# Changed twice", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         // Even with 10s lookback, nothing is old enough (< 1ms between changes).
         // Fallback is still the oldest baseline ("# Initial").
@@ -68,7 +68,7 @@ struct ReaderStoreDiffBaselineTests {
         // Build up history for the primary file
         fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.write(content: "# Primary changed", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         fixture.differ.computeChangedRegionsCalls = []
 
@@ -77,7 +77,7 @@ struct ReaderStoreDiffBaselineTests {
 
         // Change the secondary file
         fixture.write(content: "# Second changed", to: fixture.secondaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         // The diff should be against "# Second" (the secondary file's own history),
         // NOT against anything from the primary file's history.
@@ -107,7 +107,7 @@ struct ReaderStoreDiffBaselineTests {
 
         // External change after settler expired
         fixture.write(content: "# Changed again", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         // The diff should be against "# Before" (the initial baseline),
         // not "# After auto-open" (the content at auto-open time).

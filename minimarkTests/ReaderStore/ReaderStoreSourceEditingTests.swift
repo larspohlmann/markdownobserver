@@ -159,7 +159,7 @@ struct ReaderStoreSourceEditingTests {
         fixture.store.editingFlow.updateDraft("# Saved Draft")
 
         fixture.store.editingFlow.save()
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.sourceMarkdown == "# Saved Draft")
         #expect(fixture.store.document.changedRegions == [Self.sampleChangedRegion])
@@ -197,7 +197,7 @@ struct ReaderStoreSourceEditingTests {
         fixture.store.editingFlow.updateDraft("# Draft")
         fixture.write(content: "# External", to: fixture.primaryFileURL)
 
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.sourceEditingController.isSourceEditing)
         #expect(fixture.store.document.sourceMarkdown == "# Draft")
@@ -215,7 +215,7 @@ struct ReaderStoreSourceEditingTests {
         fixture.store.editingFlow.startEditing()
         fixture.store.editingFlow.updateDraft("# Draft")
         fixture.write(content: "# External", to: fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         fixture.store.editingFlow.discard()
 
@@ -244,7 +244,7 @@ struct ReaderStoreSourceEditingTests {
 
         fixture.store.opener.open(at: fixture.primaryFileURL)
         fixture.delete(fixture.primaryFileURL)
-        fixture.store.handleObservedFileChange()
+        fixture.store.externalChangeHandler.handleObservedFileChange()
 
         #expect(fixture.store.document.isCurrentFileMissing)
 
