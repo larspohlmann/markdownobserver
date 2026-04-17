@@ -47,6 +47,7 @@ final class ReaderStore {
     let persister: SourceDraftPersister
     let editingFlow: SourceEditingFlow
     let externalChangeHandler: ExternalChangeHandler
+    let folderWatchInput: FolderWatchInputHandler
     @ObservationIgnored private var settingsCancellable: AnyCancellable?
 
     // MARK: - Internal: accessible to Coordination extensions
@@ -177,6 +178,11 @@ final class ReaderStore {
             fileLoader: self.fileLoader,
             persister: self.persister,
             reloader: self.reloader
+        )
+        self.folderWatchInput = FolderWatchInputHandler(
+            document: self.document,
+            folderWatchDispatcher: folderWatchDispatcher,
+            opener: self.opener
         )
         self.postOpenEffects.onError = { [document = self.document] error in
             document.handle(error)

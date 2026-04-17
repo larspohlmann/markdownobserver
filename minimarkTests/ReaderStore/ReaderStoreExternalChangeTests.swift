@@ -660,7 +660,7 @@ struct ReaderStoreExternalChangeTests {
             folderWatchSession: session
         )
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(
                 fileURL: fixture.primaryFileURL,
                 kind: .modified,
@@ -720,7 +720,7 @@ struct ReaderStoreExternalChangeTests {
             openedEvents.append(event)
         }
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(fileURL: fixture.primaryFileURL, kind: .modified, previousMarkdown: "# Initial"),
             FolderWatchChangeEvent(fileURL: fourthFileURL, kind: .added),
             FolderWatchChangeEvent(fileURL: unsupportedURL, kind: .added)
@@ -751,7 +751,7 @@ struct ReaderStoreExternalChangeTests {
             openedEvents.append(event)
         }
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(fileURL: createdFileURL, kind: .added)
         ])
 
@@ -779,7 +779,7 @@ struct ReaderStoreExternalChangeTests {
             capturedEvent = event
         }
 
-        fixture.store.handleObservedWatchedFolderChanges([
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges([
             FolderWatchChangeEvent(
                 fileURL: changedFileURL,
                 kind: .modified,
@@ -816,7 +816,7 @@ struct ReaderStoreExternalChangeTests {
             openedAdditionalDocuments.append(ReaderFileRouting.normalizedFileURL(event.fileURL))
         }
 
-        fixture.store.handleObservedWatchedFolderChanges(
+        fixture.store.folderWatchInput.handleObservedWatchedFolderChanges(
             fileURLs.map { FolderWatchChangeEvent(fileURL: $0, kind: .added) }
         )
 

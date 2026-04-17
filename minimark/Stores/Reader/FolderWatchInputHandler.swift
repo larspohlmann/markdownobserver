@@ -1,11 +1,26 @@
 import Foundation
 
-extension ReaderStore {
+@MainActor
+final class FolderWatchInputHandler {
+    private let document: ReaderDocumentController
+    private let folderWatchDispatcher: FolderWatchDispatcher
+    private let opener: DocumentOpener
+
+    init(
+        document: ReaderDocumentController,
+        folderWatchDispatcher: FolderWatchDispatcher,
+        opener: DocumentOpener
+    ) {
+        self.document = document
+        self.folderWatchDispatcher = folderWatchDispatcher
+        self.opener = opener
+    }
+
     func handleObservedWatchedFolderChanges(_ markdownFileEvents: [FolderWatchChangeEvent]) {
         folderWatchDispatcher.handleObservedWatchedFolderChanges(
             markdownFileEvents,
-            currentDocumentFileURL: document.fileURL.map { Self.normalizedFileURL($0) }
-        ) { [self] event, session, origin in
+            currentDocumentFileURL: document.fileURL.map { ReaderFileRouting.normalizedFileURL($0) }
+        ) { [opener] event, session, origin in
             opener.open(
                 at: event.fileURL,
                 origin: origin,
@@ -22,7 +37,7 @@ extension ReaderStore {
         folderWatchDispatcher.openInitialMarkdownFilesFromWatchedFolder(
             markdownFileEvents,
             session: session
-        ) { [self] event, eventSession, eventOrigin in
+        ) { [opener] event, eventSession, eventOrigin in
             opener.open(
                 at: event.fileURL,
                 origin: eventOrigin,
