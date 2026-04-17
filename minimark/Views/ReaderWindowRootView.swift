@@ -211,7 +211,7 @@ struct ReaderWindowRootView: View {
                 windowCoordinator.appearanceLock.renderSelectedDocumentIfNeeded()
             }
             .onChange(of: sidebarDocumentController.documents.count) { oldCount, newCount in
-                windowCoordinator.handleSidebarVisibilityChange(oldCount: oldCount, newCount: newCount)
+                windowCoordinator.sidebarMetrics.handleVisibilityChange(oldCount: oldCount, newCount: newCount)
             }
             .onChange(of: sidebarDocumentController.selectedWindowTitle) { _, _ in
                 windowCoordinator.shell.applyTitlePresentation()
@@ -340,9 +340,9 @@ struct ReaderWindowRootView: View {
             settingsStore: settingsStore,
             groupState: groupStateController,
             sidebarPlacement: sidebarPlacement,
-            sidebarWidth: windowCoordinator.sidebarWidth,
+            sidebarWidth: windowCoordinator.sidebarMetrics.width,
             onSidebarWidthChanged: { newWidth in
-                windowCoordinator.handleSidebarWidthChange(newWidth)
+                windowCoordinator.sidebarMetrics.handleWidthChange(newWidth)
             },
             detail: { store in
                 contentView(for: store)

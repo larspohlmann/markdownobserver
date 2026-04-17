@@ -13,13 +13,12 @@ final class ReaderWindowCoordinator {
     private(set) var sidebarActions: SidebarDocumentActionRouter!
     private(set) var appearanceLock: AppearanceLockCoordinator!
     private(set) var contentActions: ContentViewActionRouter!
+    private(set) var sidebarMetrics: WindowSidebarMetricsController!
     let openDocumentPathTracker = OpenDocumentPathTracker()
 
     // Window presentation state
     var hasCompletedWindowPhase = false
     var hasOpenedInitialFile = false
-    var sidebarWidth: CGFloat = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
-    var lastAppliedSidebarDelta: CGFloat = 0
     var isTitlebarEditingFavorites = false
     var isEditingSubfolders = false
 
@@ -85,13 +84,18 @@ final class ReaderWindowCoordinator {
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
-            sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
+            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
         self.appearanceLock = AppearanceLockCoordinator(
             appearanceControllerProvider: { [weak self] in self?.appearanceController },
             sidebarDocumentController: sidebarDocumentController,
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController }
+        )
+        self.sidebarMetrics = WindowSidebarMetricsController(
+            sidebarDocumentController: sidebarDocumentController,
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            hostWindowProvider: { [weak self] in self?.shell.hostWindow }
         )
         self.contentActions = ContentViewActionRouter(
             documentOpen: documentOpen,
@@ -102,7 +106,7 @@ final class ReaderWindowCoordinator {
             favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
             recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
             fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
-            sidebarWidthProvider: { [weak self] in self?.sidebarWidth ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
+            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? ReaderSidebarWorkspaceMetrics.sidebarIdealWidth },
             applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
             confirmFolderWatch: { [weak self] options in self?.confirmFolderWatch(options) },
             stopFolderWatch: { [weak self] in self?.stopFolderWatch() },
@@ -208,57 +212,11 @@ final class ReaderWindowCoordinator {
         shell.clearDockTile()
     }
 
-    func handleSidebarWidthChange(_ newWidth: CGFloat) {
-        sidebarWidth = newWidth
-        if favoriteWorkspaceController?.activeFavoriteWorkspaceState != nil,
-           sidebarDocumentController.documents.count > 1 {
-            favoriteWorkspaceController?.updateSidebarWidth(newWidth)
-        }
-    }
-
-    func handleSidebarVisibilityChange(oldCount: Int, newCount: Int) {
-        let isSidebarVisible = newCount > 1
-        let wasVisible = oldCount > 1
-
-        guard isSidebarVisible != wasVisible, let window = shell.hostWindow else {
-            return
-        }
-
-        if isSidebarVisible, let favoriteWidth = favoriteWorkspaceController?.activeFavoriteWorkspaceState?.sidebarWidth {
-            sidebarWidth = favoriteWidth
-        }
-
-        let delta = isSidebarVisible
-            ? sidebarWidth
-            : -lastAppliedSidebarDelta
-
-        guard let screenFrame = window.screen?.visibleFrame else {
-            return
-        }
-
-        let oldWidth = window.frame.width
-        let newFrame = ReaderWindowDefaults.sidebarResizedFrame(
-            windowFrame: window.frame,
-            screenVisibleFrame: screenFrame,
-            sidebarDelta: delta
-        )
-
-        window.setFrame(newFrame, display: true, animate: true)
-
-        if isSidebarVisible {
-            lastAppliedSidebarDelta = newFrame.width - oldWidth
-        } else {
-            lastAppliedSidebarDelta = 0
-            sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
-        }
-    }
-
-    // MARK: - Composite folder-watch flows (mutate sidebarWidth + refresh)
+    // MARK: - Composite folder-watch flows (mutate sidebarMetrics + refresh)
 
     func startFavoriteWatch(_ entry: ReaderFavoriteWatchedFolder) {
         guard let favoriteWorkspaceController else { return }
-        let restoredSidebarWidth = favoriteWorkspaceController.startFavoriteWatch(entry)
-        sidebarWidth = restoredSidebarWidth
+        sidebarMetrics.width = favoriteWorkspaceController.startFavoriteWatch(entry)
         refreshWindowPresentation()
     }
 
@@ -273,7 +231,7 @@ final class ReaderWindowCoordinator {
             performInitialAutoOpen: performInitialAutoOpen
         ) ?? false
         if deactivated {
-            sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+            sidebarMetrics.resetToIdealWidth()
         }
         refreshWindowPresentation()
     }
@@ -288,14 +246,14 @@ final class ReaderWindowCoordinator {
     func confirmFolderWatch(_ options: FolderWatchOptions) {
         let deactivated = folderWatchFlowController?.confirmFolderWatch(options) ?? false
         if deactivated {
-            sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+            sidebarMetrics.resetToIdealWidth()
         }
         refreshWindowPresentation()
     }
 
     func stopFolderWatch() {
         folderWatchFlowController?.stopFolderWatchSession()
-        sidebarWidth = ReaderSidebarWorkspaceMetrics.sidebarIdealWidth
+        sidebarMetrics.resetToIdealWidth()
         refreshWindowPresentation()
     }
 
