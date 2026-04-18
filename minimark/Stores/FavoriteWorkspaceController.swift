@@ -147,11 +147,15 @@ final class FavoriteWorkspaceController {
 
     /// Returns the sidebar width from the favorite's workspace state (so the caller can apply it to window state).
     func startFavoriteWatch(_ entry: FavoriteWatchedFolder) -> CGFloat {
+        let appearanceController = appearanceControllerProvider()
+        let folderWatchFlowController = folderWatchFlowControllerProvider()
+        let sidebarDocumentController = sidebarDocumentControllerProvider()
+
         // Restore appearance FIRST
         if let lockedAppearance = entry.workspaceState.lockedAppearance {
-            appearanceControllerProvider()?.restore(from: lockedAppearance)
-        } else if appearanceControllerProvider()?.isLocked == true {
-            appearanceControllerProvider()?.unlock()
+            appearanceController?.restore(from: lockedAppearance)
+        } else if appearanceController?.isLocked == true {
+            appearanceController?.unlock()
         }
 
         // Activate and restore workspace state
@@ -160,19 +164,19 @@ final class FavoriteWorkspaceController {
 
         // Start watching folder (via FWFC)
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
-        folderWatchFlowControllerProvider()?.startWatchingFolder(
+        folderWatchFlowController?.startWatchingFolder(
             folderURL: resolvedURL,
             options: entry.options,
             performInitialAutoOpen: false
         )
         // Refresh shared state so sharedFolderWatchSession is available
         // for file opening and document sync below.
-        folderWatchFlowControllerProvider()?.refreshSharedState()
+        folderWatchFlowController?.refreshSharedState()
 
         // Open restored files
         let restoredFileURLs = entry.existingOpenDocumentFileURLs(relativeTo: resolvedURL)
-        if let session = folderWatchFlowControllerProvider()?.sharedFolderWatchSession,
-           let fileOpenCoordinator = sidebarDocumentControllerProvider()?.fileOpenCoordinator,
+        if let session = folderWatchFlowController?.sharedFolderWatchSession,
+           let fileOpenCoordinator = sidebarDocumentController?.fileOpenCoordinator,
            !restoredFileURLs.isEmpty {
             fileOpenCoordinator.open(FileOpenRequest(
                 fileURLs: restoredFileURLs,

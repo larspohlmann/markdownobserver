@@ -138,16 +138,18 @@ final class FolderWatchFlowController {
     ) -> Bool {
         var didDeactivateFavorite = false
 
-        if favoriteWorkspaceControllerProvider()?.activeFavoriteID != nil {
+        let favoriteWorkspaceController = favoriteWorkspaceControllerProvider()
+        if let activeFavoriteID = favoriteWorkspaceController?.activeFavoriteID {
             let normalizedPath = FileRouting.normalizedFileURL(folderURL).path
             let matchesActiveFavorite = settingsStore.currentSettings.favoriteWatchedFolders.contains {
-                $0.id == favoriteWorkspaceControllerProvider()?.activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
+                $0.id == activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
             }
             if !matchesActiveFavorite {
-                favoriteWorkspaceControllerProvider()?.persistFinalState(to: settingsStore)
-                favoriteWorkspaceControllerProvider()?.deactivate()
-                groupStateControllerProvider()?.pinnedGroupIDs = []
-                groupStateControllerProvider()?.collapsedGroupIDs = []
+                let groupStateController = groupStateControllerProvider()
+                favoriteWorkspaceController?.persistFinalState(to: settingsStore)
+                favoriteWorkspaceController?.deactivate()
+                groupStateController?.pinnedGroupIDs = []
+                groupStateController?.collapsedGroupIDs = []
                 didDeactivateFavorite = true
                 Task { @MainActor [appearanceController = appearanceControllerProvider()] in
                     if appearanceController?.isLocked == true {
@@ -174,10 +176,12 @@ final class FolderWatchFlowController {
     /// Does NOT reset `sidebarWidth` or call `refreshWindowPresentation()` — the caller handles those.
     func stopFolderWatchSession() {
         dismissAutoOpenWarning()
-        favoriteWorkspaceControllerProvider()?.persistFinalState(to: settingsStore)
-        favoriteWorkspaceControllerProvider()?.deactivate()
-        groupStateControllerProvider()?.pinnedGroupIDs = []
-        groupStateControllerProvider()?.collapsedGroupIDs = []
+        let favoriteWorkspaceController = favoriteWorkspaceControllerProvider()
+        let groupStateController = groupStateControllerProvider()
+        favoriteWorkspaceController?.persistFinalState(to: settingsStore)
+        favoriteWorkspaceController?.deactivate()
+        groupStateController?.pinnedGroupIDs = []
+        groupStateController?.collapsedGroupIDs = []
         sidebarDocumentController.folderWatchCoordinator.stopFolderWatch()
         cancelPendingWatch()
     }
