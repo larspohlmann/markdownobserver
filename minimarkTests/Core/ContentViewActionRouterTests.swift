@@ -50,21 +50,32 @@ struct ContentViewActionRouterTests {
             // Box mutable state in a class so init-time closures can write to it.
             let state = MutableState()
             self.router = ContentViewActionRouter(
-                documentOpen: documentOpen,
-                appearanceLock: appearanceLock,
-                sidebarDocumentController: harness.controller,
-                settingsStore: harness.settingsStore,
-                folderWatchFlowControllerProvider: { nil },
-                favoriteWorkspaceControllerProvider: { nil },
-                recentHistoryCoordinatorProvider: { nil },
-                fileOpenCoordinator: harness.controller.fileOpenCoordinator,
-                sidebarWidthProvider: { 320 },
-                applyTitlePresentation: { state.applyTitleCalls += 1 },
-                confirmFolderWatch: { state.confirmFolderWatchCalls.append($0) },
-                stopFolderWatch: { state.stopFolderWatchCalls += 1 },
-                startFavoriteWatch: { state.startFavoriteWatchCalls.append($0) },
-                setEditingSubfolders: { state.setEditingSubfoldersCalls.append($0) },
-                setEditingFavorites: { state.setEditingFavoritesCalls.append($0) }
+                document: DocumentActionRouter(
+                    documentOpen: documentOpen,
+                    appearanceLock: appearanceLock,
+                    sidebarDocumentController: harness.controller
+                ),
+                folderWatch: FolderWatchActionRouter(
+                    folderWatchFlowControllerProvider: { nil },
+                    callbacks: FolderWatchRouterCallbacks(
+                        confirmFolderWatch: { state.confirmFolderWatchCalls.append($0) },
+                        stopFolderWatch: { state.stopFolderWatchCalls += 1 },
+                        setEditingSubfolders: { state.setEditingSubfoldersCalls.append($0) }
+                    )
+                ),
+                favorite: FavoriteActionRouter(
+                    favoriteWorkspaceControllerProvider: { nil },
+                    recentHistoryCoordinatorProvider: { nil },
+                    settingsStore: harness.settingsStore,
+                    fileOpenCoordinator: harness.controller.fileOpenCoordinator,
+                    folderWatchFlowControllerProvider: { nil },
+                    callbacks: FavoriteRouterCallbacks(
+                        startFavoriteWatch: { state.startFavoriteWatchCalls.append($0) },
+                        applyTitlePresentation: { state.applyTitleCalls += 1 },
+                        sidebarWidthProvider: { 320 },
+                        setEditingFavorites: { state.setEditingFavoritesCalls.append($0) }
+                    )
+                )
             )
             self.state = state
         }
