@@ -197,15 +197,14 @@ struct ContentAreaViewModelObservationTests {
 
     private static func decodePayloadMarkdown(from html: String) -> String? {
         // Payload is interpolated into the bootstrap script as: .bootstrap("<base64>")
-        guard let range = html.range(of: #"MinimarkCodeMirrorSourceView\.bootstrap\("([^"]+)"\)"#, options: .regularExpression) else {
-            return nil
-        }
-        let match = String(html[range])
-        guard let openQuote = match.firstIndex(of: "\""),
-              let closeQuote = match.lastIndex(of: "\""),
-              openQuote < closeQuote
+        let pattern = #"MinimarkCodeMirrorSourceView\.bootstrap\("([^"]+)"\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let searchRange = NSRange(html.startIndex..<html.endIndex, in: html)
+        guard let match = regex.firstMatch(in: html, range: searchRange),
+              match.numberOfRanges > 1,
+              let base64Range = Range(match.range(at: 1), in: html)
         else { return nil }
-        let base64 = String(match[match.index(after: openQuote)..<closeQuote])
+        let base64 = String(html[base64Range])
         guard let data = Data(base64Encoded: base64),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let markdown = json["markdown"] as? String
