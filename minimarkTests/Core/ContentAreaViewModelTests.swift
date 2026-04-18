@@ -172,6 +172,47 @@ struct ContentAreaViewModelObservationTests {
         #expect(!viewModel.surfaceViewModel.sourceHTMLCache.document.isEmpty)
     }
 
+    // Regression test for #388: the observation coordinator captured `previous = read(vm)`
+    // synchronously in `init`, then spawned a Task whose first `withObservationTracking`
+    // registration ran on a later main-actor tick. If `sourceEditorSeedMarkdown` was
+    // written in that interval (as happens during file-load right after VM construction),
+    // the write landed before tracking was registered and the reaction never fired —
+    // the split-mode source pane then rendered an empty CodeMirror editor.
+    @Test @MainActor
+    func seedMarkdownChangedBeforeObservationSetupStillRefreshesCache() async {
+        let (viewModel, _, _, sourceEditing) = makeTestViewModel()
+        // Mutate synchronously before awaiting — mimics applyLoadedState racing the
+        // observation Task's first tracking registration during file-open.
+        let seedMarkdown = "# Hello\n\nfrom bug 388"
+        sourceEditing.sourceEditorSeedMarkdown = seedMarkdown
+
+        await settle()
+
+        let html = viewModel.surfaceViewModel.sourceHTMLCache.document
+        #expect(!html.isEmpty)
+        // The bootstrap payload must encode the seed markdown; if the observation
+        // reaction misses the pre-setup write, the CodeMirror payload still wraps "".
+        #expect(Self.decodePayloadMarkdown(from: html) == seedMarkdown)
+    }
+
+    private static func decodePayloadMarkdown(from html: String) -> String? {
+        // Payload is interpolated into the bootstrap script as: .bootstrap("<base64>")
+        guard let range = html.range(of: #"MinimarkCodeMirrorSourceView\.bootstrap\("([^"]+)"\)"#, options: .regularExpression) else {
+            return nil
+        }
+        let match = String(html[range])
+        guard let openQuote = match.firstIndex(of: "\""),
+              let closeQuote = match.lastIndex(of: "\""),
+              openQuote < closeQuote
+        else { return nil }
+        let base64 = String(match[match.index(after: openQuote)..<closeQuote])
+        guard let data = Data(base64Encoded: base64),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let markdown = json["markdown"] as? String
+        else { return nil }
+        return markdown
+    }
+
     @Test @MainActor
     func previewFallbackClearsPreviewDropTargeting() async {
         let (viewModel, _, _, _) = makeTestViewModel()

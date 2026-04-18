@@ -77,6 +77,15 @@ final class ContentAreaObservationCoordinator {
         let task = Task { [weak viewModel] in
             while !Task.isCancelled {
                 guard let currentVM = viewModel else { return }
+                // Close the gap between capturing `previous` and registering observation
+                // tracking: a mutation can happen in that window (e.g. file load during
+                // VM init) and `withObservationTracking` only fires on subsequent writes.
+                let current = read(currentVM)
+                if current != previous {
+                    previous = current
+                    react(currentVM, current)
+                    continue
+                }
                 let cancelled = await ObservationAsyncChange.next {
                     _ = read(currentVM)
                 }
