@@ -100,6 +100,7 @@ struct ContentUtilityRail: View {
         .disabled(!state.hasFile || isSelected)
         .foregroundStyle(isSelected ? .primary : (state.hasFile ? .secondary : .tertiary))
         .help(mode.displayName)
+        .accessibilityIdentifier(mode.accessibilityIdentifier)
         .accessibilityLabel(mode.displayName)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
@@ -124,6 +125,7 @@ struct ContentUtilityRail: View {
         .disabled(!state.canStartSourceEditing)
         .foregroundStyle(state.canStartSourceEditing ? .primary : .tertiary)
         .help("Edit Source (⌘E)")
+        .accessibilityIdentifier(.editSourceButton)
         .accessibilityLabel("Edit source")
     }
 

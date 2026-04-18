@@ -397,8 +397,9 @@ struct WindowRootView: View {
 
     private func promptForFolderWatch() {
         guard let folderURL = MarkdownOpenPanel.pickFolder(
-            title: "Choose Folder to Watch",
-            message: "Select a folder, then choose watch options."
+            title: "Start Watching a Folder",
+            message: "MarkdownObserver will auto-open Markdown files in this folder and keep the preview in sync as files change. You'll confirm what to open in the next step.",
+            prompt: "Choose Folder"
         ) else { return }
         folderWatchFlowController.prepareOptions(for: folderURL)
     }

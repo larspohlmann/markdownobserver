@@ -159,12 +159,15 @@ struct SidebarWorkspaceView<Detail: View>: View {
             sidebarToolbarButton("rectangle.expand.vertical", help: "Expand all groups") {
                 groupState.expandAllGroups()
             }
+            .accessibilityIdentifier(.sidebarExpandAllButton)
             sidebarToolbarButton("rectangle.compress.vertical", help: "Collapse all groups") {
                 groupState.collapseAllGroups()
             }
+            .accessibilityIdentifier(.sidebarCollapseAllButton)
             sidebarToolbarButton("arrow.uturn.backward", help: "Restore manual expand/collapse state") {
                 groupState.restoreManualExpandState()
             }
+            .accessibilityIdentifier(.sidebarRestoreManualButton)
             .disabled(!groupState.isInBulkExpandState)
         }
     }
@@ -224,6 +227,7 @@ struct SidebarWorkspaceView<Detail: View>: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .help("Sort groups by \(groupState.sortMode.displayName)")
+        .accessibilityIdentifier(.sidebarGroupSortMenu)
         .accessibilityLabel("Sidebar group sorting")
         .accessibilityValue(groupState.sortMode.displayName)
     }
@@ -261,6 +265,7 @@ struct SidebarWorkspaceView<Detail: View>: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .help("Sort files by \(groupState.fileSortMode.displayName)")
+        .accessibilityIdentifier(.sidebarFileSortMenu)
         .accessibilityLabel("Sidebar file sorting")
         .accessibilityValue(groupState.fileSortMode.displayName)
     }
@@ -567,6 +572,9 @@ private struct SidebarGroupHeader: View {
     @State private var isIndicatorPulsing = false
     @State private var lastHandledPulseToken: Int = -1
     @State private var indicatorPulseTask: Task<Void, Never>?
+    @State private var isConfirmingCloseGroup = false
+
+    private static let closeGroupConfirmationThreshold = 3
 
     let displayName: String
     let documentCount: Int
@@ -643,7 +651,11 @@ private struct SidebarGroupHeader: View {
                 .accessibilityLabel("\(documentCount) document\(documentCount == 1 ? "" : "s")")
 
             Button {
-                onCloseGroup()
+                if documentCount >= Self.closeGroupConfirmationThreshold {
+                    isConfirmingCloseGroup = true
+                } else {
+                    onCloseGroup()
+                }
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 13))
@@ -653,6 +665,18 @@ private struct SidebarGroupHeader: View {
             .help(closeGroupLabel)
             .accessibilityLabel(closeGroupLabel)
             .accessibilityHint("Closes every open file in this group")
+            .confirmationDialog(
+                "Close \(documentCount) files in \(displayName)?",
+                isPresented: $isConfirmingCloseGroup,
+                titleVisibility: .visible
+            ) {
+                Button("Close \(documentCount) Files", role: .destructive) {
+                    onCloseGroup()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes every file in this group from the sidebar. You can reopen them from File › Recent Opened Files.")
+            }
         }
         .onAppear {
             triggerIndicatorPulseIfNeeded(for: indicatorPulseToken)

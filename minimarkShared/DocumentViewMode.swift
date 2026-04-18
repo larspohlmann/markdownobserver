@@ -37,4 +37,15 @@ enum DocumentViewMode: String, CaseIterable, Sendable {
             return .preview
         }
     }
+
+    var accessibilityIdentifier: AccessibilityID {
+        switch self {
+        case .preview:
+            return .viewModePreviewButton
+        case .split:
+            return .viewModeSplitButton
+        case .source:
+            return .viewModeSourceButton
+        }
+    }
 }

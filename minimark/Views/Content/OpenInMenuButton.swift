@@ -69,6 +69,7 @@ struct OpenInMenuButton: NSViewRepresentable {
         button.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.09).cgColor
         button.layer?.masksToBounds = true
         button.setAccessibilityLabel("Open in and watch actions")
+        button.setAccessibilityIdentifier(AccessibilityID.openInMenuButton.rawValue)
         button.toolTip = "Open a file, choose an app, reveal in Finder, or manage folder watch"
         context.coordinator.button = button
         return button
@@ -361,8 +362,9 @@ struct OpenInMenuButton: NSViewRepresentable {
 
         private func pickFolder() -> URL? {
             MarkdownOpenPanel.pickFolder(
-                title: "Choose Folder to Watch",
-                message: "Select a folder, then choose watch options."
+                title: "Start Watching a Folder",
+                message: "MarkdownObserver will auto-open Markdown files in this folder and keep the preview in sync as files change. You'll confirm what to open in the next step.",
+                prompt: "Choose Folder"
             )
         }
     }

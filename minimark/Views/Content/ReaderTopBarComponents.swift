@@ -366,6 +366,7 @@ struct SourceEditingStatusBar: View {
                 isPrimary: true,
                 action: onSave
             )
+            .accessibilityIdentifier(.saveSourceDraftButton)
             .accessibilityLabel("Save source changes")
 
             statusActionButton(
@@ -375,6 +376,7 @@ struct SourceEditingStatusBar: View {
                 isPrimary: false,
                 action: onDiscard
             )
+            .accessibilityIdentifier(.discardSourceDraftButton)
             .accessibilityLabel(hasUnsavedChanges ? "Exit source editing and discard source changes" : "Exit source editing")
         }
         .padding(.horizontal, Metrics.barHorizontalPadding)
