@@ -6,7 +6,13 @@ import Testing
 struct FavoriteWorkspaceControllerTests {
     @MainActor private func makeController() -> FavoriteWorkspaceController {
         let store = TestSettingsStore(autoRefreshOnExternalChange: false)
-        return FavoriteWorkspaceController(settingsStore: store)
+        return FavoriteWorkspaceController(
+            settingsStore: store,
+            sidebarDocumentControllerProvider: { nil },
+            folderWatchFlowControllerProvider: { nil },
+            groupStateControllerProvider: { nil },
+            appearanceControllerProvider: { nil }
+        )
     }
 
     @Test @MainActor func initialStateIsInactive() {
@@ -120,7 +126,13 @@ struct FavoriteWorkspaceControllerTests {
 
     @Test @MainActor func persistFinalStateWritesToSettingsStore() {
         let store = TestSettingsStore(autoRefreshOnExternalChange: false)
-        let controller = FavoriteWorkspaceController(settingsStore: store)
+        let controller = FavoriteWorkspaceController(
+            settingsStore: store,
+            sidebarDocumentControllerProvider: { nil },
+            folderWatchFlowControllerProvider: { nil },
+            groupStateControllerProvider: { nil },
+            appearanceControllerProvider: { nil }
+        )
         store.addFavoriteWatchedFolder(name: "Persist", folderURL: URL(fileURLWithPath: "/tmp/persist"), options: .default)
         let favoriteID = store.currentSettings.favoriteWatchedFolders.first!.id
         var workspaceState = FavoriteWorkspaceState.from(
@@ -137,7 +149,13 @@ struct FavoriteWorkspaceControllerTests {
 
     @Test @MainActor func persistFinalStateIsNoOpWhenInactive() {
         let store = TestSettingsStore(autoRefreshOnExternalChange: false)
-        let controller = FavoriteWorkspaceController(settingsStore: store)
+        let controller = FavoriteWorkspaceController(
+            settingsStore: store,
+            sidebarDocumentControllerProvider: { nil },
+            folderWatchFlowControllerProvider: { nil },
+            groupStateControllerProvider: { nil },
+            appearanceControllerProvider: { nil }
+        )
         store.addFavoriteWatchedFolder(name: "NoOp", folderURL: URL(fileURLWithPath: "/tmp/no-persist"), options: .default)
         controller.persistFinalState(to: store)
         let persisted = store.currentSettings.favoriteWatchedFolders.first!

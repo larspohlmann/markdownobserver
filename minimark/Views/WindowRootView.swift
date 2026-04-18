@@ -10,11 +10,11 @@ struct WindowRootView: View {
     @State var sidebarDocumentController: SidebarDocumentController
     @State var windowCoordinator: WindowCoordinator
     @State var appearanceController: WindowAppearanceController
-    @State var groupStateController = SidebarGroupStateController()
+    @State var groupStateController: SidebarGroupStateController
     @State var favoriteWorkspaceController: FavoriteWorkspaceController
     @State var folderWatchFlowController: FolderWatchFlowController
     @State var recentHistoryCoordinator: RecentHistoryCoordinator
-    @State var uiTestLaunchCoordinator = UITestLaunchCoordinator()
+    @State var uiTestLaunchCoordinator: UITestLaunchCoordinator
 
     init(
         seed: WindowSeed?,
@@ -24,22 +24,42 @@ struct WindowRootView: View {
         self.seed = seed
         self.settingsStore = settingsStore
         self.multiFileDisplayMode = multiFileDisplayMode
+
         let sidebarDocumentController = SidebarDocumentController(settingsStore: settingsStore)
+        let groupStateController = SidebarGroupStateController()
+        let appearanceController = WindowAppearanceController(settingsStore: settingsStore)
+        let uiTestLaunchCoordinator = UITestLaunchCoordinator()
+
+        let favoriteBox = WeakBox<FavoriteWorkspaceController>()
+
+        let folderWatchFlowController = FolderWatchFlowController(
+            settingsStore: settingsStore,
+            sidebarDocumentController: sidebarDocumentController,
+            favoriteWorkspaceControllerProvider: { favoriteBox.value },
+            groupStateControllerProvider: { [weak groupStateController] in groupStateController },
+            appearanceControllerProvider: { [weak appearanceController] in appearanceController }
+        )
+
+        let favoriteWorkspaceController = FavoriteWorkspaceController(
+            settingsStore: settingsStore,
+            sidebarDocumentControllerProvider: { [weak sidebarDocumentController] in sidebarDocumentController },
+            folderWatchFlowControllerProvider: { [weak folderWatchFlowController] in folderWatchFlowController },
+            groupStateControllerProvider: { [weak groupStateController] in groupStateController },
+            appearanceControllerProvider: { [weak appearanceController] in appearanceController }
+        )
+        favoriteBox.value = favoriteWorkspaceController
+
         _sidebarDocumentController = State(wrappedValue: sidebarDocumentController)
+        _groupStateController = State(wrappedValue: groupStateController)
+        _appearanceController = State(wrappedValue: appearanceController)
+        _uiTestLaunchCoordinator = State(wrappedValue: uiTestLaunchCoordinator)
+        _folderWatchFlowController = State(wrappedValue: folderWatchFlowController)
+        _favoriteWorkspaceController = State(wrappedValue: favoriteWorkspaceController)
         _windowCoordinator = State(
             wrappedValue: WindowCoordinator(
                 settingsStore: settingsStore,
                 sidebarDocumentController: sidebarDocumentController
             )
-        )
-        _appearanceController = State(
-            wrappedValue: WindowAppearanceController(settingsStore: settingsStore)
-        )
-        _favoriteWorkspaceController = State(
-            wrappedValue: FavoriteWorkspaceController(settingsStore: settingsStore)
-        )
-        _folderWatchFlowController = State(
-            wrappedValue: FolderWatchFlowController(settingsStore: settingsStore, sidebarDocumentController: sidebarDocumentController)
         )
         _recentHistoryCoordinator = State(
             wrappedValue: RecentHistoryCoordinator(settingsStore: settingsStore)
@@ -257,17 +277,6 @@ struct WindowRootView: View {
                 folderWatchFlowController?.sharedFolderWatchSession != nil
             }
         ))
-        favoriteWorkspaceController.configure(
-            sidebarDocumentController: sidebarDocumentController,
-            folderWatchFlowController: folderWatchFlowController,
-            groupStateController: groupStateController,
-            appearanceController: appearanceController
-        )
-        folderWatchFlowController.configure(
-            favoriteWorkspaceController: favoriteWorkspaceController,
-            groupStateController: groupStateController,
-            appearanceController: appearanceController
-        )
         recentHistoryCoordinator.configure(folderWatchFlowController: folderWatchFlowController)
         windowCoordinator.configure(
             appearanceController: appearanceController,

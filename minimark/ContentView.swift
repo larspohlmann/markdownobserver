@@ -232,7 +232,10 @@ struct ContentView: View {
     let appearanceController = WindowAppearanceController(settingsStore: settingsStore)
     let folderWatchFlow = FolderWatchFlowController(
         settingsStore: settingsStore,
-        sidebarDocumentController: sidebarDocumentController
+        sidebarDocumentController: sidebarDocumentController,
+        favoriteWorkspaceControllerProvider: { nil },
+        groupStateControllerProvider: { nil },
+        appearanceControllerProvider: { nil }
     )
 
     return ContentView(

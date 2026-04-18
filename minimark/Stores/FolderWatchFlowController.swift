@@ -25,24 +25,23 @@ final class FolderWatchFlowController {
     private let settingsStore: SettingsStore
     private let sidebarDocumentController: SidebarDocumentController
 
-    // Cross-references (set via configure())
-    private(set) weak var favoriteWorkspaceController: FavoriteWorkspaceController?
-    private(set) weak var groupStateController: SidebarGroupStateController?
-    private(set) weak var appearanceController: WindowAppearanceController?
+    // Cross-references (injected as providers to resolve construction-order cycles).
+    private let favoriteWorkspaceControllerProvider: @MainActor () -> FavoriteWorkspaceController?
+    private let groupStateControllerProvider: @MainActor () -> SidebarGroupStateController?
+    private let appearanceControllerProvider: @MainActor () -> WindowAppearanceController?
 
-    init(settingsStore: SettingsStore, sidebarDocumentController: SidebarDocumentController) {
+    init(
+        settingsStore: SettingsStore,
+        sidebarDocumentController: SidebarDocumentController,
+        favoriteWorkspaceControllerProvider: @escaping @MainActor () -> FavoriteWorkspaceController?,
+        groupStateControllerProvider: @escaping @MainActor () -> SidebarGroupStateController?,
+        appearanceControllerProvider: @escaping @MainActor () -> WindowAppearanceController?
+    ) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
-    }
-
-    func configure(
-        favoriteWorkspaceController: FavoriteWorkspaceController,
-        groupStateController: SidebarGroupStateController,
-        appearanceController: WindowAppearanceController
-    ) {
-        self.favoriteWorkspaceController = favoriteWorkspaceController
-        self.groupStateController = groupStateController
-        self.appearanceController = appearanceController
+        self.favoriteWorkspaceControllerProvider = favoriteWorkspaceControllerProvider
+        self.groupStateControllerProvider = groupStateControllerProvider
+        self.appearanceControllerProvider = appearanceControllerProvider
     }
 
     // MARK: - Presentation State
@@ -139,18 +138,18 @@ final class FolderWatchFlowController {
     ) -> Bool {
         var didDeactivateFavorite = false
 
-        if favoriteWorkspaceController?.activeFavoriteID != nil {
+        if favoriteWorkspaceControllerProvider()?.activeFavoriteID != nil {
             let normalizedPath = FileRouting.normalizedFileURL(folderURL).path
             let matchesActiveFavorite = settingsStore.currentSettings.favoriteWatchedFolders.contains {
-                $0.id == favoriteWorkspaceController?.activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
+                $0.id == favoriteWorkspaceControllerProvider()?.activeFavoriteID && $0.matches(folderPath: normalizedPath, options: options)
             }
             if !matchesActiveFavorite {
-                favoriteWorkspaceController?.persistFinalState(to: settingsStore)
-                favoriteWorkspaceController?.deactivate()
-                groupStateController?.pinnedGroupIDs = []
-                groupStateController?.collapsedGroupIDs = []
+                favoriteWorkspaceControllerProvider()?.persistFinalState(to: settingsStore)
+                favoriteWorkspaceControllerProvider()?.deactivate()
+                groupStateControllerProvider()?.pinnedGroupIDs = []
+                groupStateControllerProvider()?.collapsedGroupIDs = []
                 didDeactivateFavorite = true
-                Task { @MainActor [appearanceController] in
+                Task { @MainActor [appearanceController = appearanceControllerProvider()] in
                     if appearanceController?.isLocked == true {
                         appearanceController?.unlock()
                     }
@@ -175,10 +174,10 @@ final class FolderWatchFlowController {
     /// Does NOT reset `sidebarWidth` or call `refreshWindowPresentation()` — the caller handles those.
     func stopFolderWatchSession() {
         dismissAutoOpenWarning()
-        favoriteWorkspaceController?.persistFinalState(to: settingsStore)
-        favoriteWorkspaceController?.deactivate()
-        groupStateController?.pinnedGroupIDs = []
-        groupStateController?.collapsedGroupIDs = []
+        favoriteWorkspaceControllerProvider()?.persistFinalState(to: settingsStore)
+        favoriteWorkspaceControllerProvider()?.deactivate()
+        groupStateControllerProvider()?.pinnedGroupIDs = []
+        groupStateControllerProvider()?.collapsedGroupIDs = []
         sidebarDocumentController.folderWatchCoordinator.stopFolderWatch()
         cancelPendingWatch()
     }
@@ -238,7 +237,7 @@ final class FolderWatchFlowController {
     }
 
     private func syncFavoriteExclusionsIfNeeded(_ excludedPaths: [String]) {
-        guard let favoriteID = favoriteWorkspaceController?.activeFavoriteID else { return }
+        guard let favoriteID = favoriteWorkspaceControllerProvider()?.activeFavoriteID else { return }
         settingsStore.updateFavoriteWatchedFolderExclusions(
             id: favoriteID,
             excludedSubdirectoryPaths: excludedPaths
