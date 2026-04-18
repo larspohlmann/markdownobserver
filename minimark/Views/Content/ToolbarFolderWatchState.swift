@@ -1,5 +1,3 @@
-import Foundation
-
 struct ToolbarFolderWatchState: Equatable {
     let activeFolderWatch: FolderWatchSession?
     let isInitialScanInProgress: Bool
