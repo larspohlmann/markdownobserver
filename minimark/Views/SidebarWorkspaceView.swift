@@ -664,7 +664,11 @@ private struct SidebarGroupHeader: View {
             .buttonStyle(.plain)
             .help(closeGroupLabel)
             .accessibilityLabel(closeGroupLabel)
-            .accessibilityHint("Closes every open file in this group")
+            .accessibilityHint(
+                documentCount >= Self.closeGroupConfirmationThreshold
+                    ? "Shows a confirmation dialog before closing every open file in this group"
+                    : "Closes every open file in this group"
+            )
             .confirmationDialog(
                 "Close \(documentCount) files in \(displayName)?",
                 isPresented: $isConfirmingCloseGroup,
