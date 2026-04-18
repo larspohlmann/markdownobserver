@@ -35,9 +35,11 @@ struct ContentViewActionRouterTests {
                 sidebarDocumentController: harness.controller,
                 settingsStore: harness.settingsStore,
                 folderWatchSessionProvider: { nil },
-                applyTitlePresentation: {},
-                refreshWindowPresentation: {},
-                prepareRecentFolderWatch: { _, _ in }
+                callbacks: WindowOpenCallbacks(
+                    applyTitlePresentation: {},
+                    refreshWindowPresentation: {},
+                    prepareRecentFolderWatch: { _, _ in }
+                )
             )
             self.appearanceLock = AppearanceLockCoordinator(
                 appearanceControllerProvider: { [appearanceController] in appearanceController },

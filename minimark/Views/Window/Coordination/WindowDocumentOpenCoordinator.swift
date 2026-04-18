@@ -38,9 +38,7 @@ final class WindowDocumentOpenCoordinator {
     private let sidebarDocumentController: SidebarDocumentController
     private let settingsStore: SettingsStore
     private let folderWatchSessionProvider: () -> FolderWatchSession?
-    private let applyTitlePresentation: () -> Void
-    private let refreshWindowPresentation: () -> Void
-    private let prepareRecentFolderWatch: (URL, FolderWatchOptions) -> Void
+    private let callbacks: WindowOpenCallbacks
 
     init(
         fileOpenCoordinator: FileOpenCoordinator,
@@ -48,18 +46,14 @@ final class WindowDocumentOpenCoordinator {
         sidebarDocumentController: SidebarDocumentController,
         settingsStore: SettingsStore,
         folderWatchSessionProvider: @escaping () -> FolderWatchSession?,
-        applyTitlePresentation: @escaping () -> Void,
-        refreshWindowPresentation: @escaping () -> Void,
-        prepareRecentFolderWatch: @escaping (URL, FolderWatchOptions) -> Void
+        callbacks: WindowOpenCallbacks
     ) {
         self.fileOpenCoordinator = fileOpenCoordinator
         self.folderWatchOpen = folderWatchOpen
         self.sidebarDocumentController = sidebarDocumentController
         self.settingsStore = settingsStore
         self.folderWatchSessionProvider = folderWatchSessionProvider
-        self.applyTitlePresentation = applyTitlePresentation
-        self.refreshWindowPresentation = refreshWindowPresentation
-        self.prepareRecentFolderWatch = prepareRecentFolderWatch
+        self.callbacks = callbacks
     }
 
     /// Install the store-callback configurator on the sidebar document controller.
@@ -86,7 +80,7 @@ final class WindowDocumentOpenCoordinator {
 
     func openFileRequest(_ request: FileOpenRequest) {
         fileOpenCoordinator.open(request)
-        refreshWindowPresentation()
+        callbacks.refreshWindowPresentation()
     }
 
     func openIncomingURL(_ url: URL) {
@@ -99,7 +93,7 @@ final class WindowDocumentOpenCoordinator {
             origin: .manual,
             slotStrategy: .replaceSelectedSlot
         ))
-        applyTitlePresentation()
+        callbacks.applyTitlePresentation()
     }
 
     func openDocumentInCurrentWindow(_ fileURL: URL) {
@@ -109,7 +103,7 @@ final class WindowDocumentOpenCoordinator {
             folderWatchSession: folderWatchSessionProvider(),
             slotStrategy: .replaceSelectedSlot
         ))
-        applyTitlePresentation()
+        callbacks.applyTitlePresentation()
     }
 
     func openDocumentInSelectedSlot(
@@ -126,7 +120,7 @@ final class WindowDocumentOpenCoordinator {
             initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedURL: $0] } ?? [:],
             slotStrategy: .replaceSelectedSlot
         ))
-        applyTitlePresentation()
+        callbacks.applyTitlePresentation()
     }
 
     func openAdditionalDocument(
@@ -173,7 +167,7 @@ final class WindowDocumentOpenCoordinator {
             initialDiffBaselineMarkdownByURL: initialDiffBaselineMarkdown.map { [normalizedFileURL: $0] } ?? [:],
             slotStrategy: .reuseEmptySlotForFirst
         ))
-        applyTitlePresentation()
+        callbacks.applyTitlePresentation()
     }
 
     func applyInitialSeedIfNeeded(seed: WindowSeed?) {
@@ -197,7 +191,7 @@ final class WindowDocumentOpenCoordinator {
                 settingsStore.resolvedRecentWatchedFolderURL(matching: entry.folderURL) ?? entry.folderURL
             },
             prepareRecentFolderWatch: { [weak self] folderURL, options in
-                self?.prepareRecentFolderWatch(folderURL, options)
+                self?.callbacks.prepareRecentFolderWatch(folderURL, options)
             }
         )
     }

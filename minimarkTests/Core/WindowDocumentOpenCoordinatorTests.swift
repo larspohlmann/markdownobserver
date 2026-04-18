@@ -25,9 +25,11 @@ struct WindowDocumentOpenCoordinatorTests {
             sidebarDocumentController: harness.controller,
             settingsStore: harness.settingsStore,
             folderWatchSessionProvider: { folderWatchSession },
-            applyTitlePresentation: onAfterTitle,
-            refreshWindowPresentation: onAfterRefresh,
-            prepareRecentFolderWatch: onPrepareRecentFolderWatch
+            callbacks: WindowOpenCallbacks(
+                applyTitlePresentation: onAfterTitle,
+                refreshWindowPresentation: onAfterRefresh,
+                prepareRecentFolderWatch: onPrepareRecentFolderWatch
+            )
         )
         return (coordinator, folderWatchOpen, harness)
     }
