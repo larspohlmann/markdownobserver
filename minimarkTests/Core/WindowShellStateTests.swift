@@ -16,7 +16,15 @@ struct WindowShellStateTests {
         let harness = try SidebarControllerTestHarness()
         let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
-            sidebarDocumentController: harness.controller
+            sidebarDocumentController: harness.controller,
+            dependencies: WindowCoordinatorDependencies(
+                appearanceController: { nil },
+                groupStateController: { nil },
+                favoriteWorkspaceController: { nil },
+                folderWatchFlowController: { nil },
+                uiTestLaunchCoordinator: { nil },
+                recentHistoryCoordinator: { nil }
+            )
         )
         return (coordinator, harness)
     }

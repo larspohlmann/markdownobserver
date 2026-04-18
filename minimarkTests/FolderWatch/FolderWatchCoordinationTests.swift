@@ -844,7 +844,15 @@ struct FolderWatchCoordinationTests {
 
         let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
-            sidebarDocumentController: harness.controller
+            sidebarDocumentController: harness.controller,
+            dependencies: WindowCoordinatorDependencies(
+                appearanceController: { nil },
+                groupStateController: { nil },
+                favoriteWorkspaceController: { nil },
+                folderWatchFlowController: { nil },
+                uiTestLaunchCoordinator: { nil },
+                recentHistoryCoordinator: { nil }
+            )
         )
 
         coordinator.shell.applyTitlePresentation()
@@ -863,7 +871,15 @@ struct FolderWatchCoordinationTests {
 
         let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
-            sidebarDocumentController: harness.controller
+            sidebarDocumentController: harness.controller,
+            dependencies: WindowCoordinatorDependencies(
+                appearanceController: { nil },
+                groupStateController: { nil },
+                favoriteWorkspaceController: { nil },
+                folderWatchFlowController: { nil },
+                uiTestLaunchCoordinator: { nil },
+                recentHistoryCoordinator: { nil }
+            )
         )
         let queuedURL = URL(fileURLWithPath: "/tmp/queued-from-window-coordinator.md")
         let queuedEvent = FolderWatchChangeEvent(

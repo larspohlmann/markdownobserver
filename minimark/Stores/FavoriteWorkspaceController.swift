@@ -6,31 +6,29 @@ import Observation
 final class FavoriteWorkspaceController {
     private let settingsStore: any SettingsReading & FavoriteWriting
 
-    // Cross-references (set via configure())
-    private weak var sidebarDocumentController: SidebarDocumentController?
-    private weak var folderWatchFlowController: FolderWatchFlowController?
-    private weak var groupStateController: SidebarGroupStateController?
-    private weak var appearanceController: WindowAppearanceController?
+    // Cross-references (injected as providers to resolve construction-order cycles).
+    private let sidebarDocumentControllerProvider: @MainActor () -> SidebarDocumentController?
+    private let folderWatchFlowControllerProvider: @MainActor () -> FolderWatchFlowController?
+    private let groupStateControllerProvider: @MainActor () -> SidebarGroupStateController?
+    private let appearanceControllerProvider: @MainActor () -> WindowAppearanceController?
 
     private(set) var activeFavoriteID: UUID?
     private(set) var activeFavoriteWorkspaceState: FavoriteWorkspaceState?
 
     var isActive: Bool { activeFavoriteID != nil }
 
-    init(settingsStore: some SettingsReading & FavoriteWriting) {
-        self.settingsStore = settingsStore
-    }
-
-    func configure(
-        sidebarDocumentController: SidebarDocumentController,
-        folderWatchFlowController: FolderWatchFlowController,
-        groupStateController: SidebarGroupStateController,
-        appearanceController: WindowAppearanceController
+    init(
+        settingsStore: some SettingsReading & FavoriteWriting,
+        sidebarDocumentControllerProvider: @escaping @MainActor () -> SidebarDocumentController?,
+        folderWatchFlowControllerProvider: @escaping @MainActor () -> FolderWatchFlowController?,
+        groupStateControllerProvider: @escaping @MainActor () -> SidebarGroupStateController?,
+        appearanceControllerProvider: @escaping @MainActor () -> WindowAppearanceController?
     ) {
-        self.sidebarDocumentController = sidebarDocumentController
-        self.folderWatchFlowController = folderWatchFlowController
-        self.groupStateController = groupStateController
-        self.appearanceController = appearanceController
+        self.settingsStore = settingsStore
+        self.sidebarDocumentControllerProvider = sidebarDocumentControllerProvider
+        self.folderWatchFlowControllerProvider = folderWatchFlowControllerProvider
+        self.groupStateControllerProvider = groupStateControllerProvider
+        self.appearanceControllerProvider = appearanceControllerProvider
     }
 
     // MARK: - State Mutations
@@ -83,7 +81,7 @@ final class FavoriteWorkspaceController {
     }
 
     func matchingCurrentSession() -> FavoriteWatchedFolder? {
-        guard let session = folderWatchFlowController?.sharedFolderWatchSession else { return nil }
+        guard let session = folderWatchFlowControllerProvider()?.sharedFolderWatchSession else { return nil }
         return matchingFavorite(
             folderURL: session.folderURL,
             options: session.options,
@@ -98,7 +96,7 @@ final class FavoriteWorkspaceController {
     // MARK: - Open Document URLs
 
     func openDocumentFileURLs() -> [URL] {
-        sidebarDocumentController?.documents.compactMap { $0.documentStore.document.fileURL } ?? []
+        sidebarDocumentControllerProvider()?.documents.compactMap { $0.documentStore.document.fileURL } ?? []
     }
 
     // MARK: - Persistence
@@ -115,8 +113,8 @@ final class FavoriteWorkspaceController {
     // MARK: - Favorite Lifecycle
 
     func saveAsFavorite(name: String, currentSidebarWidth: CGFloat) {
-        guard let session = folderWatchFlowController?.sharedFolderWatchSession,
-              let groupStateController else { return }
+        guard let session = folderWatchFlowControllerProvider()?.sharedFolderWatchSession,
+              let groupStateController = groupStateControllerProvider() else { return }
         let groupSnapshot = groupStateController.persistenceSnapshot
         var workspaceState = FavoriteWorkspaceState.from(
             settings: settingsStore.currentSettings,
@@ -126,7 +124,7 @@ final class FavoriteWorkspaceController {
         )
         workspaceState.fileSortMode = groupSnapshot.fileSortMode
         workspaceState.groupSortMode = groupSnapshot.sortMode
-        workspaceState.lockedAppearance = appearanceController?.lockedAppearance
+        workspaceState.lockedAppearance = appearanceControllerProvider()?.lockedAppearance
         workspaceState.manualGroupOrder = groupSnapshot.manualGroupOrder
         settingsStore.addFavoriteWatchedFolder(
             name: name,
@@ -149,6 +147,10 @@ final class FavoriteWorkspaceController {
 
     /// Returns the sidebar width from the favorite's workspace state (so the caller can apply it to window state).
     func startFavoriteWatch(_ entry: FavoriteWatchedFolder) -> CGFloat {
+        let appearanceController = appearanceControllerProvider()
+        let folderWatchFlowController = folderWatchFlowControllerProvider()
+        let sidebarDocumentController = sidebarDocumentControllerProvider()
+
         // Restore appearance FIRST
         if let lockedAppearance = entry.workspaceState.lockedAppearance {
             appearanceController?.restore(from: lockedAppearance)
@@ -158,7 +160,7 @@ final class FavoriteWorkspaceController {
 
         // Activate and restore workspace state
         activate(id: entry.id, workspaceState: entry.workspaceState)
-        groupStateController?.applyWorkspaceState(entry.workspaceState)
+        groupStateControllerProvider()?.applyWorkspaceState(entry.workspaceState)
 
         // Start watching folder (via FWFC)
         let resolvedURL = settingsStore.resolvedFavoriteWatchedFolderURL(for: entry)
@@ -198,7 +200,7 @@ final class FavoriteWorkspaceController {
     }
 
     func syncOpenDocumentsIfNeeded() {
-        guard let session = folderWatchFlowController?.sharedFolderWatchSession,
+        guard let session = folderWatchFlowControllerProvider()?.sharedFolderWatchSession,
               let favorite = matchingCurrentSession() else { return }
 
         let currentURLs = openDocumentFileURLs()
@@ -223,10 +225,10 @@ final class FavoriteWorkspaceController {
         _ entry: FavoriteWatchedFolder,
         resolvedFolderURL: URL
     ) {
-        sidebarDocumentController?.folderWatchCoordinator.scanCurrentMarkdownFiles { [weak self] scannedURLs in
+        sidebarDocumentControllerProvider()?.folderWatchCoordinator.scanCurrentMarkdownFiles { [weak self] scannedURLs in
             guard let self,
-                  let session = folderWatchFlowController?.sharedFolderWatchSession,
-                  let fileOpenCoordinator = sidebarDocumentController?.fileOpenCoordinator else {
+                  let session = folderWatchFlowControllerProvider()?.sharedFolderWatchSession,
+                  let fileOpenCoordinator = sidebarDocumentControllerProvider()?.fileOpenCoordinator else {
                 return
             }
 
@@ -239,7 +241,7 @@ final class FavoriteWorkspaceController {
                     slotStrategy: .alwaysAppend,
                     materializationStrategy: .deferOnly
                 ))
-                sidebarDocumentController?.selectDocumentWithNewestModificationDate()
+                sidebarDocumentControllerProvider()?.selectDocumentWithNewestModificationDate()
             }
 
             settingsStore.updateFavoriteWatchedFolderKnownDocuments(
