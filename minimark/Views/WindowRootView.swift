@@ -80,18 +80,80 @@ struct WindowRootView: View {
     }
 
     var body: some View {
-        Group {
+        // `ZStack` (not `Group`) is load-bearing: on windows SwiftUI creates
+        // in response to external file opens, an `if/else` inside a `Group`
+        // causes `.toolbar` items to never register with the NSToolbar —
+        // see #385. A stable outer container keeps the single `.toolbar`
+        // modifier attached across the shell→rootContent phase transition.
+        ZStack {
             if windowCoordinator.hasCompletedWindowPhase {
                 commandNotificationAwareView(windowLifecycleChangeObservers(windowLifecycleBaseView(rootContent)))
             } else {
                 windowShell
             }
         }
+        .toolbar { windowToolbarItems }
         .environment(settingsStore)
         .environment(appearanceController)
         .environment(sidebarDocumentController)
         .environment(folderWatchFlowController)
         .environment(groupStateController)
+    }
+
+    @ToolbarContentBuilder
+    private var windowToolbarItems: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            FolderWatchToolbarButton(
+                state: currentToolbarFolderWatchState,
+                onAction: { action in
+                    if case .activate = action {
+                        promptForFolderWatch()
+                    } else {
+                        windowCoordinator.contentActions.handle(action)
+                    }
+                },
+                compact: true
+            )
+            .disabled(!windowCoordinator.hasCompletedWindowPhase)
+            .allowsHitTesting(windowCoordinator.hasCompletedWindowPhase)
+            .padding(.trailing, 8)
+        }
+
+        ToolbarItem(placement: .primaryAction) {
+            if windowCoordinator.hasCompletedWindowPhase && sidebarDocumentController.documents.count > 1 {
+                Button(action: {
+                    windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
+                }) {
+                    Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .help(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+                .accessibilityLabel(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+                .accessibilityIdentifier(.sidebarPlacementToggle)
+            }
+        }
+    }
+
+    private var currentToolbarFolderWatchState: ToolbarFolderWatchState {
+        let settings = settingsStore.currentSettings
+        guard windowCoordinator.hasCompletedWindowPhase else {
+            return ToolbarFolderWatchState(
+                activeFolderWatch: nil,
+                isInitialScanInProgress: false,
+                didInitialScanFail: false,
+                favoriteWatchedFolders: settings.favoriteWatchedFolders,
+                recentWatchedFolders: settings.recentWatchedFolders
+            )
+        }
+        let folderWatchCoordinator = sidebarDocumentController.folderWatchCoordinator
+        return ToolbarFolderWatchState(
+            activeFolderWatch: folderWatchFlowController.sharedFolderWatchSession,
+            isInitialScanInProgress: folderWatchCoordinator.isFolderWatchInitialScanInProgress,
+            didInitialScanFail: folderWatchCoordinator.didFolderWatchInitialScanFail,
+            favoriteWatchedFolders: settings.favoriteWatchedFolders,
+            recentWatchedFolders: settings.recentWatchedFolders
+        )
     }
 
     private var windowShell: some View {
@@ -104,24 +166,6 @@ struct WindowRootView: View {
                 .colorScheme(theme.kind.isDark ? .dark : .light)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                FolderWatchToolbarButton(
-                    state: ToolbarFolderWatchState(
-                        activeFolderWatch: nil,
-                        isInitialScanInProgress: false,
-                        didInitialScanFail: false,
-                        favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
-                        recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders
-                    ),
-                    onAction: { _ in },
-                    compact: true
-                )
-                .disabled(true)
-                .allowsHitTesting(false)
-                .padding(.trailing, 8)
-            }
-        }
         .navigationTitle(WindowTitleFormatter.appName)
         .task {
             await Task.yield()
@@ -347,43 +391,6 @@ struct WindowRootView: View {
                 }
             )
         )
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                FolderWatchToolbarButton(
-                    state: ToolbarFolderWatchState(
-                        activeFolderWatch: folderWatchFlowController.sharedFolderWatchSession,
-                        isInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
-                        didInitialScanFail: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
-                        favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
-                        recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders
-                    ),
-                    onAction: { action in
-                        if case .activate = action {
-                            promptForFolderWatch()
-                        } else {
-                            windowCoordinator.contentActions.handle(action)
-                        }
-                    },
-                    compact: true
-                )
-                .padding(.trailing, 8)
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                if sidebarDocumentController.documents.count > 1 {
-                    Button(action: {
-                        windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
-                    }) {
-                        Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                    .help(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
-                    .accessibilityLabel(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
-                    .accessibilityIdentifier(.sidebarPlacementToggle)
-                }
-            }
-        }
     }
 
     private func contentView(for store: DocumentStore) -> some View {
