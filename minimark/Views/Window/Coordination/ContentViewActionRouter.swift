@@ -82,8 +82,8 @@ final class ContentViewActionRouter {
         switch action {
         case .activate:
             break // Handled by view (requires modal panel)
-        case .startFavoriteWatch(let favorite):
-            self.favorite.startFavoriteWatch(favorite)
+        case .startFavoriteWatch(let fav):
+            favorite.startFavoriteWatch(fav)
         case .startRecentFolderWatch(let recent):
             favorite.startRecentFolderWatch(recent)
         case .editFavoriteWatchedFolders:
