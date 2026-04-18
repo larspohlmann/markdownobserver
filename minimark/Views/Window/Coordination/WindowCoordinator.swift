@@ -3,10 +3,21 @@ import Foundation
 import Observation
 
 @MainActor
+struct WindowCoordinatorDependencies {
+    let appearanceController: @MainActor () -> WindowAppearanceController?
+    let groupStateController: @MainActor () -> SidebarGroupStateController?
+    let favoriteWorkspaceController: @MainActor () -> FavoriteWorkspaceController?
+    let folderWatchFlowController: @MainActor () -> FolderWatchFlowController?
+    let uiTestLaunchCoordinator: @MainActor () -> UITestLaunchCoordinator?
+    let recentHistoryCoordinator: @MainActor () -> RecentHistoryCoordinator?
+}
+
+@MainActor
 @Observable
 final class WindowCoordinator {
     private let settingsStore: SettingsStore
     private let sidebarDocumentController: SidebarDocumentController
+    private let dependencies: WindowCoordinatorDependencies
     private(set) var folderWatchOpen: WindowFolderWatchOpenController!
     private(set) var shell: WindowShellController!
     private(set) var documentOpen: WindowDocumentOpenCoordinator!
@@ -23,43 +34,18 @@ final class WindowCoordinator {
     var isTitlebarEditingFavorites = false
     var isEditingSubfolders = false
 
-    // Controller references (set via configure())
-    private var appearanceController: WindowAppearanceController?
-    private var groupStateController: SidebarGroupStateController?
-    private var favoriteWorkspaceController: FavoriteWorkspaceController?
-    private var folderWatchFlowController: FolderWatchFlowController?
-    private var uiTestLaunchCoordinator: UITestLaunchCoordinator?
-    private var recentHistoryCoordinator: RecentHistoryCoordinator?
-
-    func configure(
-        appearanceController: WindowAppearanceController,
-        groupStateController: SidebarGroupStateController,
-        favoriteWorkspaceController: FavoriteWorkspaceController,
-        folderWatchFlowController: FolderWatchFlowController,
-        uiTestLaunchCoordinator: UITestLaunchCoordinator,
-        recentHistoryCoordinator: RecentHistoryCoordinator
-    ) {
-        self.appearanceController = appearanceController
-        self.groupStateController = groupStateController
-        self.favoriteWorkspaceController = favoriteWorkspaceController
-        self.folderWatchFlowController = folderWatchFlowController
-        self.uiTestLaunchCoordinator = uiTestLaunchCoordinator
-        self.recentHistoryCoordinator = recentHistoryCoordinator
-        documentOpen.configureStoreCallbacks(
-            lockedAppearanceProvider: { [weak appearanceController] in appearanceController?.lockedAppearance }
-        )
-    }
-
     init(
         settingsStore: SettingsStore,
-        sidebarDocumentController: SidebarDocumentController
+        sidebarDocumentController: SidebarDocumentController,
+        dependencies: WindowCoordinatorDependencies
     ) {
         self.settingsStore = settingsStore
         self.sidebarDocumentController = sidebarDocumentController
+        self.dependencies = dependencies
         self.shell = WindowShellController(
             sidebarDocumentController: sidebarDocumentController,
             folderWatchSessionProvider: { [weak self] in
-                self?.folderWatchFlowController?.sharedFolderWatchSession
+                self?.dependencies.folderWatchFlowController()?.sharedFolderWatchSession
             }
         )
         self.folderWatchOpen = WindowFolderWatchOpenController(
@@ -73,36 +59,36 @@ final class WindowCoordinator {
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
             folderWatchSessionProvider: { [weak self] in
-                self?.folderWatchFlowController?.sharedFolderWatchSession
+                self?.dependencies.folderWatchFlowController()?.sharedFolderWatchSession
             },
             callbacks: WindowOpenCallbacks(
                 applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
                 refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() },
                 prepareRecentFolderWatch: { [weak self] folderURL, options in
-                    self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
+                    self?.dependencies.folderWatchFlowController()?.presentOptions(for: folderURL, options: options)
                 }
             )
         )
         self.sidebarActions = SidebarDocumentActionRouter(
             sidebarDocumentController: sidebarDocumentController,
             settingsStore: settingsStore,
-            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() },
             sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? SidebarWorkspaceMetrics.sidebarIdealWidth },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
         self.appearanceLock = AppearanceLockCoordinator(
-            appearanceControllerProvider: { [weak self] in self?.appearanceController },
+            appearanceControllerProvider: { [weak self] in self?.dependencies.appearanceController() },
             sidebarDocumentController: sidebarDocumentController,
-            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController }
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() }
         )
         self.sidebarMetrics = WindowSidebarMetricsController(
             sidebarDocumentController: sidebarDocumentController,
-            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() },
             hostWindowProvider: { [weak self] in self?.shell.hostWindow }
         )
         self.folderWatchSession = WindowFolderWatchSessionFlow(
-            folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
-            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+            folderWatchFlowControllerProvider: { [weak self] in self?.dependencies.folderWatchFlowController() },
+            favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() },
             sidebarMetrics: sidebarMetrics,
             hostWindowProvider: { [weak self] in self?.shell.hostWindow },
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
@@ -111,22 +97,22 @@ final class WindowCoordinator {
             hostLifecycle: WindowHostLifecycleDispatcher(
                 shell: shell,
                 folderWatchOpen: folderWatchOpen,
-                uiTestLaunchCoordinatorProvider: { [weak self] in self?.uiTestLaunchCoordinator },
+                uiTestLaunchCoordinatorProvider: { [weak self] in self?.dependencies.uiTestLaunchCoordinator() },
                 refreshWindowShellState: { [weak self] in self?.refreshWindowShellState() }
             ),
             documentSync: WindowDocumentSyncDispatcher(
                 shell: shell,
                 sidebarDocumentController: sidebarDocumentController,
                 settingsStore: settingsStore,
-                groupStateControllerProvider: { [weak self] in self?.groupStateController }
+                groupStateControllerProvider: { [weak self] in self?.dependencies.groupStateController() }
             ),
             favoriteWorkspace: FavoriteWorkspaceEventDispatcher(
-                favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
-                appearanceControllerProvider: { [weak self] in self?.appearanceController },
+                favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() },
+                appearanceControllerProvider: { [weak self] in self?.dependencies.appearanceController() },
                 settingsStore: settingsStore
             ),
             groupState: GroupStateEventDispatcher(
-                favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+                favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() },
                 settingsStore: settingsStore
             )
         )
@@ -137,7 +123,7 @@ final class WindowCoordinator {
                 sidebarDocumentController: sidebarDocumentController
             ),
             folderWatch: FolderWatchActionRouter(
-                folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
+                folderWatchFlowControllerProvider: { [weak self] in self?.dependencies.folderWatchFlowController() },
                 callbacks: FolderWatchRouterCallbacks(
                     confirmFolderWatch: { [weak self] options in self?.folderWatchSession.confirm(options) },
                     stopFolderWatch: { [weak self] in self?.folderWatchSession.stop() },
@@ -145,11 +131,11 @@ final class WindowCoordinator {
                 )
             ),
             favorite: FavoriteActionRouter(
-                favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
-                recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
+                favoriteWorkspaceControllerProvider: { [weak self] in self?.dependencies.favoriteWorkspaceController() },
+                recentHistoryCoordinatorProvider: { [weak self] in self?.dependencies.recentHistoryCoordinator() },
                 settingsStore: settingsStore,
                 fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
-                folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
+                folderWatchFlowControllerProvider: { [weak self] in self?.dependencies.folderWatchFlowController() },
                 callbacks: FavoriteRouterCallbacks(
                     startFavoriteWatch: { [weak self] favorite in self?.folderWatchSession.startFavoriteWatch(favorite) },
                     applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
@@ -158,12 +144,15 @@ final class WindowCoordinator {
                 )
             )
         )
+        documentOpen.configureStoreCallbacks(
+            lockedAppearanceProvider: { [dependencies] in dependencies.appearanceController()?.lockedAppearance }
+        )
     }
 
     // MARK: - Composite refresh
 
     private func refreshSharedFolderWatchState() {
-        folderWatchFlowController?.refreshSharedState()
+        dependencies.folderWatchFlowController()?.refreshSharedState()
     }
 
     func refreshWindowPresentation() {

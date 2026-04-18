@@ -49,20 +49,28 @@ struct WindowRootView: View {
         )
         favoriteBox.value = favoriteWorkspaceController
 
+        let recentHistoryCoordinator = RecentHistoryCoordinator(settingsStore: settingsStore)
+
         _sidebarDocumentController = State(wrappedValue: sidebarDocumentController)
         _groupStateController = State(wrappedValue: groupStateController)
         _appearanceController = State(wrappedValue: appearanceController)
         _uiTestLaunchCoordinator = State(wrappedValue: uiTestLaunchCoordinator)
         _folderWatchFlowController = State(wrappedValue: folderWatchFlowController)
         _favoriteWorkspaceController = State(wrappedValue: favoriteWorkspaceController)
+        _recentHistoryCoordinator = State(wrappedValue: recentHistoryCoordinator)
         _windowCoordinator = State(
             wrappedValue: WindowCoordinator(
                 settingsStore: settingsStore,
-                sidebarDocumentController: sidebarDocumentController
+                sidebarDocumentController: sidebarDocumentController,
+                dependencies: WindowCoordinatorDependencies(
+                    appearanceController: { [weak appearanceController] in appearanceController },
+                    groupStateController: { [weak groupStateController] in groupStateController },
+                    favoriteWorkspaceController: { [weak favoriteWorkspaceController] in favoriteWorkspaceController },
+                    folderWatchFlowController: { [weak folderWatchFlowController] in folderWatchFlowController },
+                    uiTestLaunchCoordinator: { [weak uiTestLaunchCoordinator] in uiTestLaunchCoordinator },
+                    recentHistoryCoordinator: { [weak recentHistoryCoordinator] in recentHistoryCoordinator }
+                )
             )
-        )
-        _recentHistoryCoordinator = State(
-            wrappedValue: RecentHistoryCoordinator(settingsStore: settingsStore)
         )
     }
 
@@ -278,14 +286,6 @@ struct WindowRootView: View {
             }
         ))
         recentHistoryCoordinator.configure(folderWatchFlowController: folderWatchFlowController)
-        windowCoordinator.configure(
-            appearanceController: appearanceController,
-            groupStateController: groupStateController,
-            favoriteWorkspaceController: favoriteWorkspaceController,
-            folderWatchFlowController: folderWatchFlowController,
-            uiTestLaunchCoordinator: uiTestLaunchCoordinator,
-            recentHistoryCoordinator: recentHistoryCoordinator
-        )
         windowCoordinator.documentOpen.applyInitialSeedIfNeeded(seed: seed)
         folderWatchFlowController.refreshSharedState()
         // Now that all controllers are wired, try to apply the UI-test launch

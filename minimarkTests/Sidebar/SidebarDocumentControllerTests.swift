@@ -855,7 +855,15 @@ struct SidebarDocumentControllerTests {
         // Wire up the coordinator the same way the real app does
         let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
-            sidebarDocumentController: harness.controller
+            sidebarDocumentController: harness.controller,
+            dependencies: WindowCoordinatorDependencies(
+                appearanceController: { nil },
+                groupStateController: { nil },
+                favoriteWorkspaceController: { nil },
+                folderWatchFlowController: { nil },
+                uiTestLaunchCoordinator: { nil },
+                recentHistoryCoordinator: { nil }
+            )
         )
         coordinator.documentOpen.configureStoreCallbacks(
             lockedAppearanceProvider: { lockedAppearance }
@@ -883,7 +891,15 @@ struct SidebarDocumentControllerTests {
         // No locked appearance
         let coordinator = WindowCoordinator(
             settingsStore: harness.settingsStore,
-            sidebarDocumentController: harness.controller
+            sidebarDocumentController: harness.controller,
+            dependencies: WindowCoordinatorDependencies(
+                appearanceController: { nil },
+                groupStateController: { nil },
+                favoriteWorkspaceController: { nil },
+                folderWatchFlowController: { nil },
+                uiTestLaunchCoordinator: { nil },
+                recentHistoryCoordinator: { nil }
+            )
         )
         coordinator.documentOpen.configureStoreCallbacks(lockedAppearanceProvider: { nil })
 
