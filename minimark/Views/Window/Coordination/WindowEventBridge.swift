@@ -7,10 +7,10 @@ import Foundation
 /// each dispatcher owns its own slice of deps (see #373).
 @MainActor
 final class WindowEventBridge {
-    let hostLifecycle: WindowHostLifecycleDispatcher
-    let documentSync: WindowDocumentSyncDispatcher
-    let favoriteWorkspace: FavoriteWorkspaceEventDispatcher
-    let groupState: GroupStateEventDispatcher
+    private let hostLifecycle: WindowHostLifecycleDispatcher
+    private let documentSync: WindowDocumentSyncDispatcher
+    private let favoriteWorkspace: FavoriteWorkspaceEventDispatcher
+    private let groupState: GroupStateEventDispatcher
 
     init(
         hostLifecycle: WindowHostLifecycleDispatcher,
