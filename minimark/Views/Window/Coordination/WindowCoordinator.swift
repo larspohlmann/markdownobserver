@@ -75,11 +75,13 @@ final class WindowCoordinator {
             folderWatchSessionProvider: { [weak self] in
                 self?.folderWatchFlowController?.sharedFolderWatchSession
             },
-            applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
-            refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() },
-            prepareRecentFolderWatch: { [weak self] folderURL, options in
-                self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
-            }
+            callbacks: WindowOpenCallbacks(
+                applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
+                refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() },
+                prepareRecentFolderWatch: { [weak self] folderURL, options in
+                    self?.folderWatchFlowController?.presentOptions(for: folderURL, options: options)
+                }
+            )
         )
         self.sidebarActions = SidebarDocumentActionRouter(
             sidebarDocumentController: sidebarDocumentController,
