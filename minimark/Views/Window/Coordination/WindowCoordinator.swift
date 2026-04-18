@@ -131,21 +131,32 @@ final class WindowCoordinator {
             )
         )
         self.contentActions = ContentViewActionRouter(
-            documentOpen: documentOpen,
-            appearanceLock: appearanceLock,
-            sidebarDocumentController: sidebarDocumentController,
-            settingsStore: settingsStore,
-            folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
-            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
-            recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
-            fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
-            sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? SidebarWorkspaceMetrics.sidebarIdealWidth },
-            applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
-            confirmFolderWatch: { [weak self] options in self?.folderWatchSession.confirm(options) },
-            stopFolderWatch: { [weak self] in self?.folderWatchSession.stop() },
-            startFavoriteWatch: { [weak self] favorite in self?.folderWatchSession.startFavoriteWatch(favorite) },
-            setEditingSubfolders: { [weak self] value in self?.isEditingSubfolders = value },
-            setEditingFavorites: { [weak self] value in self?.isTitlebarEditingFavorites = value }
+            document: DocumentActionRouter(
+                documentOpen: documentOpen,
+                appearanceLock: appearanceLock,
+                sidebarDocumentController: sidebarDocumentController
+            ),
+            folderWatch: FolderWatchActionRouter(
+                folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
+                callbacks: FolderWatchRouterCallbacks(
+                    confirmFolderWatch: { [weak self] options in self?.folderWatchSession.confirm(options) },
+                    stopFolderWatch: { [weak self] in self?.folderWatchSession.stop() },
+                    setEditingSubfolders: { [weak self] value in self?.isEditingSubfolders = value }
+                )
+            ),
+            favorite: FavoriteActionRouter(
+                favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+                recentHistoryCoordinatorProvider: { [weak self] in self?.recentHistoryCoordinator },
+                settingsStore: settingsStore,
+                fileOpenCoordinator: sidebarDocumentController.fileOpenCoordinator,
+                folderWatchFlowControllerProvider: { [weak self] in self?.folderWatchFlowController },
+                callbacks: FavoriteRouterCallbacks(
+                    startFavoriteWatch: { [weak self] favorite in self?.folderWatchSession.startFavoriteWatch(favorite) },
+                    applyTitlePresentation: { [weak self] in self?.shell.applyTitlePresentation() },
+                    sidebarWidthProvider: { [weak self] in self?.sidebarMetrics.width ?? SidebarWorkspaceMetrics.sidebarIdealWidth },
+                    setEditingFavorites: { [weak self] value in self?.isTitlebarEditingFavorites = value }
+                )
+            )
         )
     }
 

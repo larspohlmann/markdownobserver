@@ -1,124 +1,80 @@
 import Foundation
 
-/// Reduces three action enums (`ContentViewAction`, `FolderWatchToolbarAction`,
-/// `EditFavoritesAction`) by dispatching each case to the appropriate
-/// collaborator. Holds no state of its own — every case forwards to one of the
-/// extracted controllers, the settings store, or one of the composite
-/// callbacks that the window coordinator owns (folder-watch confirm/stop,
-/// favorite watch start, sidebar-flag toggles).
+/// Thin composite over three focused routers: `DocumentActionRouter`,
+/// `FolderWatchActionRouter`, `FavoriteActionRouter`. Each inbound action is
+/// switched on by case and dispatched to the matching sub-router method.
 @MainActor
 final class ContentViewActionRouter {
-    private let documentOpen: WindowDocumentOpenCoordinator
-    private let appearanceLock: AppearanceLockCoordinator
-    private let sidebarDocumentController: SidebarDocumentController
-    private let settingsStore: SettingsStore
-    private let folderWatchFlowControllerProvider: () -> FolderWatchFlowController?
-    private let favoriteWorkspaceControllerProvider: () -> FavoriteWorkspaceController?
-    private let recentHistoryCoordinatorProvider: () -> RecentHistoryCoordinator?
-    private let fileOpenCoordinator: FileOpenCoordinator
-    private let sidebarWidthProvider: () -> CGFloat
-    private let applyTitlePresentation: () -> Void
-    private let confirmFolderWatch: (FolderWatchOptions) -> Void
-    private let stopFolderWatch: () -> Void
-    private let startFavoriteWatch: (FavoriteWatchedFolder) -> Void
-    private let setEditingSubfolders: (Bool) -> Void
-    private let setEditingFavorites: (Bool) -> Void
+    private let document: DocumentActionRouter
+    private let folderWatch: FolderWatchActionRouter
+    private let favorite: FavoriteActionRouter
 
     init(
-        documentOpen: WindowDocumentOpenCoordinator,
-        appearanceLock: AppearanceLockCoordinator,
-        sidebarDocumentController: SidebarDocumentController,
-        settingsStore: SettingsStore,
-        folderWatchFlowControllerProvider: @escaping () -> FolderWatchFlowController?,
-        favoriteWorkspaceControllerProvider: @escaping () -> FavoriteWorkspaceController?,
-        recentHistoryCoordinatorProvider: @escaping () -> RecentHistoryCoordinator?,
-        fileOpenCoordinator: FileOpenCoordinator,
-        sidebarWidthProvider: @escaping () -> CGFloat,
-        applyTitlePresentation: @escaping () -> Void,
-        confirmFolderWatch: @escaping (FolderWatchOptions) -> Void,
-        stopFolderWatch: @escaping () -> Void,
-        startFavoriteWatch: @escaping (FavoriteWatchedFolder) -> Void,
-        setEditingSubfolders: @escaping (Bool) -> Void,
-        setEditingFavorites: @escaping (Bool) -> Void
+        document: DocumentActionRouter,
+        folderWatch: FolderWatchActionRouter,
+        favorite: FavoriteActionRouter
     ) {
-        self.documentOpen = documentOpen
-        self.appearanceLock = appearanceLock
-        self.sidebarDocumentController = sidebarDocumentController
-        self.settingsStore = settingsStore
-        self.folderWatchFlowControllerProvider = folderWatchFlowControllerProvider
-        self.favoriteWorkspaceControllerProvider = favoriteWorkspaceControllerProvider
-        self.recentHistoryCoordinatorProvider = recentHistoryCoordinatorProvider
-        self.fileOpenCoordinator = fileOpenCoordinator
-        self.sidebarWidthProvider = sidebarWidthProvider
-        self.applyTitlePresentation = applyTitlePresentation
-        self.confirmFolderWatch = confirmFolderWatch
-        self.stopFolderWatch = stopFolderWatch
-        self.startFavoriteWatch = startFavoriteWatch
-        self.setEditingSubfolders = setEditingSubfolders
-        self.setEditingFavorites = setEditingFavorites
+        self.document = document
+        self.folderWatch = folderWatch
+        self.favorite = favorite
     }
 
     func handle(_ action: ContentViewAction) {
         switch action {
         case .requestFileOpen(let request):
-            documentOpen.openFileRequest(request)
+            document.requestFileOpen(request)
         case .requestFolderWatch(let url):
-            folderWatchFlowControllerProvider()?.prepareOptions(for: url)
+            folderWatch.requestFolderWatch(url)
         case .confirmFolderWatch(let options):
-            confirmFolderWatch(options)
+            folderWatch.confirmFolderWatch(options)
         case .cancelFolderWatch:
-            folderWatchFlowControllerProvider()?.cancelPendingWatch()
+            folderWatch.cancelFolderWatch()
         case .stopFolderWatch:
-            stopFolderWatch()
+            folderWatch.stopFolderWatch()
         case .saveFolderWatchAsFavorite(let name):
-            favoriteWorkspaceControllerProvider()?.saveAsFavorite(name: name, currentSidebarWidth: sidebarWidthProvider())
+            favorite.saveFolderWatchAsFavorite(name: name)
         case .removeCurrentWatchFromFavorites:
-            favoriteWorkspaceControllerProvider()?.removeFromFavorites()
+            favorite.removeCurrentWatchFromFavorites()
         case .toggleAppearanceLock:
-            appearanceLock.toggleLock()
+            document.toggleAppearanceLock()
         case .startFavoriteWatch(let fav):
-            startFavoriteWatch(fav)
+            favorite.startFavoriteWatch(fav)
         case .clearFavoriteWatchedFolders:
-            favoriteWorkspaceControllerProvider()?.clearAll()
+            favorite.clearFavoriteWatchedFolders()
         case .renameFavoriteWatchedFolder(let id, let name):
-            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
+            favorite.renameFavoriteWatchedFolder(id: id, name: name)
         case .removeFavoriteWatchedFolder(let id):
-            settingsStore.removeFavoriteWatchedFolder(id: id)
+            favorite.removeFavoriteWatchedFolder(id: id)
         case .reorderFavoriteWatchedFolders(let ids):
-            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
+            favorite.reorderFavoriteWatchedFolders(orderedIDs: ids)
         case .startRecentManuallyOpenedFile(let entry):
-            recentHistoryCoordinatorProvider()?.openRecentFile(
-                entry,
-                using: fileOpenCoordinator,
-                session: folderWatchFlowControllerProvider()?.sharedFolderWatchSession
-            )
-            applyTitlePresentation()
+            favorite.startRecentManuallyOpenedFile(entry)
         case .startRecentFolderWatch(let entry):
-            recentHistoryCoordinatorProvider()?.startRecentFolderWatch(entry)
+            favorite.startRecentFolderWatch(entry)
         case .clearRecentWatchedFolders:
-            recentHistoryCoordinatorProvider()?.clearRecentWatchedFolders()
+            favorite.clearRecentWatchedFolders()
         case .clearRecentManuallyOpenedFiles:
-            recentHistoryCoordinatorProvider()?.clearRecentManuallyOpenedFiles()
+            favorite.clearRecentManuallyOpenedFiles()
         case .editSubfolders:
-            setEditingSubfolders(true)
+            folderWatch.editSubfolders()
         case .saveSourceDraft:
-            sidebarDocumentController.selectedDocumentStore.editingFlow.save()
+            document.saveSourceDraft()
         case .discardSourceDraft:
-            sidebarDocumentController.selectedDocumentStore.editingFlow.discard()
+            document.discardSourceDraft()
         case .startSourceEditing:
-            sidebarDocumentController.selectedDocumentStore.editingFlow.startEditing()
+            document.startSourceEditing()
         case .updateSourceDraft(let markdown):
-            sidebarDocumentController.selectedDocumentStore.editingFlow.updateDraft(markdown)
+            document.updateSourceDraft(markdown)
         case .grantImageDirectoryAccess(let url):
-            sidebarDocumentController.selectedDocumentStore.persister.grantImageDirectoryAccess(folderURL: url)
+            document.grantImageDirectoryAccess(url)
         case .openInApplication(let app):
-            sidebarDocumentController.selectedDocumentStore.document.openInApplication(app)
+            document.openInApplication(app)
         case .revealInFinder:
-            sidebarDocumentController.selectedDocumentStore.document.revealInFinder()
+            document.revealInFinder()
         case .presentError(let error):
-            sidebarDocumentController.selectedDocumentStore.document.handle(error)
+            document.presentError(error)
         case .updateTOCHeadings(let headings):
-            sidebarDocumentController.selectedDocumentStore.toc.updateHeadings(headings)
+            document.updateTOCHeadings(headings)
         }
     }
 
@@ -126,27 +82,27 @@ final class ContentViewActionRouter {
         switch action {
         case .activate:
             break // Handled by view (requires modal panel)
-        case .startFavoriteWatch(let favorite):
-            startFavoriteWatch(favorite)
+        case .startFavoriteWatch(let fav):
+            favorite.startFavoriteWatch(fav)
         case .startRecentFolderWatch(let recent):
-            recentHistoryCoordinatorProvider()?.startRecentFolderWatch(recent)
+            favorite.startRecentFolderWatch(recent)
         case .editFavoriteWatchedFolders:
-            setEditingFavorites(true)
+            favorite.editFavoriteWatchedFolders()
         case .clearRecentWatchedFolders:
-            recentHistoryCoordinatorProvider()?.clearRecentWatchedFolders()
+            favorite.clearRecentWatchedFolders()
         }
     }
 
     func handle(_ action: EditFavoritesAction) {
         switch action {
         case .rename(let id, let name):
-            settingsStore.renameFavoriteWatchedFolder(id: id, newName: name)
+            favorite.renameFavoriteWatchedFolder(id: id, name: name)
         case .delete(let id):
-            settingsStore.removeFavoriteWatchedFolder(id: id)
+            favorite.removeFavoriteWatchedFolder(id: id)
         case .reorder(let ids):
-            settingsStore.reorderFavoriteWatchedFolders(orderedIDs: ids)
+            favorite.reorderFavoriteWatchedFolders(orderedIDs: ids)
         case .dismiss:
-            setEditingFavorites(false)
+            favorite.dismissEditFavorites()
         }
     }
 }
