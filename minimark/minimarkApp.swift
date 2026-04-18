@@ -7,7 +7,7 @@ struct MarkdownObserverApp: App {
     @State private var settingsStore: SettingsStore
 
     init() {
-        let settingsStore = SettingsStore()
+        let settingsStore = SettingsStore.makeDefault()
         _settingsStore = State(wrappedValue: settingsStore)
 
         SystemNotifier.shared.configure()

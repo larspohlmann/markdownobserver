@@ -177,7 +177,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    let settingsStore = SettingsStore()
+    let settingsStore = SettingsStore.makeDefault()
     let securityScopeResolver = SecurityScopeResolver(
         securityScope: SecurityScopedResourceAccess(),
         settingsStore: settingsStore,
