@@ -318,15 +318,10 @@ struct AppCommands: Commands {
     }
 
     private func pickFolder() -> URL? {
-        let panel = NSOpenPanel()
-        panel.title = "Choose Folder to Watch"
-        panel.message = "Select a folder, then choose watch options."
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = false
-        panel.prompt = "Choose Folder"
-
-        return panel.runModal() == .OK ? panel.url : nil
+        MarkdownOpenPanel.pickFolder(
+            title: "Start Watching a Folder",
+            message: "MarkdownObserver will auto-open Markdown files in this folder and keep the preview in sync as files change. You'll confirm what to open in the next step.",
+            prompt: "Choose Folder"
+        )
     }
 }

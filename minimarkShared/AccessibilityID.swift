@@ -21,6 +21,18 @@ enum AccessibilityID: String {
     case fileSelectionOpenButton = "file-selection-open-button"
     case autoOpenKeepCurrentButton = "auto-open-keep-current-button"
     case autoOpenSelectMoreButton = "auto-open-select-more-button"
+    case openInMenuButton = "open-in-menu-button"
+    case viewModePreviewButton = "view-mode-preview-button"
+    case viewModeSplitButton = "view-mode-split-button"
+    case viewModeSourceButton = "view-mode-source-button"
+    case editSourceButton = "edit-source-button"
+    case sidebarGroupSortMenu = "sidebar-group-sort-menu"
+    case sidebarFileSortMenu = "sidebar-file-sort-menu"
+    case sidebarExpandAllButton = "sidebar-expand-all-button"
+    case sidebarCollapseAllButton = "sidebar-collapse-all-button"
+    case sidebarRestoreManualButton = "sidebar-restore-manual-button"
+    case saveSourceDraftButton = "save-source-draft-button"
+    case discardSourceDraftButton = "discard-source-draft-button"
 
     static func sidebarDocument(title: String) -> String {
         "sidebar-document-\(title)"

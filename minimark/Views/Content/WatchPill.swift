@@ -141,7 +141,7 @@ struct WatchPill: View {
                     HStack(spacing: 4) {
                         Image(systemName: "folder.badge.gearshape")
                             .font(.system(size: 8, weight: .bold))
-                        Text("Edit")
+                        Text("Edit Subfolders")
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                     }
                     .padding(.horizontal, 8)

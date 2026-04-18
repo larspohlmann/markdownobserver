@@ -31,7 +31,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(minWidth: 780, minHeight: 720)
+        .frame(minWidth: 780, minHeight: 960)
         .task {
             notificationNotifier.refreshNotificationStatus()
         }
