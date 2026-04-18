@@ -35,7 +35,7 @@ final class minimarkUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
         app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path
-        app.launch()
+        app.launchSandboxed()
 
         let sheet = app.descendants(matching: .any).matching(identifier: watchFolderSheetIdentifier).firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
@@ -63,7 +63,7 @@ final class minimarkUITests: XCTestCase {
     @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+            XCUIApplication().launchSandboxed()
         }
     }
 
@@ -81,7 +81,7 @@ final class minimarkUITests: XCTestCase {
     func testFocusedSceneCommandsAreEnabledWhenWindowIsKey() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument]
-        app.launch()
+        app.launchSandboxed()
 
         // Wait for the real WindowGroup scene window to be up — the off-screen
         // bootstrap window also matches `app.windows.firstMatch`, so gate on a
@@ -128,7 +128,7 @@ final class minimarkUITests: XCTestCase {
     func testWatchedFolderAutoOpensNewMarkdownFileAndReflectsLaterEdit() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, simulateAutoOpenWatchFlowArgument]
-        app.launch()
+        app.launchSandboxed()
 
         let preview = app.descendants(matching: .any).matching(identifier: previewSummaryIdentifier).firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
@@ -158,7 +158,7 @@ final class minimarkUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
         app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path
-        app.launch()
+        app.launchSandboxed()
 
         let sheet = app.descendants(matching: .any).matching(identifier: watchFolderSheetIdentifier).firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
@@ -184,7 +184,7 @@ final class minimarkUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
         app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path
-        app.launch()
+        app.launchSandboxed()
 
         let sheet = app.descendants(matching: .any).matching(identifier: watchFolderSheetIdentifier).firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
@@ -223,7 +223,7 @@ final class minimarkUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, presentWatchFolderSheetArgument]
         app.launchEnvironment[watchFolderPathEnvironmentKey] = folderURL.path
-        app.launch()
+        app.launchSandboxed()
 
         let sheet = app.descendants(matching: .any).matching(identifier: watchFolderSheetIdentifier).firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
@@ -245,7 +245,7 @@ final class minimarkUITests: XCTestCase {
     func testGroupedSidebarShowsDocumentsFromMultipleSubdirectories() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
-        app.launch()
+        app.launchSandboxed()
 
         let groupToggles = app.buttons.matching(identifier: sidebarGroupToggleIdentifier)
         waitForCondition(timeout: 8) {
@@ -276,7 +276,7 @@ final class minimarkUITests: XCTestCase {
     func testGroupedSidebarExposesCustomGroupToggleButtons() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
-        app.launch()
+        app.launchSandboxed()
 
         let customToggle = app.buttons.matching(identifier: sidebarGroupToggleIdentifier).firstMatch
         XCTAssertTrue(customToggle.waitForExistence(timeout: 8), "Grouped sidebar should expose custom group toggle buttons")
@@ -288,7 +288,7 @@ final class minimarkUITests: XCTestCase {
     func testGroupedSidebarDisplaysExpectedGroupsInOrder() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
-        app.launch()
+        app.launchSandboxed()
 
         let window = app.windows.firstMatch
         XCTAssertTrue(window.waitForExistence(timeout: 10), "Window should appear")
@@ -324,7 +324,7 @@ final class minimarkUITests: XCTestCase {
     func testSidebarWidthRemainsStableWhenWindowIsResized() throws {
         let app = XCUIApplication()
         app.launchArguments += [uiTestModeArgument, simulateGroupedSidebarArgument]
-        app.launch()
+        app.launchSandboxed()
 
         let sidebar = app.scrollViews.matching(identifier: sidebarColumnIdentifier).firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 8), "Sidebar should appear")

@@ -6,7 +6,7 @@ import Testing
 private func makeTestViewModel(
     folderWatchState: ContentViewFolderWatchState = .testEmpty
 ) -> (ContentAreaViewModel, DocumentController, RenderingController, SourceEditingController) {
-    let settingsStore = SettingsStore()
+    let settingsStore = SettingsStore(storage: InMemorySettingsKeyValueStorage())
     let settler = AutoOpenSettler(settlingInterval: 1.0)
     let securityScopeResolver = SecurityScopeResolver(
         securityScope: SecurityScopedResourceAccess(),
@@ -238,7 +238,7 @@ struct ContentAreaViewModelDropRoutingTests {
 
     @Test @MainActor func handleDroppedMarkdownFiresRequestFileOpen() {
         var captured: [ContentViewAction] = []
-        let settingsStore = SettingsStore()
+        let settingsStore = SettingsStore(storage: InMemorySettingsKeyValueStorage())
         let settler = AutoOpenSettler(settlingInterval: 1.0)
         let securityScopeResolver = SecurityScopeResolver(
             securityScope: SecurityScopedResourceAccess(),
