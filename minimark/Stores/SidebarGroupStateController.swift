@@ -7,12 +7,12 @@ final class SidebarGroupStateController {
 
     // MARK: - Mutable Inputs
 
-    var sortMode: ReaderSidebarSortMode = .lastChangedNewestFirst {
+    var sortMode: SidebarSortMode = .lastChangedNewestFirst {
         didSet {
             recomputeGroupingIfNeeded()
         }
     }
-    var fileSortMode: ReaderSidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
+    var fileSortMode: SidebarSortMode = .lastChangedNewestFirst { didSet { recomputeGroupingIfNeeded() } }
     var pinnedGroupIDs: Set<String> = [] { didSet { recomputeGroupingIfNeeded() } }
     var collapsedGroupIDs: Set<String> = []
     private(set) var savedCollapsedGroupIDs: Set<String>?
@@ -20,14 +20,14 @@ final class SidebarGroupStateController {
 
     // MARK: - Computed Outputs
 
-    private(set) var computedGrouping: ReaderSidebarGrouping = .flat([])
+    private(set) var computedGrouping: SidebarGrouping = .flat([])
     private(set) var isGrouped: Bool = false
-    private(set) var groupIndicatorStates: [String: [ReaderDocumentIndicatorState]] = [:]
+    private(set) var groupIndicatorStates: [String: [DocumentIndicatorState]] = [:]
     private(set) var groupIndicatorPulseTokens: [String: Int] = [:]
 
     // MARK: - Private
 
-    private var documents: [ReaderSidebarDocumentController.Document] = []
+    private var documents: [SidebarDocumentController.Document] = []
     private var suppressRecompute = false
     private var lastRowStates: [UUID: SidebarRowState] = [:]
 
@@ -35,7 +35,7 @@ final class SidebarGroupStateController {
 
     init() {}
 
-    func configureSortModes(sortMode: ReaderSidebarSortMode, fileSortMode: ReaderSidebarSortMode) {
+    func configureSortModes(sortMode: SidebarSortMode, fileSortMode: SidebarSortMode) {
         suppressRecompute = true
         self.sortMode = sortMode
         self.fileSortMode = fileSortMode
@@ -45,7 +45,7 @@ final class SidebarGroupStateController {
     // MARK: - Document Updates
 
     func updateDocuments(
-        _ documents: [ReaderSidebarDocumentController.Document],
+        _ documents: [SidebarDocumentController.Document],
         rowStates: [UUID: SidebarRowState] = [:]
     ) {
         self.documents = documents
@@ -57,7 +57,7 @@ final class SidebarGroupStateController {
         recomputeGrouping()
     }
 
-    func observeRowStates(from documentController: ReaderSidebarDocumentController) {
+    func observeRowStates(from documentController: SidebarDocumentController) {
         documentController.onRowStatesChanged = { [weak self] rowStates in
             self?.handleRowStatesChanged(rowStates)
         }
@@ -72,7 +72,7 @@ final class SidebarGroupStateController {
 
     // MARK: - Favorites Persistence
 
-    func applyWorkspaceState(_ state: ReaderFavoriteWorkspaceState) {
+    func applyWorkspaceState(_ state: FavoriteWorkspaceState) {
         suppressRecompute = true
         sortMode = state.groupSortMode
         fileSortMode = state.fileSortMode
@@ -85,8 +85,8 @@ final class SidebarGroupStateController {
     }
 
     struct WorkspaceStateSnapshot: Equatable {
-        let sortMode: ReaderSidebarSortMode
-        let fileSortMode: ReaderSidebarSortMode
+        let sortMode: SidebarSortMode
+        let fileSortMode: SidebarSortMode
         let pinnedGroupIDs: Set<String>
         let collapsedGroupIDs: Set<String>
         let manualGroupOrder: [String]?
@@ -173,27 +173,27 @@ final class SidebarGroupStateController {
     }
 
     private func recomputeGrouping(
-        sortMode: ReaderSidebarSortMode,
-        fileSortMode: ReaderSidebarSortMode,
+        sortMode: SidebarSortMode,
+        fileSortMode: SidebarSortMode,
         pinnedGroupIDs: Set<String>
     ) {
         let sortedDocuments = fileSortMode.sorted(documents) { document in
-            ReaderSidebarSortDescriptor(
-                displayName: document.readerStore.fileDisplayName,
-                lastChangedAt: document.readerStore.fileLastModifiedAt
-                    ?? document.readerStore.lastExternalChangeAt
-                    ?? document.readerStore.lastRefreshAt
+            SidebarSortDescriptor(
+                displayName: document.documentStore.document.fileDisplayName,
+                lastChangedAt: document.documentStore.document.fileLastModifiedAt
+                    ?? document.documentStore.externalChange.lastExternalChangeAt
+                    ?? document.documentStore.renderingController.lastRefreshAt
             )
         }
 
-        let directoryOrderSourceDocuments: [ReaderSidebarDocumentController.Document]
+        let directoryOrderSourceDocuments: [SidebarDocumentController.Document]
         if sortMode == .openOrder {
             directoryOrderSourceDocuments = documents
         } else {
             directoryOrderSourceDocuments = sortedDocuments
         }
 
-        computedGrouping = ReaderSidebarGrouping.group(
+        computedGrouping = SidebarGrouping.group(
             sortedDocuments,
             sortMode: sortMode,
             directoryOrderSourceDocuments: directoryOrderSourceDocuments,
@@ -214,17 +214,17 @@ final class SidebarGroupStateController {
 
     private func rebuildGroupIndicatorStates() {
         let grouped = Dictionary(grouping: documents) { document in
-            document.readerStore.fileURL?.deletingLastPathComponent()
+            document.documentStore.document.fileURL?.deletingLastPathComponent()
                 .path(percentEncoded: false) ?? ""
         }
-        var result: [String: [ReaderDocumentIndicatorState]] = [:]
+        var result: [String: [DocumentIndicatorState]] = [:]
         var updatedPulseTokens = groupIndicatorPulseTokens
         for (path, docs) in grouped {
             let states = docs.compactMap { doc in
                 lastRowStates[doc.id]?.indicatorState
             }
             let previous = groupIndicatorStates[path] ?? []
-            let next = ReaderSidebarGrouping.indicators(from: states)
+            let next = SidebarGrouping.indicators(from: states)
             if previous != next, !next.isEmpty {
                 updatedPulseTokens[path, default: 0] += 1
             }
@@ -236,7 +236,7 @@ final class SidebarGroupStateController {
 
     private func pruneStaleGroupIDs() {
         let activeGroupIDs = Set(documents.compactMap { document in
-            document.readerStore.fileURL?.deletingLastPathComponent()
+            document.documentStore.document.fileURL?.deletingLastPathComponent()
                 .path(percentEncoded: false)
         })
         collapsedGroupIDs.formIntersection(activeGroupIDs)
@@ -248,11 +248,11 @@ final class SidebarGroupStateController {
         }
     }
 
-    private func applyManualOrder(_ manualOrder: [String], to groups: [ReaderSidebarGrouping.Group]) -> [ReaderSidebarGrouping.Group] {
+    private func applyManualOrder(_ manualOrder: [String], to groups: [SidebarGrouping.Group]) -> [SidebarGrouping.Group] {
         let groupByID = Dictionary(groups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        var pinnedManual: [ReaderSidebarGrouping.Group] = []
-        var unpinnedManual: [ReaderSidebarGrouping.Group] = []
+        var pinnedManual: [SidebarGrouping.Group] = []
+        var unpinnedManual: [SidebarGrouping.Group] = []
         var seen = Set<String>()
 
         for id in manualOrder {

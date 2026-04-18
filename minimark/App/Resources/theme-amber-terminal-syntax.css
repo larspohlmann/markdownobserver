@@ -1,0 +1,30 @@
+/* ── Amber Terminal Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #FFCC00;
+    --reader-syntax-keyword: #FFCC00;
+    --reader-blockquote-accent: #CC8800;
+    --reader-blockquote-bg: rgba(255, 176, 0, 0.06);
+    --reader-blockquote-fg: #CC8800;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #FFB000;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment { color: #806020; font-style: italic; }
+pre code .hljs-keyword { color: #FFCC00; }
+pre code .hljs-string  { color: #CC8800; }
+pre code .hljs-number  { color: #FF9500; }
+pre code .hljs-title   { color: #FFC040; }
+pre code .hljs-built_in { color: #E0A000; }

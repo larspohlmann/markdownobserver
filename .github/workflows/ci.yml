@@ -13,7 +13,7 @@ on:
 
 jobs:
   test-macos:
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 30
 
     steps:
@@ -76,6 +76,13 @@ jobs:
             CODE_SIGN_IDENTITY='' \
             -resultBundlePath TestResults.xcresult \
             | tee test.log
+
+      # UI tests (minimarkUITests) are intentionally NOT gated on CI:
+      # the self-hosted runner can't reliably initialize XCUITest automation
+      # mode (xcodebuild reports "test runner hung before establishing
+      # connection" / "Timed out while enabling automation mode"). The tests
+      # are expected to be run locally before opening a PR. If a dedicated
+      # UI-capable runner is provisioned later, re-introduce a gated step.
 
       - name: Upload test logs and result bundle
         if: always()

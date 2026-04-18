@@ -1,0 +1,231 @@
+import Foundation
+import Combine
+import Observation
+
+@MainActor @Observable final class FavoriteWatchedFoldersStore: FavoriteWriting {
+    private(set) var currentFavorites: [FavoriteWatchedFolder]
+
+    weak var coordinator: ChildStoreCoordinating?
+
+    @ObservationIgnored
+    private let subject: CurrentValueSubject<[FavoriteWatchedFolder], Never>
+
+    @ObservationIgnored
+    private let bookmarkRefreshing: BookmarkRefreshing
+
+    var favoritesPublisher: AnyPublisher<[FavoriteWatchedFolder], Never> {
+        subject.eraseToAnyPublisher()
+    }
+
+    init(initial: [FavoriteWatchedFolder], bookmarkRefreshing: BookmarkRefreshing) {
+        self.currentFavorites = initial
+        self.subject = CurrentValueSubject(initial)
+        self.bookmarkRefreshing = bookmarkRefreshing
+    }
+
+    func addFavoriteWatchedFolder(
+        name: String,
+        folderURL: URL,
+        options: FolderWatchOptions,
+        openDocumentFileURLs: [URL] = [],
+        workspaceState: FavoriteWorkspaceState = .from(
+            settings: .default,
+            pinnedGroupIDs: [],
+            collapsedGroupIDs: [],
+            sidebarWidth: FavoriteWorkspaceState.defaultSidebarWidth
+        )
+    ) {
+        mutate(coalescePersistence: false) { favorites in
+            favorites = FavoriteHistory.insertingUniqueFavorite(
+                name: name,
+                folderURL: folderURL,
+                options: options,
+                openDocumentFileURLs: openDocumentFileURLs,
+                workspaceState: workspaceState,
+                into: favorites
+            )
+        }
+    }
+
+    func removeFavoriteWatchedFolder(id: UUID) {
+        mutate(coalescePersistence: false) { favorites in
+            favorites = FavoriteHistory.removingFavorite(id: id, from: favorites)
+        }
+    }
+
+    func renameFavoriteWatchedFolder(id: UUID, newName: String) {
+        mutate(coalescePersistence: false) { favorites in
+            favorites = FavoriteHistory.renamingFavorite(id: id, newName: newName, in: favorites)
+        }
+    }
+
+    func updateFavoriteWatchedFolderOpenDocuments(
+        id: UUID,
+        folderURL: URL,
+        openDocumentFileURLs: [URL]
+    ) {
+        mutate(coalescePersistence: true) { favorites in
+            guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
+
+            let existing = favorites[index]
+            let scopedRelativePaths = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+                from: openDocumentFileURLs,
+                relativeTo: folderURL,
+                options: existing.options
+            )
+            guard existing.openDocumentRelativePaths != scopedRelativePaths else { return }
+
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+            ).sorted()
+
+            favorites[index] = Self.copy(
+                existing,
+                openDocumentRelativePaths: scopedRelativePaths,
+                allKnownRelativePaths: updatedKnownPaths
+            )
+        }
+    }
+
+    func updateFavoriteWatchedFolderKnownDocuments(
+        id: UUID,
+        folderURL: URL,
+        knownDocumentFileURLs: [URL]
+    ) {
+        mutate(coalescePersistence: true) { favorites in
+            guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
+
+            let existing = favorites[index]
+            let scopedRelativePaths = FavoriteWatchedFolder.scopedOpenDocumentRelativePaths(
+                from: knownDocumentFileURLs,
+                relativeTo: folderURL,
+                options: existing.options
+            )
+            let updatedKnownPaths = Array(
+                Set(existing.allKnownRelativePaths).union(scopedRelativePaths)
+            ).sorted()
+            guard existing.allKnownRelativePaths != updatedKnownPaths else { return }
+
+            favorites[index] = Self.copy(existing, allKnownRelativePaths: updatedKnownPaths)
+        }
+    }
+
+    func updateFavoriteWorkspaceState(id: UUID, workspaceState: FavoriteWorkspaceState) {
+        mutate(coalescePersistence: true) { favorites in
+            guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
+            let existing = favorites[index]
+            guard existing.workspaceState != workspaceState else { return }
+            favorites[index] = Self.copy(existing, workspaceState: workspaceState)
+        }
+    }
+
+    func resolvedFavoriteWatchedFolderURL(for entry: FavoriteWatchedFolder) -> URL {
+        bookmarkRefreshing.resolveURL(
+            bookmarkData: entry.bookmarkData,
+            fallbackURL: entry.folderURL,
+            onStale: { [weak self] resolvedURL, refreshedBookmarkData in
+                self?.replaceEntryForStaleBookmark(
+                    id: entry.id,
+                    resolvedURL: resolvedURL,
+                    refreshedBookmarkData: refreshedBookmarkData
+                )
+            },
+            onFailure: { [weak self] in
+                self?.updateFavoriteWatchedFolderBookmarkData(id: entry.id, bookmarkData: nil)
+            }
+        )
+    }
+
+    func clearFavoriteWatchedFolders() {
+        mutate(coalescePersistence: false) { favorites in
+            favorites = []
+        }
+    }
+
+    func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
+        mutate(coalescePersistence: false) { favorites in
+            favorites = FavoriteHistory.reordering(ids: orderedIDs, in: favorites)
+        }
+    }
+
+    func updateFavoriteWatchedFolderExclusions(id: UUID, excludedSubdirectoryPaths: [String]) {
+        mutate(coalescePersistence: false) { favorites in
+            guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
+
+            let existing = favorites[index]
+            let folderURL = URL(fileURLWithPath: existing.folderPath, isDirectory: true)
+            let normalizedOptions = FolderWatchOptions(
+                openMode: existing.options.openMode,
+                scope: existing.options.scope,
+                excludedSubdirectoryPaths: excludedSubdirectoryPaths
+            ).encodedForFolder(folderURL)
+
+            guard existing.options != normalizedOptions else { return }
+
+            favorites[index] = Self.copy(existing, options: normalizedOptions)
+        }
+    }
+
+    private func replaceEntryForStaleBookmark(
+        id: UUID,
+        resolvedURL: URL,
+        refreshedBookmarkData: Data?
+    ) {
+        let normalizedResolvedPath = FileRouting.normalizedFileURL(resolvedURL).path
+
+        mutate(coalescePersistence: false) { favorites in
+            guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
+            let existing = favorites[index]
+            favorites[index] = Self.copy(
+                existing,
+                folderPath: normalizedResolvedPath,
+                bookmarkData: refreshedBookmarkData ?? existing.bookmarkData
+            )
+        }
+    }
+
+    private func updateFavoriteWatchedFolderBookmarkData(id: UUID, bookmarkData: Data?) {
+        mutate(coalescePersistence: false) { favorites in
+            guard let index = favorites.firstIndex(where: { $0.id == id }) else { return }
+
+            let existing = favorites[index]
+            guard existing.bookmarkData != bookmarkData else { return }
+
+            favorites[index] = Self.copy(existing, bookmarkData: bookmarkData)
+        }
+    }
+
+    private static func copy(
+        _ entry: FavoriteWatchedFolder,
+        folderPath: String? = nil,
+        options: FolderWatchOptions? = nil,
+        bookmarkData: Data?? = nil,
+        openDocumentRelativePaths: [String]? = nil,
+        allKnownRelativePaths: [String]? = nil,
+        workspaceState: FavoriteWorkspaceState? = nil
+    ) -> FavoriteWatchedFolder {
+        FavoriteWatchedFolder(
+            id: entry.id,
+            name: entry.name,
+            folderPath: folderPath ?? entry.folderPath,
+            options: options ?? entry.options,
+            bookmarkData: bookmarkData ?? entry.bookmarkData,
+            openDocumentRelativePaths: openDocumentRelativePaths ?? entry.openDocumentRelativePaths,
+            allKnownRelativePaths: allKnownRelativePaths ?? entry.allKnownRelativePaths,
+            workspaceState: workspaceState ?? entry.workspaceState,
+            createdAt: entry.createdAt
+        )
+    }
+
+    private func mutate(
+        coalescePersistence: Bool,
+        _ transform: (inout [FavoriteWatchedFolder]) -> Void
+    ) {
+        var updated = currentFavorites
+        transform(&updated)
+        guard updated != currentFavorites else { return }
+        currentFavorites = updated
+        subject.send(updated)
+        coordinator?.childStoreDidMutate(coalescePersistence: coalescePersistence)
+    }
+}

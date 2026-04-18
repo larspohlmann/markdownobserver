@@ -143,6 +143,7 @@
     registerPlugin(md, window.markdownitFootnote);
     registerPlugin(md, window.markdownitDeflist);
     registerPlugin(md, window.markdownItAttrs);
+    registerPlugin(md, window.markdownitCallouts);
   }
 
   function installHeadingIDs(md) {
@@ -1661,6 +1662,15 @@
     }
   }
 
+  function markExplicitLanguages(root) {
+    var codes = root.querySelectorAll("pre > code");
+    for (var i = 0; i < codes.length; i += 1) {
+      if (/(?:^|\s)language-\S+/.test(codes[i].className || "")) {
+        codes[i].setAttribute("data-lang-explicit", "1");
+      }
+    }
+  }
+
   function runHighlighting() {
     try {
       if (!window.hljs || typeof window.hljs.highlightAll !== "function") return;
@@ -1828,6 +1838,236 @@
     } catch (_) {}
   }
 
+  function addCodeBlockOverlays(root) {
+    var pres = root.querySelectorAll("pre");
+    for (var i = 0; i < pres.length; i += 1) {
+      var pre = pres[i];
+      var code = pre.querySelector("code");
+      if (!code) { continue; }
+
+      var text = code.textContent || "";
+      if (text.trim() === "") { continue; }
+
+      var language = null;
+      var classes = code.className || "";
+      var langMatch = classes.match(/(?:^|\s)language-(\S+)/);
+      if (langMatch) {
+        if (code.hasAttribute("data-lang-explicit")) {
+          language = langMatch[1];
+        } else {
+          // Auto-detected by hljs — only show if relevance is high enough
+          // to filter out low-confidence guesses (e.g. "vbnet" for plain text).
+          var hljsResult = code.result;
+          var relevance = hljsResult ? hljsResult.relevance : 0;
+          if (relevance >= 25) {
+            language = langMatch[1];
+          }
+        }
+      }
+
+      var btn = document.createElement("button");
+      btn.className = "code-block-overlay" + (language ? "" : " code-block-overlay-icon");
+      btn.type = "button";
+
+      if (language) {
+        btn.textContent = language.toLowerCase();
+      } else {
+        btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M3 11V3a1.5 1.5 0 011.5-1.5H11"/></svg>';
+      }
+
+      btn.setAttribute("aria-label", language ? "Copy " + language.toLowerCase() + " code" : "Copy code");
+
+      (function (codeEl, preEl, overlayBtn) {
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var textContent = codeEl.textContent || "";
+          var lines = textContent.split("\n");
+          var minIndent = Infinity;
+          for (var j = 0; j < lines.length; j += 1) {
+            if (lines[j].trim() === "") { continue; }
+            var indent = lines[j].match(/^(\s*)/)[1].length;
+            if (indent < minIndent) { minIndent = indent; }
+          }
+          if (minIndent === Infinity) { minIndent = 0; }
+          var normalized = lines.map(function (line) {
+            return line.substring(minIndent);
+          }).join("\n");
+          if (normalized.charCodeAt(normalized.length - 1) === 10) {
+            normalized = normalized.substring(0, normalized.length - 1);
+          }
+          var doShowToast = function () { showCopyToast(preEl, overlayBtn); };
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            try {
+              navigator.clipboard.writeText(normalized).then(doShowToast).catch(function () {
+                fallbackCopy(normalized);
+                doShowToast();
+              });
+            } catch (_) {
+              fallbackCopy(normalized);
+              doShowToast();
+            }
+          } else {
+            fallbackCopy(normalized);
+            doShowToast();
+          }
+        });
+      })(code, pre, btn);
+
+      pre.appendChild(btn);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+
+  function showCopyToast(preEl, overlayBtn) {
+    var existing = preEl.querySelector(".code-block-toast");
+    if (existing) {
+      existing.remove();
+    }
+    if (preEl._minimarkToastTimer) {
+      clearTimeout(preEl._minimarkToastTimer);
+      preEl._minimarkToastTimer = null;
+    }
+    overlayBtn.style.display = "none";
+    var toast = document.createElement("div");
+    toast.className = "code-block-toast";
+    toast.textContent = "Copied!";
+    preEl.appendChild(toast);
+    preEl._minimarkToastTimer = setTimeout(function () {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+      overlayBtn.style.display = "";
+      preEl._minimarkToastTimer = null;
+    }, 1600);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mermaid diagram rendering
+  // ---------------------------------------------------------------------------
+
+  var mermaidScriptPath = "Contents/Resources/mermaid.min.js";
+  var mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css";
+  var mermaidLoadPromise = null;
+  var mermaidLastThemeKey = null;
+
+  function getMermaidThemeVariables() {
+    var style = getComputedStyle(document.documentElement);
+    var v = function (name) { return style.getPropertyValue(name).trim(); };
+    return {
+      background: v("--reader-syntax-bg"),
+      mainBkg: v("--reader-syntax-bg"),
+      primaryTextColor: v("--reader-syntax-text"),
+      noteTextColor: v("--reader-syntax-text"),
+      primaryBorderColor: v("--reader-syntax-border"),
+      noteBorderColor: v("--reader-syntax-border"),
+      primaryColor: v("--reader-syntax-keyword"),
+      secondaryColor: v("--reader-syntax-string"),
+      tertiaryColor: v("--reader-syntax-title"),
+      lineColor: v("--reader-syntax-builtin"),
+      secondaryTextColor: v("--reader-syntax-comment"),
+      tertiaryTextColor: v("--reader-syntax-number"),
+      tertiaryBorderColor: v("--reader-syntax-number")
+    };
+  }
+
+  function loadMermaidCSS() {
+    if (document.getElementById("minimark-mermaid-css")) { return; }
+    var link = document.createElement("link");
+    link.id = "minimark-mermaid-css";
+    link.rel = "stylesheet";
+    link.href = mermaidCSSPath;
+    document.head.appendChild(link);
+  }
+
+  function loadMermaidScript() {
+    if (mermaidLoadPromise) { return mermaidLoadPromise; }
+    if (window.mermaid) { return Promise.resolve(); }
+    mermaidLoadPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = mermaidScriptPath;
+      script.onload = function () { resolve(); };
+      script.onerror = function () {
+        mermaidLoadPromise = null;
+        reject(new Error("Failed to load mermaid.min.js"));
+      };
+      document.head.appendChild(script);
+    });
+    return mermaidLoadPromise;
+  }
+
+  function initializeMermaidIfNeeded() {
+    var vars = getMermaidThemeVariables();
+    var key = JSON.stringify(vars);
+    if (key === mermaidLastThemeKey) { return; }
+    mermaidLastThemeKey = key;
+    window.mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: "base",
+      themeVariables: vars
+    });
+  }
+
+  function renderMermaidDiagrams(root, completion) {
+    var codeEls = root.querySelectorAll('pre > code.language-mermaid');
+    if (codeEls.length === 0) { completion(); return; }
+
+    loadMermaidCSS();
+
+    loadMermaidScript().then(function () {
+      initializeMermaidIfNeeded();
+
+      var pending = codeEls.length;
+      function done() {
+        pending -= 1;
+        if (pending <= 0) { completion(); }
+      }
+
+      for (var i = 0; i < codeEls.length; i += 1) {
+        (function (codeEl, idx) {
+          var pre = codeEl.parentElement;
+          if (!pre) { done(); return; }
+
+          var source = codeEl.textContent || "";
+          var id = "mermaid-diagram-" + idx + "-" + Date.now();
+
+          window.mermaid.render(id, source).then(function (result) {
+            try {
+              var container = document.createElement("div");
+              container.className = "mermaid-diagram";
+              container.innerHTML = result.svg;
+              if (pre.isConnected && pre.parentNode) {
+                pre.parentNode.replaceChild(container, pre);
+              }
+            } finally {
+              done();
+            }
+          }).catch(function () {
+            // Leave the highlight.js-rendered <pre> in place.
+            // Remove any error element Mermaid injected into the DOM.
+            var errEl = document.getElementById("d" + id);
+            if (errEl) { errEl.remove(); }
+            done();
+          });
+        })(codeEls[i], i);
+      }
+    }).catch(function () {
+      // Mermaid script failed to load — leave all blocks as-is
+      completion();
+    });
+  }
+
   function renderMarkdown(scrollAnchorProgress) {
     var root = document.getElementById("reader-root");
     var gutter = document.getElementById("reader-change-gutter");
@@ -1844,23 +2084,27 @@
     var rawHTML = md.render(payload.markdown || "");
     var safeHTML = sanitizeRenderedHTML(rawHTML);
     root.innerHTML = safeHTML;
+    markExplicitLanguages(root);
     runHighlighting();
     annotateCodeBlockLines(root);
-    typesetMath(root, function () {
-      renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
-      renderChangedRegionGutter(root, gutter, payload.changedRegions || []);
-      applyScrollProgress(scrollAnchorProgress);
+    addCodeBlockOverlays(root);
+    renderMermaidDiagrams(root, function () {
+      typesetMath(root, function () {
+        renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
+        renderChangedRegionGutter(root, gutter, payload.changedRegions || []);
+        applyScrollProgress(scrollAnchorProgress);
 
-      // Auto-expand the first edited gutter pill (screenshot automation)
-      var autoExpandMeta = document.querySelector('meta[name="minimark-auto-expand-first-edit"]');
-      if (autoExpandMeta && autoExpandMeta.getAttribute("content") === "true") {
-        var editedButton = gutter.querySelector(".reader-gutter-row-edited");
-        if (editedButton) {
-          editedButton.click();
-          autoExpandMeta.setAttribute("content", "done");
+        // Auto-expand the first edited gutter pill (screenshot automation)
+        var autoExpandMeta = document.querySelector('meta[name="minimark-auto-expand-first-edit"]');
+        if (autoExpandMeta && autoExpandMeta.getAttribute("content") === "true") {
+          var editedButton = gutter.querySelector(".reader-gutter-row-edited");
+          if (editedButton) {
+            editedButton.click();
+            autoExpandMeta.setAttribute("content", "done");
+          }
         }
-      }
-      extractHeadings();
+        extractHeadings();
+      });
     });
   }
 

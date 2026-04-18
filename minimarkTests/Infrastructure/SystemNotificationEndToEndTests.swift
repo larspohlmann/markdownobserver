@@ -18,7 +18,7 @@ import UserNotifications
 struct SystemNotificationEndToEndTests {
 
     @Test func notificationPostedForCreatedFile() async throws {
-        let notifier = ReaderSystemNotifier(
+        let notifier = SystemNotifier(
             notificationCenter: UNUserNotificationCenter.current()
         )
         notifier.configure()
@@ -37,7 +37,7 @@ struct SystemNotificationEndToEndTests {
     }
 
     @Test func notificationPostedForModifiedFile() async throws {
-        let notifier = ReaderSystemNotifier(
+        let notifier = SystemNotifier(
             notificationCenter: UNUserNotificationCenter.current()
         )
         notifier.configure()
@@ -55,7 +55,7 @@ struct SystemNotificationEndToEndTests {
     }
 
     @Test func notificationPostedForDeletedFile() async throws {
-        let notifier = ReaderSystemNotifier(
+        let notifier = SystemNotifier(
             notificationCenter: UNUserNotificationCenter.current()
         )
         notifier.configure()

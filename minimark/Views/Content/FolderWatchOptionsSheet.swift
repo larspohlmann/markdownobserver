@@ -3,11 +3,11 @@ import SwiftUI
 
 struct FolderWatchOptionsSheet: View {
     let folderURL: URL?
-    @Binding var openMode: ReaderFolderWatchOpenMode
-    @Binding var scope: ReaderFolderWatchScope
+    @Binding var openMode: FolderWatchOpenMode
+    @Binding var scope: FolderWatchScope
     @Binding var excludedSubdirectoryPaths: [String]
     let onCancel: () -> Void
-    let onConfirm: (ReaderFolderWatchOptions) -> Void
+    let onConfirm: (FolderWatchOptions) -> Void
 
     @StateObject private var directoryScanModel = FolderWatchDirectoryScanModel()
     @State private var viewModel = FolderWatchOptionsViewModel()
@@ -37,9 +37,9 @@ struct FolderWatchOptionsSheet: View {
         case .openAllMarkdownFiles:
             switch scope {
             case .selectedFolderOnly:
-                return "Will automatically open up to \(ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files in the selected folder, then continue watching that folder."
+                return "Will automatically open up to \(FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files in the selected folder, then continue watching that folder."
             case .includeSubfolders:
-                return "Will automatically open up to \(ReaderFolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files across the folder tree, then continue watching subfolders."
+                return "Will automatically open up to \(FolderWatchAutoOpenPolicy.maximumInitialAutoOpenFileCount) Markdown files across the folder tree, then continue watching subfolders."
             }
         case .watchChangesOnly:
             switch scope {
@@ -105,7 +105,7 @@ struct FolderWatchOptionsSheet: View {
         scope == .includeSubfolders
     }
 
-    private var openModeSelectionBinding: Binding<ReaderFolderWatchOpenMode> {
+    private var openModeSelectionBinding: Binding<FolderWatchOpenMode> {
         Binding(
             get: {
                 openMode
@@ -116,7 +116,7 @@ struct FolderWatchOptionsSheet: View {
         )
     }
 
-    private var scopeSelectionBinding: Binding<ReaderFolderWatchScope> {
+    private var scopeSelectionBinding: Binding<FolderWatchScope> {
         Binding(
             get: {
                 scope
@@ -193,7 +193,7 @@ struct FolderWatchOptionsSheet: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
-            .accessibilityIdentifier("folder-watch-summary-card")
+            .accessibilityIdentifier(.folderWatchSummaryCard)
 
             // MARK: Option rows
             VStack(spacing: 0) {
@@ -205,9 +205,9 @@ struct FolderWatchOptionsSheet: View {
 
                     Picker("Watch start mode", selection: openModeSelectionBinding) {
                         Text("Open Existing")
-                            .tag(ReaderFolderWatchOpenMode.openAllMarkdownFiles)
+                            .tag(FolderWatchOpenMode.openAllMarkdownFiles)
                         Text("Watch Only")
-                            .tag(ReaderFolderWatchOpenMode.watchChangesOnly)
+                            .tag(FolderWatchOpenMode.watchChangesOnly)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -226,9 +226,9 @@ struct FolderWatchOptionsSheet: View {
 
                     Picker("Folder scope", selection: scopeSelectionBinding) {
                         Text("Selected Folder")
-                            .tag(ReaderFolderWatchScope.selectedFolderOnly)
+                            .tag(FolderWatchScope.selectedFolderOnly)
                         Text("Include Subfolders")
-                            .tag(ReaderFolderWatchScope.includeSubfolders)
+                            .tag(FolderWatchScope.includeSubfolders)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -325,7 +325,7 @@ struct FolderWatchOptionsSheet: View {
                 Button("Cancel") {
                     onCancel()
                 }
-                .accessibilityIdentifier("folder-watch-cancel-button")
+                .accessibilityIdentifier(.folderWatchCancelButton)
                 .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
@@ -338,7 +338,7 @@ struct FolderWatchOptionsSheet: View {
                         Text("Start Watching")
                     }
                 }
-                .accessibilityIdentifier("folder-watch-start-button")
+                .accessibilityIdentifier(.folderWatchStartButton)
                 .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
                 .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
@@ -349,7 +349,7 @@ struct FolderWatchOptionsSheet: View {
         .padding(24)
         .frame(width: Metrics.width)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("folder-watch-sheet")
+        .accessibilityIdentifier(.folderWatchSheet)
         .onAppear {
             syncViewModel()
             scheduleDirectoryScanRefresh()
@@ -376,9 +376,9 @@ struct FolderWatchOptionsSheet: View {
         }
         .onChange(of: directoryScanModel.summary?.subdirectoryCount) { _, newCount in
             syncViewModel()
-            guard let newCount, newCount > ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
+            guard let newCount, newCount > FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
                   ProcessInfo.processInfo.environment[
-                      ReaderUITestLaunchConfiguration.screenshotOpenExclusionEnvironmentKey
+                      UITestLaunchConfiguration.screenshotOpenExclusionEnvironmentKey
                   ] == "true" else { return }
 
             // Pre-set excluded/expanded paths from env vars.
@@ -389,7 +389,7 @@ struct FolderWatchOptionsSheet: View {
             } ?? []
 
             if let excludedEnv = ProcessInfo.processInfo.environment[
-                ReaderUITestLaunchConfiguration.screenshotExcludedPathsEnvironmentKey
+                UITestLaunchConfiguration.screenshotExcludedPathsEnvironmentKey
             ], !excludedEnv.isEmpty {
                 let excludeNames = Set(excludedEnv.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) })
                 excludedSubdirectoryPaths = allPaths.filter { path in
@@ -399,7 +399,7 @@ struct FolderWatchOptionsSheet: View {
             }
 
             if let expandedEnv = ProcessInfo.processInfo.environment[
-                ReaderUITestLaunchConfiguration.screenshotExpandedPathsEnvironmentKey
+                UITestLaunchConfiguration.screenshotExpandedPathsEnvironmentKey
             ], !expandedEnv.isEmpty {
                 let expandNames = Set(expandedEnv.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) })
                 expandedDirectoryPaths = Set(allPaths.filter { path in
@@ -412,7 +412,7 @@ struct FolderWatchOptionsSheet: View {
         }
         .sheet(isPresented: $isLargeTreeDialogPresented) {
             LargeFolderExclusionDialog(
-                threshold: ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
+                threshold: FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold,
                 scanModel: directoryScanModel,
                 expandedDirectoryPaths: $expandedDirectoryPaths,
                 excludedSubdirectoryPaths: Binding(
@@ -446,7 +446,7 @@ struct FolderWatchOptionsSheet: View {
         }
 
         onConfirm(
-            ReaderFolderWatchOptions(
+            FolderWatchOptions(
                 openMode: openMode,
                 scope: scope,
                 excludedSubdirectoryPaths: normalizedExcludedSubdirectoryPaths
@@ -629,7 +629,7 @@ struct FolderWatchLargeTreeWarningCard: View {
                     } label: {
                         Label("Choose subdirectories to deactivate", systemImage: "line.3.horizontal.decrease.circle")
                     }
-                    .accessibilityIdentifier("folder-watch-choose-subdirectories-button")
+                    .accessibilityIdentifier(.folderWatchChooseSubdirectoriesButton)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
@@ -725,7 +725,7 @@ private struct LargeFolderExclusionDialog: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Label("Depth limit: \(ReaderFolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels", systemImage: "arrow.down.to.line.compact")
+                    Label("Depth limit: \(FolderWatchPerformancePolicy.maximumIncludedSubfolderDepth) levels", systemImage: "arrow.down.to.line.compact")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.orange)
                         .padding(.horizontal, 8)
@@ -856,7 +856,7 @@ private struct LargeFolderExclusionDialog: View {
                 Button("Start Watching") {
                     onConfirm()
                 }
-                .accessibilityIdentifier("folder-watch-dialog-start-button")
+                .accessibilityIdentifier(.folderWatchDialogStartButton)
                 .buttonStyle(
                     FolderWatchPrimaryActionButtonStyle(
                         tint: remainingToDeactivateCount == 0 ? .accentColor : .orange

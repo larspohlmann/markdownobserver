@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct SidebarScanProgressView: View {
-    var controller: ReaderSidebarDocumentController
+    var controller: SidebarDocumentController
 
     var body: some View {
-        if let session = controller.activeFolderWatchSession {
+        if let session = controller.folderWatchCoordinator.activeFolderWatchSession {
             VStack(spacing: 0) {
                 Divider()
                 footerContent(session: session)
@@ -13,9 +13,9 @@ struct SidebarScanProgressView: View {
         }
     }
 
-    private func footerContent(session: ReaderFolderWatchSession) -> some View {
+    private func footerContent(session: FolderWatchSession) -> some View {
         HStack(spacing: 6) {
-            if let progress = controller.contentScanProgress, !progress.isFinished {
+            if let progress = controller.folderWatchCoordinator.contentScanProgress, !progress.isFinished {
                 ProgressView(value: Double(progress.completed), total: max(Double(progress.total), 1))
                     .progressViewStyle(.linear)
                     .frame(maxWidth: 60)
@@ -29,7 +29,7 @@ struct SidebarScanProgressView: View {
                     .fill(Color.green)
                     .frame(width: 6, height: 6)
 
-                if let fileCount = controller.scannedFileCount, fileCount > 0 {
+                if let fileCount = controller.folderWatchCoordinator.scannedFileCount, fileCount > 0 {
                     Text("\(fileCount) \(fileCount == 1 ? "file" : "files")")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
@@ -44,6 +44,6 @@ struct SidebarScanProgressView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .animation(.easeInOut(duration: 0.3), value: controller.contentScanProgress?.isFinished)
+        .animation(.easeInOut(duration: 0.3), value: controller.folderWatchCoordinator.contentScanProgress?.isFinished)
     }
 }

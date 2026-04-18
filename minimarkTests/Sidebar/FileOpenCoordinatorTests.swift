@@ -8,7 +8,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: reuseEmptySlotForFirst
 
     @Test @MainActor func planForThreeFilesOnEmptyWindowReusesFirstSlot() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -28,7 +28,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func planForFilesOnNonEmptyWindowAlwaysCreatesNew() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -51,7 +51,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: deduplication
 
     @Test @MainActor func planDeduplicatesDuplicateURLs() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -64,7 +64,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func planFocusesAlreadyOpenURLAndAppendsNew() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -75,7 +75,7 @@ struct FileOpenCoordinatorTests {
         ))
 
         let existingDocID = harness.controller.documents.first(where: {
-            $0.readerStore.fileURL?.lastPathComponent == "alpha.md"
+            $0.documentStore.document.fileURL?.lastPathComponent == "alpha.md"
         })!.id
 
         let plan = coordinator.buildPlan(for: FileOpenRequest(
@@ -94,7 +94,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: alwaysAppend
 
     @Test @MainActor func planWithAlwaysAppendNeverReusesEmptySlot() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -111,7 +111,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: replaceSelectedSlot
 
     @Test @MainActor func planWithReplaceSelectedSlotTargetsSelectedDocument() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -130,7 +130,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: materialization strategies
 
     @Test @MainActor func planWithLoadAllSetsLoadFully() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -144,7 +144,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func planWithDeferThenMaterializeSetsDeferOnly() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -161,11 +161,11 @@ struct FileOpenCoordinatorTests {
     // MARK: - Plan building: diff baseline passthrough
 
     @Test @MainActor func planPassesThroughDiffBaseline() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
-        let normalizedURL = ReaderFileRouting.normalizedFileURL(harness.primaryFileURL)
+        let normalizedURL = FileRouting.normalizedFileURL(harness.primaryFileURL)
 
         let plan = coordinator.buildPlan(for: FileOpenRequest(
             fileURLs: [harness.primaryFileURL],
@@ -179,7 +179,7 @@ struct FileOpenCoordinatorTests {
     // MARK: - End-to-end: regression test for #85
 
     @Test @MainActor func openThreeFilesOnEmptyWindowOpensAllThree() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -193,12 +193,12 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 3)
-        let openFileNames = Set(harness.controller.documents.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        let openFileNames = Set(harness.controller.documents.compactMap { $0.documentStore.document.fileURL?.lastPathComponent })
         #expect(openFileNames == ["alpha.md", "beta.md", "zeta.md"])
     }
 
     @Test @MainActor func openDeduplicatesAndSortsAlphabetically() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -208,12 +208,12 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 2)
-        let orderedNames = harness.controller.documents.compactMap { $0.readerStore.fileURL?.lastPathComponent }
+        let orderedNames = harness.controller.documents.compactMap { $0.documentStore.document.fileURL?.lastPathComponent }
         #expect(orderedNames == ["alpha.md", "zeta.md"])
     }
 
     @Test @MainActor func openWithReplaceSelectedSlotReplacesContent() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -224,11 +224,11 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.fileURL?.lastPathComponent == "alpha.md")
+        #expect(harness.controller.selectedDocumentStore.document.fileURL?.lastPathComponent == "alpha.md")
     }
 
     @Test @MainActor func openWithDeferThenMaterializeDefersAllFiles() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -238,15 +238,15 @@ struct FileOpenCoordinatorTests {
             materializationStrategy: .deferThenMaterializeNewest(count: 1)
         ))
 
-        let deferredCount = harness.controller.documents.filter { $0.readerStore.isDeferredDocument }.count
-        let loadedCount = harness.controller.documents.filter { !$0.readerStore.isDeferredDocument && $0.readerStore.fileURL != nil }.count
+        let deferredCount = harness.controller.documents.filter { $0.documentStore.document.isDeferredDocument }.count
+        let loadedCount = harness.controller.documents.filter { !$0.documentStore.document.isDeferredDocument && $0.documentStore.document.fileURL != nil }.count
 
         #expect(deferredCount == 1)
         #expect(loadedCount == 1)
     }
 
     @Test @MainActor func openWithAlwaysAppendDoesNotReuseEmptySlot() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -260,7 +260,7 @@ struct FileOpenCoordinatorTests {
     }
 
     @Test @MainActor func openSkipsAlreadyOpenFiles() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -279,12 +279,12 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 2)
-        let openFileNames = Set(harness.controller.documents.compactMap { $0.readerStore.fileURL?.lastPathComponent })
+        let openFileNames = Set(harness.controller.documents.compactMap { $0.documentStore.document.fileURL?.lastPathComponent })
         #expect(openFileNames == ["alpha.md", "zeta.md"])
     }
 
     @Test @MainActor func openEmptyURLListIsNoOp() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
         let coordinator = FileOpenCoordinator(controller: harness.controller)
 
@@ -294,6 +294,6 @@ struct FileOpenCoordinatorTests {
         ))
 
         #expect(harness.controller.documents.count == 1)
-        #expect(harness.controller.selectedReaderStore.fileURL == nil)
+        #expect(harness.controller.selectedDocumentStore.document.fileURL == nil)
     }
 }

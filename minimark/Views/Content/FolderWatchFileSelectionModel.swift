@@ -29,12 +29,12 @@ final class FolderWatchFileSelectionModel: ObservableObject {
     }
 
     var exceedsPerformanceThreshold: Bool {
-        selectedFileURLs.count > ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount
+        selectedFileURLs.count > FolderWatchAutoOpenPolicy.performanceWarningFileCount
     }
 
     init(folderURL: URL, fileURLs: [URL]) {
-        let normalizedFolder = ReaderFileRouting.normalizedFileURL(folderURL)
-        let normalizedFiles = fileURLs.map { ReaderFileRouting.normalizedFileURL($0) }
+        let normalizedFolder = FileRouting.normalizedFileURL(folderURL)
+        let normalizedFiles = fileURLs.map { FileRouting.normalizedFileURL($0) }
         self.folderURL = normalizedFolder
         self.allFileURLs = normalizedFiles
         self.selectedFileURLs = Set(normalizedFiles)

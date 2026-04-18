@@ -1,0 +1,49 @@
+/* ── Paper Theme ── */
+
+html, body, .markdown-body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif !important;
+}
+
+.markdown-body {
+    line-height: 1.60;
+}
+
+.markdown-body h1 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #0B0B0B;
+}
+
+.markdown-body h2 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #0B0B0B;
+    border-bottom: 1px solid #E4E2DC;
+    padding-bottom: 4px;
+}
+
+.markdown-body h3 {
+    font-weight: 600;
+    color: #0B0B0B;
+}
+
+.markdown-body code,
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    font-family: 'IBM Plex Mono', 'SF Mono', Menlo, monospace !important;
+}
+
+.markdown-body blockquote {
+    border-left-color: #E4E2DC;
+    color: #555555;
+}
+
+.markdown-body hr {
+    border: none;
+    border-top: 1px solid #E4E2DC;
+}
+
+.markdown-body a {
+    color: #0B5FB8;
+}

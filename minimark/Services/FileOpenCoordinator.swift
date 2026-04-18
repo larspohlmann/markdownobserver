@@ -2,16 +2,16 @@ import Foundation
 
 struct FileOpenRequest {
     let fileURLs: [URL]
-    let origin: ReaderOpenOrigin
-    let folderWatchSession: ReaderFolderWatchSession?
+    let origin: OpenOrigin
+    let folderWatchSession: FolderWatchSession?
     let initialDiffBaselineMarkdownByURL: [URL: String]
     let slotStrategy: SlotStrategy
     let materializationStrategy: MaterializationStrategy
 
     init(
         fileURLs: [URL],
-        origin: ReaderOpenOrigin,
-        folderWatchSession: ReaderFolderWatchSession? = nil,
+        origin: OpenOrigin,
+        folderWatchSession: FolderWatchSession? = nil,
         initialDiffBaselineMarkdownByURL: [URL: String] = [:],
         slotStrategy: SlotStrategy = .reuseEmptySlotForFirst,
         materializationStrategy: MaterializationStrategy = .loadAll
@@ -66,16 +66,16 @@ struct FileOpenPlan {
     }
 
     let assignments: [SlotAssignment]
-    let origin: ReaderOpenOrigin
-    let folderWatchSession: ReaderFolderWatchSession?
+    let origin: OpenOrigin
+    let folderWatchSession: FolderWatchSession?
     let materializationStrategy: FileOpenRequest.MaterializationStrategy
 }
 
 @MainActor
 final class FileOpenCoordinator {
-    private let controller: ReaderSidebarDocumentController
+    private let controller: SidebarDocumentController
 
-    init(controller: ReaderSidebarDocumentController) {
+    init(controller: SidebarDocumentController) {
         self.controller = controller
     }
 
@@ -112,7 +112,7 @@ final class FileOpenCoordinator {
     // MARK: - Private
 
     private nonisolated func deduplicateAndSort(_ urls: [URL]) -> [URL] {
-        Array(Set(urls.map(ReaderFileRouting.normalizedFileURL)))
+        Array(Set(urls.map(FileRouting.normalizedFileURL)))
             .sorted { $0.path < $1.path }
     }
 
@@ -173,7 +173,7 @@ final class FileOpenCoordinator {
 
     private var canReuseEmptySlot: Bool {
         guard let selectedDocument = controller.selectedDocument else { return false }
-        return selectedDocument.readerStore.fileURL == nil && controller.documents.count == 1
+        return selectedDocument.documentStore.document.fileURL == nil && controller.documents.count == 1
     }
 
     private nonisolated func loadMode(

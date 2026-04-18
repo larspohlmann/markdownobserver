@@ -1,0 +1,48 @@
+import Testing
+import Foundation
+@testable import minimark
+
+@MainActor
+@Suite("FolderWatchDispatcher")
+struct FolderWatchDispatcherTests {
+    private func makeSUT() -> FolderWatchDispatcher {
+        FolderWatchDispatcher(
+            folderWatchDependencies: FolderWatchDependencies(
+                autoOpenPlanner: FolderWatchAutoOpenPlanner(),
+                settler: AutoOpenSettler(settlingInterval: 1.0),
+                systemNotifier: TestSystemNotifier()
+            )
+        )
+    }
+
+    @Test("setSession updates activeFolderWatchSession")
+    func setSessionUpdatesSession() {
+        let sut = makeSUT()
+        let session = FolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/tmp/test"),
+            options: .default,
+            startedAt: Date()
+        )
+        sut.setSession(session)
+        #expect(sut.activeFolderWatchSession != nil)
+    }
+
+    @Test("dismissAutoOpenWarning clears warning")
+    func dismissAutoOpenWarningClears() {
+        let sut = makeSUT()
+        sut.dismissAutoOpenWarning()
+        #expect(sut.autoOpenWarning == nil)
+    }
+
+    @Test("isWatchingFolder reflects session state")
+    func isWatchingFolderReflectsSession() {
+        let sut = makeSUT()
+        #expect(!sut.isWatchingFolder)
+        sut.setSession(FolderWatchSession(
+            folderURL: URL(fileURLWithPath: "/tmp/test"),
+            options: .default,
+            startedAt: Date()
+        ))
+        #expect(sut.isWatchingFolder)
+    }
+}

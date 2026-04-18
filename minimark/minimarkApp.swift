@@ -4,14 +4,13 @@ import SwiftUI
 @main
 struct MarkdownObserverApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var settingsStore: ReaderSettingsStore
+    @State private var settingsStore: SettingsStore
 
     init() {
-        let settingsStore = ReaderSettingsStore()
+        let settingsStore = SettingsStore.makeDefault()
         _settingsStore = State(wrappedValue: settingsStore)
-        ReaderUITestWindowBootstrapper.shared.configure(settingsStore: settingsStore)
 
-        ReaderSystemNotifier.shared.configure()
+        SystemNotifier.shared.configure()
 
         NSWindow.allowsAutomaticWindowTabbing = false
         applyAppAppearanceIfAvailable(settingsStore.currentSettings.appAppearance)
@@ -25,8 +24,8 @@ struct MarkdownObserverApp: App {
         let activeMultiFileDisplayMode = settingsStore.currentSettings.multiFileDisplayMode
         let appAppearance = settingsStore.currentSettings.appAppearance
 
-        WindowGroup("MarkdownObserver", for: ReaderWindowSeed.self) { seed in
-            ReaderWindowRootView(
+        WindowGroup("MarkdownObserver", for: WindowSeed.self) { seed in
+            WindowRootView(
                 seed: seed.wrappedValue,
                 settingsStore: settingsStore,
                 multiFileDisplayMode: activeMultiFileDisplayMode
@@ -34,31 +33,31 @@ struct MarkdownObserverApp: App {
             .appAppearance(appAppearance)
         }
         .defaultSize(
-            width: ReaderWindowDefaults.defaultWidth,
-            height: ReaderWindowDefaults.defaultHeight
+            width: WindowDefaults.defaultWidth,
+            height: WindowDefaults.defaultHeight
         )
         .commands {
-            ReaderCommands(settingsStore: settingsStore, multiFileDisplayMode: activeMultiFileDisplayMode)
+            AppCommands(settingsStore: settingsStore, multiFileDisplayMode: activeMultiFileDisplayMode)
         }
 
-        Settings {
-            ReaderSettingsView(settingsStore: settingsStore)
+        Window("MarkdownObserver Settings", id: AppWindowID.settings.rawValue) {
+            SettingsView(settingsStore: settingsStore)
             .appAppearance(appAppearance)
         }
-        .defaultSize(width: 640, height: 700)
-        .windowResizability(.contentSize)
+        .defaultSize(width: 1000, height: 720)
+        .windowResizability(.contentMinSize)
 
         Window("About MarkdownObserver", id: AppWindowID.about.rawValue) {
             AboutWindowView()
                 .appAppearance(appAppearance)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
     }
 }
 
 private final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        ReaderUITestWindowBootstrapper.shared.openInitialWindowIfNeeded()
+        UITestWindowBootstrapper.shared.openInitialWindowIfNeeded()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -66,37 +65,31 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        ReaderSystemNotifier.shared.refreshNotificationStatus()
+        SystemNotifier.shared.refreshNotificationStatus()
     }
 }
 
 @MainActor
-private final class ReaderUITestWindowBootstrapper {
-    static let shared = ReaderUITestWindowBootstrapper()
+private final class UITestWindowBootstrapper {
+    static let shared = UITestWindowBootstrapper()
 
-    private var settingsStore: ReaderSettingsStore?
-    private var windowController: ReaderHostedWindowController?
-
-    func configure(settingsStore: ReaderSettingsStore) {
-        self.settingsStore = settingsStore
-    }
+    private var windowController: HostedWindowController?
 
     func openInitialWindowIfNeeded() {
-        guard ReaderUITestLaunchConfiguration.current.isUITestModeEnabled else {
+        guard UITestLaunchConfiguration.current.isUITestModeEnabled else {
             return
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self,
-                  let settingsStore = self.settingsStore,
-                  NSApp.windows.isEmpty else {
+                  NSApp.windows.allSatisfy({ !$0.isVisible }) else {
                 return
             }
 
-            let controller = ReaderHostedWindowController(settingsStore: settingsStore)
+            let controller = HostedWindowController()
             windowController = controller
             controller.showWindow(nil)
-            controller.window?.makeKeyAndOrderFront(nil)
+            controller.window?.orderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
     }

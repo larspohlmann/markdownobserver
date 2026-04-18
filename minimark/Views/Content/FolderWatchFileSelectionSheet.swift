@@ -5,7 +5,7 @@ struct FolderWatchFileSelectionSheetWrapper: View {
     let onSkip: () -> Void
     let onConfirm: ([URL]) -> Void
 
-    init(request: ReaderFolderWatchFileSelectionRequest, onSkip: @escaping () -> Void, onConfirm: @escaping ([URL]) -> Void) {
+    init(request: FolderWatchFileSelectionRequest, onSkip: @escaping () -> Void, onConfirm: @escaping ([URL]) -> Void) {
         _model = StateObject(wrappedValue: FolderWatchFileSelectionModel(
             folderURL: request.folderURL,
             fileURLs: request.allFileURLs
@@ -156,7 +156,7 @@ struct FolderWatchFileSelectionSheet: View {
             if model.exceedsPerformanceThreshold {
                 FolderWatchLargeTreeWarningCard(
                     title: "\(model.selectedCount) files selected",
-                    detail: "Opening more than \(ReaderFolderWatchAutoOpenPolicy.performanceWarningFileCount) files at once may slow down the system. Consider selecting fewer files.",
+                    detail: "Opening more than \(FolderWatchAutoOpenPolicy.performanceWarningFileCount) files at once may slow down the system. Consider selecting fewer files.",
                     tone: .warning,
                     showsAction: false,
                     onInspect: {}
@@ -178,14 +178,14 @@ struct FolderWatchFileSelectionSheet: View {
                 Button("Skip") {
                     onSkip()
                 }
-                .accessibilityIdentifier("file-selection-skip-button")
+                .accessibilityIdentifier(.fileSelectionSkipButton)
                 .buttonStyle(FolderWatchSecondaryActionButtonStyle())
                 .keyboardShortcut(.cancelAction)
 
                 Button(openButtonTitle) {
                     onConfirm(Array(model.selectedFileURLs))
                 }
-                .accessibilityIdentifier("file-selection-open-button")
+                .accessibilityIdentifier(.fileSelectionOpenButton)
                 .buttonStyle(FolderWatchPrimaryActionButtonStyle(tint: .accentColor))
                 .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)

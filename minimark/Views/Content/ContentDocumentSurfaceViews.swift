@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DocumentLoadingOverlay: View {
-    let theme: ReaderTheme
+    let theme: Theme
     let headline: String
     let subtitle: String?
 
@@ -200,5 +200,96 @@ struct MarkdownSourceFallbackView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+struct DocumentSurfaceHost: View {
+    let configuration: DocumentSurfaceConfiguration
+    let fallbackMarkdown: String
+
+    var body: some View {
+        Group {
+            if configuration.usesWebSurface {
+                MarkdownWebView(
+                    htmlDocument: configuration.htmlDocument,
+                    documentIdentity: configuration.documentIdentity,
+                    accessibilityIdentifier: configuration.accessibilityIdentifier,
+                    accessibilityValue: configuration.accessibilityValue,
+                    reloadToken: configuration.reloadToken,
+                    diagnosticName: configuration.diagnosticName,
+                    postLoadStatusScript: configuration.postLoadStatusScript,
+                    changedRegionNavigationRequest: configuration.changedRegionNavigationRequest,
+                    scrollSyncRequest: configuration.scrollSyncRequest,
+                    tocScrollRequest: configuration.tocScrollRequest,
+                    supportsInPlaceContentUpdates: configuration.supportsInPlaceContentUpdates,
+                    overlayTopInset: configuration.overlayTopInset,
+                    reloadAnchorProgress: configuration.reloadAnchorProgress,
+                    canAcceptDroppedFileURLs: configuration.canAcceptDroppedFileURLs,
+                    onAction: configuration.onAction
+                )
+            } else {
+                fallbackSurface
+            }
+        }
+        .frame(minWidth: configuration.minimumWidth)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var fallbackSurface: some View {
+        switch configuration.role {
+        case .preview:
+            NativeMarkdownFallbackView(
+                markdown: fallbackMarkdown,
+                onRetryPreview: { configuration.onAction(.retryFallback) }
+            )
+        case .source:
+            MarkdownSourceFallbackView(
+                markdown: fallbackMarkdown,
+                onRetryHighlighting: { configuration.onAction(.retryFallback) }
+            )
+        }
+    }
+}
+
+struct DocumentSurfaceLayoutView<PreviewSurface: View, SourceSurface: View>: View {
+    let content: DocumentSurfaceContent
+    let theme: Theme
+    let onDroppedFileURLs: ([URL]) -> Void
+    let previewSurface: PreviewSurface
+    let sourceSurface: SourceSurface
+
+    var body: some View {
+        switch content {
+        case .loading(let overlay):
+            DocumentLoadingOverlay(
+                theme: theme,
+                headline: overlay.headline,
+                subtitle: overlay.subtitle
+            )
+        case .empty(let variant):
+            ContentEmptyStateView(
+                variant: variant,
+                theme: theme
+            )
+            .dropDestination(for: URL.self) { urls, _ in
+                let fileURLs = urls.filter { $0.isFileURL }
+                guard !fileURLs.isEmpty else { return false }
+                onDroppedFileURLs(fileURLs)
+                return true
+            }
+        case .document(let documentViewMode):
+            switch documentViewMode {
+            case .preview:
+                previewSurface
+            case .split:
+                HSplitView {
+                    previewSurface
+                    sourceSurface
+                }
+            case .source:
+                sourceSurface
+            }
+        }
     }
 }

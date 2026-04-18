@@ -1,0 +1,7 @@
+pre code { color: #F2E8FF; }
+pre code .hljs-comment { color: #6A4A9A; font-style: italic; }
+pre code .hljs-keyword { color: #FF2E8A; }
+pre code .hljs-string  { color: #00E8D6; }
+pre code .hljs-number  { color: #B478E8; }
+pre code .hljs-title   { color: #FFCA28; }
+pre code .hljs-built_in { color: #FF2E8A; }

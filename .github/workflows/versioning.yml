@@ -18,7 +18,7 @@ concurrency:
 jobs:
   bump-build-on-merge:
     if: github.ref == 'refs/heads/develop' && github.actor != 'github-actions[bot]'
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64]
 
     steps:
       - name: Check out develop
@@ -71,7 +71,7 @@ jobs:
 
   bump-version-on-release-tag:
     if: startsWith(github.ref, 'refs/tags/') && github.actor != 'github-actions[bot]'
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64]
 
     steps:
       - name: Check out develop

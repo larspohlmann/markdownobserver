@@ -1,0 +1,56 @@
+import CoreGraphics
+import Foundation
+
+struct OverlayInsetValues: Equatable {
+    let railTopPadding: CGFloat
+    let leadingOverlayTopPadding: CGFloat
+    let scrollTargetTopInset: CGFloat
+    let watchPillLeadingWithChangeNav: CGFloat
+    let watchPillLeadingWithoutChangeNav: CGFloat
+    let watchPillTrailing: CGFloat
+    let changeNavigationLeadingPadding: CGFloat
+}
+
+enum OverlayInsetCalculator {
+    static let overlayBaseGap: CGFloat = 8
+    static let leadingOverlayAlignmentAdjustment: CGFloat = 8
+    static let overlayControlHeight: CGFloat = 30
+
+    static let watchPillLeadingWithChangeNav: CGFloat = 150
+    static let watchPillLeadingWithoutChangeNav: CGFloat = 60
+    static let watchPillTrailing: CGFloat = 70
+    static let changeNavigationLeadingPadding: CGFloat = 8
+
+    static let scrollLandingGap: CGFloat = {
+        if let raw = Bundle.main.object(forInfoDictionaryKey: "ScrollLandingGap") as? String,
+           let value = Double(raw), value >= 0 {
+            return CGFloat(value)
+        }
+        return 8
+    }()
+
+    static let defaultScrollTargetTopInset: CGFloat =
+        overlayBaseGap + leadingOverlayAlignmentAdjustment + overlayControlHeight + scrollLandingGap
+
+    static func statusBannerTopPadding(topBarInset: CGFloat) -> CGFloat {
+        max(0, topBarInset)
+    }
+
+    static func compute(topBarInset: CGFloat, hasStatusBanner: Bool) -> OverlayInsetValues {
+        let safeTopBarInset = max(0, topBarInset)
+        let overlayBaseInset = (hasStatusBanner ? 0 : safeTopBarInset) + overlayBaseGap
+        let railTopPadding = overlayBaseInset
+        let leadingOverlayTopPadding = overlayBaseInset + leadingOverlayAlignmentAdjustment
+        let scrollTargetTopInset = leadingOverlayTopPadding + overlayControlHeight + scrollLandingGap
+
+        return OverlayInsetValues(
+            railTopPadding: railTopPadding,
+            leadingOverlayTopPadding: leadingOverlayTopPadding,
+            scrollTargetTopInset: scrollTargetTopInset,
+            watchPillLeadingWithChangeNav: watchPillLeadingWithChangeNav,
+            watchPillLeadingWithoutChangeNav: watchPillLeadingWithoutChangeNav,
+            watchPillTrailing: watchPillTrailing,
+            changeNavigationLeadingPadding: changeNavigationLeadingPadding
+        )
+    }
+}

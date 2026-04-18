@@ -1,14 +1,18 @@
 import SwiftUI
 
+enum EditFavoritesAction {
+    case rename(id: UUID, name: String)
+    case delete(UUID)
+    case reorder([UUID])
+    case dismiss
+}
+
 struct EditFavoritesSheet: View {
-    let favorites: [ReaderFavoriteWatchedFolder]
-    let onRename: (UUID, String) -> Void
-    let onDelete: (UUID) -> Void
-    let onReorder: ([UUID]) -> Void
-    let onDismiss: () -> Void
+    let favorites: [FavoriteWatchedFolder]
+    let onAction: (EditFavoritesAction) -> Void
 
     @State private var draftNames: [UUID: String] = [:]
-    @State private var localOrder: [ReaderFavoriteWatchedFolder] = []
+    @State private var localOrder: [FavoriteWatchedFolder] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +36,7 @@ struct EditFavoritesSheet: View {
                 newFavorites.map { ($0.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            var updatedOrder: [ReaderFavoriteWatchedFolder] = []
+            var updatedOrder: [FavoriteWatchedFolder] = []
             var seenIDs = Set<UUID>()
             for entry in localOrder {
                 if let updated = favoritesById[entry.id] {
@@ -116,9 +120,9 @@ struct EditFavoritesSheet: View {
                 commitAllPendingRenames()
                 let newIDs = localOrder.map(\.id)
                 if newIDs != favorites.map(\.id) {
-                    onReorder(newIDs)
+                    onAction(.reorder(newIDs))
                 }
-                onDismiss()
+                onAction(.dismiss)
             }
             .keyboardShortcut(.defaultAction)
         }
@@ -134,18 +138,18 @@ struct EditFavoritesSheet: View {
         )
     }
 
-    private func bindingForDraft(_ entry: ReaderFavoriteWatchedFolder) -> Binding<String> {
+    private func bindingForDraft(_ entry: FavoriteWatchedFolder) -> Binding<String> {
         Binding(
             get: { draftNames[entry.id] ?? entry.name },
             set: { draftNames[entry.id] = $0 }
         )
     }
 
-    private func commitRename(for entry: ReaderFavoriteWatchedFolder) {
+    private func commitRename(for entry: FavoriteWatchedFolder) {
         guard let draft = draftNames[entry.id] else { return }
         let trimmed = draft.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty, trimmed != entry.name else { return }
-        onRename(entry.id, trimmed)
+        onAction(.rename(id: entry.id, name: trimmed))
         if let index = localOrder.firstIndex(where: { $0.id == entry.id }) {
             localOrder[index].name = trimmed
         }
@@ -157,10 +161,10 @@ struct EditFavoritesSheet: View {
         }
     }
 
-    private func deleteEntry(_ entry: ReaderFavoriteWatchedFolder) {
+    private func deleteEntry(_ entry: FavoriteWatchedFolder) {
         localOrder.removeAll { $0.id == entry.id }
         draftNames.removeValue(forKey: entry.id)
-        onDelete(entry.id)
+        onAction(.delete(entry.id))
     }
 
     private func moveEntries(from source: IndexSet, to destination: Int) {
@@ -171,7 +175,7 @@ struct EditFavoritesSheet: View {
 // MARK: - Favorite Row
 
 private struct FavoriteRow: View {
-    let entry: ReaderFavoriteWatchedFolder
+    let entry: FavoriteWatchedFolder
     @Binding var draftName: String
     let onCommitRename: () -> Void
     let onDelete: () -> Void

@@ -8,7 +8,7 @@ struct FolderWatchControllerUpdateExclusionsTests {
 
     @Test func updateExclusionsRestartsWatcherWithNewPaths() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
-        let initialOptions = ReaderFolderWatchOptions(
+        let initialOptions = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: ["/tmp/test-folder/excluded"]
@@ -16,16 +16,16 @@ struct FolderWatchControllerUpdateExclusionsTests {
         let updatedExclusions = ["/tmp/test-folder/excluded", "/tmp/test-folder/another"]
 
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.update-excl.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            systemNotifier: TestSystemNotifier(),
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(folderURL: folderURL, options: initialOptions, performInitialAutoOpen: false)
@@ -49,16 +49,16 @@ struct FolderWatchControllerUpdateExclusionsTests {
 
     @Test func updateExclusionsThrowsWhenNotWatching() {
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.update-excl-err.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            systemNotifier: TestSystemNotifier(),
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         #expect(throws: FolderWatchUpdateError.self) {
@@ -68,23 +68,23 @@ struct FolderWatchControllerUpdateExclusionsTests {
 
     @Test func updateExclusionsSkipsRestartWhenUnchanged() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .watchChangesOnly,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: ["/tmp/test-folder/excluded"]
         )
 
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.update-excl-noop.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            systemNotifier: TestSystemNotifier(),
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(folderURL: folderURL, options: options, performInitialAutoOpen: false)

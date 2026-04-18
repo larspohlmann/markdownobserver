@@ -79,9 +79,19 @@ nonisolated enum SyntaxThemeKind: String, CaseIterable, Codable, Sendable {
                     --reader-blockquote-accent: \(palette.blockquoteAccentHex);
                     --reader-blockquote-bg: \(palette.blockquoteBackgroundHex);
                     --reader-blockquote-fg: \(palette.blockquoteForegroundHex);
+                    --reader-syntax-keyword: \(palette.keywordHex);
+                    --reader-syntax-text: \(palette.blockTextHex);
+                    --reader-syntax-bg: \(palette.blockBackgroundHex);
+                    --reader-syntax-border: \(palette.blockBorderHex);
+                    --reader-syntax-string: \(palette.stringHex);
+                    --reader-syntax-number: \(palette.numberHex);
+                    --reader-syntax-title: \(palette.titleHex);
+                    --reader-syntax-builtin: \(palette.builtInHex);
+                    --reader-syntax-comment: \(palette.commentHex);
                 }
 
         pre {
+          position: relative;
           background: \(palette.blockBackgroundHex);
           border: 1px solid \(palette.blockBorderHex);
         }

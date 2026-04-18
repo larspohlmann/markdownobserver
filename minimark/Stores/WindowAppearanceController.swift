@@ -9,21 +9,21 @@ final class WindowAppearanceController {
     private(set) var isLocked = false
     private(set) var effectiveAppearance: LockedAppearance
 
-    var effectiveTheme: ReaderThemeKind { effectiveAppearance.readerTheme }
+    var effectiveTheme: ThemeKind { effectiveAppearance.readerTheme }
     var effectiveFontSize: Double { effectiveAppearance.baseFontSize }
     var effectiveSyntaxTheme: SyntaxThemeKind { effectiveAppearance.syntaxTheme }
 
-    private static let _lockedWindowCount = Mutex(0)
+    nonisolated private static let _lockedWindowCount = Mutex(0)
     static var lockedWindowCount: Int { _lockedWindowCount.withLock { $0 } }
 
     /// Tracks whether this instance contributed to `_lockedWindowCount`.
     /// Must be `nonisolated(unsafe)` so `deinit` (which is nonisolated) can read it.
-    private nonisolated(unsafe) var _isLockedForDeinit = false
+    @ObservationIgnored private nonisolated(unsafe) var _isLockedForDeinit = false
 
-    private let settingsStore: ReaderSettingsReading
+    private let settingsStore: SettingsReading
     private var cancellable: AnyCancellable?
 
-    init(settingsStore: ReaderSettingsReading) {
+    init(settingsStore: SettingsReading) {
         self.settingsStore = settingsStore
         let current = settingsStore.currentSettings
         self.effectiveAppearance = LockedAppearance(

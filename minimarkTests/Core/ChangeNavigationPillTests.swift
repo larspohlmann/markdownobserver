@@ -63,7 +63,7 @@ struct ChangeNavigationPillTests {
     private func wrappedIndex(
         current: Int,
         count: Int,
-        direction: ReaderChangedRegionNavigationDirection
+        direction: ChangedRegionNavigationDirection
     ) -> Int {
         switch direction {
         case .previous:

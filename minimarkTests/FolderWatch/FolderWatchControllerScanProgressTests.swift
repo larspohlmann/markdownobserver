@@ -19,7 +19,7 @@ struct FolderWatchControllerScanProgressTests {
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             performInitialAutoOpen: false
         )
 
@@ -48,7 +48,7 @@ struct FolderWatchControllerScanProgressTests {
 
         try controller.startWatching(
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
+            options: FolderWatchOptions(openMode: .watchChangesOnly, scope: .selectedFolderOnly),
             performInitialAutoOpen: false
         )
 
@@ -59,17 +59,17 @@ struct FolderWatchControllerScanProgressTests {
         #expect(controller.contentScanProgress == nil)
     }
 
-    @MainActor private func makeController(folderWatcher: TestFolderWatcher) -> ReaderFolderWatchController {
-        let settingsStore = ReaderSettingsStore(
+    @MainActor private func makeController(folderWatcher: TestFolderWatcher) -> FolderWatchController {
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.scan-progress-tests.\(UUID().uuidString)"
         )
-        return ReaderFolderWatchController(
+        return FolderWatchController(
             folderWatcher: folderWatcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            systemNotifier: TestSystemNotifier(),
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
     }
 }

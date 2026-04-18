@@ -2,13 +2,9 @@ import AppKit
 import SwiftUI
 
 struct ContentUtilityRail: View {
-    let hasFile: Bool
-    let documentViewMode: ReaderDocumentViewMode
-    let showEditButton: Bool
-    let canStartSourceEditing: Bool
-    let onSetDocumentViewMode: (ReaderDocumentViewMode) -> Void
+    let state: ContentUtilityRailState
+    let onSetDocumentViewMode: (DocumentViewMode) -> Void
     let onStartSourceEditing: () -> Void
-    let hasTOCHeadings: Bool
     let isTOCVisible: Binding<Bool>
 
     @State private var isHovering = false
@@ -27,16 +23,16 @@ struct ContentUtilityRail: View {
     }
 
     var body: some View {
-        if hasFile {
+        if state.hasFile {
             VStack(spacing: Metrics.groupSpacing) {
                 viewModeGroup
 
-                if showEditButton {
+                if state.showEditButton {
                     groupSeparator
                     editGroup
                 }
 
-                if hasTOCHeadings && documentViewMode == .preview {
+                if state.hasTOCHeadings && state.documentViewMode == .preview {
                     groupSeparator
                     tocGroup
                 }
@@ -63,18 +59,18 @@ struct ContentUtilityRail: View {
 
     private var viewModeGroup: some View {
         VStack(spacing: 6) {
-            ForEach(ReaderDocumentViewMode.allCases, id: \.self) { mode in
+            ForEach(DocumentViewMode.allCases, id: \.self) { mode in
                 viewModeButton(mode: mode)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: documentViewMode)
+        .animation(.easeInOut(duration: 0.25), value: state.documentViewMode)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Document view mode")
         .accessibilityHint("Switch between preview, split, and source views of the document.")
     }
 
-    private func viewModeButton(mode: ReaderDocumentViewMode) -> some View {
-        let isSelected = documentViewMode == mode
+    private func viewModeButton(mode: DocumentViewMode) -> some View {
+        let isSelected = state.documentViewMode == mode
 
         return Button {
             onSetDocumentViewMode(mode)
@@ -101,9 +97,10 @@ struct ContentUtilityRail: View {
                 )
         }
         .buttonStyle(.plain)
-        .disabled(!hasFile || isSelected)
-        .foregroundStyle(isSelected ? .primary : (hasFile ? .secondary : .tertiary))
+        .disabled(!state.hasFile || isSelected)
+        .foregroundStyle(isSelected ? .primary : (state.hasFile ? .secondary : .tertiary))
         .help(mode.displayName)
+        .accessibilityIdentifier(mode.accessibilityIdentifier)
         .accessibilityLabel(mode.displayName)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
@@ -118,16 +115,17 @@ struct ContentUtilityRail: View {
                 .font(.system(size: Metrics.iconSize, weight: .semibold))
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
                 .railButtonBackground(cornerRadius: Metrics.buttonCornerRadius,
-                    fill: Color.primary.opacity(canStartSourceEditing ? 0.06 : 0.03),
-                    border: Color.primary.opacity(canStartSourceEditing ? 0.10 : 0.05),
-                    hoverFill: canStartSourceEditing ? Color.primary.opacity(0.10) : nil,
-                    hoverBorder: canStartSourceEditing ? Color.primary.opacity(0.14) : nil
+                    fill: Color.primary.opacity(state.canStartSourceEditing ? 0.06 : 0.03),
+                    border: Color.primary.opacity(state.canStartSourceEditing ? 0.10 : 0.05),
+                    hoverFill: state.canStartSourceEditing ? Color.primary.opacity(0.10) : nil,
+                    hoverBorder: state.canStartSourceEditing ? Color.primary.opacity(0.14) : nil
                 )
         }
         .buttonStyle(.plain)
-        .disabled(!canStartSourceEditing)
-        .foregroundStyle(canStartSourceEditing ? .primary : .tertiary)
+        .disabled(!state.canStartSourceEditing)
+        .foregroundStyle(state.canStartSourceEditing ? .primary : .tertiary)
         .help("Edit Source (⌘E)")
+        .accessibilityIdentifier(.editSourceButton)
         .accessibilityLabel("Edit source")
     }
 
@@ -162,7 +160,7 @@ struct ContentUtilityRail: View {
         .buttonStyle(.plain)
         .foregroundStyle(isActive ? .primary : .secondary)
         .help("Table of Contents (⇧⌘T)")
-        .accessibilityIdentifier("toc-button")
+        .accessibilityIdentifier(.tocButton)
         .accessibilityLabel("Table of Contents")
         .accessibilityValue(isTOCVisible.wrappedValue ? "Visible" : "Hidden")
         .anchorPreference(key: TOCButtonAnchorKey.self, value: .bounds) { $0 }

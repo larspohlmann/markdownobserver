@@ -56,7 +56,7 @@ struct SidebarRowStateTests {
 @Suite(.serialized)
 struct SidebarRowStateDerivationTests {
     @Test @MainActor func controllerDerivesSidebarRowStateFromDocument() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let docID = harness.controller.documents[0].id
@@ -67,7 +67,7 @@ struct SidebarRowStateDerivationTests {
     }
 
     @Test @MainActor func controllerUpdatesRowStatesWhenDocumentsChange() throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let coordinator = FileOpenCoordinator(controller: harness.controller)
@@ -81,7 +81,7 @@ struct SidebarRowStateDerivationTests {
     }
 
     @Test @MainActor func controllerUpdatesRowStateWhenStorePropertyChanges() async throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         // Open a real file so the store has meaningful state
@@ -92,14 +92,14 @@ struct SidebarRowStateDerivationTests {
         ))
 
         let docID = harness.controller.documents[0].id
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
         let initialState = harness.controller.rowStates[docID]
 
         // Let the observation tracking tasks start their first withObservationTracking call
         await Task.yield()
 
         // Simulate an external change notification on the store
-        store.noteObservedExternalChange()
+        store.externalChange.noteObservedExternalChange()
 
         // Allow the observation tracking task to process and update rowStates
         try await Task.sleep(for: .milliseconds(50))
@@ -111,7 +111,7 @@ struct SidebarRowStateDerivationTests {
     }
 
     @Test @MainActor func controllerUpdatesRowStateWhenChangeKindTransitions() async throws {
-        let harness = try ReaderSidebarControllerTestHarness()
+        let harness = try SidebarControllerTestHarness()
         defer { harness.cleanup() }
 
         let coordinator = FileOpenCoordinator(controller: harness.controller)
@@ -121,19 +121,19 @@ struct SidebarRowStateDerivationTests {
         ))
 
         let docID = harness.controller.documents[0].id
-        let store = harness.controller.documents[0].readerStore
+        let store = harness.controller.documents[0].documentStore
 
         await Task.yield()
 
         // Simulate file-created indicator (green badge)
-        store.noteObservedExternalChange(kind: .added)
+        store.externalChange.noteObservedExternalChange(kind: .added)
         try await Task.sleep(for: .milliseconds(50))
 
         let addedState = harness.controller.rowStates[docID]
         #expect(addedState?.indicatorState == .addedExternalChange)
 
         // Simulate file-modified indicator (yellow badge) — should replace green
-        store.noteObservedExternalChange(kind: .modified)
+        store.externalChange.noteObservedExternalChange(kind: .modified)
         try await Task.sleep(for: .milliseconds(50))
 
         let modifiedState = harness.controller.rowStates[docID]

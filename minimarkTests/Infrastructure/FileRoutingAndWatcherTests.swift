@@ -16,11 +16,11 @@ struct FileRoutingAndWatcherTests {
         let markdownURL2 = tempDirectory.appendingPathComponent("design.markdown")
         let unsupportedURL = tempDirectory.appendingPathComponent("todo.txt")
 
-        let output = ReaderFileRouting.supportedMarkdownFiles(from: [markdownURL, unsupportedURL, markdownURL2])
+        let output = FileRouting.supportedMarkdownFiles(from: [markdownURL, unsupportedURL, markdownURL2])
 
         #expect(output.count == 2)
-        #expect(output.contains(ReaderFileRouting.normalizedFileURL(markdownURL)))
-        #expect(output.contains(ReaderFileRouting.normalizedFileURL(markdownURL2)))
+        #expect(output.contains(FileRouting.normalizedFileURL(markdownURL)))
+        #expect(output.contains(FileRouting.normalizedFileURL(markdownURL2)))
     }
 
     @Test func supportedMarkdownFilesAcceptsKnownExtensionsOnly() {
@@ -30,13 +30,13 @@ struct FileRoutingAndWatcherTests {
 
         for ext in supported {
             let url = tempDirectory.appendingPathComponent("sample.\(ext)")
-            #expect(ReaderFileRouting.isSupportedMarkdownFileURL(url))
+            #expect(FileRouting.isSupportedMarkdownFileURL(url))
         }
 
         for ext in unsupported {
             let filename = ext.isEmpty ? "sample" : "sample.\(ext)"
             let url = tempDirectory.appendingPathComponent(filename)
-            #expect(!ReaderFileRouting.isSupportedMarkdownFileURL(url))
+            #expect(!FileRouting.isSupportedMarkdownFileURL(url))
         }
     }
 
@@ -50,9 +50,9 @@ struct FileRoutingAndWatcherTests {
         let droppedFileURL = directoryURL.appendingPathComponent("notes.md")
         try "# Notes".write(to: droppedFileURL, atomically: false, encoding: .utf8)
 
-        let firstDirectoryURL = ReaderFileRouting.firstDroppedDirectoryURL(from: [droppedFileURL, droppedDirectoryURL])
+        let firstDirectoryURL = FileRouting.firstDroppedDirectoryURL(from: [droppedFileURL, droppedDirectoryURL])
 
-        #expect(firstDirectoryURL == ReaderFileRouting.normalizedFileURL(droppedDirectoryURL))
+        #expect(firstDirectoryURL == FileRouting.normalizedFileURL(droppedDirectoryURL))
     }
 
     @Test func firstDroppedDirectoryURLReturnsNilWhenNoDirectoryIsPresent() throws {
@@ -62,7 +62,7 @@ struct FileRoutingAndWatcherTests {
         let droppedFileURL = directoryURL.appendingPathComponent("notes.md")
         try "# Notes".write(to: droppedFileURL, atomically: false, encoding: .utf8)
 
-        #expect(ReaderFileRouting.firstDroppedDirectoryURL(from: [droppedFileURL]) == nil)
+        #expect(FileRouting.firstDroppedDirectoryURL(from: [droppedFileURL]) == nil)
     }
 
     @Test func containsLikelyDirectoryPathUsesURLDirectoryHints() {
@@ -70,8 +70,8 @@ struct FileRoutingAndWatcherTests {
         let folderHintURL = tempDirectory.appendingPathComponent("watch-folder", isDirectory: true)
         let fileHintURL = tempDirectory.appendingPathComponent("notes.md", isDirectory: false)
 
-        #expect(ReaderFileRouting.containsLikelyDirectoryPath(in: [fileHintURL, folderHintURL]))
-        #expect(!ReaderFileRouting.containsLikelyDirectoryPath(in: [fileHintURL]))
+        #expect(FileRouting.containsLikelyDirectoryPath(in: [fileHintURL, folderHintURL]))
+        #expect(!FileRouting.containsLikelyDirectoryPath(in: [fileHintURL]))
     }
 
     @Test @MainActor func fileChangeWatcherDetectsContentChangeWithRestoredMetadata() async throws {
@@ -149,7 +149,7 @@ struct FileRoutingAndWatcherTests {
         try "# Before".write(to: existingFileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { events in
             receivedEvents.append(contentsOf: events)
@@ -165,10 +165,10 @@ struct FileRoutingAndWatcherTests {
 
         #expect(await waitUntil(timeout: .seconds(2)) {
             let modifiedEvent = receivedEvents.first(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(existingFileURL) && $0.kind == .modified
+                $0.fileURL == FileRouting.normalizedFileURL(existingFileURL) && $0.kind == .modified
             })
             let addedEvent = receivedEvents.first(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(addedFileURL) && $0.kind == .added
+                $0.fileURL == FileRouting.normalizedFileURL(addedFileURL) && $0.kind == .added
             })
 
             return modifiedEvent?.previousMarkdown == "# Before" && addedEvent != nil
@@ -208,13 +208,13 @@ struct FileRoutingAndWatcherTests {
         let recursiveFiles = try watcher.markdownFiles(in: directoryURL, includeSubfolders: true)
 
         #expect(selectedFolderOnlyFiles == [
-            ReaderFileRouting.normalizedFileURL(hiddenRootFileURL),
-            ReaderFileRouting.normalizedFileURL(visibleFileURL)
+            FileRouting.normalizedFileURL(hiddenRootFileURL),
+            FileRouting.normalizedFileURL(visibleFileURL)
         ].sorted(by: { $0.path < $1.path }))
         #expect(recursiveFiles == [
-            ReaderFileRouting.normalizedFileURL(hiddenRootFileURL),
-            ReaderFileRouting.normalizedFileURL(hiddenNestedFileURL),
-            ReaderFileRouting.normalizedFileURL(visibleFileURL)
+            FileRouting.normalizedFileURL(hiddenRootFileURL),
+            FileRouting.normalizedFileURL(hiddenNestedFileURL),
+            FileRouting.normalizedFileURL(visibleFileURL)
         ].sorted(by: { $0.path < $1.path }))
     }
 
@@ -238,7 +238,7 @@ struct FileRoutingAndWatcherTests {
             excludedSubdirectoryURLs: [excludedSubdirectoryURL]
         )
 
-        #expect(recursiveFiles == [ReaderFileRouting.normalizedFileURL(includedFileURL)])
+        #expect(recursiveFiles == [FileRouting.normalizedFileURL(includedFileURL)])
     }
 
     @Test func folderChangeWatcherLimitsRecursiveEnumerationToFiveLevels() throws {
@@ -263,8 +263,8 @@ struct FileRoutingAndWatcherTests {
         let watcher = FolderChangeWatcher()
         let recursiveFiles = try watcher.markdownFiles(in: directoryURL, includeSubfolders: true)
 
-        #expect(recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthFiveFileURL)))
-        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(depthSixFileURL)))
+        #expect(recursiveFiles.contains(FileRouting.normalizedFileURL(depthFiveFileURL)))
+        #expect(!recursiveFiles.contains(FileRouting.normalizedFileURL(depthSixFileURL)))
     }
 
     @Test func folderChangeWatcherStillAppliesDepthLimitWhenSubdirectoriesAreExplicitlyExcluded() throws {
@@ -295,7 +295,7 @@ struct FileRoutingAndWatcherTests {
             excludedSubdirectoryURLs: [excludedBranchDirectoryURL]
         )
 
-        #expect(!recursiveFiles.contains(ReaderFileRouting.normalizedFileURL(deepIncludedFileURL)))
+        #expect(!recursiveFiles.contains(FileRouting.normalizedFileURL(deepIncludedFileURL)))
     }
 
     @Test @MainActor func folderChangeWatcherDoesNotEmitEventsFromExcludedSubdirectories() async throws {
@@ -312,7 +312,7 @@ struct FileRoutingAndWatcherTests {
         try "# Before".write(to: includedFileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(
             folderURL: directoryURL,
@@ -332,13 +332,13 @@ struct FileRoutingAndWatcherTests {
 
         #expect(await waitUntil(timeout: .seconds(2)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(includedFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(includedFileURL) &&
                 $0.kind == .modified
             })
         })
 
         #expect(!receivedEvents.contains(where: {
-            $0.fileURL == ReaderFileRouting.normalizedFileURL(excludedFileURL)
+            $0.fileURL == FileRouting.normalizedFileURL(excludedFileURL)
         }))
     }
 
@@ -356,7 +356,7 @@ struct FileRoutingAndWatcherTests {
         try "# Nested".write(to: nestedFileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -376,7 +376,7 @@ struct FileRoutingAndWatcherTests {
         try "# Stable".write(to: fileURL, atomically: false, encoding: .utf8)
 
         let watcher = makeFolderChangeWatcher()
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: false) { events in
             receivedEvents.append(contentsOf: events)
@@ -399,7 +399,7 @@ struct FileRoutingAndWatcherTests {
 
         let lock = NSLock()
         var failures: [FolderChangeWatcherFailure] = []
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         let watcher = makeFolderChangeWatcher(onFailure: { failure in
             lock.lock()
@@ -435,7 +435,7 @@ struct FileRoutingAndWatcherTests {
             lock.lock()
             defer { lock.unlock() }
             return receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(recoveredFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(recoveredFileURL) &&
                 $0.kind == .added
             })
         })
@@ -505,7 +505,7 @@ struct FileRoutingAndWatcherTests {
 
         let lock = NSLock()
         var failures: [FolderChangeWatcherFailure] = []
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         let watcher = makeFolderChangeWatcher(onFailure: { failure in
             lock.lock()
@@ -537,7 +537,7 @@ struct FileRoutingAndWatcherTests {
             lock.lock()
             defer { lock.unlock() }
             return receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(recoveredFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(recoveredFileURL) &&
                 $0.kind == .added
             })
         })
@@ -557,7 +557,7 @@ struct FileRoutingAndWatcherTests {
         let fileWatcher = makeFileChangeWatcher()
         let folderWatcher = makeFolderChangeWatcher()
         var fileChangeCount = 0
-        var folderEvents: [ReaderFolderWatchChangeEvent] = []
+        var folderEvents: [FolderWatchChangeEvent] = []
 
         try fileWatcher.startWatching(fileURL: nestedFileURL) {
             fileChangeCount += 1
@@ -601,7 +601,7 @@ struct FileRoutingAndWatcherTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -616,7 +616,7 @@ struct FileRoutingAndWatcherTests {
 
         #expect(await waitUntil(timeout: .seconds(2)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(deepFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(deepFileURL) &&
                 $0.kind == .modified &&
                 $0.previousMarkdown == "# Before"
             })
@@ -642,7 +642,7 @@ struct FileRoutingAndWatcherTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -660,7 +660,7 @@ struct FileRoutingAndWatcherTests {
 
         #expect(await waitUntil(timeout: .seconds(2)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(trackedFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(trackedFileURL) &&
                 $0.kind == .modified &&
                 $0.previousMarkdown == "# Before"
             })
@@ -767,11 +767,11 @@ struct FileRoutingAndWatcherTests {
             includeSubfolders: true,
             exclusionMatcher: exclusionMatcher,
             previousSnapshot: initialSnapshot,
-            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(changedSubdir)])
+            changedDirectoryURLs: Set([FileRouting.normalizedFileURL(changedSubdir)])
         )
 
-        let normalizedUnchangedURL = ReaderFileRouting.normalizedFileURL(unchangedFileURL)
-        let normalizedChangedURL = ReaderFileRouting.normalizedFileURL(changedFileURL)
+        let normalizedUnchangedURL = FileRouting.normalizedFileURL(unchangedFileURL)
+        let normalizedChangedURL = FileRouting.normalizedFileURL(changedFileURL)
 
         #expect(targetedSnapshot[normalizedUnchangedURL] != nil)
         #expect(targetedSnapshot[normalizedChangedURL] != nil)
@@ -807,7 +807,7 @@ struct FileRoutingAndWatcherTests {
             previousSnapshot: [:]
         )
 
-        let normalizedFileURL = ReaderFileRouting.normalizedFileURL(fileURL)
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         #expect(initialSnapshot[normalizedFileURL] != nil)
 
         try FileManager.default.removeItem(at: fileURL)
@@ -817,7 +817,7 @@ struct FileRoutingAndWatcherTests {
             includeSubfolders: true,
             exclusionMatcher: exclusionMatcher,
             previousSnapshot: initialSnapshot,
-            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+            changedDirectoryURLs: Set([FileRouting.normalizedFileURL(subdir)])
         )
 
         #expect(targetedSnapshot[normalizedFileURL] == nil)
@@ -854,11 +854,11 @@ struct FileRoutingAndWatcherTests {
             includeSubfolders: true,
             exclusionMatcher: exclusionMatcher,
             previousSnapshot: initialSnapshot,
-            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+            changedDirectoryURLs: Set([FileRouting.normalizedFileURL(subdir)])
         )
 
-        let normalizedExistingURL = ReaderFileRouting.normalizedFileURL(existingFileURL)
-        let normalizedNewURL = ReaderFileRouting.normalizedFileURL(newFileURL)
+        let normalizedExistingURL = FileRouting.normalizedFileURL(existingFileURL)
+        let normalizedNewURL = FileRouting.normalizedFileURL(newFileURL)
 
         #expect(targetedSnapshot[normalizedExistingURL] != nil)
         #expect(targetedSnapshot[normalizedNewURL] != nil)
@@ -905,14 +905,14 @@ struct FileRoutingAndWatcherTests {
             folderURL: directoryURL, includeSubfolders: true,
             exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
             changedDirectoryURLs: Set([
-                ReaderFileRouting.normalizedFileURL(subdirA),
-                ReaderFileRouting.normalizedFileURL(subdirB)
+                FileRouting.normalizedFileURL(subdirA),
+                FileRouting.normalizedFileURL(subdirB)
             ])
         )
 
-        let normalizedA = ReaderFileRouting.normalizedFileURL(fileA)
-        let normalizedB = ReaderFileRouting.normalizedFileURL(fileB)
-        let normalizedC = ReaderFileRouting.normalizedFileURL(fileC)
+        let normalizedA = FileRouting.normalizedFileURL(fileA)
+        let normalizedB = FileRouting.normalizedFileURL(fileB)
+        let normalizedC = FileRouting.normalizedFileURL(fileC)
 
         #expect(targetedSnapshot[normalizedA]?.markdown == "# A modified")
         #expect(targetedSnapshot[normalizedB] == nil)
@@ -949,10 +949,10 @@ struct FileRoutingAndWatcherTests {
         let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
             folderURL: directoryURL, includeSubfolders: true,
             exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
-            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+            changedDirectoryURLs: Set([FileRouting.normalizedFileURL(subdir)])
         )
 
-        #expect(targetedSnapshot[ReaderFileRouting.normalizedFileURL(fileURL)] == nil)
+        #expect(targetedSnapshot[FileRouting.normalizedFileURL(fileURL)] == nil)
     }
 
     @Test func folderSnapshotDifferTargetedSnapshotIgnoresNonMarkdownFiles() throws {
@@ -983,11 +983,11 @@ struct FileRoutingAndWatcherTests {
         let targetedSnapshot = try differ.buildTargetedIncrementalSnapshot(
             folderURL: directoryURL, includeSubfolders: true,
             exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
-            changedDirectoryURLs: Set([ReaderFileRouting.normalizedFileURL(subdir)])
+            changedDirectoryURLs: Set([FileRouting.normalizedFileURL(subdir)])
         )
 
         #expect(targetedSnapshot.count == 1)
-        #expect(targetedSnapshot[ReaderFileRouting.normalizedFileURL(markdownURL)] != nil)
+        #expect(targetedSnapshot[FileRouting.normalizedFileURL(markdownURL)] != nil)
     }
 
     @Test func folderSnapshotDifferTargetedSnapshotDetectsFileMoveAcrossDirectories() throws {
@@ -1019,13 +1019,13 @@ struct FileRoutingAndWatcherTests {
             folderURL: directoryURL, includeSubfolders: true,
             exclusionMatcher: exclusionMatcher, previousSnapshot: initialSnapshot,
             changedDirectoryURLs: Set([
-                ReaderFileRouting.normalizedFileURL(sourceDir),
-                ReaderFileRouting.normalizedFileURL(destDir)
+                FileRouting.normalizedFileURL(sourceDir),
+                FileRouting.normalizedFileURL(destDir)
             ])
         )
 
-        let normalizedSource = ReaderFileRouting.normalizedFileURL(sourceFileURL)
-        let normalizedDest = ReaderFileRouting.normalizedFileURL(destFileURL)
+        let normalizedSource = FileRouting.normalizedFileURL(sourceFileURL)
+        let normalizedDest = FileRouting.normalizedFileURL(destFileURL)
 
         #expect(targetedSnapshot[normalizedSource] == nil)
         #expect(targetedSnapshot[normalizedDest] != nil)
@@ -1043,7 +1043,7 @@ struct FileRoutingAndWatcherTests {
             rootFolderURL: URL(fileURLWithPath: "/tmp"), excludedSubdirectoryURLs: []
         )
 
-        #expect(throws: ReaderError.self) {
+        #expect(throws: AppError.self) {
             _ = try differ.buildTargetedIncrementalSnapshot(
                 folderURL: URL(string: "https://example.com")!,
                 includeSubfolders: true,
@@ -1088,13 +1088,13 @@ struct FileRoutingAndWatcherTests {
             exclusionMatcher: exclusionMatcher,
             previousSnapshot: [:],
             changedDirectoryURLs: Set([
-                ReaderFileRouting.normalizedFileURL(deepDir),
-                ReaderFileRouting.normalizedFileURL(atLimitDir)
+                FileRouting.normalizedFileURL(deepDir),
+                FileRouting.normalizedFileURL(atLimitDir)
             ])
         )
 
-        let normalizedDeepURL = ReaderFileRouting.normalizedFileURL(deepFileURL)
-        let normalizedAtLimitURL = ReaderFileRouting.normalizedFileURL(atLimitFileURL)
+        let normalizedDeepURL = FileRouting.normalizedFileURL(deepFileURL)
+        let normalizedAtLimitURL = FileRouting.normalizedFileURL(atLimitFileURL)
 
         // File beyond depth limit should be excluded
         #expect(targetedSnapshot[normalizedDeepURL] == nil)
@@ -1169,7 +1169,7 @@ struct FileRoutingAndWatcherTests {
         )
 
         #expect(snapshot.count == 1)
-        let realURL = ReaderFileRouting.normalizedFileURL(realDir.appendingPathComponent("real.md"))
+        let realURL = FileRouting.normalizedFileURL(realDir.appendingPathComponent("real.md"))
         #expect(snapshot[realURL] != nil)
     }
 
@@ -1201,7 +1201,7 @@ struct FileRoutingAndWatcherTests {
         let workspace = TestWorkspace(
             applicationURLsToReturn: [duplicateReleaseAppURL, textEditAppURL, duplicateDebugAppURL]
         )
-        let service = ReaderFileActionService(workspace: workspace)
+        let service = FileActionService(workspace: workspace)
 
         let applications = try service.registeredApplications(for: markdownFileURL)
 
@@ -1224,7 +1224,7 @@ struct FileRoutingAndWatcherTests {
         )
         let bundle = try #require(Bundle(url: appURL))
         let launchServices = TestLaunchServices()
-        let service = ReaderDefaultMarkdownAssociationService(
+        let service = DefaultMarkdownAssociationService(
             launchServices: launchServices,
             typeResolver: TestMarkdownContentTypeResolver(identifiers: ["net.daringfireball.markdown"]),
             appBundle: bundle
@@ -1254,7 +1254,7 @@ struct FileRoutingAndWatcherTests {
         )
         let bundle = try #require(Bundle(url: appURL))
         let launchServices = TestLaunchServices(registerStatus: -10814)
-        let service = ReaderDefaultMarkdownAssociationService(
+        let service = DefaultMarkdownAssociationService(
             launchServices: launchServices,
             typeResolver: TestMarkdownContentTypeResolver(identifiers: ["net.daringfireball.markdown"]),
             appBundle: bundle
@@ -1326,7 +1326,7 @@ private extension FileRoutingAndWatcherTests {
                 )
             }
         )
-        var receivedEvents: [ReaderFolderWatchChangeEvent] = []
+        var receivedEvents: [FolderWatchChangeEvent] = []
 
         try watcher.startWatching(folderURL: directoryURL, includeSubfolders: true) { events in
             receivedEvents.append(contentsOf: events)
@@ -1341,7 +1341,7 @@ private extension FileRoutingAndWatcherTests {
 
         #expect(await waitUntil(timeout: .seconds(6)) {
             receivedEvents.contains(where: {
-                $0.fileURL == ReaderFileRouting.normalizedFileURL(nestedFileURL) &&
+                $0.fileURL == FileRouting.normalizedFileURL(nestedFileURL) &&
                 $0.kind == .modified &&
                 $0.previousMarkdown == "# Before"
             })

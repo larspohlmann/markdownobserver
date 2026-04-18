@@ -3,17 +3,17 @@ import SwiftUI
 
 // MARK: - FolderWatchToolbarButton
 
+enum FolderWatchToolbarAction {
+    case activate
+    case startFavoriteWatch(FavoriteWatchedFolder)
+    case startRecentFolderWatch(RecentWatchedFolder)
+    case editFavoriteWatchedFolders
+    case clearRecentWatchedFolders
+}
+
 struct FolderWatchToolbarButton: View {
-    let activeFolderWatch: ReaderFolderWatchSession?
-    let isInitialScanInProgress: Bool
-    let didInitialScanFail: Bool
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let onActivate: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onEditFavoriteWatchedFolders: () -> Void
-    let onClearRecentWatchedFolders: () -> Void
+    let state: ToolbarFolderWatchState
+    let onAction: (FolderWatchToolbarAction) -> Void
     var compact: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
@@ -25,7 +25,7 @@ struct FolderWatchToolbarButton: View {
         static let compactControlHeight: CGFloat = 22
     }
 
-    private var isActive: Bool { activeFolderWatch != nil }
+    private var isActive: Bool { state.activeFolderWatch != nil }
 
     private var resolvedControlHeight: CGFloat {
         compact ? Metrics.compactControlHeight : Metrics.controlHeight
@@ -46,13 +46,13 @@ struct FolderWatchToolbarButton: View {
     var body: some View {
         HStack(spacing: 0) {
             Button {
-                onActivate()
+                onAction(.activate)
             } label: {
                 mainButtonLabel
             }
             .buttonStyle(.plain)
             .help(isActive ? "Watch a different folder (⌥⌘W)" : "Watch Folder… (⌥⌘W)")
-            .accessibilityIdentifier("folder-watch-toolbar-button")
+            .accessibilityIdentifier(.folderWatchToolbarButton)
             .accessibilityLabel("Watch folder")
             .accessibilityValue(isActive ? "Active" : "Inactive")
             .accessibilityHint("Opens the folder picker for starting folder watch")
@@ -87,11 +87,11 @@ struct FolderWatchToolbarButton: View {
         }
         .overlay(alignment: .topTrailing) {
             Group {
-                if isInitialScanInProgress {
+                if state.isInitialScanInProgress {
                     ProgressView()
                         .scaleEffect(0.6)
                         .controlSize(.small)
-                } else if didInitialScanFail {
+                } else if state.didInitialScanFail {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10))
                         .foregroundStyle(.red)
@@ -122,13 +122,13 @@ struct FolderWatchToolbarButton: View {
     @ViewBuilder
     private var watchMenuPopover: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !favoriteWatchedFolders.isEmpty {
+            if !state.favoriteWatchedFolders.isEmpty {
                 menuSectionHeader("Favorites")
 
-                ForEach(favoriteWatchedFolders) { entry in
+                ForEach(state.favoriteWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false
-                        onStartFavoriteWatch(entry)
+                        onAction(.startFavoriteWatch(entry))
                     } label: {
                         Label {
                             Text(entry.name)
@@ -150,9 +150,9 @@ struct FolderWatchToolbarButton: View {
 
                 Button("Edit Favorites\u{2026}") {
                     isMenuPresented = false
-                    onEditFavoriteWatchedFolders()
+                    onAction(.editFavoriteWatchedFolders)
                 }
-                .accessibilityIdentifier("edit-favorites-button")
+                .accessibilityIdentifier(.editFavoritesButton)
                 .buttonStyle(.plain)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
@@ -162,18 +162,18 @@ struct FolderWatchToolbarButton: View {
                 .contentShape(Rectangle())
             }
 
-            if !recentWatchedFolders.isEmpty {
-                if !favoriteWatchedFolders.isEmpty {
+            if !state.recentWatchedFolders.isEmpty {
+                if !state.favoriteWatchedFolders.isEmpty {
                     Divider().padding(.vertical, 4)
                 }
 
                 menuSectionHeader("Recent")
 
-                let titlesByPath = ReaderRecentHistory.menuTitles(for: recentWatchedFolders)
-                ForEach(recentWatchedFolders) { entry in
+                let titlesByPath = RecentHistory.menuTitles(for: state.recentWatchedFolders)
+                ForEach(state.recentWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false
-                        onStartRecentFolderWatch(entry)
+                        onAction(.startRecentFolderWatch(entry))
                     } label: {
                         Text(titlesByPath[entry.folderPath] ?? entry.displayName)
                             .lineLimit(1)
@@ -187,7 +187,7 @@ struct FolderWatchToolbarButton: View {
 
                 Button("Clear History") {
                     isMenuPresented = false
-                    onClearRecentWatchedFolders()
+                    onAction(.clearRecentWatchedFolders)
                 }
                 .buttonStyle(.plain)
                 .font(.system(size: 12))
@@ -198,7 +198,7 @@ struct FolderWatchToolbarButton: View {
                 .contentShape(Rectangle())
             }
 
-            if favoriteWatchedFolders.isEmpty && recentWatchedFolders.isEmpty {
+            if state.favoriteWatchedFolders.isEmpty && state.recentWatchedFolders.isEmpty {
                 Text("No favorites or recent watches")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
@@ -225,7 +225,7 @@ struct FolderWatchToolbarButton: View {
 // MARK: - BreadcrumbDocumentContext
 
 struct BreadcrumbDocumentContext: View {
-    let projection: ReaderTopBarStoreProjection
+    let projection: TopBarStoreProjection
     let onRevealInFinder: () -> Void
 
     private var hasFile: Bool { projection.fileURL != nil }
@@ -296,7 +296,7 @@ struct BreadcrumbDocumentContext: View {
 
 struct BreadcrumbTimestampLine: View {
     let breadcrumbPath: String
-    let statusTimestamp: ReaderStatusBarTimestamp?
+    let statusTimestamp: StatusBarTimestamp?
     let isCurrentFileMissing: Bool
 
     var body: some View {
@@ -319,7 +319,7 @@ struct BreadcrumbTimestampLine: View {
             case let .updated(d), let .lastModified(d):
                 date = d
             }
-            let relative = ReaderStatusFormatting.relativeText(for: date, relativeTo: now)
+            let relative = StatusFormatting.relativeText(for: date, relativeTo: now)
             parts += " \u{00B7} \(relative)"
         }
         return parts
@@ -366,6 +366,7 @@ struct SourceEditingStatusBar: View {
                 isPrimary: true,
                 action: onSave
             )
+            .accessibilityIdentifier(.saveSourceDraftButton)
             .accessibilityLabel("Save source changes")
 
             statusActionButton(
@@ -375,6 +376,7 @@ struct SourceEditingStatusBar: View {
                 isPrimary: false,
                 action: onDiscard
             )
+            .accessibilityIdentifier(.discardSourceDraftButton)
             .accessibilityLabel(hasUnsavedChanges ? "Exit source editing and discard source changes" : "Exit source editing")
         }
         .padding(.horizontal, Metrics.barHorizontalPadding)

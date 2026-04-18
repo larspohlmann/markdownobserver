@@ -24,10 +24,10 @@ enum MarkdownSourceHTMLRenderer {
         let isDark: Bool
     }
 
-    static func makeHTMLDocument(markdown: String, settings: ReaderSettings, isEditable: Bool) -> String {
-        let theme = ReaderTheme.theme(for: settings.readerTheme)
+    static func makeHTMLDocument(markdown: String, settings: Settings, isEditable: Bool) -> String {
+        let theme = Theme.theme(for: settings.readerTheme)
         let baseCSS = theme.cssVariables(baseFontSize: settings.baseFontSize)
-        let codeMirrorScriptPath = ReaderBundledAssets.availableCodeMirrorSourceViewScriptPath()
+        let codeMirrorScriptPath = BundledAssets.availableCodeMirrorSourceViewScriptPath()
         let payloadBase64 = makePayloadBase64(
             markdown: markdown,
             theme: theme,
@@ -220,7 +220,7 @@ enum MarkdownSourceHTMLRenderer {
 
                 #minimark-source-root {
                     min-height: 100vh;
-                    padding-top: \(Int(ReaderOverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px;
+                    padding-top: \(Int(OverlayInsetCalculator.defaultScrollTargetTopInset.rounded()))px;
                 }
 
                 .minimark-source-editor {
@@ -256,8 +256,8 @@ enum MarkdownSourceHTMLRenderer {
 
     private static func makePayloadBase64(
         markdown: String,
-        theme: ReaderTheme,
-        settings: ReaderSettings,
+        theme: Theme,
+        settings: Settings,
         isEditable: Bool
     ) -> String {
         let payload = Payload(
@@ -342,7 +342,7 @@ enum MarkdownSourceHTMLRenderer {
         }
     }
 
-    private static func selectionHex(for theme: ReaderTheme) -> String {
+    private static func selectionHex(for theme: Theme) -> String {
         switch theme.kind {
         case .blackOnWhite: return "rgba(0, 95, 204, 0.18)"
         case .whiteOnBlack: return "rgba(125, 180, 255, 0.22)"
@@ -354,10 +354,20 @@ enum MarkdownSourceHTMLRenderer {
         case .focus: return "rgba(44, 44, 44, 0.12)"
         case .commodore64: return "rgba(160, 160, 255, 0.22)"
         case .gameBoy: return "rgba(15, 56, 15, 0.22)"
+        case .gruvboxDark: return "rgba(251, 73, 52, 0.18)"
+        case .gruvboxLight: return "rgba(157, 0, 6, 0.18)"
+        case .dracula: return "rgba(139, 233, 253, 0.22)"
+        case .monokai: return "rgba(166, 226, 46, 0.22)"
+        case .reef: return "rgba(74, 220, 186, 0.22)"
+        case .neon: return "rgba(255, 46, 138, 0.25)"
+        case .nord: return "rgba(136, 192, 208, 0.22)"
+        case .tokyoNight: return "rgba(122, 162, 247, 0.22)"
+        case .tufte: return "rgba(160, 16, 16, 0.18)"
+        case .paper: return "rgba(11, 95, 184, 0.18)"
         }
     }
 
-    private static func isDarkTheme(_ theme: ReaderTheme) -> Bool {
+    private static func isDarkTheme(_ theme: Theme) -> Bool {
         theme.kind.isDark
     }
 }

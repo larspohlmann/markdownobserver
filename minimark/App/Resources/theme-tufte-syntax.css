@@ -1,0 +1,33 @@
+/* ── Tufte Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #A01010;
+    --reader-syntax-keyword: #A01010;
+    --reader-blockquote-accent: #D4CEC0;
+    --reader-blockquote-bg: transparent;
+    --reader-blockquote-fg: #5A5A5A;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+    border-radius: 2px;
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #111111;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment  { color: #888888; font-style: italic; }
+pre code .hljs-keyword  { color: #A01010; }
+pre code .hljs-string   { color: #444444; }
+pre code .hljs-number   { color: #553F1F; }
+pre code .hljs-title    { color: #111111; font-weight: bold; }
+pre code .hljs-built_in { color: #111111; }
+pre code .hljs-type     { color: #553F1F; }
+pre code .hljs-variable { color: #111111; }

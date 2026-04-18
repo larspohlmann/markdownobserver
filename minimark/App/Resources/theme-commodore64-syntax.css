@@ -1,0 +1,30 @@
+/* ── Commodore 64 Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #FFFFFF;
+    --reader-syntax-keyword: #FFFFFF;
+    --reader-blockquote-accent: #7069C4;
+    --reader-blockquote-bg: rgba(112, 105, 196, 0.1);
+    --reader-blockquote-fg: #A0A0FF;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #A0A0FF;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment { color: #504694; font-style: italic; }
+pre code .hljs-keyword { color: #FFFFFF; }
+pre code .hljs-string  { color: #5CAB5E; }
+pre code .hljs-number  { color: #C9D487; }
+pre code .hljs-title   { color: #6ABFC6; }
+pre code .hljs-built_in { color: #887ECB; }

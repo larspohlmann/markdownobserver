@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
+func appIconImage(for app: ExternalApplication) -> NSImage? {
     let iconPath: String
     if let bundleIdentifier = app.bundleIdentifier,
        let installedURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
@@ -21,26 +21,30 @@ func appIconImage(for app: ReaderExternalApplication) -> NSImage? {
     return icon
 }
 
+enum OpenInMenuAction {
+    case openFiles([URL])
+    case openInApp(ExternalApplication)
+    case revealInFinder
+    case requestFolderWatch(URL)
+    case stopFolderWatch
+    case startFavoriteWatch(FavoriteWatchedFolder)
+    case clearFavoriteWatchedFolders
+    case editFavoriteWatchedFolders
+    case startRecentManuallyOpenedFile(RecentOpenedFile)
+    case startRecentFolderWatch(RecentWatchedFolder)
+    case clearRecentWatchedFolders
+    case clearRecentManuallyOpenedFiles
+}
+
 struct OpenInMenuButton: NSViewRepresentable {
     let hasFile: Bool
     let hasActiveFolderWatch: Bool
-    let apps: [ReaderExternalApplication]
-    let favoriteWatchedFolders: [ReaderFavoriteWatchedFolder]
-    let recentWatchedFolders: [ReaderRecentWatchedFolder]
-    let recentManuallyOpenedFiles: [ReaderRecentOpenedFile]
-    let iconProvider: (ReaderExternalApplication) -> NSImage?
-    let onOpenFiles: ([URL]) -> Void
-    let onOpenApp: (ReaderExternalApplication) -> Void
-    let onRevealInFinder: () -> Void
-    let onRequestFolderWatch: (URL) -> Void
-    let onStopFolderWatch: () -> Void
-    let onStartFavoriteWatch: (ReaderFavoriteWatchedFolder) -> Void
-    let onClearFavoriteWatchedFolders: () -> Void
-    let onEditFavoriteWatchedFolders: () -> Void
-    let onStartRecentManuallyOpenedFile: (ReaderRecentOpenedFile) -> Void
-    let onStartRecentFolderWatch: (ReaderRecentWatchedFolder) -> Void
-    let onClearRecentWatchedFolders: () -> Void
-    let onClearRecentManuallyOpenedFiles: () -> Void
+    let apps: [ExternalApplication]
+    let favoriteWatchedFolders: [FavoriteWatchedFolder]
+    let recentWatchedFolders: [RecentWatchedFolder]
+    let recentManuallyOpenedFiles: [RecentOpenedFile]
+    let iconProvider: (ExternalApplication) -> NSImage?
+    let onAction: (OpenInMenuAction) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -65,6 +69,7 @@ struct OpenInMenuButton: NSViewRepresentable {
         button.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.09).cgColor
         button.layer?.masksToBounds = true
         button.setAccessibilityLabel("Open in and watch actions")
+        button.setAccessibilityIdentifier(AccessibilityID.openInMenuButton.rawValue)
         button.toolTip = "Open a file, choose an app, reveal in Finder, or manage folder watch"
         context.coordinator.button = button
         return button
@@ -84,7 +89,7 @@ struct OpenInMenuButton: NSViewRepresentable {
 
     final class Coordinator: NSObject {
         var parent: OpenInMenuButton
-        var appByID: [String: ReaderExternalApplication] = [:]
+        var appByID: [String: ExternalApplication] = [:]
         weak var button: NSButton?
 
         init(parent: OpenInMenuButton) {
@@ -167,7 +172,7 @@ struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentFilesMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Opened Files", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
-            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentManuallyOpenedFiles)
+            let titlesByPath = RecentHistory.menuTitles(for: parent.recentManuallyOpenedFiles)
 
             if parent.recentManuallyOpenedFiles.isEmpty {
                 let empty = NSMenuItem(title: "No recent manually opened files", action: nil, keyEquivalent: "")
@@ -245,7 +250,7 @@ struct OpenInMenuButton: NSViewRepresentable {
         private func makeRecentWatchedFoldersMenuItem() -> NSMenuItem {
             let item = NSMenuItem(title: "Recent Watched Folders", action: nil, keyEquivalent: "")
             let submenu = NSMenu(title: item.title)
-            let titlesByPath = ReaderRecentHistory.menuTitles(for: parent.recentWatchedFolders)
+            let titlesByPath = RecentHistory.menuTitles(for: parent.recentWatchedFolders)
 
             if parent.recentWatchedFolders.isEmpty {
                 let empty = NSMenuItem(title: "No recent watched folders", action: nil, keyEquivalent: "")
@@ -285,7 +290,7 @@ struct OpenInMenuButton: NSViewRepresentable {
                   let app = appByID[id] else {
                 return
             }
-            parent.onOpenApp(app)
+            parent.onAction(.openInApp(app))
         }
 
         @objc private func openFileFromPicker() {
@@ -293,7 +298,7 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onOpenFiles(fileURLs)
+            parent.onAction(.openFiles(fileURLs))
         }
 
         @objc private func openRecentFile(_ sender: NSMenuItem) {
@@ -302,18 +307,18 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onStartRecentManuallyOpenedFile(entry)
+            parent.onAction(.startRecentManuallyOpenedFile(entry))
         }
 
         @objc private func revealInFinder() {
-            parent.onRevealInFinder()
+            parent.onAction(.revealInFinder)
         }
 
         @objc private func watchFolderFromPicker() {
             guard let folderURL = pickFolder() else {
                 return
             }
-            parent.onRequestFolderWatch(folderURL)
+            parent.onAction(.requestFolderWatch(folderURL))
         }
 
         @objc private func startRecentFolderWatch(_ sender: NSMenuItem) {
@@ -322,15 +327,15 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onStartRecentFolderWatch(entry)
+            parent.onAction(.startRecentFolderWatch(entry))
         }
 
         @objc private func stopWatchingFolder() {
-            parent.onStopFolderWatch()
+            parent.onAction(.stopFolderWatch)
         }
 
         @objc private func clearRecentFiles() {
-            parent.onClearRecentManuallyOpenedFiles()
+            parent.onAction(.clearRecentManuallyOpenedFiles)
         }
 
         @objc private func startFavoriteWatch(_ sender: NSMenuItem) {
@@ -340,25 +345,26 @@ struct OpenInMenuButton: NSViewRepresentable {
                 return
             }
 
-            parent.onStartFavoriteWatch(entry)
+            parent.onAction(.startFavoriteWatch(entry))
         }
 
         @objc private func editFavoriteWatchedFolders() {
-            parent.onEditFavoriteWatchedFolders()
+            parent.onAction(.editFavoriteWatchedFolders)
         }
 
         @objc private func clearFavoriteWatchedFolders() {
-            parent.onClearFavoriteWatchedFolders()
+            parent.onAction(.clearFavoriteWatchedFolders)
         }
 
         @objc private func clearRecentWatchedFolders() {
-            parent.onClearRecentWatchedFolders()
+            parent.onAction(.clearRecentWatchedFolders)
         }
 
         private func pickFolder() -> URL? {
             MarkdownOpenPanel.pickFolder(
-                title: "Choose Folder to Watch",
-                message: "Select a folder, then choose watch options."
+                title: "Start Watching a Folder",
+                message: "MarkdownObserver will auto-open Markdown files in this folder and keep the preview in sync as files change. You'll confirm what to open in the next step.",
+                prompt: "Choose Folder"
             )
         }
     }

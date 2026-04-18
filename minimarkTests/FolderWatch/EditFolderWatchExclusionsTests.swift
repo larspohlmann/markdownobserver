@@ -15,12 +15,12 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsPreservesBookmarkData() throws {
         let folderURL = try makeTemporaryFolder(name: "bookmark")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-bookmark.\(UUID().uuidString)"
         )
 
-        let options = ReaderFolderWatchOptions(
+        let options = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: []
@@ -55,7 +55,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsNoOpWhenUnchanged() throws {
         let folderURL = try makeTemporaryFolder(name: "noop")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-noop.\(UUID().uuidString)"
         )
@@ -65,7 +65,7 @@ struct EditFolderWatchExclusionsTests {
         store.addFavoriteWatchedFolder(
             name: "Test",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders,
                 excludedSubdirectoryPaths: exclusions
@@ -86,7 +86,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsNoOpForUnknownID() throws {
         let folderURL = try makeTemporaryFolder(name: "unknown")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-unknown.\(UUID().uuidString)"
         )
@@ -94,7 +94,7 @@ struct EditFolderWatchExclusionsTests {
         store.addFavoriteWatchedFolder(
             name: "Test",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders
             )
@@ -112,7 +112,7 @@ struct EditFolderWatchExclusionsTests {
 
     @Test func updateFavoriteExclusionsPreservesAllOtherProperties() throws {
         let folderURL = try makeTemporaryFolder(name: "props")
-        let store = ReaderSettingsStore(
+        let store = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-props.\(UUID().uuidString)"
         )
@@ -120,7 +120,7 @@ struct EditFolderWatchExclusionsTests {
         store.addFavoriteWatchedFolder(
             name: "Test",
             folderURL: folderURL,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .includeSubfolders
             )
@@ -153,46 +153,54 @@ struct EditFolderWatchExclusionsTests {
         try "# A (older)".write(to: fileA, atomically: true, encoding: .utf8)
         try "# B (newer)".write(to: fileB, atomically: true, encoding: .utf8)
 
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-fallback.\(UUID().uuidString)"
         )
 
         var createdFileWatchers: [TestFileWatcher] = []
         let controllerWatcher = TestFolderWatcher()
-        let controller = ReaderSidebarDocumentController(
+        let controller = SidebarDocumentController(
             settingsStore: settingsStore,
-            makeReaderStore: {
+            makeDocumentStore: {
                 let fw = TestFileWatcher()
                 createdFileWatchers.append(fw)
-                return ReaderStore(
-                    renderer: TestMarkdownRenderer(),
-                    differ: TestChangedRegionDiffer(),
-                    fileWatcher: fw,
-                    settingsStore: settingsStore,
+                let securityScopeResolver = SecurityScopeResolver(
                     securityScope: TestSecurityScopeAccess(),
-                    fileActions: TestReaderFileActions(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner(),
-                    settler: ReaderAutoOpenSettler(settlingInterval: 1.0),
+                    settingsStore: settingsStore,
                     requestWatchedFolderReauthorization: { _ in nil }
+                )
+                return DocumentStore(
+                    rendering: RenderingDependencies(
+                        renderer: TestMarkdownRenderer(), differ: TestChangedRegionDiffer()
+                    ),
+                    file: FileDependencies(
+                        watcher: fw, io: DocumentIOService(), actions: TestFileActions()
+                    ),
+                    folderWatch: FolderWatchDependencies(
+                        autoOpenPlanner: FolderWatchAutoOpenPlanner(),
+                        settler: AutoOpenSettler(settlingInterval: 1.0),
+                        systemNotifier: TestSystemNotifier()
+                    ),
+                    settingsStore: settingsStore,
+                    securityScopeResolver: securityScopeResolver
                 )
             },
             makeFolderWatchController: {
-                ReaderFolderWatchController(
+                FolderWatchController(
                     folderWatcher: controllerWatcher,
                     settingsStore: settingsStore,
                     securityScope: TestSecurityScopeAccess(),
-                    systemNotifier: TestReaderSystemNotifier(),
-                    folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+                    systemNotifier: TestSystemNotifier(),
+                    folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
                 )
             }
         )
 
         let coordinator = FileOpenCoordinator(controller: controller)
-        try controller.startWatchingFolder(
+        try controller.folderWatchCoordinator.startWatchingFolder(
             folderURL: tempDir,
-            options: ReaderFolderWatchOptions(
+            options: FolderWatchOptions(
                 openMode: .watchChangesOnly,
                 scope: .selectedFolderOnly
             ),
@@ -207,42 +215,42 @@ struct EditFolderWatchExclusionsTests {
 
         #expect(controller.documents.count == 2)
 
-        let docA = controller.documents.first { $0.readerStore.fileURL == fileA }
+        let docA = controller.documents.first { $0.documentStore.document.fileURL == fileA }
         #expect(docA != nil)
         controller.selectDocument(docA?.id)
-        #expect(controller.selectedDocument?.readerStore.fileURL == fileA)
+        #expect(controller.selectedDocument?.documentStore.document.fileURL == fileA)
 
         controller.closeDocument(docA!.id)
 
         #expect(controller.documents.count == 1)
         let selected = controller.selectedDocument
         #expect(selected != nil)
-        #expect(selected?.readerStore.fileURL == fileB)
-        #expect(selected?.readerStore.isDeferredDocument == false)
+        #expect(selected?.documentStore.document.fileURL == fileB)
+        #expect(selected?.documentStore.document.isDeferredDocument == false)
 
         try? FileManager.default.removeItem(at: tempDir)
     }
 
     @Test func updateExclusionsPreservesSessionProperties() throws {
         let folderURL = URL(fileURLWithPath: "/tmp/test-folder", isDirectory: true)
-        let normalizedFolderURL = ReaderFileRouting.normalizedFileURL(folderURL)
-        let initialOptions = ReaderFolderWatchOptions(
+        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
+        let initialOptions = FolderWatchOptions(
             openMode: .openAllMarkdownFiles,
             scope: .includeSubfolders,
             excludedSubdirectoryPaths: [normalizedFolderURL.path + "/excluded"]
         )
 
         let watcher = TestFolderWatcher()
-        let settingsStore = ReaderSettingsStore(
+        let settingsStore = SettingsStore(
             storage: TestSettingsKeyValueStorage(),
             storageKey: "reader.settings.edit-excl-restart.\(UUID().uuidString)"
         )
-        let controller = ReaderFolderWatchController(
+        let controller = FolderWatchController(
             folderWatcher: watcher,
             settingsStore: settingsStore,
             securityScope: TestSecurityScopeAccess(),
-            systemNotifier: TestReaderSystemNotifier(),
-            folderWatchAutoOpenPlanner: ReaderFolderWatchAutoOpenPlanner()
+            systemNotifier: TestSystemNotifier(),
+            folderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanner()
         )
 
         try controller.startWatching(folderURL: folderURL, options: initialOptions, performInitialAutoOpen: false)

@@ -5,7 +5,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
 
     private func makeViewModel(
         folderURL: URL? = URL(fileURLWithPath: "/tmp/project"),
-        scope: ReaderFolderWatchScope = .includeSubfolders,
+        scope: FolderWatchScope = .includeSubfolders,
         excludedPaths: [String] = [],
         subdirectoryCount: Int? = nil,
         allSubdirectoryPaths: [String] = [],
@@ -56,7 +56,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     // MARK: - requiresExclusionSelectionBeforeStart
 
     func testRequiresExclusionAtThresholdBoundary() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let count = threshold + 1
         let paths = (0..<count).map { "/tmp/project/sub\($0)" }
 
@@ -70,7 +70,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testNoExclusionRequiredAtExactThreshold() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let paths = (0..<threshold).map { "/tmp/project/sub\($0)" }
 
         let vm = makeViewModel(
@@ -83,7 +83,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testNoExclusionRequiredWhenSelectedFolderOnly() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let count = threshold + 100
         let paths = (0..<count).map { "/tmp/project/sub\($0)" }
 
@@ -97,7 +97,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testExclusionNotRequiredWhenEnoughPathsExcluded() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let count = threshold + 2
         let paths = (0..<count).map { "/tmp/project/sub\($0)" }
         let excluded = Array(paths.suffix(2))
@@ -137,7 +137,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testStartActionStatusTextWhenActionRequired() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let count = threshold + 10
         let paths = (0..<count).map { "/tmp/project/sub\($0)" }
 
@@ -161,7 +161,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testStartActionStatusTextWhenLargeTreeReviewed() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let count = threshold + 2
         let paths = (0..<count).map { "/tmp/project/sub\($0)" }
         let excluded = Array(paths.suffix(2))
@@ -203,7 +203,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testOptimizationCardToneWarningWhenAboveThreshold() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let count = threshold + 10
         let paths = (0..<count).map { "/tmp/project/sub\($0)" }
 
@@ -248,7 +248,7 @@ final class FolderWatchOptionsViewModelTests: XCTestCase {
     }
 
     func testThresholdWarningVisibleWhenAboveThreshold() {
-        let threshold = ReaderFolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
+        let threshold = FolderWatchPerformancePolicy.exclusionPromptSubdirectoryThreshold
         let vm = makeViewModel(
             scope: .includeSubfolders,
             subdirectoryCount: threshold + 1

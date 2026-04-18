@@ -153,7 +153,7 @@ wc -c profiling/watch-eigenes-diagnostic-signposts-<TIMESTAMP>.xml
 3. Quick hotspot grep examples:
 
 ```bash
-rg -n "FolderChangeWatcher.verifyChanges|FolderChangeWatcher.enumerateMarkdownFiles|AppKitMainMenuItem.menuNeedsUpdate|ReaderRecentHistory.menuTitle|CFPrefsSearchListSource" profiling/watch-eigenes-diagnostic-time-profile-<TIMESTAMP>.xml | head -n 200
+rg -n "FolderChangeWatcher.verifyChanges|FolderChangeWatcher.enumerateMarkdownFiles|AppKitMainMenuItem.menuNeedsUpdate|RecentHistory.menuTitle|CFPrefsSearchListSource" profiling/watch-eigenes-diagnostic-time-profile-<TIMESTAMP>.xml | head -n 200
 ```
 
 ## Output Artifacts
