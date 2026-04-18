@@ -108,15 +108,27 @@ final class WindowCoordinator {
             refreshWindowPresentation: { [weak self] in self?.refreshWindowPresentation() }
         )
         self.events = WindowEventBridge(
-            shell: shell,
-            folderWatchOpen: folderWatchOpen,
-            sidebarDocumentController: sidebarDocumentController,
-            settingsStore: settingsStore,
-            groupStateControllerProvider: { [weak self] in self?.groupStateController },
-            favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
-            appearanceControllerProvider: { [weak self] in self?.appearanceController },
-            uiTestLaunchCoordinatorProvider: { [weak self] in self?.uiTestLaunchCoordinator },
-            refreshWindowShellState: { [weak self] in self?.refreshWindowShellState() }
+            hostLifecycle: WindowHostLifecycleDispatcher(
+                shell: shell,
+                folderWatchOpen: folderWatchOpen,
+                uiTestLaunchCoordinatorProvider: { [weak self] in self?.uiTestLaunchCoordinator },
+                refreshWindowShellState: { [weak self] in self?.refreshWindowShellState() }
+            ),
+            documentSync: WindowDocumentSyncDispatcher(
+                shell: shell,
+                sidebarDocumentController: sidebarDocumentController,
+                settingsStore: settingsStore,
+                groupStateControllerProvider: { [weak self] in self?.groupStateController }
+            ),
+            favoriteWorkspace: FavoriteWorkspaceEventDispatcher(
+                favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+                appearanceControllerProvider: { [weak self] in self?.appearanceController },
+                settingsStore: settingsStore
+            ),
+            groupState: GroupStateEventDispatcher(
+                favoriteWorkspaceControllerProvider: { [weak self] in self?.favoriteWorkspaceController },
+                settingsStore: settingsStore
+            )
         )
         self.contentActions = ContentViewActionRouter(
             documentOpen: documentOpen,
