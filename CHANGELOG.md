@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.0] - 2026-04-18
+
+### Added
+- Six new reader themes: Reef, Neon, Nord, Tokyo Night, Tufte, Paper.
+- Real-time warning when a duplicate favorite name is entered in the favorites editor.
+
+### Changed
+- Clearer watch-folder flow with streamlined start/stop and a taller Settings window.
+- Closing a group now prompts for confirmation when it contains more than a few files.
+- Close-group accessibility hint reflects whether the confirmation dialog will appear.
+
+### Fixed
+- Fixed blank source pane in Split mode before entering edit; an observation-tracking race during view model setup was dropping the seed-markdown update that arrives with a file open, leaving CodeMirror rendering only the "1" line-number gutter.
+- Fixed disabled menu commands (Edit Source, Save Source Changes, view-mode cycles, change navigation, TOC) for the focused document by propagating them via `focusedSceneValue`.
+- Fixed missing Watch Folder toolbar button on single-file windows.
+
+### Internal
+- Sandboxed test runs from the installed app's `UserDefaults` so unit and UI tests no longer mutate favorites, recents, or settings on the developer machine.
+- Dissolved the ReaderStore god class into focused `@Observable` controllers and dropped the `Reader` type-name prefix across `Stores/`, `Services/`, `Support/`, `Models/`, `Views/`, and `Commands/`.
+
 ## [1.2.3] - 2026-04-11
 
 ### Security
