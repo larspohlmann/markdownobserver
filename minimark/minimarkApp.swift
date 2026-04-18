@@ -9,7 +9,6 @@ struct MarkdownObserverApp: App {
     init() {
         let settingsStore = SettingsStore()
         _settingsStore = State(wrappedValue: settingsStore)
-        UITestWindowBootstrapper.shared.configure(settingsStore: settingsStore)
 
         SystemNotifier.shared.configure()
 
@@ -74,12 +73,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 private final class UITestWindowBootstrapper {
     static let shared = UITestWindowBootstrapper()
 
-    private var settingsStore: SettingsStore?
     private var windowController: HostedWindowController?
-
-    func configure(settingsStore: SettingsStore) {
-        self.settingsStore = settingsStore
-    }
 
     func openInitialWindowIfNeeded() {
         guard UITestLaunchConfiguration.current.isUITestModeEnabled else {
@@ -88,15 +82,14 @@ private final class UITestWindowBootstrapper {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self,
-                  let settingsStore = self.settingsStore,
-                  NSApp.windows.isEmpty else {
+                  NSApp.windows.allSatisfy({ !$0.isVisible }) else {
                 return
             }
 
-            let controller = HostedWindowController(settingsStore: settingsStore)
+            let controller = HostedWindowController()
             windowController = controller
             controller.showWindow(nil)
-            controller.window?.makeKeyAndOrderFront(nil)
+            controller.window?.orderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
     }

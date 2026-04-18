@@ -67,6 +67,63 @@ final class minimarkUITests: XCTestCase {
         }
     }
 
+    // Regression for #384: `@FocusedValue`-gated menu commands (Watch Folder,
+    // Edit Source, Table of Contents, etc.) were all disabled on cold launch
+    // because `focusedValue` requires a focused descendant. They must be
+    // published as `focusedSceneValue` so they're available whenever the
+    // window is key, regardless of which view has keyboard focus.
+    //
+    // Uses the standard `uiTestModeArgument` launch flag; the UI-test bootstrap
+    // path (`UITestWindowBootstrapper` / `HostedWindowController`) opens a real
+    // `WindowGroup` window so the test exercises the same SwiftUI Scene path
+    // production uses.
+    @MainActor
+    func testFocusedSceneCommandsAreEnabledWhenWindowIsKey() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [uiTestModeArgument]
+        app.launch()
+
+        // Wait for the real WindowGroup scene window to be up — the off-screen
+        // bootstrap window also matches `app.windows.firstMatch`, so gate on a
+        // marker that only `ContentView` (inside the scene) renders.
+        let previewSummary = app.descendants(matching: .any)
+            .matching(identifier: previewSummaryIdentifier).firstMatch
+        XCTAssertTrue(previewSummary.waitForExistence(timeout: 10))
+
+        let fileMenu = app.menuBars.menuBarItems["File"]
+        XCTAssertTrue(fileMenu.waitForExistence(timeout: 2))
+        fileMenu.click()
+
+        let watchMenuItem = fileMenu.menuItems["Watch Folder..."]
+        XCTAssertTrue(watchMenuItem.waitForExistence(timeout: 2))
+        pollUntilEnabled(watchMenuItem, timeout: 2)
+        XCTAssertTrue(
+            watchMenuItem.isEnabled,
+            "File → Watch Folder... must be enabled when a window is key"
+        )
+
+        fileMenu.click()
+
+        let watchMenu = app.menuBars.menuBarItems["Watch"]
+        XCTAssertTrue(watchMenu.waitForExistence(timeout: 2))
+        watchMenu.click()
+
+        let watchFolderInWatchMenu = watchMenu.menuItems["Watch Folder..."]
+        XCTAssertTrue(watchFolderInWatchMenu.waitForExistence(timeout: 2))
+        pollUntilEnabled(watchFolderInWatchMenu, timeout: 2)
+        XCTAssertTrue(
+            watchFolderInWatchMenu.isEnabled,
+            "Watch → Watch Folder... must be enabled when a window is key"
+        )
+    }
+
+    private func pollUntilEnabled(_ element: XCUIElement, timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, !element.isEnabled {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+    }
+
     @MainActor
     func testWatchedFolderAutoOpensNewMarkdownFileAndReflectsLaterEdit() throws {
         let app = XCUIApplication()

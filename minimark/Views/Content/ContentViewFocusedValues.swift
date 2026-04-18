@@ -50,9 +50,13 @@ struct ContentViewFocusedValues: ViewModifier {
     }
 
     func body(content: Content) -> some View {
+        // Scene-scoped, not view-focused: commands need the values whenever this
+        // window is key, even when no descendant has keyboard focus. `focusedValue`
+        // would require a focused view in the chain, which leaves the menu items
+        // disabled on cold launch (issue #384).
         @Bindable var folderWatchFlow = folderWatchFlow
         return content
-            .focusedValue(
+            .focusedSceneValue(
                 \.openDocumentInCurrentWindow,
                 OpenDocumentInCurrentWindowAction { fileURL in
                     let normalizedURL = FileRouting.normalizedFileURL(fileURL)
@@ -68,27 +72,27 @@ struct ContentViewFocusedValues: ViewModifier {
                     )))
                 }
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.openDocument,
                 OpenDocumentAction { fileURL in openOrAppendDocument(fileURL) }
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.openAdditionalDocument,
                 OpenAdditionalDocumentAction { fileURL in openOrAppendDocument(fileURL) }
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.watchFolder,
                 WatchFolderAction { folderURL in
                     onAction(.requestFolderWatch(folderURL))
                 }
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.startRecentFolderWatch,
                 StartRecentFolderWatchAction { entry in
                     onAction(.startRecentFolderWatch(entry))
                 }
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.stopFolderWatch,
                 StopFolderWatchAction {
                     guard folderWatchState.canStopFolderWatch else {
@@ -97,11 +101,11 @@ struct ContentViewFocusedValues: ViewModifier {
                     onAction(.stopFolderWatch)
                 }
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.hasActiveFolderWatch,
                 folderWatchState.canStopFolderWatch
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.documentViewModeContext,
                 DocumentViewModeContext(
                     currentMode: sourceEditing.documentViewMode,
@@ -114,7 +118,7 @@ struct ContentViewFocusedValues: ViewModifier {
                     }
                 )
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.sourceEditingContext,
                 SourceEditingContext(
                     canStartEditing: (document.hasOpenDocument && !document.isCurrentFileMissing && !sourceEditing.isSourceEditing),
@@ -131,11 +135,11 @@ struct ContentViewFocusedValues: ViewModifier {
                     }
                 )
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.changedRegionNavigation,
                 changedRegionNavigation
             )
-            .focusedValue(
+            .focusedSceneValue(
                 \.toggleTOC,
                 ToggleTOCAction(
                     canToggle: !toc.headings.isEmpty,
