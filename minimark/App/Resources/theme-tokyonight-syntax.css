@@ -1,0 +1,33 @@
+/* ── Tokyo Night Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #7AA2F7;
+    --reader-syntax-keyword: #BB9AF7;
+    --reader-blockquote-accent: #7AA2F7;
+    --reader-blockquote-bg: rgba(122, 162, 247, 0.10);
+    --reader-blockquote-fg: #9AA5CE;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #C0CAF5;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment  { color: #565F89; font-style: italic; }
+pre code .hljs-keyword  { color: #BB9AF7; }
+pre code .hljs-string   { color: #9ECE6A; }
+pre code .hljs-number   { color: #FF9E64; }
+pre code .hljs-title    { color: #7AA2F7; font-weight: bold; }
+pre code .hljs-built_in { color: #7DCFFF; }
+pre code .hljs-type     { color: #E0AF68; }
+pre code .hljs-variable { color: #F7768E; }
+pre code .hljs-params   { color: #E0AF68; }

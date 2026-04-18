@@ -1,0 +1,33 @@
+/* ── Nord Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #88C0D0;
+    --reader-syntax-keyword: #81A1C1;
+    --reader-blockquote-accent: #81A1C1;
+    --reader-blockquote-bg: rgba(129, 161, 193, 0.10);
+    --reader-blockquote-fg: #81A1C1;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #ECEFF4;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment  { color: #4C566A; font-style: italic; }
+pre code .hljs-keyword  { color: #81A1C1; }
+pre code .hljs-string   { color: #A3BE8C; }
+pre code .hljs-number   { color: #B48EAD; }
+pre code .hljs-title    { color: #88C0D0; font-weight: bold; }
+pre code .hljs-built_in { color: #8FBCBB; }
+pre code .hljs-type     { color: #8FBCBB; }
+pre code .hljs-variable { color: #D08770; }
+pre code .hljs-params   { color: #ECEFF4; }

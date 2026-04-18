@@ -1,0 +1,32 @@
+/* ── Paper Syntax Highlighting ── */
+
+:root {
+    --reader-mark-signal: #0B5FB8;
+    --reader-syntax-keyword: #0B5FB8;
+    --reader-blockquote-accent: #E4E2DC;
+    --reader-blockquote-bg: transparent;
+    --reader-blockquote-fg: #555555;
+}
+
+pre {
+    background: var(--reader-code-bg);
+    border: 1px solid var(--reader-border);
+}
+
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    color: #1A1A1A;
+    background: transparent;
+    display: block;
+    padding: 0;
+}
+
+pre code .hljs-comment  { color: #888888; font-style: italic; }
+pre code .hljs-keyword  { color: #0B5FB8; }
+pre code .hljs-string   { color: #116622; }
+pre code .hljs-number   { color: #8A3FAE; }
+pre code .hljs-title    { color: #0B5FB8; font-weight: bold; }
+pre code .hljs-built_in { color: #AA3A8F; }
+pre code .hljs-type     { color: #8A3FAE; }
+pre code .hljs-variable { color: #AA5500; }

@@ -16,6 +16,12 @@ nonisolated enum ThemeKind: String, CaseIterable, Codable, Sendable {
     case gruvboxLight
     case dracula
     case monokai
+    case reef
+    case neon
+    case nord
+    case tokyoNight
+    case tufte
+    case paper
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -43,9 +49,9 @@ nonisolated enum ThemeKind: String, CaseIterable, Codable, Sendable {
 
     var isDark: Bool {
         switch self {
-        case .blackOnWhite, .darkGreyOnLightGrey, .newspaper, .focus, .gameBoy, .gruvboxLight:
+        case .blackOnWhite, .darkGreyOnLightGrey, .newspaper, .focus, .gameBoy, .gruvboxLight, .tufte, .paper:
             return false
-        case .whiteOnBlack, .lightGreyOnDarkGrey, .amberTerminal, .greenTerminal, .greenTerminalStatic, .commodore64, .gruvboxDark, .dracula, .monokai:
+        case .whiteOnBlack, .lightGreyOnDarkGrey, .amberTerminal, .greenTerminal, .greenTerminalStatic, .commodore64, .gruvboxDark, .dracula, .monokai, .reef, .neon, .nord, .tokyoNight:
             return true
         }
     }
@@ -82,6 +88,18 @@ nonisolated enum ThemeKind: String, CaseIterable, Codable, Sendable {
             return "Dracula"
         case .monokai:
             return "Monokai"
+        case .reef:
+            return "Reef"
+        case .neon:
+            return "Neon"
+        case .nord:
+            return "Nord"
+        case .tokyoNight:
+            return "Tokyo Night"
+        case .tufte:
+            return "Tufte"
+        case .paper:
+            return "Paper"
         }
     }
 }
@@ -338,6 +356,106 @@ nonisolated struct Theme: Equatable, Codable, Sendable {
                 h1Hex: "#F92672",
                 h2Hex: "#A6E22E",
                 h3Hex: "#66D9EF"
+            )
+        case .reef:
+            return Theme(
+                kind: .reef,
+                backgroundHex: "#062B2E",
+                foregroundHex: "#D0F0E8",
+                secondaryForegroundHex: "#68B8B0",
+                codeBackgroundHex: "#041A1C",
+                borderHex: "#144048",
+                linkHex: "#4ADCBA",
+                changedBlockHex: "#0C3A40",
+                changeAddedHex: "#7AE89C",
+                changeEditedHex: "#E8C070",
+                changeDeletedHex: "#E88080",
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
+            )
+        case .neon:
+            return Theme(
+                kind: .neon,
+                backgroundHex: "#0A0820",
+                foregroundHex: "#F2E8FF",
+                secondaryForegroundHex: "#B478E8",
+                codeBackgroundHex: "#140F2E",
+                borderHex: "#3A1E6E",
+                linkHex: "#FF2E8A",
+                changedBlockHex: "#1F1440",
+                changeAddedHex: "#00E8D6",
+                changeEditedHex: "#FFCA28",
+                changeDeletedHex: "#FF2E8A",
+                hasLightBackground: false,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
+            )
+        case .nord:
+            return Theme(
+                kind: .nord,
+                backgroundHex: "#2E3440",
+                foregroundHex: "#ECEFF4",
+                secondaryForegroundHex: "#81A1C1",
+                codeBackgroundHex: "#242933",
+                borderHex: "#3B4252",
+                linkHex: "#88C0D0",
+                changedBlockHex: "#353B48",
+                changeAddedHex: "#A3BE8C",
+                changeEditedHex: "#EBCB8B",
+                changeDeletedHex: "#BF616A",
+                hasLightBackground: false,
+                h1Hex: "#88C0D0",
+                h2Hex: "#8FBCBB",
+                h3Hex: "#5E81AC"
+            )
+        case .tokyoNight:
+            return Theme(
+                kind: .tokyoNight,
+                backgroundHex: "#1A1B26",
+                foregroundHex: "#C0CAF5",
+                secondaryForegroundHex: "#9AA5CE",
+                codeBackgroundHex: "#16161E",
+                borderHex: "#292E42",
+                linkHex: "#7AA2F7",
+                changedBlockHex: "#1F2335",
+                changeAddedHex: "#9ECE6A",
+                changeEditedHex: "#E0AF68",
+                changeDeletedHex: "#F7768E",
+                hasLightBackground: false,
+                h1Hex: "#BB9AF7",
+                h2Hex: "#7AA2F7",
+                h3Hex: "#7DCFFF"
+            )
+        case .tufte:
+            return Theme(
+                kind: .tufte,
+                backgroundHex: "#FFFFF8",
+                foregroundHex: "#111111",
+                secondaryForegroundHex: "#5A5A5A",
+                codeBackgroundHex: "#F5F3E9",
+                borderHex: "#D4CEC0",
+                linkHex: "#A01010",
+                changedBlockHex: "#F5F3E9",
+                changeAddedHex: "#2E4A1A",
+                changeEditedHex: "#553F1F",
+                changeDeletedHex: "#A01010",
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
+            )
+        case .paper:
+            return Theme(
+                kind: .paper,
+                backgroundHex: "#FCFCFA",
+                foregroundHex: "#1A1A1A",
+                secondaryForegroundHex: "#555555",
+                codeBackgroundHex: "#F4F4F0",
+                borderHex: "#E4E2DC",
+                linkHex: "#0B5FB8",
+                changedBlockHex: "#F4F4F0",
+                changeAddedHex: "#116622",
+                changeEditedHex: "#AA5500",
+                changeDeletedHex: "#B82020",
+                hasLightBackground: true,
+                h1Hex: nil, h2Hex: nil, h3Hex: nil
             )
         }
     }

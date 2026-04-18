@@ -1,0 +1,57 @@
+/* ── Nord Theme ── */
+
+html, body, .markdown-body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif !important;
+}
+
+.markdown-body {
+    line-height: 1.60;
+}
+
+.markdown-body h1 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.markdown-body h2 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border-bottom: 1px solid #3B4252;
+    padding-bottom: 4px;
+}
+
+.markdown-body h3 {
+    font-weight: 600;
+}
+
+.markdown-body code,
+pre code,
+pre code.hljs,
+pre code[class*="language-"] {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace !important;
+}
+
+.markdown-body blockquote {
+    border-left-color: #81A1C1;
+    color: #81A1C1;
+}
+
+/* Subtle aurora at top */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse 60% 30% at 30% 0%, rgba(136, 192, 208, 0.10), transparent 60%),
+        radial-gradient(ellipse 50% 25% at 75% 0%, rgba(180, 142, 173, 0.08), transparent 60%);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.markdown-body hr {
+    border: none;
+    border-top: 1px solid #3B4252;
+}

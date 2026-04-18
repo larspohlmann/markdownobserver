@@ -39,6 +39,18 @@ extension ThemeKind {
             return Commodore64Theme.definition
         case .gameBoy:
             return GameBoyTheme.definition
+        case .reef:
+            return ReefTheme.definition
+        case .neon:
+            return NeonTheme.definition
+        case .nord:
+            return NordTheme.definition
+        case .tokyoNight:
+            return TokyoNightTheme.definition
+        case .tufte:
+            return TufteTheme.definition
+        case .paper:
+            return PaperTheme.definition
         }
     }
 }

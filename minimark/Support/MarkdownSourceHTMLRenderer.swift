@@ -358,6 +358,12 @@ enum MarkdownSourceHTMLRenderer {
         case .gruvboxLight: return "rgba(157, 0, 6, 0.18)"
         case .dracula: return "rgba(139, 233, 253, 0.22)"
         case .monokai: return "rgba(166, 226, 46, 0.22)"
+        case .reef: return "rgba(74, 220, 186, 0.22)"
+        case .neon: return "rgba(255, 46, 138, 0.25)"
+        case .nord: return "rgba(136, 192, 208, 0.22)"
+        case .tokyoNight: return "rgba(122, 162, 247, 0.22)"
+        case .tufte: return "rgba(160, 16, 16, 0.18)"
+        case .paper: return "rgba(11, 95, 184, 0.18)"
         }
     }
 
