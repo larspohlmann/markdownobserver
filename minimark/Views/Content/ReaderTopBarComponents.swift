@@ -12,11 +12,7 @@ enum FolderWatchToolbarAction {
 }
 
 struct FolderWatchToolbarButton: View {
-    let activeFolderWatch: FolderWatchSession?
-    let isInitialScanInProgress: Bool
-    let didInitialScanFail: Bool
-    let favoriteWatchedFolders: [FavoriteWatchedFolder]
-    let recentWatchedFolders: [RecentWatchedFolder]
+    let state: ToolbarFolderWatchState
     let onAction: (FolderWatchToolbarAction) -> Void
     var compact: Bool = false
 
@@ -29,7 +25,7 @@ struct FolderWatchToolbarButton: View {
         static let compactControlHeight: CGFloat = 22
     }
 
-    private var isActive: Bool { activeFolderWatch != nil }
+    private var isActive: Bool { state.activeFolderWatch != nil }
 
     private var resolvedControlHeight: CGFloat {
         compact ? Metrics.compactControlHeight : Metrics.controlHeight
@@ -91,11 +87,11 @@ struct FolderWatchToolbarButton: View {
         }
         .overlay(alignment: .topTrailing) {
             Group {
-                if isInitialScanInProgress {
+                if state.isInitialScanInProgress {
                     ProgressView()
                         .scaleEffect(0.6)
                         .controlSize(.small)
-                } else if didInitialScanFail {
+                } else if state.didInitialScanFail {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10))
                         .foregroundStyle(.red)
@@ -126,10 +122,10 @@ struct FolderWatchToolbarButton: View {
     @ViewBuilder
     private var watchMenuPopover: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !favoriteWatchedFolders.isEmpty {
+            if !state.favoriteWatchedFolders.isEmpty {
                 menuSectionHeader("Favorites")
 
-                ForEach(favoriteWatchedFolders) { entry in
+                ForEach(state.favoriteWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false
                         onAction(.startFavoriteWatch(entry))
@@ -166,15 +162,15 @@ struct FolderWatchToolbarButton: View {
                 .contentShape(Rectangle())
             }
 
-            if !recentWatchedFolders.isEmpty {
-                if !favoriteWatchedFolders.isEmpty {
+            if !state.recentWatchedFolders.isEmpty {
+                if !state.favoriteWatchedFolders.isEmpty {
                     Divider().padding(.vertical, 4)
                 }
 
                 menuSectionHeader("Recent")
 
-                let titlesByPath = RecentHistory.menuTitles(for: recentWatchedFolders)
-                ForEach(recentWatchedFolders) { entry in
+                let titlesByPath = RecentHistory.menuTitles(for: state.recentWatchedFolders)
+                ForEach(state.recentWatchedFolders) { entry in
                     Button {
                         isMenuPresented = false
                         onAction(.startRecentFolderWatch(entry))
@@ -202,7 +198,7 @@ struct FolderWatchToolbarButton: View {
                 .contentShape(Rectangle())
             }
 
-            if favoriteWatchedFolders.isEmpty && recentWatchedFolders.isEmpty {
+            if state.favoriteWatchedFolders.isEmpty && state.recentWatchedFolders.isEmpty {
                 Text("No favorites or recent watches")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)

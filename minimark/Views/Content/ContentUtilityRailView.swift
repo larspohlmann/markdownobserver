@@ -8,13 +8,9 @@ struct ContentUtilityRailView: View {
 
     var body: some View {
         ContentUtilityRail(
-            hasFile: state.hasFile,
-            documentViewMode: state.documentViewMode,
-            showEditButton: state.showEditButton,
-            canStartSourceEditing: state.canStartSourceEditing,
+            state: state,
             onSetDocumentViewMode: onSetDocumentViewMode,
             onStartSourceEditing: onStartSourceEditing,
-            hasTOCHeadings: state.hasTOCHeadings,
             isTOCVisible: $isTOCVisible
         )
     }

@@ -79,11 +79,13 @@ struct WindowRootView: View {
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 FolderWatchToolbarButton(
-                    activeFolderWatch: nil,
-                    isInitialScanInProgress: false,
-                    didInitialScanFail: false,
-                    favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
-                    recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+                    state: ToolbarFolderWatchState(
+                        activeFolderWatch: nil,
+                        isInitialScanInProgress: false,
+                        didInitialScanFail: false,
+                        favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                        recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders
+                    ),
                     onAction: { _ in },
                     compact: true
                 )
@@ -339,11 +341,13 @@ struct WindowRootView: View {
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 FolderWatchToolbarButton(
-                    activeFolderWatch: folderWatchFlowController.sharedFolderWatchSession,
-                    isInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
-                    didInitialScanFail: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
-                    favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
-                    recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
+                    state: ToolbarFolderWatchState(
+                        activeFolderWatch: folderWatchFlowController.sharedFolderWatchSession,
+                        isInitialScanInProgress: sidebarDocumentController.folderWatchCoordinator.isFolderWatchInitialScanInProgress,
+                        didInitialScanFail: sidebarDocumentController.folderWatchCoordinator.didFolderWatchInitialScanFail,
+                        favoriteWatchedFolders: settingsStore.currentSettings.favoriteWatchedFolders,
+                        recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders
+                    ),
                     onAction: { action in
                         if case .activate = action {
                             promptForFolderWatch()
