@@ -73,7 +73,7 @@ enum CSSThemeGenerator {
           bottom: 0;
           left: 0;
           width: var(--reader-gutter-width);
-          background: var(--reader-bg);
+          background: transparent;
           z-index: 2;
         }
 
