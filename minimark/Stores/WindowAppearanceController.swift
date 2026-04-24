@@ -29,7 +29,8 @@ final class WindowAppearanceController {
         self.effectiveAppearance = LockedAppearance(
             readerTheme: current.readerTheme,
             baseFontSize: current.baseFontSize,
-            syntaxTheme: current.syntaxTheme
+            syntaxTheme: current.syntaxTheme,
+            readerThemeOverride: current.readerThemeOverride
         )
 
         cancellable = settingsStore.settingsPublisher
@@ -40,7 +41,8 @@ final class WindowAppearanceController {
                 let newAppearance = LockedAppearance(
                     readerTheme: settings.readerTheme,
                     baseFontSize: settings.baseFontSize,
-                    syntaxTheme: settings.syntaxTheme
+                    syntaxTheme: settings.syntaxTheme,
+                    readerThemeOverride: settings.readerThemeOverride
                 )
                 if self.effectiveAppearance != newAppearance {
                     self.effectiveAppearance = newAppearance
@@ -71,7 +73,8 @@ final class WindowAppearanceController {
         effectiveAppearance = LockedAppearance(
             readerTheme: current.readerTheme,
             baseFontSize: current.baseFontSize,
-            syntaxTheme: current.syntaxTheme
+            syntaxTheme: current.syntaxTheme,
+            readerThemeOverride: current.readerThemeOverride
         )
     }
 
