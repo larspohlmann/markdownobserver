@@ -13,7 +13,8 @@ protocol MarkdownRendering {
         unsavedChangedRegions: [ChangedRegion],
         theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
-        baseFontSize: Double
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
     ) throws -> RenderedMarkdown
 }
 
@@ -38,7 +39,8 @@ struct MarkdownRenderingService: MarkdownRendering {
         unsavedChangedRegions: [ChangedRegion],
         theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
-        baseFontSize: Double
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
     ) throws -> RenderedMarkdown {
         let runtimeAssets = try runtimeAssetResolver.requiredRuntimeAssets()
         let payloadBase64 = try payloadEncoder.makePayloadBase64(
@@ -46,7 +48,12 @@ struct MarkdownRenderingService: MarkdownRendering {
             changedRegions: changedRegions,
             unsavedChangedRegions: unsavedChangedRegions
         )
-        let css = cssFactory.makeCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
+        let css = cssFactory.makeCSS(
+            theme: theme,
+            syntaxTheme: syntaxTheme,
+            baseFontSize: baseFontSize,
+            readerThemeOverride: readerThemeOverride
+        )
         let htmlDocument = cssFactory.makeHTMLDocument(
             css: css,
             payloadBase64: payloadBase64,

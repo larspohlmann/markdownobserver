@@ -10,8 +10,18 @@ struct CSSFactory {
             : ""
     }
 
-    func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
-        CSSThemeGenerator.makeCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
+    func makeCSS(
+        theme: ThemeDefinition,
+        syntaxTheme: SyntaxThemeKind,
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
+    ) -> String {
+        CSSThemeGenerator.makeCSS(
+            theme: theme,
+            syntaxTheme: syntaxTheme,
+            baseFontSize: baseFontSize,
+            readerThemeOverride: readerThemeOverride
+        )
     }
 
     func makeHTMLDocument(

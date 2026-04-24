@@ -16,7 +16,8 @@ final class TestMarkdownRenderer: MarkdownRendering {
         unsavedChangedRegions: [ChangedRegion],
         theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
-        baseFontSize: Double
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
     ) throws -> RenderedMarkdown {
         RenderedMarkdown(
             htmlDocument: "<html><body>\(markdown)</body></html>",
