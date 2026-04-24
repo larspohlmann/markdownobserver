@@ -222,8 +222,10 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
     case markdownItDeflist
     case markdownItFootnote
     case markdownItTaskLists
+    case markdownItKatex
     case differ
     case highlightJS
+    case katex
     case mermaidJS
 
     var id: String {
@@ -244,10 +246,14 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return "markdown-it-footnote"
         case .markdownItTaskLists:
             return "markdown-it-task-lists"
+        case .markdownItKatex:
+            return "markdown-it-katex"
         case .differ:
             return "Differ (Swift package)"
         case .highlightJS:
             return "highlight.js"
+        case .katex:
+            return "KaTeX"
         case .mermaidJS:
             return "Mermaid"
         }
@@ -267,10 +273,14 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return "MIT"
         case .markdownItTaskLists:
             return "ISC"
+        case .markdownItKatex:
+            return "MIT"
         case .differ:
             return "MIT"
         case .highlightJS:
             return "BSD 3-Clause"
+        case .katex:
+            return "MIT"
         case .mermaidJS:
             return "MIT"
         }
@@ -290,10 +300,14 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
             return URL(string: "https://github.com/markdown-it/markdown-it-footnote")!
         case .markdownItTaskLists:
             return URL(string: "https://github.com/revin/markdown-it-task-lists")!
+        case .markdownItKatex:
+            return URL(string: "https://github.com/waylonflinn/markdown-it-katex")!
         case .differ:
             return URL(string: "https://github.com/tonyarnold/Differ")!
         case .highlightJS:
             return URL(string: "https://github.com/highlightjs/highlight.js")!
+        case .katex:
+            return URL(string: "https://github.com/KaTeX/KaTeX")!
         case .mermaidJS:
             return URL(string: "https://github.com/mermaid-js/mermaid")!
         }

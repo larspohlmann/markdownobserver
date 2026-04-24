@@ -24,7 +24,6 @@ struct CSSFactory {
         let themeJSBase64 = themeJavaScript.map { Data($0.utf8).base64EncodedString() }
         let runtimeScripts = makeRuntimeScripts(runtimeAssets: runtimeAssets)
         let runtimeCSSLinks = makeRuntimeCSSLinks(runtimeAssets: runtimeAssets)
-        let mathRuntimeScripts = makeMathRuntimeScripts()
         let bootstrapRuntime = makeBootstrapRuntime(
             payloadBase64: payloadBase64,
             cssBase64: cssBase64
@@ -35,7 +34,7 @@ struct CSSFactory {
         <head>
           <meta charset=\"utf-8\" />
           <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-          <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' file:; style-src 'unsafe-inline' file:; img-src data: https:; frame-ancestors 'none'\" />
+          <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' file:; style-src 'unsafe-inline' file:; img-src data: https:; font-src file:; frame-ancestors 'none'\" />
           <meta name="minimark-runtime-payload-base64" content="\(payloadBase64)" />
           <meta name="minimark-runtime-css-base64" content="\(cssBase64)" />
           \(themeJSBase64.map { "<meta name=\"minimark-runtime-theme-js-base64\" content=\"\($0)\" />" } ?? "")
@@ -45,7 +44,6 @@ struct CSSFactory {
           </style>
           \(runtimeScripts)
           \(runtimeCSSLinks)
-          \(mathRuntimeScripts)
         </head>
         <body>
             <div class="reader-layout">
@@ -92,27 +90,6 @@ struct CSSFactory {
       [runtimeAssets.calloutsCSSPath].compactMap { $0 }.map(makeCSSLinkTag).joined(separator: "\n")
     }
 
-    private func makeMathRuntimeScripts() -> String {
-      """
-      <script>
-      // MathJax is optional. Avoid remote script injection to keep rendering local-only.
-      // If a local MathJax bundle is added later, this config remains compatible.
-      if (!window.MathJax) {
-        window.MathJax = {
-          tex: {
-            inlineMath: [["$", "$"], ["\\\\(", "\\\\)"]],
-            displayMath: [["$$", "$$"], ["\\\\[", "\\\\]"]],
-            processEscapes: true
-          },
-          options: {
-            skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
-          }
-        };
-      }
-      </script>
-      """
-    }
-
     private func makeBootstrapRuntime(payloadBase64: String, cssBase64: String) -> String {
         let escapedPayload = payloadBase64.replacingOccurrences(of: "\"", with: "\\\"")
         let escapedCSS = cssBase64.replacingOccurrences(of: "\"", with: "\\\"")
@@ -122,6 +99,7 @@ struct CSSFactory {
         let runtimeJS = BundledAssetLoader.loadBundledJS(named: "markdownobserver-runtime")
             .replacingOccurrences(of: "__MINIMARK_PAYLOAD_BASE64__", with: escapedPayload)
             .replacingOccurrences(of: "__MINIMARK_CSS_BASE64__", with: escapedCSS)
+            .replacingOccurrences(of: "__MINIMARK_LAZY_ASSET_PATHS_BASE64__", with: Self.lazyAssetPathsBase64)
             .replacingOccurrences(of: "__MINIMARK_OVERLAY_TOP_INSET__", with: defaultInset)
 
         return """
@@ -133,4 +111,12 @@ struct CSSFactory {
         </script>
         """
     }
+
+    // Encoded once at init — inputs are compile-time `BundledAssets` constants
+    // and stable key order keeps the output byte-stable so the HTML-equality
+    // fast-path in MarkdownWebView isn't defeated by dictionary-order churn.
+    // Encoding a struct of String fields is infallible; the empty-string
+    // fallback is purely for style (the codebase avoids `try!`).
+    private static let lazyAssetPathsBase64: String =
+        (try? JSONBase64.encodeStable(BundledAssets.lazyAssetPaths)) ?? ""
 }
