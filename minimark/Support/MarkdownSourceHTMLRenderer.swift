@@ -25,7 +25,7 @@ enum MarkdownSourceHTMLRenderer {
     }
 
     static func makeHTMLDocument(markdown: String, settings: Settings, isEditable: Bool) -> String {
-        let theme = Theme.theme(for: settings.readerTheme)
+        let theme = Theme.theme(for: settings.readerTheme).applyingOverride(settings.readerThemeOverride)
         let baseCSS = theme.cssVariables(baseFontSize: settings.baseFontSize)
         let codeMirrorScriptPath = BundledAssets.availableCodeMirrorSourceViewScriptPath()
         let payloadBase64 = makePayloadBase64(
