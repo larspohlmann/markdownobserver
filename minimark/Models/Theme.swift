@@ -482,3 +482,31 @@ nonisolated struct Theme: Equatable, Codable, Sendable {
         """
     }
 }
+
+extension Theme {
+    func applyingOverride(_ override: ThemeOverride?) -> Theme {
+        guard let override, override.themeKind == kind else { return self }
+        let newBackground = override.backgroundHex ?? backgroundHex
+        let newForeground = override.foregroundHex ?? foregroundHex
+        if newBackground == backgroundHex && newForeground == foregroundHex {
+            return self
+        }
+        return Theme(
+            kind: kind,
+            backgroundHex: newBackground,
+            foregroundHex: newForeground,
+            secondaryForegroundHex: secondaryForegroundHex,
+            codeBackgroundHex: codeBackgroundHex,
+            borderHex: borderHex,
+            linkHex: linkHex,
+            changedBlockHex: changedBlockHex,
+            changeAddedHex: changeAddedHex,
+            changeEditedHex: changeEditedHex,
+            changeDeletedHex: changeDeletedHex,
+            hasLightBackground: hasLightBackground,
+            h1Hex: h1Hex,
+            h2Hex: h2Hex,
+            h3Hex: h3Hex
+        )
+    }
+}
