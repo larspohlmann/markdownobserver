@@ -7,17 +7,21 @@ struct ThemeColorOverrideRow: View {
 
     private var themeDefaults: Theme { Theme.theme(for: themeKind) }
 
+    private var matchedOverride: ThemeOverride? {
+        override?.themeKind == themeKind ? override : nil
+    }
+
     private var effectiveBackgroundHex: String {
-        (override?.themeKind == themeKind ? override?.backgroundHex : nil) ?? themeDefaults.backgroundHex
+        matchedOverride?.backgroundHex ?? themeDefaults.backgroundHex
     }
 
     private var effectiveForegroundHex: String {
-        (override?.themeKind == themeKind ? override?.foregroundHex : nil) ?? themeDefaults.foregroundHex
+        matchedOverride?.foregroundHex ?? themeDefaults.foregroundHex
     }
 
     private var hasOverride: Bool {
-        guard let override, override.themeKind == themeKind else { return false }
-        return override.backgroundHex != nil || override.foregroundHex != nil
+        guard let matched = matchedOverride else { return false }
+        return matched.backgroundHex != nil || matched.foregroundHex != nil
     }
 
     var body: some View {
@@ -106,17 +110,8 @@ struct ThemeColorOverrideRow: View {
     }
 
     private func mutateOverride(_ transform: (inout ThemeOverride) -> Void) {
-        var working: ThemeOverride
-        if let existing = override, existing.themeKind == themeKind {
-            working = existing
-        } else {
-            working = ThemeOverride(themeKind: themeKind, backgroundHex: nil, foregroundHex: nil)
-        }
+        var working = matchedOverride ?? ThemeOverride(themeKind: themeKind, backgroundHex: nil, foregroundHex: nil)
         transform(&working)
-        if working.backgroundHex == nil && working.foregroundHex == nil {
-            override = nil
-        } else {
-            override = working
-        }
+        override = (working.backgroundHex == nil && working.foregroundHex == nil) ? nil : working
     }
 }
