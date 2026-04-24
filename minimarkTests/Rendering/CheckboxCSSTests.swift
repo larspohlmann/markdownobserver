@@ -11,7 +11,8 @@ struct CheckboxCSSTests {
     private let css = CSSFactory().makeCSS(
         theme: ThemeKind.blackOnWhite.themeDefinition,
         syntaxTheme: .default,
-        baseFontSize: 16.0
+        baseFontSize: 16.0,
+        readerThemeOverride: nil
     )
 
     @Test

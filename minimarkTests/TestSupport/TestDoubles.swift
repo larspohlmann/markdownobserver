@@ -16,7 +16,8 @@ final class TestMarkdownRenderer: MarkdownRendering {
         unsavedChangedRegions: [ChangedRegion],
         theme: ThemeDefinition,
         syntaxTheme: SyntaxThemeKind,
-        baseFontSize: Double
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
     ) throws -> RenderedMarkdown {
         RenderedMarkdown(
             htmlDocument: "<html><body>\(markdown)</body></html>",
@@ -142,6 +143,12 @@ final class TestSettingsStore: SettingsStoring {
     func updateTheme(_ kind: ThemeKind) {
         var next = subject.value
         next.readerTheme = kind
+        subject.send(next)
+    }
+
+    func updateReaderThemeOverride(_ override: ThemeOverride?) {
+        var next = subject.value
+        next.readerThemeOverride = override
         subject.send(next)
     }
 

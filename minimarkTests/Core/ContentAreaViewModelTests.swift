@@ -63,7 +63,8 @@ extension ContentViewFolderWatchState {
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
         isAppearanceLocked: false,
-        effectiveReaderTheme: .blackOnWhite
+        effectiveReaderTheme: .blackOnWhite,
+        effectiveReaderThemeOverride: nil
     )
 }
 
@@ -258,7 +259,8 @@ struct ContentAreaViewModelObservationTests {
             recentWatchedFolders: [],
             recentManuallyOpenedFiles: [],
             isAppearanceLocked: false,
-            effectiveReaderTheme: .blackOnWhite
+            effectiveReaderTheme: .blackOnWhite,
+            effectiveReaderThemeOverride: nil
         )
         viewModel.applyHostInputs(folderWatchState: nextState, onAction: { _ in })
         await settle()

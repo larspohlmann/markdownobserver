@@ -157,7 +157,7 @@ struct WindowRootView: View {
     }
 
     private var windowShell: some View {
-        let theme = Theme.theme(for: settingsStore.currentSettings.readerTheme)
+        let theme = Theme.theme(for: settingsStore.currentSettings.readerTheme).applyingOverride(settingsStore.currentSettings.readerThemeOverride)
         return ZStack {
             Rectangle()
                 .fill(Color(hex: theme.backgroundHex) ?? .clear)

@@ -11,12 +11,14 @@ struct ThemeSelectorView: View {
 
     @State private var stagedReaderTheme: ThemeKind
     @State private var stagedSyntaxTheme: SyntaxThemeKind
+    @State private var stagedOverride: ThemeOverride?
     @State private var selectedBackgroundTab: BackgroundTab = .light
 
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
         self._stagedReaderTheme = State(initialValue: settingsStore.currentSettings.readerTheme)
         self._stagedSyntaxTheme = State(initialValue: settingsStore.currentSettings.syntaxTheme)
+        self._stagedOverride = State(initialValue: settingsStore.currentSettings.readerThemeOverride)
         self._selectedBackgroundTab = State(
             initialValue: settingsStore.currentSettings.readerTheme.isDark ? .dark : .light
         )
@@ -25,9 +27,16 @@ struct ThemeSelectorView: View {
     var body: some View {
         VStack(spacing: 0) {
             threeColumnLayout
+            ThemeColorOverrideRow(themeKind: stagedReaderTheme, override: $stagedOverride)
+                .padding(.top, 8)
             applyBar
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onChange(of: stagedReaderTheme) { _, newKind in
+            if let existing = stagedOverride, existing.themeKind != newKind {
+                stagedOverride = nil
+            }
+        }
     }
 
     private var threeColumnLayout: some View {
@@ -174,6 +183,7 @@ struct ThemeSelectorView: View {
             Button("Reset") {
                 stagedReaderTheme = appliedReaderTheme
                 stagedSyntaxTheme = appliedSyntaxTheme
+                stagedOverride = settingsStore.currentSettings.readerThemeOverride
                 selectedBackgroundTab = appliedReaderTheme.isDark ? .dark : .light
             }
             .disabled(!hasUnsavedChanges)
@@ -199,7 +209,9 @@ struct ThemeSelectorView: View {
     }
 
     private var hasUnsavedChanges: Bool {
-        stagedReaderTheme != appliedReaderTheme || stagedSyntaxTheme != appliedSyntaxTheme
+        stagedReaderTheme != appliedReaderTheme
+            || stagedSyntaxTheme != appliedSyntaxTheme
+            || stagedOverride != settingsStore.currentSettings.readerThemeOverride
     }
 
     private var appliedReaderTheme: ThemeKind {
@@ -214,6 +226,7 @@ struct ThemeSelectorView: View {
         var settings = settingsStore.currentSettings
         settings.readerTheme = stagedReaderTheme
         settings.syntaxTheme = stagedSyntaxTheme
+        settings.readerThemeOverride = stagedOverride
         return settings
     }
 
@@ -223,6 +236,10 @@ struct ThemeSelectorView: View {
         }
         if stagedSyntaxTheme != appliedSyntaxTheme {
             settingsStore.updateSyntaxTheme(stagedSyntaxTheme)
+        }
+        let normalizedOverride = stagedOverride.flatMap { $0.themeKind == stagedReaderTheme ? $0 : nil }
+        if normalizedOverride != settingsStore.currentSettings.readerThemeOverride {
+            settingsStore.updateReaderThemeOverride(normalizedOverride)
         }
     }
 }

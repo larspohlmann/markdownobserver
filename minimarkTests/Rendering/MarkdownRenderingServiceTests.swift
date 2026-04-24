@@ -19,7 +19,8 @@ struct MarkdownRenderingServiceTests {
             unsavedChangedRegions: [],
             theme: theme,
             syntaxTheme: .monokai,
-            baseFontSize: 15
+            baseFontSize: 15,
+            readerThemeOverride: nil
         )
 
         let containsHTML = result.htmlDocument.contains("<html") || result.htmlDocument.contains("<!DOCTYPE")
@@ -34,7 +35,8 @@ struct MarkdownRenderingServiceTests {
             unsavedChangedRegions: [],
             theme: theme,
             syntaxTheme: .monokai,
-            baseFontSize: 15
+            baseFontSize: 15,
+            readerThemeOverride: nil
         )
 
         #expect(result.changedRegions == [region])
@@ -48,7 +50,8 @@ struct MarkdownRenderingServiceTests {
             unsavedChangedRegions: [],
             theme: theme,
             syntaxTheme: .monokai,
-            baseFontSize: 15
+            baseFontSize: 15,
+            readerThemeOverride: nil
         )
 
         #expect(result.renderedAt >= before)

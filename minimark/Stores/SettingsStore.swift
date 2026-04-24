@@ -19,6 +19,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
     var trustedImageFolders: [TrustedImageFolder]
     var diffBaselineLookback: DiffBaselineLookback
     var dismissedHints: Set<FirstUseHint>
+    var readerThemeOverride: ThemeOverride?
 
     init(
         appAppearance: AppAppearance,
@@ -35,7 +36,8 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         recentManuallyOpenedFiles: [RecentOpenedFile],
         trustedImageFolders: [TrustedImageFolder] = [],
         diffBaselineLookback: DiffBaselineLookback = .twoMinutes,
-        dismissedHints: Set<FirstUseHint> = []
+        dismissedHints: Set<FirstUseHint> = [],
+        readerThemeOverride: ThemeOverride? = nil
     ) {
         self.appAppearance = appAppearance
         self.readerTheme = readerTheme
@@ -52,6 +54,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         self.trustedImageFolders = trustedImageFolders
         self.diffBaselineLookback = diffBaselineLookback
         self.dismissedHints = dismissedHints
+        self.readerThemeOverride = readerThemeOverride
     }
 
     enum CodingKeys: String, CodingKey {
@@ -70,6 +73,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         case trustedImageFolders
         case diffBaselineLookback
         case dismissedHints
+        case readerThemeOverride
     }
 
     static let `default` = Settings(
@@ -87,7 +91,8 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         recentManuallyOpenedFiles: [],
         trustedImageFolders: [],
         diffBaselineLookback: .twoMinutes,
-        dismissedHints: []
+        dismissedHints: [],
+        readerThemeOverride: nil
     )
 
     init(from decoder: Decoder) throws {
@@ -107,6 +112,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         trustedImageFolders = try container.decodeIfPresent([TrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
         diffBaselineLookback = try container.decodeIfPresent(DiffBaselineLookback.self, forKey: .diffBaselineLookback) ?? .twoMinutes
         dismissedHints = try container.decodeIfPresent(Set<FirstUseHint>.self, forKey: .dismissedHints) ?? []
+        readerThemeOverride = try container.decodeIfPresent(ThemeOverride.self, forKey: .readerThemeOverride)
 
         // Migrate legacy favorites: replace hardcoded-default workspace state with decoded global settings
         let legacyDefaultState = FavoriteWorkspaceState.from(
@@ -150,6 +156,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
     func increaseFontSize(step: Double)
     func decreaseFontSize(step: Double)
     func resetFontSize()
+    func updateReaderThemeOverride(_ override: ThemeOverride?)
 }
 
 @MainActor protocol PreferencesWriting: AnyObject {
@@ -298,7 +305,8 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
                 sidebarSortMode: initialSettings.sidebarSortMode,
                 sidebarGroupSortMode: initialSettings.sidebarGroupSortMode,
                 diffBaselineLookback: initialSettings.diffBaselineLookback,
-                dismissedHints: initialSettings.dismissedHints
+                dismissedHints: initialSettings.dismissedHints,
+                readerThemeOverride: initialSettings.readerThemeOverride
             )
         )
         self.favorites = FavoriteWatchedFoldersStore(
@@ -362,7 +370,8 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
             recentManuallyOpenedFiles: recentOpenedFiles.currentRecentOpenedFiles,
             trustedImageFolders: trustedImageFolders.currentTrustedFolders,
             diffBaselineLookback: prefs.diffBaselineLookback,
-            dismissedHints: prefs.dismissedHints
+            dismissedHints: prefs.dismissedHints,
+            readerThemeOverride: prefs.readerThemeOverride
         )
     }
 
@@ -375,6 +384,9 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
     func increaseFontSize(step: Double = 1.0) { preferences.increaseFontSize(step: step) }
     func decreaseFontSize(step: Double = 1.0) { preferences.decreaseFontSize(step: step) }
     func resetFontSize() { preferences.resetFontSize() }
+    func updateReaderThemeOverride(_ override: ThemeOverride?) {
+        preferences.updateReaderThemeOverride(override)
+    }
 
     // MARK: - PreferencesWriting
 

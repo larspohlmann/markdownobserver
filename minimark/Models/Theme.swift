@@ -482,3 +482,40 @@ nonisolated struct Theme: Equatable, Codable, Sendable {
         """
     }
 }
+
+extension Theme {
+    func applyingOverride(_ override: ThemeOverride?) -> Theme {
+        guard let override, override.themeKind == kind else { return self }
+        let newBackground = override.backgroundHex ?? backgroundHex
+        let newForeground = override.foregroundHex ?? foregroundHex
+        if newBackground == backgroundHex && newForeground == foregroundHex {
+            return self
+        }
+        return Theme(
+            kind: kind,
+            backgroundHex: newBackground,
+            foregroundHex: newForeground,
+            secondaryForegroundHex: secondaryForegroundHex,
+            codeBackgroundHex: codeBackgroundHex,
+            borderHex: borderHex,
+            linkHex: linkHex,
+            changedBlockHex: changedBlockHex,
+            changeAddedHex: changeAddedHex,
+            changeEditedHex: changeEditedHex,
+            changeDeletedHex: changeDeletedHex,
+            hasLightBackground: Self.isLightHex(newBackground),
+            h1Hex: h1Hex,
+            h2Hex: h2Hex,
+            h3Hex: h3Hex
+        )
+    }
+
+    private static func isLightHex(_ hex: String) -> Bool {
+        let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        guard cleaned.count == 6, let int = Int(cleaned, radix: 16) else { return true }
+        let r = Double((int >> 16) & 0xFF) / 255.0
+        let g = Double((int >> 8) & 0xFF) / 255.0
+        let b = Double(int & 0xFF) / 255.0
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5
+    }
+}

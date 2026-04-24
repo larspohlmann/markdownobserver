@@ -14,6 +14,7 @@ nonisolated struct PreferencesSlice: Equatable, Sendable {
     var sidebarGroupSortMode: SidebarSortMode
     var diffBaselineLookback: DiffBaselineLookback
     var dismissedHints: Set<FirstUseHint>
+    var readerThemeOverride: ThemeOverride?
 }
 
 @MainActor @Observable final class PreferencesStore: ThemeWriting, PreferencesWriting, HintWriting {
@@ -45,6 +46,15 @@ nonisolated struct PreferencesSlice: Equatable, Sendable {
     func updateTheme(_ kind: ThemeKind) {
         mutate(coalescePersistence: true) { slice in
             slice.readerTheme = kind
+            if let override = slice.readerThemeOverride, override.themeKind != kind {
+                slice.readerThemeOverride = nil
+            }
+        }
+    }
+
+    func updateReaderThemeOverride(_ override: ThemeOverride?) {
+        mutate(coalescePersistence: true) { slice in
+            slice.readerThemeOverride = override
         }
     }
 
