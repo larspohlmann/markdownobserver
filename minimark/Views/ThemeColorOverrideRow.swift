@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct ThemeColorOverrideRow: View {
@@ -61,6 +62,21 @@ struct ThemeColorOverrideRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
+                        guard let panel = notification.object as? NSWindow,
+                              panel === NSColorPanel.shared else { return }
+                        let rowFrame = geo.frame(in: .global)
+                        let panelSize = panel.frame.size
+                        panel.setFrameOrigin(NSPoint(
+                            x: rowFrame.maxX + 12,
+                            y: rowFrame.midY - panelSize.height / 2
+                        ))
+                    }
+            }
+        )
     }
 
     private var backgroundBinding: Binding<Color> {
