@@ -1001,4 +1001,29 @@ struct SettingsAndModelsTests {
         #expect(store.currentSettings.readerThemeOverride == nil)
         #expect(store.currentSettings.readerTheme == .nord)
     }
+
+    @Test @MainActor func updateThemeClearsOverrideWhenKindChanges() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = SettingsStore(storage: storage, storageKey: "reader.settings.clear-on-switch.tests")
+        store.updateTheme(.nord)
+        store.updateReaderThemeOverride(
+            ThemeOverride(themeKind: .nord, backgroundHex: "#112233", foregroundHex: "#AABBCC")
+        )
+
+        store.updateTheme(.dracula)
+
+        #expect(store.currentSettings.readerThemeOverride == nil)
+    }
+
+    @Test @MainActor func updateThemeKeepsOverrideWhenKindIsUnchanged() {
+        let storage = TestSettingsKeyValueStorage()
+        let store = SettingsStore(storage: storage, storageKey: "reader.settings.keep-on-resame.tests")
+        store.updateTheme(.nord)
+        let override = ThemeOverride(themeKind: .nord, backgroundHex: "#112233", foregroundHex: "#AABBCC")
+        store.updateReaderThemeOverride(override)
+
+        store.updateTheme(.nord)
+
+        #expect(store.currentSettings.readerThemeOverride == override)
+    }
 }

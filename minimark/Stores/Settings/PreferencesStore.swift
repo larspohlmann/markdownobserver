@@ -46,6 +46,9 @@ nonisolated struct PreferencesSlice: Equatable, Sendable {
     func updateTheme(_ kind: ThemeKind) {
         mutate(coalescePersistence: true) { slice in
             slice.readerTheme = kind
+            if let override = slice.readerThemeOverride, override.themeKind != kind {
+                slice.readerThemeOverride = nil
+            }
         }
     }
 
