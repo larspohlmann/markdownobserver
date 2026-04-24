@@ -1,7 +1,40 @@
 (function () {
-  var payload = decodePayload("__MINIMARK_PAYLOAD_BASE64__");
+  var payload = decodeBase64JSON("__MINIMARK_PAYLOAD_BASE64__", emptyPayload());
   var runtimeCSSBase64 = "__MINIMARK_CSS_BASE64__";
   var overlayTopInset = __MINIMARK_OVERLAY_TOP_INSET__;
+  var lazyAssetPaths = decodeBase64JSON("__MINIMARK_LAZY_ASSET_PATHS_BASE64__", {});
+
+  // Fresh object per call — consumers occasionally mutate payload.changedRegions
+  // in place, and a shared module-scope default would leak across renders.
+  function emptyPayload() {
+    return { markdown: "", changedRegions: [], unsavedChangedRegions: [] };
+  }
+
+  function decodeBase64JSON(base64Value, fallback) {
+    if (!base64Value) { return fallback; }
+    try { return JSON.parse(decodeBase64UTF8(base64Value)); }
+    catch (_) { return fallback; }
+  }
+
+  function injectStylesheetOnce(id, href) {
+    if (!href || document.getElementById(id)) { return; }
+    var link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }
+
+  function loadScriptOnce(src) {
+    return new Promise(function (resolve, reject) {
+      if (!src) { reject(new Error("Missing script src")); return; }
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error("Failed to load " + src)); };
+      document.head.appendChild(s);
+    });
+  }
 
   function setOverlayTopInset(value) {
     var numericValue = Number(value);
@@ -35,14 +68,6 @@
       utf8 += String.fromCharCode(bytes[j]);
     }
     return decodeURIComponent(escape(utf8));
-  }
-
-  function decodePayload(base64Value) {
-    try {
-      return JSON.parse(decodeBase64UTF8(base64Value));
-    } catch (_) {
-      return { markdown: "", changedRegions: [], unsavedChangedRegions: [] };
-    }
   }
 
   function applyRuntimeCSS(cssBase64Value) {
@@ -144,6 +169,12 @@
     registerPlugin(md, window.markdownitDeflist);
     registerPlugin(md, window.markdownItAttrs);
     registerPlugin(md, window.markdownitCallouts);
+    if (window.katex && window.markdownItKatex) {
+      registerPlugin(md, window.markdownItKatex, {
+        throwOnError: false,
+        output: "html"
+      });
+    }
   }
 
   function installHeadingIDs(md) {
@@ -321,7 +352,10 @@
       "th": true,
       "thead": true,
       "tr": true,
-      "ul": true
+      "ul": true,
+      // SVG elements emitted by KaTeX stretchy delimiters (markdown-it-katex
+      // runs with output: "html", so MathML is never generated).
+      "svg": true, "path": true, "line": true
     };
 
     function isAllowedHTMLAttribute(tagName, attrName) {
@@ -354,13 +388,41 @@
       var perTag = {
         "a": { "href": true, "name": true, "target": true, "rel": true },
         "img": { "src": true, "alt": true },
-        "input": { "type": true, "checked": true }
+        "input": { "type": true, "checked": true },
+        // SVG attributes emitted by KaTeX stretchy delimiters
+        "svg": { "xmlns": true, "width": true, "height": true, "viewBox": true,
+                 "preserveAspectRatio": true, "style": true },
+        "path": { "d": true },
+        "line": { "x1": true, "x2": true, "y1": true, "y2": true, "stroke-width": true }
       };
 
       return !!(perTag[tagName] && perTag[tagName][attrName]);
     }
 
-    function sanitizeElement(node) {
+    // KaTeX positions glyphs with inline `style` (top, margin, width, height).
+    // The sanitizer can't strip it like elsewhere, so we whitelist the value
+    // against script-like patterns.
+    function isSafeStyleValue(value) {
+      if (typeof value !== "string") { return false; }
+      var v = value.toLowerCase();
+      if (v.indexOf("javascript:") !== -1) { return false; }
+      if (v.indexOf("expression(") !== -1) { return false; }
+      if (v.indexOf("@import") !== -1) { return false; }
+      if (/url\s*\(/.test(v)) { return false; }
+      return true;
+    }
+
+    var KATEX_ROOT_CLASSES = { "katex": true, "katex-display": true, "katex-block": true };
+
+    function hasKatexRootClass(node) {
+      if (!node.classList) { return false; }
+      for (var key in KATEX_ROOT_CLASSES) {
+        if (node.classList.contains(key)) { return true; }
+      }
+      return false;
+    }
+
+    function sanitizeElement(node, insideKatex) {
       if (!node || node.nodeType !== Node.ELEMENT_NODE) {
         return;
       }
@@ -378,14 +440,23 @@
         return;
       }
 
+      var nowInsideKatex = insideKatex || hasKatexRootClass(node);
+
       var attributes = Array.prototype.slice.call(node.attributes || []);
       for (var i = 0; i < attributes.length; i += 1) {
         var attribute = attributes[i];
         var attrName = String(attribute.name || "").toLowerCase();
         var value = String(attribute.value || "");
 
-        if (attrName.indexOf("on") === 0 || attrName === "style") {
+        if (attrName.indexOf("on") === 0) {
           node.removeAttribute(attribute.name);
+          continue;
+        }
+
+        if (attrName === "style") {
+          if (!nowInsideKatex || !isSafeStyleValue(value)) {
+            node.removeAttribute(attribute.name);
+          }
           continue;
         }
 
@@ -415,7 +486,7 @@
       for (var childIndex = 0; childIndex < children.length; childIndex += 1) {
         var child = children[childIndex];
         if (child.nodeType === Node.ELEMENT_NODE) {
-          sanitizeElement(child);
+          sanitizeElement(child, nowInsideKatex);
         } else if (child.nodeType === Node.COMMENT_NODE) {
           child.parentNode.removeChild(child);
         }
@@ -426,7 +497,7 @@
     for (var rootIndex = 0; rootIndex < rootChildren.length; rootIndex += 1) {
       var child = rootChildren[rootIndex];
       if (child.nodeType === Node.ELEMENT_NODE) {
-        sanitizeElement(child);
+        sanitizeElement(child, false);
       } else if (child.nodeType === Node.COMMENT_NODE) {
         child.parentNode.removeChild(child);
       }
@@ -1778,23 +1849,35 @@
     }
   }
 
-  function typesetMath(root, completion) {
-    if (!window.MathJax || typeof window.MathJax.typesetPromise !== "function") {
-      if (typeof completion === "function") {
-        completion();
-      }
-      return;
-    }
+  // ---------------------------------------------------------------------------
+  // KaTeX math rendering (lazy-loaded on first document containing $…$ or $$…$$)
+  // ---------------------------------------------------------------------------
 
-    window.MathJax.typesetPromise([root]).then(function () {
-      if (typeof completion === "function") {
-        completion();
-      }
-    }).catch(function () {
-      if (typeof completion === "function") {
-        completion();
-      }
-    });
+  var katexLoadPromise = null;
+
+  function detectMathInSource(source) {
+    if (typeof source !== "string" || source.indexOf("$") === -1) {
+      return false;
+    }
+    // Strip fenced code blocks and inline code so `$x$` inside them is ignored.
+    var stripped = source
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/~~~[\s\S]*?~~~/g, "")
+      .replace(/`[^`\n]*`/g, "");
+    return stripped.indexOf("$") !== -1;
+  }
+
+  function loadKatexRuntime() {
+    if (katexLoadPromise) { return katexLoadPromise; }
+    if (window.katex && window.markdownItKatex) { return Promise.resolve(); }
+    injectStylesheetOnce("minimark-katex-css", lazyAssetPaths.katexCSS);
+    katexLoadPromise = loadScriptOnce(lazyAssetPaths.katexScript)
+      .then(function () { return loadScriptOnce(lazyAssetPaths.markdownItKatex); })
+      .catch(function (err) {
+        katexLoadPromise = null;
+        throw err;
+      });
+    return katexLoadPromise;
   }
 
   function applyScrollProgress(progressValue) {
@@ -1956,8 +2039,6 @@
   // Mermaid diagram rendering
   // ---------------------------------------------------------------------------
 
-  var mermaidScriptPath = "Contents/Resources/mermaid.min.js";
-  var mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css";
   var mermaidLoadPromise = null;
   var mermaidLastThemeKey = null;
 
@@ -1981,28 +2062,14 @@
     };
   }
 
-  function loadMermaidCSS() {
-    if (document.getElementById("minimark-mermaid-css")) { return; }
-    var link = document.createElement("link");
-    link.id = "minimark-mermaid-css";
-    link.rel = "stylesheet";
-    link.href = mermaidCSSPath;
-    document.head.appendChild(link);
-  }
-
   function loadMermaidScript() {
     if (mermaidLoadPromise) { return mermaidLoadPromise; }
     if (window.mermaid) { return Promise.resolve(); }
-    mermaidLoadPromise = new Promise(function (resolve, reject) {
-      var script = document.createElement("script");
-      script.src = mermaidScriptPath;
-      script.onload = function () { resolve(); };
-      script.onerror = function () {
+    mermaidLoadPromise = loadScriptOnce(lazyAssetPaths.mermaidScript)
+      .catch(function (err) {
         mermaidLoadPromise = null;
-        reject(new Error("Failed to load mermaid.min.js"));
-      };
-      document.head.appendChild(script);
-    });
+        throw err;
+      });
     return mermaidLoadPromise;
   }
 
@@ -2023,7 +2090,7 @@
     var codeEls = root.querySelectorAll('pre > code.language-mermaid');
     if (codeEls.length === 0) { completion(); return; }
 
-    loadMermaidCSS();
+    injectStylesheetOnce("minimark-mermaid-css", lazyAssetPaths.mermaidCSS);
 
     loadMermaidScript().then(function () {
       initializeMermaidIfNeeded();
@@ -2075,21 +2142,23 @@
       return;
     }
 
-    var md = createMarkdownIt();
-    if (!md) {
-      root.innerHTML = "<p>Markdown runtime unavailable.</p>";
-      return;
-    }
+    var source = payload.markdown || "";
 
-    var rawHTML = md.render(payload.markdown || "");
-    var safeHTML = sanitizeRenderedHTML(rawHTML);
-    root.innerHTML = safeHTML;
-    markExplicitLanguages(root);
-    runHighlighting();
-    annotateCodeBlockLines(root);
-    addCodeBlockOverlays(root);
-    renderMermaidDiagrams(root, function () {
-      typesetMath(root, function () {
+    function performRender() {
+      var md = createMarkdownIt();
+      if (!md) {
+        root.innerHTML = "<p>Markdown runtime unavailable.</p>";
+        return;
+      }
+
+      var rawHTML = md.render(source);
+      var safeHTML = sanitizeRenderedHTML(rawHTML);
+      root.innerHTML = safeHTML;
+      markExplicitLanguages(root);
+      runHighlighting();
+      annotateCodeBlockLines(root);
+      addCodeBlockOverlays(root);
+      renderMermaidDiagrams(root, function () {
         renderUnsavedDraftHighlights(root, payload.unsavedChangedRegions || []);
         renderChangedRegionGutter(root, gutter, payload.changedRegions || []);
         applyScrollProgress(scrollAnchorProgress);
@@ -2105,11 +2174,17 @@
         }
         extractHeadings();
       });
-    });
+    }
+
+    if (detectMathInSource(source)) {
+      loadKatexRuntime().catch(function () { /* fall through; math stays raw */ }).then(performRender);
+    } else {
+      performRender();
+    }
   }
 
   window.__minimarkUpdateRenderedMarkdown = function (payloadBase64Value, scrollAnchorProgress) {
-    payload = decodePayload(payloadBase64Value);
+    payload = decodeBase64JSON(payloadBase64Value, emptyPayload());
     renderMarkdown(scrollAnchorProgress);
     return true;
   };

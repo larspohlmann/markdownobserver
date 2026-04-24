@@ -277,9 +277,8 @@ enum MarkdownSourceHTMLRenderer {
             isDark: isDarkTheme(theme)
         )
 
-        let data: Data
         do {
-            data = try JSONEncoder().encode(payload)
+            return try JSONBase64.encode(payload)
         } catch {
             let nsError = error as NSError
             logger.error(
@@ -287,8 +286,6 @@ enum MarkdownSourceHTMLRenderer {
             )
             return ""
         }
-
-        return data.base64EncodedString()
     }
 
     private static func syntaxAccentHex(for kind: SyntaxThemeKind) -> String {
