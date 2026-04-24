@@ -355,8 +355,7 @@
       "ul": true,
       // SVG elements emitted by KaTeX stretchy delimiters (markdown-it-katex
       // runs with output: "html", so MathML is never generated).
-      "svg": true, "path": true, "line": true, "rect": true, "polyline": true,
-      "g": true
+      "svg": true, "path": true, "line": true
     };
 
     function isAllowedHTMLAttribute(tagName, attrName) {
@@ -394,8 +393,7 @@
         "svg": { "xmlns": true, "width": true, "height": true, "viewBox": true,
                  "preserveAspectRatio": true, "style": true },
         "path": { "d": true },
-        "line": { "x1": true, "x2": true, "y1": true, "y2": true, "stroke-width": true },
-        "rect": { "x": true, "y": true, "width": true, "height": true, "fill": true }
+        "line": { "x1": true, "x2": true, "y1": true, "y2": true, "stroke-width": true }
       };
 
       return !!(perTag[tagName] && perTag[tagName][attrName]);

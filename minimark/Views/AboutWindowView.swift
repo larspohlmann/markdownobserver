@@ -247,7 +247,7 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
         case .markdownItTaskLists:
             return "markdown-it-task-lists"
         case .markdownItKatex:
-            return "markdown-it-katex"
+            return "@traptitech/markdown-it-katex"
         case .differ:
             return "Differ (Swift package)"
         case .highlightJS:
@@ -301,7 +301,7 @@ private enum ThirdPartyLicenseNote: String, CaseIterable, Identifiable {
         case .markdownItTaskLists:
             return URL(string: "https://github.com/revin/markdown-it-task-lists")!
         case .markdownItKatex:
-            return URL(string: "https://github.com/waylonflinn/markdown-it-katex")!
+            return URL(string: "https://github.com/traPtitech/markdown-it-katex")!
         case .differ:
             return URL(string: "https://github.com/tonyarnold/Differ")!
         case .highlightJS:

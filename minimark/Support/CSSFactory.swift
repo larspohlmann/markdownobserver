@@ -115,8 +115,16 @@ struct CSSFactory {
     // Encoded once at init — inputs are compile-time `BundledAssets` constants
     // and stable key order keeps the output byte-stable so the HTML-equality
     // fast-path in MarkdownWebView isn't defeated by dictionary-order churn.
-    // Encoding a struct of String fields is infallible; the empty-string
-    // fallback is purely for style (the codebase avoids `try!`).
-    private static let lazyAssetPathsBase64: String =
-        (try? JSONBase64.encodeStable(BundledAssets.lazyAssetPaths)) ?? ""
+    // Encoding a struct of `String` fields is infallible today; if that ever
+    // changes we surface the failure loudly in debug and log in release
+    // rather than silently disabling lazy-loaded assets.
+    private static let lazyAssetPathsBase64: String = {
+        do {
+            return try JSONBase64.encodeStable(BundledAssets.lazyAssetPaths)
+        } catch {
+            assertionFailure("Failed to encode lazy asset paths as base64: \(error)")
+            NSLog("CSSFactory: failed to encode lazy asset paths as base64: %@", String(describing: error))
+            return ""
+        }
+    }()
 }

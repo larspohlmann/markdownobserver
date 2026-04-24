@@ -40,10 +40,11 @@ Components and licenses:
 	- License: MIT
 	- Source: https://github.com/KaTeX/KaTeX
 	- License text: https://github.com/KaTeX/KaTeX/blob/main/LICENSE
-- markdown-it-katex (traptitech fork)
+- @traptitech/markdown-it-katex
 	- License: MIT
-	- Source: https://github.com/waylonflinn/markdown-it-katex
-	- License text: https://github.com/waylonflinn/markdown-it-katex/blob/master/LICENSE
+	- Source: https://github.com/traPtitech/markdown-it-katex
+	- License text: https://github.com/traPtitech/markdown-it-katex/blob/master/LICENSE
+	- Upstream: https://github.com/waylonflinn/markdown-it-katex
 - Differ (Swift package)
 	- License: MIT
 	- Source: https://github.com/tonyarnold/Differ
