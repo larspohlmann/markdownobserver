@@ -952,4 +952,53 @@ struct SettingsAndModelsTests {
         #expect(reloadedStore.isHintDismissed(.changeNavigation))
         #expect(!reloadedStore.isHintDismissed(.multiSelect))
     }
+
+    @Test @MainActor func readerSettingsStorePersistsReaderThemeOverride() {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.override.tests"
+        let store = SettingsStore(
+            storage: storage,
+            storageKey: storageKey,
+            minimumPersistInterval: 0
+        )
+
+        store.updateTheme(.nord)
+        store.updateReaderThemeOverride(
+            ThemeOverride(themeKind: .nord, backgroundHex: "#112233", foregroundHex: "#AABBCC")
+        )
+
+        let reloadedStore = SettingsStore(storage: storage, storageKey: storageKey)
+        #expect(reloadedStore.currentSettings.readerThemeOverride?.themeKind == .nord)
+        #expect(reloadedStore.currentSettings.readerThemeOverride?.backgroundHex == "#112233")
+        #expect(reloadedStore.currentSettings.readerThemeOverride?.foregroundHex == "#AABBCC")
+    }
+
+    @Test @MainActor func readerSettingsLegacyPayloadDecodesOverrideAsNil() throws {
+        let storage = TestSettingsKeyValueStorage()
+        let storageKey = "reader.settings.legacy-override.tests"
+        let legacy: [String: Any] = [
+            "appAppearance": "system",
+            "readerTheme": "nord",
+            "syntaxTheme": "monokai",
+            "baseFontSize": 15,
+            "autoRefreshOnExternalChange": true,
+            "notificationsEnabled": true,
+            "multiFileDisplayMode": "sidebarLeft",
+            "sidebarSortMode": "openOrder",
+            "sidebarGroupSortMode": "lastChangedNewestFirst",
+            "favoriteWatchedFolders": [],
+            "recentWatchedFolders": [],
+            "recentManuallyOpenedFiles": [],
+            "trustedImageFolders": [],
+            "diffBaselineLookback": "twoMinutes",
+            "dismissedHints": []
+        ]
+        let data = try JSONSerialization.data(withJSONObject: legacy)
+        storage.set(data, forKey: storageKey)
+
+        let store = SettingsStore(storage: storage, storageKey: storageKey)
+
+        #expect(store.currentSettings.readerThemeOverride == nil)
+        #expect(store.currentSettings.readerTheme == .nord)
+    }
 }

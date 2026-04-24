@@ -145,6 +145,12 @@ final class TestSettingsStore: SettingsStoring {
         subject.send(next)
     }
 
+    func updateReaderThemeOverride(_ override: ThemeOverride?) {
+        var next = subject.value
+        next.readerThemeOverride = override
+        subject.send(next)
+    }
+
     func updateSyntaxTheme(_ kind: SyntaxThemeKind) {
         var next = subject.value
         next.syntaxTheme = kind
