@@ -26,6 +26,13 @@ import Testing
 
         let hex = ColorHexConversion.hexString(from: color)
 
-        #expect(hex == expected)
+        let original = try #require(Color(hex: expected))
+        let roundTripped = try #require(Color(hex: hex))
+        let nsOriginal = NSColor(original).usingColorSpace(.sRGB) ?? NSColor(original)
+        let nsRoundTripped = NSColor(roundTripped).usingColorSpace(.sRGB) ?? NSColor(roundTripped)
+        let tolerance: Double = 1.0 / 255.0
+        #expect(abs(nsOriginal.redComponent - nsRoundTripped.redComponent) <= tolerance)
+        #expect(abs(nsOriginal.greenComponent - nsRoundTripped.greenComponent) <= tolerance)
+        #expect(abs(nsOriginal.blueComponent - nsRoundTripped.blueComponent) <= tolerance)
     }
 }

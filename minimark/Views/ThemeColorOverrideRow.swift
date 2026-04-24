@@ -4,6 +4,7 @@ import SwiftUI
 struct ThemeColorOverrideRow: View {
     let themeKind: ThemeKind
     @Binding var override: ThemeOverride?
+    @State private var hasPositionedPanel = false
 
     private var themeDefaults: Theme { Theme.theme(for: themeKind) }
 
@@ -70,8 +71,10 @@ struct ThemeColorOverrideRow: View {
             GeometryReader { geo in
                 Color.clear
                     .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
-                        guard let panel = notification.object as? NSWindow,
+                        guard !hasPositionedPanel,
+                              let panel = notification.object as? NSWindow,
                               panel === NSColorPanel.shared else { return }
+                        hasPositionedPanel = true
                         let rowFrame = geo.frame(in: .global)
                         let panelSize = panel.frame.size
                         panel.setFrameOrigin(NSPoint(
@@ -85,7 +88,7 @@ struct ThemeColorOverrideRow: View {
 
     private var backgroundBinding: Binding<Color> {
         Binding(
-            get: { Color(hex: effectiveBackgroundHex) ?? .clear },
+            get: { Color(hex: effectiveBackgroundHex) ?? Color(hex: themeDefaults.backgroundHex) ?? .clear },
             set: { setBackground($0) }
         )
     }

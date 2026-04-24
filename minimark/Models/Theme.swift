@@ -503,10 +503,19 @@ extension Theme {
             changeAddedHex: changeAddedHex,
             changeEditedHex: changeEditedHex,
             changeDeletedHex: changeDeletedHex,
-            hasLightBackground: hasLightBackground,
+            hasLightBackground: Self.isLightHex(newBackground),
             h1Hex: h1Hex,
             h2Hex: h2Hex,
             h3Hex: h3Hex
         )
+    }
+
+    private static func isLightHex(_ hex: String) -> Bool {
+        let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        guard cleaned.count == 6, let int = Int(cleaned, radix: 16) else { return true }
+        let r = Double((int >> 16) & 0xFF) / 255.0
+        let g = Double((int >> 8) & 0xFF) / 255.0
+        let b = Double(int & 0xFF) / 255.0
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.5
     }
 }
