@@ -50,7 +50,10 @@ final class LinkFollowAccessRequester {
         }
 
         grantStore.addLinkAccessGrant(chosenFolderURL)
-        return true
+        // Confirm the grant was actually persisted with a usable bookmark —
+        // `addLinkAccessGrant` is a no-op when bookmark creation fails, and
+        // we must not let the file open proceed against a phantom grant.
+        return grantStore.resolvedLinkAccessFolderURL(containing: targetFileURL) != nil
     }
 
     private func folderContains(_ folderURL: URL, file fileURL: URL) -> Bool {

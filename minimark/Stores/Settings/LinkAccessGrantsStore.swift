@@ -24,8 +24,13 @@ import Observation
     }
 
     func addLinkAccessGrant(_ folderURL: URL) {
+        let bookmarkData = try? bookmarkRefreshing.create(folderURL)
         mutate(coalescePersistence: false) { entries in
-            entries = LinkAccessGrantHistory.insertingUnique(folderURL, into: entries)
+            entries = LinkAccessGrantHistory.insertingUnique(
+                folderURL,
+                bookmarkData: bookmarkData,
+                into: entries
+            )
         }
     }
 

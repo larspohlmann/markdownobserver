@@ -19,16 +19,6 @@ nonisolated struct LinkAccessGrant: Equatable, Hashable, Codable, Sendable, Iden
         URL(fileURLWithPath: folderPath)
     }
 
-    init(folderURL: URL) {
-        let normalizedURL = FileRouting.normalizedFileURL(folderURL)
-        folderPath = normalizedURL.path
-        bookmarkData = try? folderURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
-    }
-
     init(folderPath: String, bookmarkData: Data?) {
         self.folderPath = folderPath
         self.bookmarkData = bookmarkData
@@ -36,11 +26,18 @@ nonisolated struct LinkAccessGrant: Equatable, Hashable, Codable, Sendable, Iden
 }
 
 nonisolated enum LinkAccessGrantHistory {
+    /// Returns `existingEntries` unchanged when `bookmarkData` is `nil` —
+    /// persisting a grant without a usable bookmark would re-prompt forever:
+    /// the resolver would skip the bookmark-less entry and the coordinator
+    /// would see no covering grant on the next click.
     static func insertingUnique(
         _ folderURL: URL,
+        bookmarkData: Data?,
         into existingEntries: [LinkAccessGrant]
     ) -> [LinkAccessGrant] {
-        let newEntry = LinkAccessGrant(folderURL: folderURL)
+        guard let bookmarkData else { return existingEntries }
+        let normalizedURL = FileRouting.normalizedFileURL(folderURL)
+        let newEntry = LinkAccessGrant(folderPath: normalizedURL.path, bookmarkData: bookmarkData)
         let deduplicated = existingEntries.filter { $0.folderPath != newEntry.folderPath }
         return Array(([newEntry] + deduplicated).prefix(LinkAccessGrant.maximumCount))
     }

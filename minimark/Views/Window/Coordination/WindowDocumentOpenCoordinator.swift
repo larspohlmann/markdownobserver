@@ -84,7 +84,7 @@ final class WindowDocumentOpenCoordinator {
 
     func openFileRequest(_ request: FileOpenRequest) {
         if request.origin == .linkFollow {
-            ensureLinkFollowAccess(forFiles: request.fileURLs)
+            guard ensureLinkFollowAccess(forFiles: request.fileURLs) else { return }
         }
         fileOpenCoordinator.open(request)
         callbacks.refreshWindowPresentation()
@@ -96,12 +96,21 @@ final class WindowDocumentOpenCoordinator {
     /// detect that here and present an NSOpenPanel to collect the grant —
     /// which is then persisted so future link clicks under the same folder
     /// don't re-prompt.
-    private func ensureLinkFollowAccess(forFiles fileURLs: [URL]) {
-        guard let firstFileURL = fileURLs.first else { return }
+    ///
+    /// Returns `true` when access is already covered or was successfully
+    /// granted. Returns `false` when the user cancelled or chose a folder
+    /// that doesn't cover the target — callers must abort the file open in
+    /// that case to avoid a broken slot showing a sandbox read failure.
+    ///
+    /// Link-follow file opens always carry exactly one URL (see
+    /// `DocumentSurfaceViewModel.openLinkedFile(_:)`).
+    private func ensureLinkFollowAccess(forFiles fileURLs: [URL]) -> Bool {
+        precondition(fileURLs.count == 1, "link-follow open expects exactly one file URL")
+        guard let firstFileURL = fileURLs.first else { return false }
         if settingsStore.resolvedLinkAccessFolderURL(containing: firstFileURL) != nil {
-            return
+            return true
         }
-        linkFollowAccessRequester.requestAccess(forContaining: firstFileURL)
+        return linkFollowAccessRequester.requestAccess(forContaining: firstFileURL)
     }
 
     func openIncomingURL(_ url: URL) {

@@ -153,6 +153,13 @@ final class SecurityScopeResolver {
     /// `fileURL` and returns a folder-relative URL the loader can read.
     /// Returns nil if no grant covers the URL or the bookmark cannot be
     /// resolved.
+    ///
+    /// Replacing `context.folderToken` here is safe because each `DocumentStore`
+    /// owns its own `SecurityScopeResolver` (see `SidebarDocumentController`),
+    /// so a slot's link-access token cannot stomp another slot's watched-folder
+    /// token. Within a single resolver, `effectiveAccessibleFileURL` checks
+    /// `folderScopedAccessibleFileURL` (watch session) before falling through
+    /// to the link-access path, so a watched file never reaches this branch.
     func linkAccessScopedAccessibleFileURL(for fileURL: URL) -> URL? {
         let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
         guard let grantFolderURL = settingsStore.resolvedLinkAccessFolderURL(containing: normalizedFileURL) else {

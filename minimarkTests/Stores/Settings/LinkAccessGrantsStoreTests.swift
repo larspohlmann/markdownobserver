@@ -130,10 +130,36 @@ struct LinkAccessGrantsStoreTests {
         for index in 0..<(LinkAccessGrant.maximumCount + 5) {
             entries = LinkAccessGrantHistory.insertingUnique(
                 URL(fileURLWithPath: "/tmp/folder-\(index)", isDirectory: true),
+                bookmarkData: Data([UInt8(index & 0xFF)]),
                 into: entries
             )
         }
 
         #expect(entries.count == LinkAccessGrant.maximumCount)
+    }
+
+    @Test @MainActor func insertingUniqueSkipsEntriesWithoutBookmark() {
+        // A nil bookmark would create a phantom grant that the resolver skips
+        // and the coordinator never sees — guarding against an infinite prompt
+        // loop when bookmark creation fails.
+        let result = LinkAccessGrantHistory.insertingUnique(
+            URL(fileURLWithPath: "/tmp/notes", isDirectory: true),
+            bookmarkData: nil,
+            into: []
+        )
+
+        #expect(result.isEmpty)
+    }
+
+    @Test @MainActor func addLinkAccessGrantSkipsWhenBookmarkCreationFails() {
+        let helper = BookmarkRefreshing(
+            resolve: { _ in (URL(fileURLWithPath: "/ignored"), false) },
+            create: { _ in throw NSError(domain: "test", code: 1) }
+        )
+        let store = LinkAccessGrantsStore(initial: [], bookmarkRefreshing: helper)
+
+        store.addLinkAccessGrant(URL(fileURLWithPath: "/tmp/notes", isDirectory: true))
+
+        #expect(store.currentGrants.isEmpty)
     }
 }

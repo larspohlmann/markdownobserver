@@ -445,6 +445,7 @@ final class TestSettingsStore: SettingsStoring {
         var next = subject.value
         next.linkAccessGrants = LinkAccessGrantHistory.insertingUnique(
             folderURL,
+            bookmarkData: Data(),
             into: next.linkAccessGrants
         )
         recordedLinkAccessGrants = next.linkAccessGrants
