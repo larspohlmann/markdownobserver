@@ -27,6 +27,7 @@ struct MarkdownLinkClickInterceptTests {
     private static let bundleBaseURL = URL(fileURLWithPath: "/Applications/MarkdownObserver.app/")
 
     private final class MessageRecorder: NSObject, WKScriptMessageHandler {
+        var received: [[String: Any]] = []
         var continuation: CheckedContinuation<[String: Any], Never>?
 
         func userContentController(
@@ -35,6 +36,7 @@ struct MarkdownLinkClickInterceptTests {
         ) {
             guard message.name == MarkdownWebView.linkClickMessageName else { return }
             let payload = (message.body as? [String: Any]) ?? [:]
+            received.append(payload)
             continuation?.resume(returning: payload)
             continuation = nil
         }
@@ -173,7 +175,7 @@ struct MarkdownLinkClickInterceptTests {
 
         // Give the JS a moment to run; if it were going to post, it would have.
         try await Task.sleep(nanoseconds: 100_000_000)
-        #expect(recorder.continuation == nil, "no message should have been posted")
+        #expect(recorder.received.isEmpty, "no message should have been posted")
     }
 
     @Test
@@ -187,7 +189,7 @@ struct MarkdownLinkClickInterceptTests {
 
         try await clickAnchor(id: "link", in: webView)
         try await Task.sleep(nanoseconds: 100_000_000)
-        #expect(recorder.continuation == nil)
+        #expect(recorder.received.isEmpty)
     }
 
     @Test
@@ -201,6 +203,6 @@ struct MarkdownLinkClickInterceptTests {
 
         try await clickAnchor(id: "link", in: webView)
         try await Task.sleep(nanoseconds: 100_000_000)
-        #expect(recorder.continuation == nil)
+        #expect(recorder.received.isEmpty)
     }
 }

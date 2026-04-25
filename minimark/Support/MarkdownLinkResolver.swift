@@ -57,12 +57,7 @@ enum MarkdownLinkResolver {
         }
 
         let resolvedURL = URL(fileURLWithPath: resolvedPath)
-        guard isMarkdownExtension(resolvedURL.pathExtension) else { return nil }
+        guard FileRouting.isSupportedMarkdownFileURL(resolvedURL) else { return nil }
         return resolvedURL
-    }
-
-    private static func isMarkdownExtension(_ ext: String) -> Bool {
-        let lower = ext.lowercased()
-        return lower == "md" || lower == "markdown"
     }
 }

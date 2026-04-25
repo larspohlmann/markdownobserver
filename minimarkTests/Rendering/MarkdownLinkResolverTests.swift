@@ -111,6 +111,19 @@ struct MarkdownLinkResolverTests {
     }
 
     @Test
+    func acceptsMdownExtension() {
+        let mdown = URL(fileURLWithPath: "\(bundlePath)/file.mdown")
+
+        let resolved = MarkdownLinkResolver.resolveMarkdownLink(
+            url: mdown,
+            documentDirectoryPath: documentDir,
+            bundlePath: bundlePath
+        )
+
+        #expect(resolved?.path == "\(documentDir)/file.mdown")
+    }
+
+    @Test
     func extensionMatchIsCaseInsensitive() {
         let upper = URL(fileURLWithPath: "\(bundlePath)/file.MD")
 
