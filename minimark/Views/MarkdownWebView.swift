@@ -9,7 +9,7 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
     private static let tocMessageName = "minimarkTOC"
-    private static let linkClickMessageName = "minimarkLinkClick"
+    static let linkClickMessageName = "minimarkLinkClick"
     private static let scrollSyncObserverScript = BundledAssetLoader.scrollSyncObserverJavaScript
 
     /// Intercepts clicks on markdown file links before WKWebView's default
@@ -19,7 +19,7 @@ struct MarkdownWebView: NSViewRepresentable {
     /// the click in JS instead and post the resolved URL to Swift, which then
     /// runs it through `MarkdownLinkResolver` to map the bundle-prefixed
     /// href back to a real on-disk file URL.
-    private static let markdownLinkInterceptScript = """
+    static let markdownLinkInterceptScript = """
         (function() {
             function isMarkdownHref(href) {
                 if (!href) return false;
