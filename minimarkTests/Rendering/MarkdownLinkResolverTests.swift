@@ -148,4 +148,20 @@ struct MarkdownLinkResolverTests {
 
         #expect(resolved == nil)
     }
+
+    @Test
+    func resolvesFileWithSpacesInName() {
+        // WKWebView decodes percent-encoded hrefs before the navigation
+        // delegate sees them, so a markdown link `[x](my%20file.md)` arrives
+        // with a space in `.path`. Confirm the resolver passes it through.
+        let bundleResolved = URL(fileURLWithPath: "\(bundlePath)/my file.md")
+
+        let resolved = MarkdownLinkResolver.resolveMarkdownLink(
+            url: bundleResolved,
+            documentDirectoryPath: documentDir,
+            bundlePath: bundlePath
+        )
+
+        #expect(resolved?.path == "\(documentDir)/my file.md")
+    }
 }

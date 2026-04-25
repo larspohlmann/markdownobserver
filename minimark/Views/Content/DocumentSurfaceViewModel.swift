@@ -215,7 +215,7 @@ final class DocumentSurfaceViewModel {
                         onAction(.requestFileOpen(FileOpenRequest(
                             fileURLs: [url],
                             origin: .manual,
-                            slotStrategy: .reuseEmptySlotForFirst
+                            slotStrategy: .alwaysAppend
                         )))
                     default:
                         break
