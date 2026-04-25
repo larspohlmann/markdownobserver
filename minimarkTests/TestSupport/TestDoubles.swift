@@ -465,13 +465,6 @@ final class TestSettingsStore: SettingsStoring {
         return coveringEntries.first?.folderURL
     }
 
-    func clearLinkAccessGrants() {
-        var next = subject.value
-        next.linkAccessGrants = []
-        recordedLinkAccessGrants = []
-        subject.send(next)
-    }
-
     func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
         var next = subject.value
         let existing = next.favoriteWatchedFolders

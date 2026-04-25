@@ -222,7 +222,6 @@ typealias RecentWriting = RecentWatchedFolderWriting & RecentOpenedFileWriting
 @MainActor protocol LinkAccessGrantWriting: AnyObject {
     func addLinkAccessGrant(_ folderURL: URL)
     func resolvedLinkAccessFolderURL(containing fileURL: URL) -> URL?
-    func clearLinkAccessGrants()
 }
 
 @MainActor protocol HintWriting: AnyObject {
@@ -508,7 +507,6 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
     func resolvedLinkAccessFolderURL(containing fileURL: URL) -> URL? {
         linkAccessGrants.resolvedLinkAccessFolderURL(containing: fileURL)
     }
-    func clearLinkAccessGrants() { linkAccessGrants.clearLinkAccessGrants() }
 
     // MARK: - Persistence
 

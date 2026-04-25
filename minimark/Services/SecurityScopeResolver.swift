@@ -159,8 +159,7 @@ final class SecurityScopeResolver {
             return nil
         }
 
-        if context.folderToken?.didStartAccess != true ||
-            FileRouting.normalizedFileURL(context.folderToken!.url) != FileRouting.normalizedFileURL(grantFolderURL) {
+        if needsFolderTokenRefresh(for: grantFolderURL) {
             context.folderToken?.endAccess()
             context.folderToken = securityScope.beginAccess(to: grantFolderURL)
         }
@@ -179,6 +178,11 @@ final class SecurityScopeResolver {
         guard !relativePath.isEmpty else { return folderToken.url }
 
         return URL(fileURLWithPath: relativePath, relativeTo: folderToken.url).standardizedFileURL
+    }
+
+    private func needsFolderTokenRefresh(for grantFolderURL: URL) -> Bool {
+        guard let token = context.folderToken, token.didStartAccess else { return true }
+        return FileRouting.normalizedFileURL(token.url) != FileRouting.normalizedFileURL(grantFolderURL)
     }
 
     // MARK: - Folder Session Helpers
