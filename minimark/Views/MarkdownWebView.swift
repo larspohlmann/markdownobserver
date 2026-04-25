@@ -108,6 +108,7 @@ struct MarkdownWebView: NSViewRepresentable {
             case cancel
             case openExternal(URL)
             case scrollToFragment(String)
+            case openLinkedFile(URL)
         }
 
         private weak var webView: WKWebView?
@@ -528,6 +529,10 @@ struct MarkdownWebView: NSViewRepresentable {
             case let .scrollToFragment(fragment):
                 scrollToFragment(fragment, in: webView)
                 decisionHandler(.cancel)
+
+            case let .openLinkedFile(url):
+                onAction(.openLinkedFile(url))
+                decisionHandler(.cancel)
             }
         }
 
@@ -584,11 +589,24 @@ struct MarkdownWebView: NSViewRepresentable {
                 return .scrollToFragment(fragment)
             }
 
+            if let resolved = MarkdownLinkResolver.resolveMarkdownLink(
+                url: url,
+                documentDirectoryPath: currentDocumentDirectoryPath(),
+                bundlePath: Bundle.main.bundleURL.standardizedFileURL.path
+            ) {
+                return .openLinkedFile(resolved)
+            }
+
             if isSafeExternalURL(url) {
                 return .openExternal(url)
             }
 
             return .cancel
+        }
+
+        private func currentDocumentDirectoryPath() -> String? {
+            guard let identity = lastDocumentIdentity else { return nil }
+            return URL(fileURLWithPath: identity).deletingLastPathComponent().path
         }
 
         private func inPageFragment(for targetURL: URL, in webView: WKWebView) -> String? {
