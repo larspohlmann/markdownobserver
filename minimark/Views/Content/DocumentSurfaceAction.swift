@@ -10,6 +10,7 @@ enum DocumentSurfaceAction {
     case dropTargetedChange(DropTargetingUpdate)
     case changedRegionNavigationResult(index: Int)
     case retryFallback
+    case openLinkedFile(URL)
 }
 
 enum DocumentSurfaceRole: Hashable {
