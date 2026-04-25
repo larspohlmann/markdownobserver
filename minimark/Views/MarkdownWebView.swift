@@ -9,7 +9,46 @@ struct MarkdownWebView: NSViewRepresentable {
     private static let sourceEditMessageName = "minimarkSourceEdit"
     private static let sourceEditorDiagnosticMessageName = "minimarkSourceEditorDiagnostic"
     private static let tocMessageName = "minimarkTOC"
+    private static let linkClickMessageName = "minimarkLinkClick"
     private static let scrollSyncObserverScript = BundledAssetLoader.scrollSyncObserverJavaScript
+
+    /// Intercepts clicks on markdown file links before WKWebView's default
+    /// navigation. WKWebView silently drops `file://` link navigation for
+    /// documents loaded via `loadHTMLString(...baseURL:bundleURL)`, so
+    /// `WKNavigationDelegate.decidePolicyFor` never fires for them. We catch
+    /// the click in JS instead and post the resolved URL to Swift, which then
+    /// runs it through `MarkdownLinkResolver` to map the bundle-prefixed
+    /// href back to a real on-disk file URL.
+    private static let markdownLinkInterceptScript = """
+        (function() {
+            function isMarkdownHref(href) {
+                if (!href) return false;
+                var bare = href.split('#')[0].split('?')[0];
+                var dot = bare.lastIndexOf('.');
+                if (dot < 0) return false;
+                var ext = bare.substring(dot + 1).toLowerCase();
+                return ext === 'md' || ext === 'markdown';
+            }
+            document.addEventListener('click', function(e) {
+                if (e.defaultPrevented) return;
+                if (e.button !== 0) return;
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                var a = e.target.closest && e.target.closest('a');
+                if (!a) return;
+                var rawHref = a.getAttribute('href');
+                if (!isMarkdownHref(rawHref)) return;
+                var resolvedHref = a.href;
+                if (!resolvedHref) return;
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    window.webkit.messageHandlers.minimarkLinkClick.postMessage({
+                        url: resolvedHref
+                    });
+                } catch (err) {}
+            }, true);
+        })();
+    """
 
     let htmlDocument: String
     let documentIdentity: String?
@@ -41,10 +80,18 @@ struct MarkdownWebView: NSViewRepresentable {
                 forMainFrameOnly: true
             )
         )
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: Self.markdownLinkInterceptScript,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true
+            )
+        )
         configuration.userContentController.add(context.coordinator, name: Self.scrollSyncMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.sourceEditorDiagnosticMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.tocMessageName)
+        configuration.userContentController.add(context.coordinator, name: Self.linkClickMessageName)
 
         let webView = DropAwareWKWebView(frame: .zero, configuration: configuration)
         #if DEBUG
@@ -108,7 +155,6 @@ struct MarkdownWebView: NSViewRepresentable {
             case cancel
             case openExternal(URL)
             case scrollToFragment(String)
-            case openLinkedFile(URL)
         }
 
         private weak var webView: WKWebView?
@@ -529,10 +575,6 @@ struct MarkdownWebView: NSViewRepresentable {
             case let .scrollToFragment(fragment):
                 scrollToFragment(fragment, in: webView)
                 decisionHandler(.cancel)
-
-            case let .openLinkedFile(url):
-                onAction(.openLinkedFile(url))
-                decisionHandler(.cancel)
             }
         }
 
@@ -587,14 +629,6 @@ struct MarkdownWebView: NSViewRepresentable {
 
             if let fragment = inPageFragment(for: url, in: webView) {
                 return .scrollToFragment(fragment)
-            }
-
-            if let resolved = MarkdownLinkResolver.resolveMarkdownLink(
-                url: url,
-                documentDirectoryPath: currentDocumentDirectoryPath(),
-                bundlePath: Bundle.main.bundleURL.standardizedFileURL.path
-            ) {
-                return .openLinkedFile(resolved)
             }
 
             if isSafeExternalURL(url) {
@@ -709,6 +743,20 @@ struct MarkdownWebView: NSViewRepresentable {
                let payload = message.body as? [[String: Any]] {
                 let headings = TOCHeading.fromJavaScriptPayload(payload)
                 onAction(.tocHeadingsExtracted(headings))
+                return
+            }
+
+            if message.name == MarkdownWebView.linkClickMessageName,
+               let payload = message.body as? [String: Any],
+               let urlString = payload["url"] as? String,
+               let url = URL(string: urlString) {
+                if let resolved = MarkdownLinkResolver.resolveMarkdownLink(
+                    url: url,
+                    documentDirectoryPath: currentDocumentDirectoryPath(),
+                    bundlePath: Bundle.main.bundleURL.standardizedFileURL.path
+                ) {
+                    onAction(.openLinkedFile(resolved))
+                }
                 return
             }
 
