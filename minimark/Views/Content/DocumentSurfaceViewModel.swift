@@ -211,6 +211,12 @@ final class DocumentSurfaceViewModel {
                     case .retryFallback:
                         self.previewReloadToken += 1
                         self.previewMode = .web
+                    case .openLinkedFile(let url):
+                        onAction(.requestFileOpen(FileOpenRequest(
+                            fileURLs: [url],
+                            origin: .manual,
+                            slotStrategy: .reuseEmptySlotForFirst
+                        )))
                     default:
                         break
                     }
