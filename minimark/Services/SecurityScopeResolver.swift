@@ -11,12 +11,12 @@ final class SecurityScopeResolver {
     var context = SecurityScopeContext()
 
     private let securityScope: SecurityScopedResourceAccessing
-    private let settingsStore: RecentWriting & TrustedFolderWriting
+    private let settingsStore: RecentWriting & TrustedFolderWriting & LinkAccessGrantWriting
     private let requestWatchedFolderReauthorization: (URL) -> URL?
 
     init(
         securityScope: SecurityScopedResourceAccessing,
-        settingsStore: RecentWriting & TrustedFolderWriting,
+        settingsStore: RecentWriting & TrustedFolderWriting & LinkAccessGrantWriting,
         requestWatchedFolderReauthorization: @escaping (URL) -> URL?
     ) {
         self.securityScope = securityScope
@@ -64,6 +64,12 @@ final class SecurityScopeResolver {
             context.accessibleFileURL = folderScopedFileURL
             context.accessibleFileURLSource = .folderScopeChildURL
             return folderScopedFileURL
+        }
+
+        if let linkScopedFileURL = linkAccessScopedAccessibleFileURL(for: normalizedURL) {
+            context.accessibleFileURL = linkScopedFileURL
+            context.accessibleFileURLSource = .folderScopeChildURL
+            return linkScopedFileURL
         }
 
         deriveFileSecurityScopeFromFolderIfNeeded(
@@ -139,6 +145,40 @@ final class SecurityScopeResolver {
 
     func resolvedWatchedFolderAccessURL(for session: FolderWatchSession) -> URL {
         settingsStore.resolvedRecentWatchedFolderURL(matching: session.folderURL) ?? session.folderURL
+    }
+
+    // MARK: - Link Access Grant Scope
+
+    /// Activates folder-scoped access via a stored link-access grant covering
+    /// `fileURL` and returns a folder-relative URL the loader can read.
+    /// Returns nil if no grant covers the URL or the bookmark cannot be
+    /// resolved.
+    func linkAccessScopedAccessibleFileURL(for fileURL: URL) -> URL? {
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
+        guard let grantFolderURL = settingsStore.resolvedLinkAccessFolderURL(containing: normalizedFileURL) else {
+            return nil
+        }
+
+        if context.folderToken?.didStartAccess != true ||
+            FileRouting.normalizedFileURL(context.folderToken!.url) != FileRouting.normalizedFileURL(grantFolderURL) {
+            context.folderToken?.endAccess()
+            context.folderToken = securityScope.beginAccess(to: grantFolderURL)
+        }
+
+        guard let folderToken = context.folderToken, folderToken.didStartAccess else {
+            return nil
+        }
+
+        let folderPath = FileRouting.normalizedFileURL(folderToken.url).path
+        let filePath = normalizedFileURL.path
+
+        guard filePath.hasPrefix(folderPath) else { return nil }
+
+        let relativePath = filePath.dropFirst(folderPath.count)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !relativePath.isEmpty else { return folderToken.url }
+
+        return URL(fileURLWithPath: relativePath, relativeTo: folderToken.url).standardizedFileURL
     }
 
     // MARK: - Folder Session Helpers

@@ -214,7 +214,7 @@ final class DocumentSurfaceViewModel {
                     case .openLinkedFile(let url):
                         onAction(.requestFileOpen(FileOpenRequest(
                             fileURLs: [url],
-                            origin: .manual,
+                            origin: .linkFollow,
                             slotStrategy: .alwaysAppend
                         )))
                     default:
