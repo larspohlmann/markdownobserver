@@ -37,6 +37,7 @@ final class WindowDocumentOpenCoordinator {
     private let folderWatchOpen: WindowFolderWatchOpenController
     private let sidebarDocumentController: SidebarDocumentController
     private let settingsStore: SettingsStore
+    private let linkFollowAccessRequester: LinkFollowAccessRequester
     private let folderWatchSessionProvider: () -> FolderWatchSession?
     private let callbacks: WindowOpenCallbacks
 
@@ -45,6 +46,7 @@ final class WindowDocumentOpenCoordinator {
         folderWatchOpen: WindowFolderWatchOpenController,
         sidebarDocumentController: SidebarDocumentController,
         settingsStore: SettingsStore,
+        linkFollowAccessRequester: LinkFollowAccessRequester? = nil,
         folderWatchSessionProvider: @escaping () -> FolderWatchSession?,
         callbacks: WindowOpenCallbacks
     ) {
@@ -52,6 +54,8 @@ final class WindowDocumentOpenCoordinator {
         self.folderWatchOpen = folderWatchOpen
         self.sidebarDocumentController = sidebarDocumentController
         self.settingsStore = settingsStore
+        self.linkFollowAccessRequester = linkFollowAccessRequester
+            ?? LinkFollowAccessRequester(grantStore: settingsStore)
         self.folderWatchSessionProvider = folderWatchSessionProvider
         self.callbacks = callbacks
     }
@@ -79,8 +83,34 @@ final class WindowDocumentOpenCoordinator {
     // MARK: - Open entry points
 
     func openFileRequest(_ request: FileOpenRequest) {
+        if request.origin == .linkFollow {
+            guard ensureLinkFollowAccess(forFiles: request.fileURLs) else { return }
+        }
         fileOpenCoordinator.open(request)
         callbacks.refreshWindowPresentation()
+    }
+
+    /// Sandboxed apps only have access to files the user explicitly grants.
+    /// When following a markdown link to a sibling/descendant file, that file
+    /// usually isn't accessible until the user grants the parent folder. We
+    /// detect that here and present an NSOpenPanel to collect the grant —
+    /// which is then persisted so future link clicks under the same folder
+    /// don't re-prompt.
+    ///
+    /// Returns `true` when access is already covered or was successfully
+    /// granted. Returns `false` when the user cancelled or chose a folder
+    /// that doesn't cover the target — callers must abort the file open in
+    /// that case to avoid a broken slot showing a sandbox read failure.
+    ///
+    /// Link-follow file opens always carry exactly one URL (see
+    /// `DocumentSurfaceViewModel.openLinkedFile(_:)`).
+    private func ensureLinkFollowAccess(forFiles fileURLs: [URL]) -> Bool {
+        precondition(fileURLs.count == 1, "link-follow open expects exactly one file URL")
+        guard let firstFileURL = fileURLs.first else { return false }
+        if settingsStore.resolvedLinkAccessFolderURL(containing: firstFileURL) != nil {
+            return true
+        }
+        return linkFollowAccessRequester.requestAccess(forContaining: firstFileURL)
     }
 
     func openIncomingURL(_ url: URL) {

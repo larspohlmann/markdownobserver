@@ -439,6 +439,33 @@ final class TestSettingsStore: SettingsStoring {
         return nil
     }
 
+    private(set) var recordedLinkAccessGrants: [LinkAccessGrant] = []
+
+    func addLinkAccessGrant(_ folderURL: URL) {
+        var next = subject.value
+        next.linkAccessGrants = LinkAccessGrantHistory.insertingUnique(
+            folderURL,
+            bookmarkData: Data(),
+            into: next.linkAccessGrants
+        )
+        recordedLinkAccessGrants = next.linkAccessGrants
+        subject.send(next)
+    }
+
+    func resolvedLinkAccessFolderURL(containing fileURL: URL) -> URL? {
+        let normalizedFileURL = FileRouting.normalizedFileURL(fileURL)
+        let filePath = normalizedFileURL.path
+
+        let coveringEntries = subject.value.linkAccessGrants
+            .filter { entry in
+                let folderPath = entry.folderPath.hasSuffix("/") ? entry.folderPath : entry.folderPath + "/"
+                return filePath.hasPrefix(folderPath) || filePath == entry.folderPath
+            }
+            .sorted { $0.folderPath.count > $1.folderPath.count }
+
+        return coveringEntries.first?.folderURL
+    }
+
     func reorderFavoriteWatchedFolders(orderedIDs: [UUID]) {
         var next = subject.value
         let existing = next.favoriteWatchedFolders

@@ -58,6 +58,10 @@ enum BundledAssetLoader {
         loadBundledJS(named: "markdownobserver-scroll-sync")
     }
 
+    static var markdownLinkInterceptJavaScript: String {
+        loadBundledJS(named: "markdownobserver-link-intercept")
+    }
+
     static var themeJSBootstrapScript: String {
         "<script>\n\(loadBundledJS(named: "theme-bootstrap"))\n</script>"
     }

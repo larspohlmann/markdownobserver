@@ -17,6 +17,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
     var recentWatchedFolders: [RecentWatchedFolder]
     var recentManuallyOpenedFiles: [RecentOpenedFile]
     var trustedImageFolders: [TrustedImageFolder]
+    var linkAccessGrants: [LinkAccessGrant]
     var diffBaselineLookback: DiffBaselineLookback
     var dismissedHints: Set<FirstUseHint>
     var readerThemeOverride: ThemeOverride?
@@ -35,6 +36,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         recentWatchedFolders: [RecentWatchedFolder],
         recentManuallyOpenedFiles: [RecentOpenedFile],
         trustedImageFolders: [TrustedImageFolder] = [],
+        linkAccessGrants: [LinkAccessGrant] = [],
         diffBaselineLookback: DiffBaselineLookback = .twoMinutes,
         dismissedHints: Set<FirstUseHint> = [],
         readerThemeOverride: ThemeOverride? = nil
@@ -52,6 +54,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         self.recentWatchedFolders = recentWatchedFolders
         self.recentManuallyOpenedFiles = recentManuallyOpenedFiles
         self.trustedImageFolders = trustedImageFolders
+        self.linkAccessGrants = linkAccessGrants
         self.diffBaselineLookback = diffBaselineLookback
         self.dismissedHints = dismissedHints
         self.readerThemeOverride = readerThemeOverride
@@ -71,6 +74,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         case recentWatchedFolders
         case recentManuallyOpenedFiles
         case trustedImageFolders
+        case linkAccessGrants
         case diffBaselineLookback
         case dismissedHints
         case readerThemeOverride
@@ -90,6 +94,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
         trustedImageFolders: [],
+        linkAccessGrants: [],
         diffBaselineLookback: .twoMinutes,
         dismissedHints: [],
         readerThemeOverride: nil
@@ -110,6 +115,7 @@ nonisolated struct Settings: Equatable, Codable, Sendable {
         recentWatchedFolders = try container.decodeIfPresent([RecentWatchedFolder].self, forKey: .recentWatchedFolders) ?? []
         recentManuallyOpenedFiles = try container.decodeIfPresent([RecentOpenedFile].self, forKey: .recentManuallyOpenedFiles) ?? []
         trustedImageFolders = try container.decodeIfPresent([TrustedImageFolder].self, forKey: .trustedImageFolders) ?? []
+        linkAccessGrants = try container.decodeIfPresent([LinkAccessGrant].self, forKey: .linkAccessGrants) ?? []
         diffBaselineLookback = try container.decodeIfPresent(DiffBaselineLookback.self, forKey: .diffBaselineLookback) ?? .twoMinutes
         dismissedHints = try container.decodeIfPresent(Set<FirstUseHint>.self, forKey: .dismissedHints) ?? []
         readerThemeOverride = try container.decodeIfPresent(ThemeOverride.self, forKey: .readerThemeOverride)
@@ -213,6 +219,11 @@ typealias RecentWriting = RecentWatchedFolderWriting & RecentOpenedFileWriting
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL?
 }
 
+@MainActor protocol LinkAccessGrantWriting: AnyObject {
+    func addLinkAccessGrant(_ folderURL: URL)
+    func resolvedLinkAccessFolderURL(containing fileURL: URL) -> URL?
+}
+
 @MainActor protocol HintWriting: AnyObject {
     func dismissHint(_ hint: FirstUseHint)
 }
@@ -222,6 +233,7 @@ typealias SettingsWriting = ThemeWriting
     & FavoriteWriting
     & RecentWriting
     & TrustedFolderWriting
+    & LinkAccessGrantWriting
     & HintWriting
 
 typealias SettingsStoring = SettingsReading & SettingsWriting
@@ -247,6 +259,7 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
     let recentWatchedFolders: RecentWatchedFoldersStore
     let recentOpenedFiles: RecentOpenedFilesStore
     let trustedImageFolders: TrustedImageFoldersStore
+    let linkAccessGrants: LinkAccessGrantsStore
 
     @ObservationIgnored private let storage: SettingsKeyValueStoring
     @ObservationIgnored private let storageKey: String
@@ -325,6 +338,10 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
             initial: initialSettings.trustedImageFolders,
             bookmarkRefreshing: bookmarkRefreshing
         )
+        self.linkAccessGrants = LinkAccessGrantsStore(
+            initial: initialSettings.linkAccessGrants,
+            bookmarkRefreshing: bookmarkRefreshing
+        )
 
         self.subject = CurrentValueSubject(initialSettings)
         self.currentSettings = initialSettings
@@ -334,6 +351,7 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
         self.recentWatchedFolders.coordinator = self
         self.recentOpenedFiles.coordinator = self
         self.trustedImageFolders.coordinator = self
+        self.linkAccessGrants.coordinator = self
     }
 
     // MARK: - ChildStoreCoordinating
@@ -369,6 +387,7 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
             recentWatchedFolders: recentWatchedFolders.currentRecentWatchedFolders,
             recentManuallyOpenedFiles: recentOpenedFiles.currentRecentOpenedFiles,
             trustedImageFolders: trustedImageFolders.currentTrustedFolders,
+            linkAccessGrants: linkAccessGrants.currentGrants,
             diffBaselineLookback: prefs.diffBaselineLookback,
             dismissedHints: prefs.dismissedHints,
             readerThemeOverride: prefs.readerThemeOverride
@@ -480,6 +499,13 @@ typealias SettingsStoring = SettingsReading & SettingsWriting
     func addTrustedImageFolder(_ folderURL: URL) { trustedImageFolders.addTrustedImageFolder(folderURL) }
     func resolvedTrustedImageFolderURL(containing fileURL: URL) -> URL? {
         trustedImageFolders.resolvedTrustedImageFolderURL(containing: fileURL)
+    }
+
+    // MARK: - LinkAccessGrantWriting
+
+    func addLinkAccessGrant(_ folderURL: URL) { linkAccessGrants.addLinkAccessGrant(folderURL) }
+    func resolvedLinkAccessFolderURL(containing fileURL: URL) -> URL? {
+        linkAccessGrants.resolvedLinkAccessFolderURL(containing: fileURL)
     }
 
     // MARK: - Persistence

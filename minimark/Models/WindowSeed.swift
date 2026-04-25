@@ -2,12 +2,13 @@ import Foundation
 
 enum OpenOrigin: String, Hashable, Codable, Sendable {
     case manual
+    case linkFollow
     case folderWatchAutoOpen
     case folderWatchInitialBatchAutoOpen
 
     var isFolderWatchAutoOpen: Bool {
         switch self {
-        case .manual:
+        case .manual, .linkFollow:
             return false
         case .folderWatchAutoOpen, .folderWatchInitialBatchAutoOpen:
             return true
