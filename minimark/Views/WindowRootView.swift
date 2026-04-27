@@ -102,6 +102,26 @@ struct WindowRootView: View {
 
     @ToolbarContentBuilder
     private var windowToolbarItems: some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            folderWatchToolbarItem
+                .sharedBackgroundVisibility(.hidden)
+            sidebarPlacementToolbarItem
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            folderWatchToolbarItem
+            sidebarPlacementToolbarItem
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var sidebarPlacementToolbarItem: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            sidebarPlacementToggleButton
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var folderWatchToolbarItem: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
             FolderWatchToolbarButton(
                 state: currentToolbarFolderWatchState,
@@ -118,20 +138,21 @@ struct WindowRootView: View {
             .allowsHitTesting(windowCoordinator.hasCompletedWindowPhase)
             .padding(.trailing, 8)
         }
+    }
 
-        ToolbarItem(placement: .primaryAction) {
-            if windowCoordinator.hasCompletedWindowPhase && sidebarDocumentController.documents.count > 1 {
-                Button(action: {
-                    windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
-                }) {
-                    Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-                .help(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
-                .accessibilityLabel(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
-                .accessibilityIdentifier(.sidebarPlacementToggle)
+    @ViewBuilder
+    private var sidebarPlacementToggleButton: some View {
+        if windowCoordinator.hasCompletedWindowPhase && sidebarDocumentController.documents.count > 1 {
+            Button(action: {
+                windowCoordinator.sidebarActions.toggleSidebarPlacement(currentMultiFileDisplayMode: multiFileDisplayMode)
+            }) {
+                Image(systemName: sidebarPlacement == .left ? "sidebar.right" : "sidebar.left")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
+            .help(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+            .accessibilityLabel(sidebarPlacement == .left ? "Move Sidebar Right" : "Move Sidebar Left")
+            .accessibilityIdentifier(.sidebarPlacementToggle)
         }
     }
 
