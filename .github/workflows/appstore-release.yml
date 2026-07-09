@@ -91,12 +91,21 @@ jobs:
       - name: Export and upload to App Store Connect
         run: |
           set -o pipefail
+          PLIST="$GITHUB_WORKSPACE/Config/ExportOptions-AppStore.plist"
+          echo "::group::export debug"
+          echo "PWD=$PWD"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          ls -la "$GITHUB_WORKSPACE/Config" || true
+          echo "PLIST=$PLIST"
+          [ -f "$PLIST" ] && echo "plist: EXISTS" || echo "plist: MISSING"
+          plutil -lint "$PLIST" || true
+          echo "::endgroup::"
           xcodebuild -exportArchive \
-            -archivePath "$ARCHIVE_PATH" \
-            -exportPath "$EXPORT_PATH" \
-            -exportOptionsPlist "$PWD/Config/ExportOptions-AppStore.plist" \
+            -archivePath "$GITHUB_WORKSPACE/$ARCHIVE_PATH" \
+            -exportPath "$GITHUB_WORKSPACE/$EXPORT_PATH" \
+            -exportOptionsPlist "$PLIST" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$PWD/$API_KEY_PATH" \
+            -authenticationKeyPath "$GITHUB_WORKSPACE/$API_KEY_PATH" \
             -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
