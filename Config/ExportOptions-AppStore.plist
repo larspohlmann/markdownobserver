@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- App Store distribution. "app-store-connect" is the modern method name
+       (Xcode 15.3+); it replaces the older "app-store" spelling. -->
+  <key>method</key>
+  <string>app-store-connect</string>
+
+  <!-- Upload the exported package straight to App Store Connect instead of
+       writing it to disk for a manual Transporter step. -->
+  <key>destination</key>
+  <string>upload</string>
+
+  <!-- Automatic (cloud-managed) signing. The App Store Connect API key passed
+       to xcodebuild lets it create/download the Apple Distribution certificate
+       and provisioning profile on the fly, so no .p12 import is required. -->
+  <key>signingStyle</key>
+  <string>automatic</string>
+
+  <key>teamID</key>
+  <string>7R54WT353Z</string>
+
+  <!-- Let the App Store handle bitcode/symbol stripping decisions. -->
+  <key>uploadSymbols</key>
+  <true/>
+</dict>
+</plist>

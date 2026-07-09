@@ -1,0 +1,105 @@
+name: App Store Release
+
+# Archives MarkdownObserver with a RELEASE Xcode on a GitHub-hosted macOS
+# runner and uploads the build to App Store Connect.
+#
+# Why hosted (not the self-hosted CI runner): App Store Connect rejects builds
+# made with a beta Xcode/SDK. GitHub's macos-latest image ships a release macOS
+# and a release Xcode, which produces a submittable build even when the
+# maintainer's own Mac is on a macOS beta that only runs Xcode-beta.
+#
+# Signing uses cloud-managed automatic signing driven by an App Store Connect
+# API key, so no certificate/.p12 needs to be imported into the runner keychain.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build (e.g. 1.3.1). Defaults to the ref the workflow runs on."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    env:
+      ARCHIVE_PATH: build/MarkdownObserver.xcarchive
+      EXPORT_PATH: build/export
+      API_KEY_PATH: build/AuthKey.p8
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+
+      - name: Write App Store Connect API key
+        run: |
+          mkdir -p build
+          printf '%s' "${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}" > "$API_KEY_PATH"
+
+      - name: Write local signing config
+        # Signing.local.xcconfig is gitignored; recreate it on the runner from
+        # secrets so the archive uses the real bundle identity + team.
+        run: |
+          cat > Config/Signing.local.xcconfig <<EOF
+          CODE_SIGNING_ALLOWED = YES
+          CODE_SIGNING_REQUIRED = YES
+          CODE_SIGN_STYLE = Automatic
+          DEVELOPMENT_TEAM = ${{ secrets.APPLE_TEAM_ID }}
+          APP_BUNDLE_IDENTIFIER = ${{ secrets.APP_BUNDLE_IDENTIFIER }}
+          TESTS_BUNDLE_IDENTIFIER = \$(APP_BUNDLE_IDENTIFIER).tests
+          UITESTS_BUNDLE_IDENTIFIER = \$(APP_BUNDLE_IDENTIFIER).uitests
+          EOF
+
+      - name: Resolve package dependencies
+        run: |
+          set -o pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project minimark.xcodeproj \
+            -scheme minimark
+
+      - name: Archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project minimark.xcodeproj \
+            -scheme minimark \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -archivePath "$ARCHIVE_PATH" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/$API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Export and upload to App Store Connect
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist Config/ExportOptions-AppStore.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/$API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Clean up secrets
+        if: always()
+        run: rm -f "$API_KEY_PATH" Config/Signing.local.xcconfig
