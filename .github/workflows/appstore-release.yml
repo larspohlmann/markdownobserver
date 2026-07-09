@@ -94,7 +94,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportPath "$EXPORT_PATH" \
-            -exportOptionsPlist Config/ExportOptions-AppStore.plist \
+            -exportOptionsPlist "$PWD/Config/ExportOptions-AppStore.plist" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$PWD/$API_KEY_PATH" \
             -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
