@@ -213,7 +213,8 @@ struct ContentView: View {
         recentWatchedFolders: [],
         recentManuallyOpenedFiles: [],
         isAppearanceLocked: false,
-        effectiveReaderTheme: .blackOnWhite
+        effectiveReaderTheme: .blackOnWhite,
+        effectiveReaderThemeOverride: nil
     )
 
     let viewModel = ContentAreaViewModel(

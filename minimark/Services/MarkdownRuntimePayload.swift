@@ -144,8 +144,7 @@ struct JSONBase64MarkdownRuntimePayloadEncoder: MarkdownRuntimePayloadEncoding {
         )
 
         do {
-            let data = try JSONEncoder().encode(payload)
-            return data.base64EncodedString()
+            return try JSONBase64.encode(payload)
         } catch {
             throw AppError.renderingFailed(underlying: error)
         }

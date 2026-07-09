@@ -12,4 +12,5 @@ struct ContentViewFolderWatchState: Equatable {
     let recentManuallyOpenedFiles: [RecentOpenedFile]
     let isAppearanceLocked: Bool
     let effectiveReaderTheme: ThemeKind
+    let effectiveReaderThemeOverride: ThemeOverride?
 }

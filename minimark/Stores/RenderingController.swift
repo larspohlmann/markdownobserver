@@ -138,6 +138,7 @@ final class RenderingController {
         let effectiveThemeKind = appearanceOverride?.readerTheme ?? settings.readerTheme
         let effectiveFontSize = appearanceOverride?.baseFontSize ?? settings.baseFontSize
         let effectiveSyntaxTheme = appearanceOverride?.syntaxTheme ?? settings.syntaxTheme
+        let effectiveReaderThemeOverride = appearanceOverride?.readerThemeOverride ?? settings.readerThemeOverride
         let theme = effectiveThemeKind.themeDefinition
 
         let docDir = fileURL?.deletingLastPathComponent()
@@ -158,7 +159,8 @@ final class RenderingController {
             unsavedChangedRegions: unsavedChangedRegions,
             theme: theme,
             syntaxTheme: effectiveSyntaxTheme,
-            baseFontSize: effectiveFontSize
+            baseFontSize: effectiveFontSize,
+            readerThemeOverride: effectiveReaderThemeOverride
         )
 
         renderedHTMLDocument = rendered.htmlDocument

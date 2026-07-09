@@ -32,7 +32,8 @@ struct ContentViewAdapter: View {
             recentWatchedFolders: settingsStore.currentSettings.recentWatchedFolders,
             recentManuallyOpenedFiles: settingsStore.currentSettings.recentManuallyOpenedFiles,
             isAppearanceLocked: appearanceController.isLocked,
-            effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme
+            effectiveReaderTheme: appearanceController.effectiveAppearance.readerTheme,
+            effectiveReaderThemeOverride: appearanceController.effectiveAppearance.readerThemeOverride
         )
 
         ContentAreaHost(

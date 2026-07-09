@@ -2,23 +2,40 @@ import Foundation
 
 enum CSSThemeGenerator {
     // All production callers reach this via @MainActor DocumentStore → MarkdownRenderingService.
-    private nonisolated(unsafe) static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, css: String)?
+    private nonisolated(unsafe) static var cache: (theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double, override: ThemeOverride?, css: String)?
 
-    static func makeCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
+    static func makeCSS(
+        theme: ThemeDefinition,
+        syntaxTheme: SyntaxThemeKind,
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
+    ) -> String {
         if let cache,
            cache.theme == theme,
            cache.syntaxTheme == syntaxTheme,
-           cache.baseFontSize == baseFontSize {
+           cache.baseFontSize == baseFontSize,
+           cache.override == readerThemeOverride {
             return cache.css
         }
 
-        let css = generateCSS(theme: theme, syntaxTheme: syntaxTheme, baseFontSize: baseFontSize)
-        cache = (theme, syntaxTheme, baseFontSize, css)
+        let css = generateCSS(
+            theme: theme,
+            syntaxTheme: syntaxTheme,
+            baseFontSize: baseFontSize,
+            readerThemeOverride: readerThemeOverride
+        )
+        cache = (theme, syntaxTheme, baseFontSize, readerThemeOverride, css)
         return css
     }
 
-    private static func generateCSS(theme: ThemeDefinition, syntaxTheme: SyntaxThemeKind, baseFontSize: Double) -> String {
-        let variables = theme.colors.cssVariables(baseFontSize: baseFontSize)
+    private static func generateCSS(
+        theme: ThemeDefinition,
+        syntaxTheme: SyntaxThemeKind,
+        baseFontSize: Double,
+        readerThemeOverride: ThemeOverride?
+    ) -> String {
+        let effectiveColors = theme.colors.applyingOverride(readerThemeOverride)
+        let variables = effectiveColors.cssVariables(baseFontSize: baseFontSize)
         let syntaxLayer = theme.providesSyntaxHighlighting ? (theme.syntaxCSS ?? syntaxTheme.css) : syntaxTheme.css
         let themeLayer = theme.customCSS ?? ""
 

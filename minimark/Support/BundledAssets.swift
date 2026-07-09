@@ -11,6 +11,17 @@ struct RuntimeAssets: Equatable, Sendable {
     let calloutsCSSPath: String?
 }
 
+// Paths the JS runtime lazy-loads when the corresponding feature is detected
+// (math, diagrams). Handed to the JS side so Swift stays the single source of
+// truth for bundle layout.
+struct LazyAssetPaths: Encodable, Sendable {
+    let katexScript: String
+    let katexCSS: String
+    let markdownItKatex: String
+    let mermaidScript: String
+    let mermaidCSS: String
+}
+
 protocol RuntimeAssetResolving {
     func requiredRuntimeAssets() throws -> RuntimeAssets
 }
@@ -34,6 +45,17 @@ enum BundledAssets {
     static let calloutsCSSPath = "Contents/Resources/callout-blocks.css"
     static let mermaidScriptPath = "Contents/Resources/mermaid.min.js"
     static let mermaidCSSPath = "Contents/Resources/mermaid-diagrams.css"
+    static let katexScriptPath = "Contents/Resources/katex.min.js"
+    static let katexCSSPath = "Contents/Resources/katex.min.css"
+    static let markdownItKatexScriptPath = "Contents/Resources/markdown-it-katex.min.js"
+
+    static let lazyAssetPaths = LazyAssetPaths(
+        katexScript: katexScriptPath,
+        katexCSS: katexCSSPath,
+        markdownItKatex: markdownItKatexScriptPath,
+        mermaidScript: mermaidScriptPath,
+        mermaidCSS: mermaidCSSPath
+    )
 
     static func requiredRuntimeAssets() throws -> RuntimeAssets {
         let markdownURL = Bundle.main.bundleURL.appendingPathComponent(markdownItScriptPath)
@@ -82,8 +104,19 @@ enum BundledAssets {
     }
 
     static func availableCalloutsCSSPath() -> String? {
-        let fileURL = Bundle.main.bundleURL.appendingPathComponent(calloutsCSSPath)
-        return FileManager.default.fileExists(atPath: fileURL.path) ? calloutsCSSPath : nil
+        availableScriptPath(calloutsCSSPath)
+    }
+
+    static func availableKatexScriptPath() -> String? {
+        availableScriptPath(katexScriptPath)
+    }
+
+    static func availableKatexCSSPath() -> String? {
+        availableScriptPath(katexCSSPath)
+    }
+
+    static func availableMarkdownItKatexScriptPath() -> String? {
+        availableScriptPath(markdownItKatexScriptPath)
     }
 
     private static func availableScriptPath(_ path: String) -> String? {

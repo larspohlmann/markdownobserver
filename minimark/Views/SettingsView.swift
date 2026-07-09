@@ -294,7 +294,7 @@ struct ThemePreviewCard: View {
     let settings: Settings
 
     private var theme: Theme {
-        Theme.theme(for: settings.readerTheme)
+        Theme.theme(for: settings.readerTheme).applyingOverride(settings.readerThemeOverride)
     }
 
     private var syntaxPalette: SyntaxThemePreviewPalette {

@@ -19,7 +19,8 @@ struct CalloutBlockRenderingTests {
             unsavedChangedRegions: [],
             theme: theme,
             syntaxTheme: .monokai,
-            baseFontSize: 15
+            baseFontSize: 15,
+            readerThemeOverride: nil
         ).htmlDocument
     }
 

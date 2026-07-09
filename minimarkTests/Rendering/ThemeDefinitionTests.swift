@@ -86,7 +86,7 @@ final class ThemeDefinitionTests: XCTestCase {
     func testSimpleThemeCSSDoesNotContainCustomCSS() {
         let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
         XCTAssertTrue(css.contains("--reader-bg:"))
         XCTAssertTrue(css.contains(".hljs-keyword"), "Should contain syntax theme CSS from SyntaxThemeKind")
         XCTAssertFalse(css.contains("Amber Terminal"), "Should not contain amber custom CSS")
@@ -95,7 +95,7 @@ final class ThemeDefinitionTests: XCTestCase {
     func testAmberTerminalCSSIncludesCustomCSSAfterStructural() {
         let factory = CSSFactory()
         let theme = ThemeKind.amberTerminal.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
 
         XCTAssertTrue(css.contains("--reader-bg:"), "Should contain CSS variables")
         XCTAssertTrue(css.contains("repeating-linear-gradient"), "Should contain scanlines from customCSS")
@@ -111,7 +111,7 @@ final class ThemeDefinitionTests: XCTestCase {
     func testAmberTerminalUsesSyntaxCSSInsteadOfSyntaxTheme() {
         let factory = CSSFactory()
         let theme = ThemeKind.amberTerminal.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
 
         // Should contain amber syntax tokens, not Monokai ones
         XCTAssertTrue(css.contains("color: #FFB000"), "Should contain amber syntax CSS")
@@ -121,7 +121,7 @@ final class ThemeDefinitionTests: XCTestCase {
     func testSimpleThemeUsesSelectedSyntaxTheme() {
         let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
 
         XCTAssertTrue(css.contains("#F92672"), "Should contain Monokai keyword color")
     }
@@ -238,7 +238,7 @@ final class ThemeDefinitionTests: XCTestCase {
     func testGreenTerminalUsesSyntaxCSSInsteadOfSyntaxTheme() {
         let factory = CSSFactory()
         let theme = ThemeKind.greenTerminal.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
 
         XCTAssertTrue(css.contains("color: #00FF41"), "Should contain green syntax CSS")
         XCTAssertFalse(css.contains("#F92672"), "Should not contain Monokai keyword color")
@@ -360,7 +360,7 @@ final class ThemeDefinitionTests: XCTestCase {
         let factory = CSSFactory()
         for kind in [ThemeKind.blackOnWhite, .whiteOnBlack, .darkGreyOnLightGrey, .lightGreyOnDarkGrey] {
             let theme = kind.themeDefinition
-            let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
+            let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16, readerThemeOverride: nil)
             let expectedColors = Theme.theme(for: kind)
             XCTAssertTrue(css.contains(expectedColors.backgroundHex), "CSS should contain background hex for \(kind)")
             XCTAssertTrue(css.contains(expectedColors.foregroundHex), "CSS should contain foreground hex for \(kind)")
@@ -458,7 +458,7 @@ final class ThemeDefinitionTests: XCTestCase {
         let newThemes: [ThemeKind] = [.gruvboxDark, .gruvboxLight, .dracula, .monokai]
         for kind in newThemes {
             let theme = kind.themeDefinition
-            let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+            let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
             let colors = theme.colors
             XCTAssertTrue(css.contains("--reader-h1: \(colors.h1Hex!)"), "Missing h1 variable for \(kind)")
             XCTAssertTrue(css.contains("--reader-h2: \(colors.h2Hex!)"), "Missing h2 variable for \(kind)")
@@ -469,14 +469,14 @@ final class ThemeDefinitionTests: XCTestCase {
     func testNewThemesUseSelectedSyntaxTheme() {
         let factory = CSSFactory()
         let theme = ThemeKind.gruvboxDark.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .github, baseFontSize: 16, readerThemeOverride: nil)
         XCTAssertTrue(css.contains("#D73A49"), "Should contain GitHub keyword color from selected syntax theme")
     }
 
     func testSimpleThemesDoNotEmitHeaderVariables() {
         let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
         XCTAssertFalse(css.contains("--reader-h1:"), "Simple themes should not emit h1 variable")
         XCTAssertFalse(css.contains("--reader-h2:"), "Simple themes should not emit h2 variable")
         XCTAssertFalse(css.contains("--reader-h3:"), "Simple themes should not emit h3 variable")
@@ -485,7 +485,7 @@ final class ThemeDefinitionTests: XCTestCase {
     func testHeaderColorFallbackInCSS() {
         let factory = CSSFactory()
         let theme = ThemeKind.blackOnWhite.themeDefinition
-        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16)
+        let css = factory.makeCSS(theme: theme, syntaxTheme: .monokai, baseFontSize: 16, readerThemeOverride: nil)
         XCTAssertTrue(css.contains("color: var(--reader-h1, var(--reader-fg))"), "h1 should fall back to foreground")
         XCTAssertTrue(css.contains("color: var(--reader-h2, var(--reader-fg))"), "h2 should fall back to foreground")
         XCTAssertTrue(css.contains("color: var(--reader-h3, var(--reader-fg))"), "h3 should fall back to foreground")
