@@ -46,6 +46,10 @@ final class DocumentActionRouter {
         sidebarDocumentController.selectedDocumentStore.persister.grantImageDirectoryAccess(folderURL: url)
     }
 
+    func selectDiffBaseline(_ selection: DiffBaselineSelection) {
+        sidebarDocumentController.selectedDocumentStore.diffBaselineRecomparer.apply(selection)
+    }
+
     func openInApplication(_ app: ExternalApplication?) {
         sidebarDocumentController.selectedDocumentStore.document.openInApplication(app)
     }

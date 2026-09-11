@@ -12,7 +12,7 @@ struct PreviewAccessibilitySummaryTests {
             mode: .split
         )
 
-        #expect(summary.description == "file=notes.md|regions=3|mode=split|surface=preview")
+        #expect(summary.description == "file=notes.md|regions=3|mode=split|surface=preview|baseline=none")
     }
 
     @Test func descriptionEscapesNothingForPlainFilenames() {
@@ -22,7 +22,24 @@ struct PreviewAccessibilitySummaryTests {
             mode: .preview
         )
 
-        #expect(summary.description == "file=none|regions=0|mode=preview|surface=preview")
+        #expect(summary.description == "file=none|regions=0|mode=preview|surface=preview|baseline=none")
+    }
+
+    @Test func descriptionCarriesBaselineField() {
+        let summary = PreviewAccessibilitySummary(
+            fileName: "notes.md",
+            regionCount: 1,
+            mode: .preview,
+            baseline: "pinned:14:32:05"
+        )
+
+        #expect(summary.description == "file=notes.md|regions=1|mode=preview|surface=preview|baseline=pinned:14:32:05")
+        #expect(PreviewAccessibilitySummary(rawValue: summary.description) == summary)
+    }
+
+    @Test func parsingWithoutBaselineFieldDefaultsToNone() {
+        let parsed = PreviewAccessibilitySummary(rawValue: "file=a.md|regions=0|mode=preview|surface=preview")
+        #expect(parsed?.baseline == "none")
     }
 
     @Test func roundTripRecoversOriginalValue() {

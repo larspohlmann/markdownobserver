@@ -6,7 +6,7 @@ final class PostOpenEffects {
     private let settingsStore: SettingsReading & RecentWriting
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let folderWatch: FolderWatchDependencies
-    private let diffBaselineTracker: DiffBaselineTracking
+    private let diffBaselineSelection: DiffBaselineSelectionController
     private let fileWatcher: FileChangeWatching
     var onError: (@MainActor (Error) -> Void)?
     var onObservedFileChange: (@MainActor () -> Void)?
@@ -16,14 +16,14 @@ final class PostOpenEffects {
         settingsStore: SettingsReading & RecentWriting,
         folderWatchDispatcher: FolderWatchDispatcher,
         folderWatch: FolderWatchDependencies,
-        diffBaselineTracker: DiffBaselineTracking,
+        diffBaselineSelection: DiffBaselineSelectionController,
         fileWatcher: FileChangeWatching
     ) {
         self.document = document
         self.settingsStore = settingsStore
         self.folderWatchDispatcher = folderWatchDispatcher
         self.folderWatch = folderWatch
-        self.diffBaselineTracker = diffBaselineTracker
+        self.diffBaselineSelection = diffBaselineSelection
         self.fileWatcher = fileWatcher
     }
 
@@ -44,7 +44,7 @@ final class PostOpenEffects {
             )
         )
         if let initialDiffBaselineMarkdown {
-            _ = diffBaselineTracker.recordAndSelectBaseline(
+            _ = diffBaselineSelection.adoptRecordedBaseline(
                 markdown: initialDiffBaselineMarkdown,
                 for: normalizedURL,
                 at: now

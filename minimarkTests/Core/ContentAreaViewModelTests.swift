@@ -35,6 +35,7 @@ private func makeTestViewModel(
     let sourceEditing = SourceEditingController()
     let externalChange = ExternalChangeController()
     let toc = TOCController()
+    let diffBaselineSelection = DiffBaselineSelectionController(tracker: DiffBaselineTracker(minimumAge: 60))
     let surfaceViewModel = DocumentSurfaceViewModel()
 
     let viewModel = ContentAreaViewModel(
@@ -43,6 +44,7 @@ private func makeTestViewModel(
         sourceEditing: sourceEditing,
         externalChange: externalChange,
         toc: toc,
+        diffBaselineSelection: diffBaselineSelection,
         settingsStore: settingsStore,
         folderWatchState: folderWatchState,
         surfaceViewModel: surfaceViewModel,
@@ -103,6 +105,16 @@ struct ContentAreaViewModelTests {
         sourceEditing.setViewMode(.source, hasOpenDocument: true)
         sourceEditing.isSourceEditing = true
         #expect(viewModel.overlayLayout.isSourceEditing == true)
+    }
+
+    @Test @MainActor func diffBaselineStatusBarStateFollowsSelection() {
+        let (viewModel, document, _, _) = makeTestViewModel()
+        #expect(viewModel.diffBaselineStatusBarState.isVisible == false)
+
+        document.testSetFileURL(URL(fileURLWithPath: "/tmp/a.md"))
+        #expect(viewModel.diffBaselineStatusBarState.isVisible)
+        #expect(viewModel.diffBaselineStatusBarState.label == "No earlier snapshot")
+        #expect(viewModel.previewAccessibilitySummary.baseline == "none")
     }
 }
 
@@ -310,6 +322,7 @@ struct ContentAreaViewModelDropRoutingTests {
             sourceEditing: SourceEditingController(),
             externalChange: ExternalChangeController(),
             toc: TOCController(),
+            diffBaselineSelection: DiffBaselineSelectionController(tracker: DiffBaselineTracker(minimumAge: 60)),
             settingsStore: settingsStore,
             folderWatchState: .testEmpty,
             surfaceViewModel: DocumentSurfaceViewModel(),

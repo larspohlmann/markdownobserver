@@ -24,6 +24,7 @@ enum ContentViewAction {
     case startSourceEditing
     case updateSourceDraft(String)
     case grantImageDirectoryAccess(URL)
+    case selectDiffBaseline(DiffBaselineSelection)
     case openInApplication(ExternalApplication?)
     case revealInFinder
     case presentError(Error)
