@@ -41,6 +41,22 @@ struct DiffBaselineSnapshotFormatterTests {
         #expect(title.contains("min"))
     }
 
+    @Test func accessibilityBaselineRendersAutoAndPinned() {
+        let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-120))
+        let auto = DiffBaselineSnapshotFormatter.accessibilityBaseline(
+            mode: .automatic, activeBaseline: snapshot, calendar: calendar
+        )
+        #expect(auto == "auto:14:30:05")
+        let pinned = DiffBaselineSnapshotFormatter.accessibilityBaseline(
+            mode: .pinned(snapshot.id), activeBaseline: snapshot, calendar: calendar
+        )
+        #expect(pinned == "pinned:14:30:05")
+        let none = DiffBaselineSnapshotFormatter.accessibilityBaseline(
+            mode: .automatic, activeBaseline: nil, calendar: calendar
+        )
+        #expect(none == "none")
+    }
+
     @Test func statusLabelVariants() {
         let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-120))
         let comparing = DiffBaselineSnapshotFormatter.statusLabel(
