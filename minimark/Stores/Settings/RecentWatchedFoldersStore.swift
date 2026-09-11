@@ -34,9 +34,9 @@ import Observation
     }
 
     func resolvedRecentWatchedFolderURL(matching folderURL: URL) -> URL? {
-        let normalizedFolderURL = FileRouting.normalizedFileURL(folderURL)
+        let normalizedFolderPath = FileRouting.normalizedFileURL(folderURL).path
         guard let entry = currentRecentWatchedFolders.first(where: { entry in
-            FileRouting.normalizedFileURL(entry.folderURL) == normalizedFolderURL
+            FileRouting.normalizedFileURL(entry.folderURL).path == normalizedFolderPath
         }) else {
             return nil
         }
