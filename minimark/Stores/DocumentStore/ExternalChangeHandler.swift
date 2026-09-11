@@ -50,7 +50,7 @@ final class ExternalChangeHandler {
         )
         reloader.reload(
             at: fileURL,
-            diffBaselineMarkdown: baseline,
+            diffBaselineMarkdown: baseline.markdown,
             acknowledgeExternalChange: false
         )
     }

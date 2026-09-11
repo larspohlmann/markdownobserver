@@ -3,11 +3,19 @@ import Foundation
 protocol DiffBaselineTracking: AnyObject {
     var currentMinimumAge: TimeInterval { get }
 
-    func recordAndSelectBaseline(
-        markdown: String,
-        for fileURL: URL,
-        at now: Date
-    ) -> String
+    /// Appends `markdown` unless it equals the newest record for `fileURL`.
+    /// Returns the newest record after the call.
+    @discardableResult
+    func record(markdown: String, for fileURL: URL, at now: Date) -> DiffBaselineSnapshot
+
+    /// `record` followed by the lookback selection: the newest record older than
+    /// `currentMinimumAge`, excluding the just-recorded one; else the oldest
+    /// record; else the just-recorded one.
+    func recordAndSelectBaseline(markdown: String, for fileURL: URL, at now: Date) -> DiffBaselineSnapshot
+
+    /// Newest first.
+    func snapshots(for fileURL: URL) -> [DiffBaselineSnapshot]
+    func snapshot(id: DiffBaselineSnapshot.ID, for fileURL: URL) -> DiffBaselineSnapshot?
 
     func updateMinimumAge(_ age: TimeInterval)
     func reset()
@@ -16,36 +24,61 @@ protocol DiffBaselineTracking: AnyObject {
 final class DiffBaselineTracker: DiffBaselineTracking {
     private(set) var currentMinimumAge: TimeInterval
     private let maximumHistoryDepth: Int
-    private var historyByFileURL: [URL: [Record]] = [:]
+    /// Oldest first.
+    private var historyByFileURL: [URL: [DiffBaselineSnapshot]] = [:]
 
     init(minimumAge: TimeInterval, maximumHistoryDepth: Int = 32) {
         self.currentMinimumAge = max(0, minimumAge)
         self.maximumHistoryDepth = maximumHistoryDepth
     }
 
-    func recordAndSelectBaseline(
-        markdown: String,
-        for fileURL: URL,
-        at now: Date
-    ) -> String {
+    /// The lookback rule shared by the tracker and `DiffBaselineSelectionController`.
+    /// `history` is oldest first. `excluding` removes one id (the just-recorded
+    /// entry) from the aged candidates but not from the oldest-record fallback.
+    static func agedSelection(
+        fromOldestFirst history: [DiffBaselineSnapshot],
+        minimumAge: TimeInterval,
+        now: Date,
+        excluding excludedID: DiffBaselineSnapshot.ID?
+    ) -> DiffBaselineSnapshot? {
+        let aged = history.last(where: { candidate in
+            candidate.id != excludedID
+                && now.timeIntervalSince(candidate.capturedAt) >= minimumAge
+        })
+        return aged ?? history.first
+    }
+
+    @discardableResult
+    func record(markdown: String, for fileURL: URL, at now: Date) -> DiffBaselineSnapshot {
         var history = historyByFileURL[fileURL] ?? []
 
         if history.last?.markdown != markdown {
-            history.append(Record(markdown: markdown, capturedAt: now))
+            history.append(DiffBaselineSnapshot(markdown: markdown, capturedAt: now))
         }
         if history.count > maximumHistoryDepth {
             history.removeFirst(history.count - maximumHistoryDepth)
         }
         historyByFileURL[fileURL] = history
+        return history[history.count - 1]
+    }
 
-        // Exclude the just-recorded entry so the baseline is always from a prior
-        // call.  With any production minimumAge (≥ 10 s) the just-recorded entry
-        // (age 0) would never qualify anyway; dropLast() makes that invariant
-        // explicit and prevents surprising results when minimumAge is 0 in tests.
-        let agedBaseline = history.dropLast().last(where: {
-            now.timeIntervalSince($0.capturedAt) >= currentMinimumAge
-        })?.markdown
-        return agedBaseline ?? history.first?.markdown ?? markdown
+    func recordAndSelectBaseline(markdown: String, for fileURL: URL, at now: Date) -> DiffBaselineSnapshot {
+        let newest = record(markdown: markdown, for: fileURL, at: now)
+        let history = historyByFileURL[fileURL] ?? []
+        return Self.agedSelection(
+            fromOldestFirst: history,
+            minimumAge: currentMinimumAge,
+            now: now,
+            excluding: newest.id
+        ) ?? newest
+    }
+
+    func snapshots(for fileURL: URL) -> [DiffBaselineSnapshot] {
+        (historyByFileURL[fileURL] ?? []).reversed()
+    }
+
+    func snapshot(id: DiffBaselineSnapshot.ID, for fileURL: URL) -> DiffBaselineSnapshot? {
+        historyByFileURL[fileURL]?.first(where: { $0.id == id })
     }
 
     func updateMinimumAge(_ age: TimeInterval) {
@@ -54,12 +87,5 @@ final class DiffBaselineTracker: DiffBaselineTracking {
 
     func reset() {
         historyByFileURL = [:]
-    }
-}
-
-private extension DiffBaselineTracker {
-    struct Record {
-        let markdown: String
-        let capturedAt: Date
     }
 }
