@@ -45,6 +45,7 @@ final class DocumentStore {
     let externalChangeHandler: ExternalChangeHandler
     let folderWatchInput: FolderWatchInputHandler
     let setupActivator: DeferredSetupActivator
+    let diffBaselineRecomparer: DiffBaselineRecomparer
 
     // MARK: - Cross-group view-model projections
 
@@ -193,6 +194,16 @@ final class DocumentStore {
             diffBaselineTracker: self.diffBaselineTracker,
             fileLoader: self.fileLoader,
             presenter: self.presenter
+        )
+        self.diffBaselineRecomparer = DiffBaselineRecomparer(
+            document: self.document,
+            sourceEditingController: self.sourceEditingController,
+            renderingController: self.renderingController,
+            folderWatchDispatcher: folderWatchDispatcher,
+            diffBaselineSelection: self.diffBaselineSelection,
+            onError: { [document = self.document] error in
+                document.handle(error)
+            }
         )
         self.postOpenEffects.onError = { [document = self.document] error in
             document.handle(error)

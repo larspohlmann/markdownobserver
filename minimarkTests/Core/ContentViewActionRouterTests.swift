@@ -142,4 +142,19 @@ struct ContentViewActionRouterTests {
         env.router.handle(ContentViewAction.toggleAppearanceLock)
         #expect(env.appearanceController.isLocked == true)
     }
+
+    @Test @MainActor func selectDiffBaselineAutomaticResetsSelectedStoreMode() throws {
+        let env = try TestRouterEnvironment()
+        defer { env.harness.cleanup() }
+        let store = env.harness.controller.selectedDocumentStore
+        store.opener.open(at: env.harness.primaryFileURL)
+        store.diffBaselineTracker.record(markdown: "# older", for: env.harness.primaryFileURL, at: Date(timeIntervalSince1970: 0))
+        let older = try #require(store.diffBaselineTracker.snapshots(for: env.harness.primaryFileURL).first)
+        _ = store.diffBaselineSelection.pin(older.id, for: env.harness.primaryFileURL)
+
+        env.router.handle(.selectDiffBaseline(.automatic))
+
+        #expect(store.diffBaselineSelection.mode == .automatic)
+        #expect(store.diffBaselineSelection.activeBaseline == older)
+    }
 }

@@ -201,4 +201,74 @@ struct DocumentStoreDiffBaselineTests {
         fixture.store.clearOpenDocument()
         #expect(fixture.store.diffBaselineSelection.snapshots.isEmpty)
     }
+
+    @Test @MainActor func applySnapshotRecomputesRegionsAndRerenders() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            changedRegionsForModifiedContent: [ChangedRegion(blockIndex: 0, lineRange: 1...1)],
+            diffBaselineLookback: .tenSeconds
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        fixture.write(content: "# Changed twice", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        let newest = try #require(fixture.store.diffBaselineSelection.snapshots.first)
+        #expect(newest.markdown == "# Changed once")
+
+        fixture.rendering.lastRefreshAt = nil
+        fixture.differ.computeChangedRegionsCalls = []
+        fixture.store.diffBaselineRecomparer.apply(.snapshot(newest.id))
+
+        #expect(fixture.differ.computeChangedRegionsCalls.last?.oldMarkdown == "# Changed once")
+        #expect(fixture.differ.computeChangedRegionsCalls.last?.newMarkdown == "# Changed twice")
+        #expect(fixture.document.changedRegions.count == 1)
+        #expect(fixture.rendering.lastRefreshAt != nil)
+        #expect(fixture.store.diffBaselineSelection.mode == .pinned(newest.id))
+    }
+
+    @Test @MainActor func applyAutomaticReturnsToLookbackSelection() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenMinutes
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        fixture.write(content: "# Changed twice", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        let newest = try #require(fixture.store.diffBaselineSelection.snapshots.first)
+        fixture.store.diffBaselineRecomparer.apply(.snapshot(newest.id))
+        fixture.differ.computeChangedRegionsCalls = []
+
+        fixture.store.diffBaselineRecomparer.apply(.automatic)
+
+        // Ten-minute lookback: nothing is aged, fallback is the oldest record.
+        #expect(fixture.differ.computeChangedRegionsCalls.last?.oldMarkdown == "# Initial")
+        #expect(fixture.store.diffBaselineSelection.mode == .automatic)
+    }
+
+    @Test @MainActor func applyIsNoOpWhileSourceEditing() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenSeconds
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        let newest = try #require(fixture.store.diffBaselineSelection.snapshots.first)
+        fixture.store.editingFlow.startEditing()
+        fixture.differ.computeChangedRegionsCalls = []
+
+        fixture.store.diffBaselineRecomparer.apply(.snapshot(newest.id))
+
+        #expect(fixture.differ.computeChangedRegionsCalls.isEmpty)
+        #expect(fixture.store.diffBaselineSelection.mode == .automatic)
+    }
 }
