@@ -54,6 +54,7 @@ struct ContentView: View {
                 onGrantImageAccess: viewModel.promptForImageDirectoryAccess
             )
             documentSurfaceWithOverlays
+            diffBaselineStatusBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .modifier(ContentDropModifier(
@@ -114,6 +115,16 @@ struct ContentView: View {
             onStartSourceEditing: { viewModel.onAction(.startSourceEditing) }
         )
         .padding(.top, viewModel.overlayLayout.insets.railTopPadding)
+        .environment(\.colorScheme, viewModel.overlayColorScheme)
+    }
+
+    private var diffBaselineStatusBar: some View {
+        TimelineView(.periodic(from: .now, by: 20)) { _ in
+            DiffBaselineStatusBar(
+                state: viewModel.diffBaselineStatusBarState,
+                onSelect: viewModel.selectDiffBaseline
+            )
+        }
         .environment(\.colorScheme, viewModel.overlayColorScheme)
     }
 
