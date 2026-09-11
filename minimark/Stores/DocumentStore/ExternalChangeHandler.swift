@@ -8,7 +8,7 @@ final class ExternalChangeHandler {
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let folderWatch: FolderWatchDependencies
     private let settingsStore: SettingsReading
-    private let diffBaselineTracker: DiffBaselineTracking
+    private let diffBaselineSelection: DiffBaselineSelectionController
     private let fileLoader: MarkdownFileLoader
     private let persister: SourceDraftPersister
     private let reloader: DocumentReloader
@@ -20,7 +20,7 @@ final class ExternalChangeHandler {
         folderWatchDispatcher: FolderWatchDispatcher,
         folderWatch: FolderWatchDependencies,
         settingsStore: SettingsReading,
-        diffBaselineTracker: DiffBaselineTracking,
+        diffBaselineSelection: DiffBaselineSelectionController,
         fileLoader: MarkdownFileLoader,
         persister: SourceDraftPersister,
         reloader: DocumentReloader
@@ -31,7 +31,7 @@ final class ExternalChangeHandler {
         self.folderWatchDispatcher = folderWatchDispatcher
         self.folderWatch = folderWatch
         self.settingsStore = settingsStore
-        self.diffBaselineTracker = diffBaselineTracker
+        self.diffBaselineSelection = diffBaselineSelection
         self.fileLoader = fileLoader
         self.persister = persister
         self.reloader = reloader
@@ -43,8 +43,8 @@ final class ExternalChangeHandler {
               let fileURL = document.fileURL else {
             return
         }
-        let baseline = diffBaselineTracker.recordAndSelectBaseline(
-            markdown: document.sourceMarkdown,
+        let baseline = diffBaselineSelection.resolveBaseline(
+            recording: document.sourceMarkdown,
             for: fileURL,
             at: .now
         )

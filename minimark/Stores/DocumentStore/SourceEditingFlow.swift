@@ -6,6 +6,7 @@ final class SourceEditingFlow {
     private let sourceEditingController: SourceEditingController
     private let externalChange: ExternalChangeController
     private let renderingController: RenderingController
+    private let diffBaselineSelection: DiffBaselineSelectionController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let persister: SourceDraftPersister
     private let reloader: DocumentReloader
@@ -17,6 +18,7 @@ final class SourceEditingFlow {
         sourceEditingController: SourceEditingController,
         externalChange: ExternalChangeController,
         renderingController: RenderingController,
+        diffBaselineSelection: DiffBaselineSelectionController,
         folderWatchDispatcher: FolderWatchDispatcher,
         persister: SourceDraftPersister,
         reloader: DocumentReloader,
@@ -27,6 +29,7 @@ final class SourceEditingFlow {
         self.sourceEditingController = sourceEditingController
         self.externalChange = externalChange
         self.renderingController = renderingController
+        self.diffBaselineSelection = diffBaselineSelection
         self.folderWatchDispatcher = folderWatchDispatcher
         self.persister = persister
         self.reloader = reloader
@@ -86,7 +89,11 @@ final class SourceEditingFlow {
                 "save requested: \(saveLogFormatter.saveContext(for: fileURL)) draftUTF8Bytes=\(draftMarkdown.utf8.count)"
             )
             renderingController.cancelPendingDraftPreviewRender()
-            let diffBaselineMarkdown = document.savedMarkdown
+            let diffBaselineMarkdown = diffBaselineSelection.resolveBaseline(
+                recording: document.savedMarkdown,
+                for: fileURL,
+                at: .now
+            ).markdown
             try persister.persist(
                 draftMarkdown,
                 to: fileURL,

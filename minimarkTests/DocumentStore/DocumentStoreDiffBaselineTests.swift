@@ -115,4 +115,90 @@ struct DocumentStoreDiffBaselineTests {
         #expect(lastDiffCall?.oldMarkdown == "# Before")
         #expect(lastDiffCall?.newMarkdown == "# Changed again")
     }
+
+    @Test @MainActor func externalChangeSetsActiveBaseline() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenMinutes
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        #expect(fixture.store.diffBaselineSelection.activeBaseline == nil)
+
+        fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+
+        #expect(fixture.store.diffBaselineSelection.activeBaseline?.markdown == "# Initial")
+        #expect(fixture.store.diffBaselineSelection.snapshots.map(\.markdown) == ["# Initial"])
+    }
+
+    @Test @MainActor func pinnedSnapshotStaysBaselineAcrossExternalChanges() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenSeconds
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.write(content: "# Changed once", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        let initialSnapshot = try #require(fixture.store.diffBaselineSelection.snapshots.first)
+        _ = fixture.store.diffBaselineSelection.pin(initialSnapshot.id, for: fixture.primaryFileURL)
+
+        fixture.write(content: "# Changed twice", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        fixture.differ.computeChangedRegionsCalls = []
+        fixture.write(content: "# Changed thrice", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+
+        #expect(fixture.differ.computeChangedRegionsCalls.last?.oldMarkdown == "# Initial")
+        #expect(fixture.store.diffBaselineSelection.mode == .pinned(initialSnapshot.id))
+    }
+
+    @Test @MainActor func editorSaveRecordsPreviousContentAsSnapshot() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenMinutes
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.store.editingFlow.startEditing()
+        fixture.store.editingFlow.updateDraft("# Edited")
+        fixture.differ.computeChangedRegionsCalls = []
+
+        fixture.store.editingFlow.save()
+
+        #expect(fixture.store.diffBaselineSelection.snapshots.map(\.markdown) == ["# Initial"])
+        #expect(fixture.store.diffBaselineSelection.activeBaseline?.markdown == "# Initial")
+        #expect(fixture.differ.computeChangedRegionsCalls.last?.oldMarkdown == "# Initial")
+        #expect(fixture.differ.computeChangedRegionsCalls.last?.newMarkdown == "# Edited")
+    }
+
+    @Test @MainActor func openingAnotherFileResetsSelectionButKeepsHistoryPerFile() throws {
+        let fixture = try DocumentStoreTestFixture(
+            autoRefreshOnExternalChange: true,
+            diffBaselineLookback: .tenMinutes
+        )
+        defer { fixture.cleanup() }
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        fixture.write(content: "# Changed", to: fixture.primaryFileURL)
+        fixture.store.externalChangeHandler.handleObservedFileChange()
+        let snapshot = try #require(fixture.store.diffBaselineSelection.snapshots.first)
+        _ = fixture.store.diffBaselineSelection.pin(snapshot.id, for: fixture.primaryFileURL)
+
+        fixture.store.opener.open(at: fixture.secondaryFileURL)
+        #expect(fixture.store.diffBaselineSelection.mode == .automatic)
+        #expect(fixture.store.diffBaselineSelection.activeBaseline == nil)
+        #expect(fixture.store.diffBaselineSelection.snapshots.isEmpty)
+
+        fixture.store.opener.open(at: fixture.primaryFileURL)
+        #expect(fixture.store.diffBaselineSelection.activeBaseline == nil)
+        #expect(fixture.store.diffBaselineSelection.snapshots == [snapshot])
+
+        fixture.store.clearOpenDocument()
+        #expect(fixture.store.diffBaselineSelection.snapshots.isEmpty)
+    }
 }
