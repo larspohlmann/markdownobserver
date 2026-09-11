@@ -223,6 +223,7 @@ struct ContentView: View {
         sourceEditing: documentStore.sourceEditingController,
         externalChange: documentStore.externalChange,
         toc: documentStore.toc,
+        diffBaselineSelection: documentStore.diffBaselineSelection,
         settingsStore: settingsStore,
         folderWatchState: folderWatchState,
         surfaceViewModel: surfaceViewModel,

@@ -18,6 +18,7 @@ final class ContentAreaViewModel {
     let sourceEditing: SourceEditingController
     let externalChange: ExternalChangeController
     let toc: TOCController
+    let diffBaselineSelection: DiffBaselineSelectionController
     let settingsStore: SettingsStore
     var folderWatchState: ContentViewFolderWatchState
     let surfaceViewModel: DocumentSurfaceViewModel
@@ -31,6 +32,7 @@ final class ContentAreaViewModel {
         sourceEditing: SourceEditingController,
         externalChange: ExternalChangeController,
         toc: TOCController,
+        diffBaselineSelection: DiffBaselineSelectionController,
         settingsStore: SettingsStore,
         folderWatchState: ContentViewFolderWatchState,
         surfaceViewModel: DocumentSurfaceViewModel,
@@ -41,6 +43,7 @@ final class ContentAreaViewModel {
         self.sourceEditing = sourceEditing
         self.externalChange = externalChange
         self.toc = toc
+        self.diffBaselineSelection = diffBaselineSelection
         self.settingsStore = settingsStore
         self.folderWatchState = folderWatchState
         self.surfaceViewModel = surfaceViewModel
@@ -132,11 +135,31 @@ final class ContentAreaViewModel {
             && (sourceEditing.documentViewMode != .preview || sourceEditing.isSourceEditing)
     }
 
+    var diffBaselineStatusBarState: DiffBaselineStatusBarState {
+        DiffBaselineStatusBarState.make(
+            hasOpenDocument: document.hasOpenDocument,
+            isSourceEditing: sourceEditing.isSourceEditing,
+            mode: diffBaselineSelection.mode,
+            activeBaseline: diffBaselineSelection.activeBaseline,
+            snapshots: diffBaselineSelection.snapshots,
+            lookback: settingsStore.currentSettings.diffBaselineLookback,
+            now: .now
+        )
+    }
+
+    func selectDiffBaseline(_ selection: DiffBaselineSelection) {
+        onAction(.selectDiffBaseline(selection))
+    }
+
     var previewAccessibilitySummary: PreviewAccessibilitySummary {
         PreviewAccessibilitySummary(
             fileName: document.fileURL?.lastPathComponent ?? "none",
             regionCount: document.changedRegions.count,
-            mode: sourceEditing.documentViewMode
+            mode: sourceEditing.documentViewMode,
+            baseline: DiffBaselineSnapshotFormatter.accessibilityBaseline(
+                mode: diffBaselineSelection.mode,
+                activeBaseline: diffBaselineSelection.activeBaseline
+            )
         )
     }
 
