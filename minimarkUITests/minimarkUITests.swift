@@ -143,6 +143,38 @@ final class minimarkUITests: XCTestCase {
     }
 
     @MainActor
+    func testDiffBaselineStatusBarShowsAutomaticSnapshotAndAllowsPinning() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [uiTestModeArgument, simulateAutoOpenWatchFlowArgument]
+        app.launchSandboxed()
+
+        let preview = app.descendants(matching: .any).matching(identifier: previewSummaryIdentifier).firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        waitForPreviewSummary(preview, matching: { $0.regionCount > 0 }, timeout: 12)
+        waitForPreviewSummary(preview, matching: { $0.baseline.hasPrefix("auto:") }, timeout: 8)
+
+        let statusBar = app.descendants(matching: .any)
+            .matching(identifier: AccessibilityID.diffBaselineStatusBar.rawValue).firstMatch
+        XCTAssertTrue(statusBar.waitForExistence(timeout: 5))
+        statusBar.click()
+
+        let newestItem = app.menuItems
+            .matching(identifier: AccessibilityID.diffBaselineSnapshotItem(index: 0)).firstMatch
+        XCTAssertTrue(newestItem.waitForExistence(timeout: 5))
+        newestItem.click()
+
+        waitForPreviewSummary(preview, matching: { $0.baseline.hasPrefix("pinned:") }, timeout: 8)
+
+        statusBar.click()
+        let automaticItem = app.menuItems
+            .matching(identifier: AccessibilityID.diffBaselineAutomaticItem.rawValue).firstMatch
+        XCTAssertTrue(automaticItem.waitForExistence(timeout: 5))
+        automaticItem.click()
+
+        waitForPreviewSummary(preview, matching: { $0.baseline.hasPrefix("auto:") }, timeout: 8)
+    }
+
+    @MainActor
     func testWatchChangesOnlyWithIncludedSubfoldersDoesNotAutoOpenExistingMarkdownFiles() throws {
         let folderURL = try makeTemporaryFolder()
         let nestedFolderURL = folderURL
