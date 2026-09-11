@@ -36,6 +36,7 @@ struct ContentView: View {
                 isEnabled: viewModel.isUITestModeEnabled,
                 makeValue: { viewModel.previewAccessibilityValue }
             )
+            .padding(.bottom, viewModel.diffBaselineStatusBarState.isVisible ? DiffBaselineStatusBar.barHeight : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())

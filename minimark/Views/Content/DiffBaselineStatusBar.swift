@@ -7,8 +7,11 @@ struct DiffBaselineStatusBar: View {
     let state: DiffBaselineStatusBarState
     let onSelect: (DiffBaselineSelection) -> Void
 
+    /// Fixed height of the bar. Other chrome that must clear the bar reads this.
+    static let barHeight: CGFloat = 22
+
     private enum Metrics {
-        static let height: CGFloat = 22
+        static let height = DiffBaselineStatusBar.barHeight
         static let horizontalPadding: CGFloat = 12
         static let iconSize: CGFloat = 9
         static let labelSize: CGFloat = 10
