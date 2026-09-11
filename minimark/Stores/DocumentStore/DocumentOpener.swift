@@ -5,6 +5,7 @@ final class DocumentOpener {
     private let document: DocumentController
     private let externalChange: ExternalChangeController
     private let sourceEditingController: SourceEditingController
+    private let diffBaselineSelection: DiffBaselineSelectionController
     private let folderWatchDispatcher: FolderWatchDispatcher
     private let securityScopeResolver: SecurityScopeResolver
     private let folderWatch: FolderWatchDependencies
@@ -19,6 +20,7 @@ final class DocumentOpener {
         document: DocumentController,
         externalChange: ExternalChangeController,
         sourceEditingController: SourceEditingController,
+        diffBaselineSelection: DiffBaselineSelectionController,
         folderWatchDispatcher: FolderWatchDispatcher,
         securityScopeResolver: SecurityScopeResolver,
         folderWatch: FolderWatchDependencies,
@@ -31,6 +33,7 @@ final class DocumentOpener {
         self.document = document
         self.externalChange = externalChange
         self.sourceEditingController = sourceEditingController
+        self.diffBaselineSelection = diffBaselineSelection
         self.folderWatchDispatcher = folderWatchDispatcher
         self.securityScopeResolver = securityScopeResolver
         self.folderWatch = folderWatch
@@ -72,6 +75,8 @@ final class DocumentOpener {
             // Stop previous file-watch callbacks before mutating the active
             // document identity so stale events cannot cross into the new file state.
             fileWatcher.stopWatching()
+
+            diffBaselineSelection.resetForDocument(at: normalizedURL)
 
             try presenter.presentLoaded(
                 loaded,

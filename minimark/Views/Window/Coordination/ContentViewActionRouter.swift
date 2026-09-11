@@ -67,6 +67,8 @@ final class ContentViewActionRouter {
             document.updateSourceDraft(markdown)
         case .grantImageDirectoryAccess(let url):
             document.grantImageDirectoryAccess(url)
+        case .selectDiffBaseline(let selection):
+            document.selectDiffBaseline(selection)
         case .openInApplication(let app):
             document.openInApplication(app)
         case .revealInFinder:

@@ -161,7 +161,7 @@ final class FolderWatchAutoOpenPlanner: FolderWatchAutoOpenPlanning {
             return FolderWatchChangeEvent(
                 fileURL: fileURL,
                 kind: .modified,
-                previousMarkdown: baseline
+                previousMarkdown: baseline.markdown
             )
         }
     }

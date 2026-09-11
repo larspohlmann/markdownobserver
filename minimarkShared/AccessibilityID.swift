@@ -33,8 +33,14 @@ enum AccessibilityID: String {
     case sidebarRestoreManualButton = "sidebar-restore-manual-button"
     case saveSourceDraftButton = "save-source-draft-button"
     case discardSourceDraftButton = "discard-source-draft-button"
+    case diffBaselineStatusBar = "diff-baseline-status-bar"
+    case diffBaselineAutomaticItem = "diff-baseline-automatic-item"
 
     static func sidebarDocument(title: String) -> String {
         "sidebar-document-\(title)"
+    }
+
+    static func diffBaselineSnapshotItem(index: Int) -> String {
+        "diff-baseline-snapshot-item-\(index)"
     }
 }

@@ -1,0 +1,87 @@
+import Foundation
+import Testing
+@testable import minimark
+
+@Suite
+struct DiffBaselineSnapshotFormatterTests {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }
+    private let locale = Locale(identifier: "en_US_POSIX")
+    // 2026-09-11 14:32:05 UTC
+    private let now = Date(timeIntervalSince1970: 1_789_137_125)
+
+    @Test func sameDayShowsTimeOnly() {
+        let text = DiffBaselineSnapshotFormatter.timeText(
+            for: now.addingTimeInterval(-120), relativeTo: now, calendar: calendar, locale: locale
+        )
+        #expect(text == "14:30:05")
+    }
+
+    @Test func yesterdayIsPrefixed() {
+        let text = DiffBaselineSnapshotFormatter.timeText(
+            for: now.addingTimeInterval(-86_400), relativeTo: now, calendar: calendar, locale: locale
+        )
+        #expect(text == "Yesterday 14:32:05")
+    }
+
+    @Test func olderShowsDayAndMonth() {
+        let text = DiffBaselineSnapshotFormatter.timeText(
+            for: now.addingTimeInterval(-3 * 86_400), relativeTo: now, calendar: calendar, locale: locale
+        )
+        #expect(text == "Sep 8 14:32:05")
+    }
+
+    @Test func menuTitleCombinesTimeAndRelativeAge() {
+        let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-120))
+        let title = DiffBaselineSnapshotFormatter.menuTitle(for: snapshot, relativeTo: now, calendar: calendar, locale: locale)
+        #expect(title.hasPrefix("14:30:05 \u{00B7} "))
+        #expect(title.contains("min"))
+    }
+
+    @Test func freshlyCapturedSnapshotReadsJustNow() {
+        // A baseline recorded at (or, from clock skew, just after) now must not
+        // read "in 0 sec" / "0 sec ago".
+        #expect(DiffBaselineSnapshotFormatter.relativeAgeText(for: now, relativeTo: now) == "just now")
+        #expect(DiffBaselineSnapshotFormatter.relativeAgeText(for: now.addingTimeInterval(2), relativeTo: now) == "just now")
+
+        let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-1))
+        let title = DiffBaselineSnapshotFormatter.menuTitle(for: snapshot, relativeTo: now, calendar: calendar, locale: locale)
+        #expect(title == "14:32:04 \u{00B7} just now")
+
+        // Past the threshold it falls back to the standard relative age.
+        #expect(DiffBaselineSnapshotFormatter.relativeAgeText(for: now.addingTimeInterval(-120), relativeTo: now).contains("min"))
+    }
+
+    @Test func accessibilityBaselineRendersAutoAndPinned() {
+        let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-120))
+        let auto = DiffBaselineSnapshotFormatter.accessibilityBaseline(
+            mode: .automatic, activeBaseline: snapshot, calendar: calendar
+        )
+        #expect(auto == "auto:14:30:05")
+        let pinned = DiffBaselineSnapshotFormatter.accessibilityBaseline(
+            mode: .pinned(snapshot.id), activeBaseline: snapshot, calendar: calendar
+        )
+        #expect(pinned == "pinned:14:30:05")
+        let none = DiffBaselineSnapshotFormatter.accessibilityBaseline(
+            mode: .automatic, activeBaseline: nil, calendar: calendar
+        )
+        #expect(none == "none")
+    }
+
+    @Test func statusLabelVariants() {
+        let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-120))
+        let comparing = DiffBaselineSnapshotFormatter.statusLabel(
+            activeBaseline: snapshot, hasSnapshots: true, relativeTo: now, calendar: calendar, locale: locale
+        )
+        #expect(comparing.hasPrefix("Comparing to 14:30:05 \u{00B7} "))
+        #expect(DiffBaselineSnapshotFormatter.statusLabel(
+            activeBaseline: nil, hasSnapshots: false, relativeTo: now, calendar: calendar, locale: locale
+        ) == "No earlier snapshot")
+        #expect(DiffBaselineSnapshotFormatter.statusLabel(
+            activeBaseline: nil, hasSnapshots: true, relativeTo: now, calendar: calendar, locale: locale
+        ) == "Not comparing")
+    }
+}

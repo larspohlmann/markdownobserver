@@ -36,6 +36,7 @@ struct ContentView: View {
                 isEnabled: viewModel.isUITestModeEnabled,
                 makeValue: { viewModel.previewAccessibilityValue }
             )
+            .padding(.bottom, viewModel.diffBaselineStatusBarState.isVisible ? DiffBaselineStatusBar.barHeight : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
@@ -54,6 +55,7 @@ struct ContentView: View {
                 onGrantImageAccess: viewModel.promptForImageDirectoryAccess
             )
             documentSurfaceWithOverlays
+            diffBaselineStatusBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .modifier(ContentDropModifier(
@@ -114,6 +116,16 @@ struct ContentView: View {
             onStartSourceEditing: { viewModel.onAction(.startSourceEditing) }
         )
         .padding(.top, viewModel.overlayLayout.insets.railTopPadding)
+        .environment(\.colorScheme, viewModel.overlayColorScheme)
+    }
+
+    private var diffBaselineStatusBar: some View {
+        TimelineView(.periodic(from: .now, by: 20)) { _ in
+            DiffBaselineStatusBar(
+                state: viewModel.diffBaselineStatusBarState,
+                onSelect: viewModel.selectDiffBaseline
+            )
+        }
         .environment(\.colorScheme, viewModel.overlayColorScheme)
     }
 
@@ -223,6 +235,7 @@ struct ContentView: View {
         sourceEditing: documentStore.sourceEditingController,
         externalChange: documentStore.externalChange,
         toc: documentStore.toc,
+        diffBaselineSelection: documentStore.diffBaselineSelection,
         settingsStore: settingsStore,
         folderWatchState: folderWatchState,
         surfaceViewModel: surfaceViewModel,

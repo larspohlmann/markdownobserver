@@ -47,6 +47,13 @@ Native macOS app (SwiftUI + Combine). The shipped app name is **MarkdownObserver
 - Preserve public behavior and APIs unless the task explicitly calls for refactoring.
 - Use targeted tests instead of broad suite changes when only a small behavior changed.
 
+## Response language
+
+Write all prose replies in **ASD-STE100 Simplified Technical English**: active
+voice, short sentences, one instruction per sentence, approved words only, no
+synonyms, no slang or idioms. This applies to prose only — do not change code,
+code comments, commit messages, file contents, or command output.
+
 ## Tests
 
 Tests live in `minimarkTests/` grouped by domain: `Core/`, `ReaderStore/`, `Rendering/`, `Sidebar/`, `FolderWatch/`, `Infrastructure/`. Test doubles are in `TestSupport/`. UI tests are in `minimarkUITests/`.

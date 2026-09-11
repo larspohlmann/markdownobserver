@@ -12,21 +12,24 @@ struct PreviewAccessibilitySummary: Equatable, CustomStringConvertible {
     let regionCount: Int
     let mode: DocumentViewMode
     let surface: Surface
+    let baseline: String
 
     init(
         fileName: String,
         regionCount: Int,
         mode: DocumentViewMode,
-        surface: Surface = .preview
+        surface: Surface = .preview,
+        baseline: String = "none"
     ) {
         self.fileName = fileName
         self.regionCount = regionCount
         self.mode = mode
         self.surface = surface
+        self.baseline = baseline
     }
 
     var description: String {
-        "file=\(fileName)|regions=\(regionCount)|mode=\(mode.rawValue)|surface=\(surface.rawValue)"
+        "file=\(fileName)|regions=\(regionCount)|mode=\(mode.rawValue)|surface=\(surface.rawValue)|baseline=\(baseline)"
     }
 
     init?(rawValue: String) {
@@ -49,7 +52,8 @@ struct PreviewAccessibilitySummary: Equatable, CustomStringConvertible {
         else {
             return nil
         }
+        let baseline = fields["baseline"] ?? "none"
 
-        self.init(fileName: fileName, regionCount: regionCount, mode: mode, surface: surface)
+        self.init(fileName: fileName, regionCount: regionCount, mode: mode, surface: surface, baseline: baseline)
     }
 }
