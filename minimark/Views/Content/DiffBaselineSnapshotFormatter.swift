@@ -37,6 +37,21 @@ enum DiffBaselineSnapshotFormatter {
         return "\(day) \(clock)"
     }
 
+    static let justNowLabel = "just now"
+
+    /// A baseline snapshot is always a prior version, so a freshly recorded one
+    /// reads as "just now" instead of a rounding artifact like "in 0 sec" or
+    /// "0 sec ago". Below the threshold, or when clock skew puts `capturedAt`
+    /// ahead of `now`, use "just now"; otherwise the standard relative age.
+    private static let justNowThreshold: TimeInterval = 5
+
+    static func relativeAgeText(for date: Date, relativeTo now: Date) -> String {
+        if now.timeIntervalSince(date) < justNowThreshold {
+            return justNowLabel
+        }
+        return StatusFormatting.relativeText(for: date, relativeTo: now)
+    }
+
     static func menuTitle(
         for snapshot: DiffBaselineSnapshot,
         relativeTo now: Date,
@@ -44,7 +59,7 @@ enum DiffBaselineSnapshotFormatter {
         locale: Locale = .current
     ) -> String {
         let time = timeText(for: snapshot.capturedAt, relativeTo: now, calendar: calendar, locale: locale)
-        let relative = StatusFormatting.relativeText(for: snapshot.capturedAt, relativeTo: now)
+        let relative = relativeAgeText(for: snapshot.capturedAt, relativeTo: now)
         return "\(time) \u{00B7} \(relative)"
     }
 

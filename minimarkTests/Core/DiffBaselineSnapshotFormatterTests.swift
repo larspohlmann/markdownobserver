@@ -41,6 +41,20 @@ struct DiffBaselineSnapshotFormatterTests {
         #expect(title.contains("min"))
     }
 
+    @Test func freshlyCapturedSnapshotReadsJustNow() {
+        // A baseline recorded at (or, from clock skew, just after) now must not
+        // read "in 0 sec" / "0 sec ago".
+        #expect(DiffBaselineSnapshotFormatter.relativeAgeText(for: now, relativeTo: now) == "just now")
+        #expect(DiffBaselineSnapshotFormatter.relativeAgeText(for: now.addingTimeInterval(2), relativeTo: now) == "just now")
+
+        let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-1))
+        let title = DiffBaselineSnapshotFormatter.menuTitle(for: snapshot, relativeTo: now, calendar: calendar, locale: locale)
+        #expect(title == "14:32:04 \u{00B7} just now")
+
+        // Past the threshold it falls back to the standard relative age.
+        #expect(DiffBaselineSnapshotFormatter.relativeAgeText(for: now.addingTimeInterval(-120), relativeTo: now).contains("min"))
+    }
+
     @Test func accessibilityBaselineRendersAutoAndPinned() {
         let snapshot = DiffBaselineSnapshot(markdown: "", capturedAt: now.addingTimeInterval(-120))
         let auto = DiffBaselineSnapshotFormatter.accessibilityBaseline(
