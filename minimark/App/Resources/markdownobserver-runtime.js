@@ -1896,8 +1896,10 @@
     window.scrollTo(0, target);
   }
 
-  var lastExtractedHeadingsJSON = "";
-
+  // Always post after a render: Swift clears its TOC on every reload (see
+  // DocumentPresenter.applyLoadedState) while this page survives in-place
+  // updates, so a JS-side dedup would leave the Swift list empty (#404).
+  // TOCController.updateHeadings already ignores unchanged lists.
   function extractHeadings() {
     try {
       var headings = document.querySelectorAll("h1, h2, h3");
@@ -1911,12 +1913,8 @@
           sourceLine: parseInt(el.getAttribute("data-src-line-start"), 10) || null
         });
       }
-      var json = JSON.stringify(result);
-      if (json !== lastExtractedHeadingsJSON) {
-        lastExtractedHeadingsJSON = json;
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
-          window.webkit.messageHandlers.minimarkTOC.postMessage(result);
-        }
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.minimarkTOC) {
+        window.webkit.messageHandlers.minimarkTOC.postMessage(result);
       }
     } catch (_) {}
   }
